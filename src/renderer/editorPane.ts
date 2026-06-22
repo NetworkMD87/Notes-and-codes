@@ -6,6 +6,7 @@ export class EditorPane {
   private changeCb: ((content: string) => void) | null = null
   private lineNumbersOn = true
   private cursorListener: monaco.IDisposable | null = null
+  private bufferId: string | null = null
 
   constructor(container: HTMLElement) {
     this.editor = monaco.editor.create(container, {
@@ -22,11 +23,14 @@ export class EditorPane {
   }
 
   setBuffer(b: BufferState): void {
+    this.bufferId = b.id
     const old = this.editor.getModel()
     const model = monaco.editor.createModel(b.content, b.language)
     this.editor.setModel(model)
     old?.dispose()
   }
+
+  currentBufferId(): string | null { return this.bufferId }
 
   getContent(): string { return this.editor.getValue() }
   onChange(cb: (content: string) => void): void { this.changeCb = cb }

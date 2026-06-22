@@ -48,7 +48,14 @@ function showActive(): void {
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
 
 for (const which of ['A', 'B'] as const) {
-  paneFor(which).onChange(c => { manager.update(manager.activeId!, c); tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave() })
+  paneFor(which).onChange(c => {
+    const id = paneFor(which).currentBufferId()
+    if (!id) return
+    manager.update(id, c)
+    tabBar.render(manager.list(), manager.activeId)
+    refreshStatus()
+    scheduleSessionSave()
+  })
 }
 
 let autoSave = true
@@ -72,12 +79,18 @@ async function boot(): Promise<void> {
 }
 
 async function saveActive(): Promise<void> {
-  const b = manager.get(manager.activeId!)!
+  const pane = paneFor(view.focusedPane())
+  const id = pane.currentBufferId()
+  if (!id) return
+  const b = manager.get(id)!
+  const oldLang = b.language
   let path = b.filePath
   if (!path) { path = await window.api.saveAsDialog(); if (!path) return }
-  await window.api.writeFile(path, paneFor(view.focusedPane()).getContent(), b.eol)
-  manager.markSaved(b.id, path)
+  await window.api.writeFile(path, pane.getContent(), b.eol)
+  manager.markSaved(id, path)
+  if (manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
   tabBar.render(manager.list(), manager.activeId)
+  refreshStatus()
 }
 
 async function openFromDisk(): Promise<void> {
@@ -121,11 +134,15 @@ palette.register({ id: 'ctxmenu', label: 'Toggle "Open with Notes & Codes" right
   toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`)
 } })
 
+const overlayOpen = () =>
+  !document.getElementById('palette')?.classList.contains('hidden') ||
+  !!document.querySelector('.diff-picker:not(.hidden)')
+
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
-  if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); saveActive() }
-  if (e.ctrlKey && e.key.toLowerCase() === 'o') { e.preventDefault(); openFromDisk() }
+  if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (overlayOpen()) return; saveActive() }
+  if (e.ctrlKey && e.key.toLowerCase() === 'o') { e.preventDefault(); if (overlayOpen()) return; openFromDisk() }
   if (e.key === 'Escape' && diff.isOpen()) diff.hide()
 })
 
