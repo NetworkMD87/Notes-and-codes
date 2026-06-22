@@ -18,6 +18,10 @@
       .tab-add{background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:0 10px}
       .gutter{background:#333;cursor:col-resize}
       .gutter.gutter-horizontal{width:6px}
+      body[data-theme="light"]{--bar:#f3f3f3;--bartext:#333;--tabbg:#ececec;--editorbg:#fff}
+      body[data-theme="dark"]{--bar:#252526;--bartext:#ccc;--tabbg:#2d2d2d;--editorbg:#1e1e1e}
+      #tabbar{background:var(--bar)}
+      #theme-toggle{margin-left:auto;background:none;border:none;color:var(--bartext);cursor:pointer;font-size:14px;padding:0 10px}
     </style>
   </head>
   <body>
