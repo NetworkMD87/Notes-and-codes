@@ -12,6 +12,7 @@ import { toast } from './notify'
 import { registerCommands } from './commands'
 import { MarkdownPreview } from './markdownPreview'
 import { PasteHistoryList } from './pasteHistory'
+import { PasteHistoryPicker } from './pasteHistoryPicker'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -22,6 +23,7 @@ const statusBar = new StatusBar(document.getElementById('statusbar')!, {
 })
 const diff = new DiffView(document.getElementById('diff')!)
 const diffPicker = new DiffPicker(document.getElementById('app')!)
+const phPicker = new PasteHistoryPicker(document.getElementById('app')!)
 const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, () => { view.paneA.layout(); view.paneB.layout() })
 
 function previewContent(): string { return paneFor(view.focusedPane()).getContent() }
@@ -162,12 +164,15 @@ function startDiff(): void {
 
 const togglePreview = () => { mdPreview.toggle(); refreshPreview() }
 
+const pasteFromHistory = () => phPicker.open(pasteHistory.entries(), (text) => { paneFor(view.focusedPane()).insertAtCursor(text) })
+const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); toast('Paste history cleared.') }
+
 const palette = new CommandPalette()
 registerCommands({
   palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
   saveActive, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
-  togglePreview
+  togglePreview, pasteFromHistory, clearPasteHistory
 })
 
 const overlayOpen = () =>
