@@ -21,6 +21,7 @@ export interface CommandDeps {
   setAutoSave: (v: boolean) => void
   diffClipboard: () => Promise<void>
   diffFiles: () => Promise<void>
+  togglePreview: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -40,6 +41,7 @@ export function registerCommands(d: CommandDeps): void {
     const next = !d.getAutoSave(); d.setAutoSave(next)
     const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, autoSaveSession: next })
   } })
+  p.register({ id: 'mdpreview', label: 'Toggle Markdown Preview', run: () => d.togglePreview() })
   p.register({ id: 'ctxmenu', label: 'Toggle "Open with Notes & Codes" right-click menu', run: async () => {
     const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled
     await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next })

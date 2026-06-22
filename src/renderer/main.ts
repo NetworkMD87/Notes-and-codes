@@ -10,6 +10,7 @@ import { DiffView } from './diffView'
 import { DiffPicker } from './diffPicker'
 import { toast } from './notify'
 import { registerCommands } from './commands'
+import { MarkdownPreview } from './markdownPreview'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -20,6 +21,10 @@ const statusBar = new StatusBar(document.getElementById('statusbar')!, {
 })
 const diff = new DiffView(document.getElementById('diff')!)
 const diffPicker = new DiffPicker(document.getElementById('app')!)
+const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, () => { view.paneA.layout(); view.paneB.layout() })
+
+function previewContent(): string { return paneFor(view.focusedPane()).getContent() }
+function refreshPreview(): void { mdPreview.update(previewContent()) }
 
 const theme = new ThemeController([view.paneA, view.paneB], (m) => {
   window.api.loadSettings().then(s => window.api.saveSettings({ ...s, theme: m }))
@@ -48,6 +53,7 @@ function showActive(): void {
   paneFor(view.focusedPane()).setBuffer(active)
   tabBar.render(manager.list(), manager.activeId)
   refreshStatus()
+  refreshPreview()
 }
 
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
@@ -60,6 +66,7 @@ for (const which of ['A', 'B'] as const) {
     tabBar.render(manager.list(), manager.activeId)
     refreshStatus()
     scheduleSessionSave()
+    refreshPreview()
   })
 }
 
@@ -139,11 +146,14 @@ function startDiff(): void {
   })
 }
 
+const togglePreview = () => { mdPreview.toggle(); refreshPreview() }
+
 const palette = new CommandPalette()
 registerCommands({
   palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
   saveActive, openFromDisk, startDiff, diffClipboard, diffFiles,
-  getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v }
+  getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
+  togglePreview
 })
 
 const overlayOpen = () =>
