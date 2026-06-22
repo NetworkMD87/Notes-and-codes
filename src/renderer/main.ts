@@ -130,8 +130,15 @@ window.addEventListener('keydown', (e) => {
 })
 
 window.api.onOpenFile(async (path) => {
-  const file = await window.api.readFile(path)
-  manager.open(file); showActive(); scheduleSessionSave()
+  try {
+    const file = await window.api.readFile(path)
+    manager.open(file)
+    showActive()
+    scheduleSessionSave()
+  } catch (err) {
+    console.error('failed to open file:', path, err)
+    toast(`Could not open: ${path}`)
+  }
 })
 
 boot()
