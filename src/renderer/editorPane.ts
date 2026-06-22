@@ -5,6 +5,7 @@ export class EditorPane {
   private editor: monaco.editor.IStandaloneCodeEditor
   private changeCb: ((content: string) => void) | null = null
   private lineNumbersOn = true
+  private cursorListener: monaco.IDisposable | null = null
 
   constructor(container: HTMLElement) {
     this.editor = monaco.editor.create(container, {
@@ -21,8 +22,10 @@ export class EditorPane {
   }
 
   setBuffer(b: BufferState): void {
+    const old = this.editor.getModel()
     const model = monaco.editor.createModel(b.content, b.language)
     this.editor.setModel(model)
+    old?.dispose()
   }
 
   getContent(): string { return this.editor.getValue() }
@@ -40,8 +43,9 @@ export class EditorPane {
     return { line: p?.lineNumber ?? 1, col: p?.column ?? 1 }
   }
   onCursor(cb: (pos: { line: number; col: number }) => void): void {
-    this.editor.onDidChangeCursorPosition(e => cb({ line: e.position.lineNumber, col: e.position.column }))
+    this.cursorListener?.dispose()
+    this.cursorListener = this.editor.onDidChangeCursorPosition(e => cb({ line: e.position.lineNumber, col: e.position.column }))
   }
   layout(): void { this.editor.layout() }
-  dispose(): void { this.editor.getModel()?.dispose(); this.editor.dispose() }
+  dispose(): void { this.cursorListener?.dispose(); this.editor.getModel()?.dispose(); this.editor.dispose() }
 }
