@@ -52,4 +52,5 @@ export interface Api {
   onOpenFile(cb: (path: string) => void): void     // implemented in Task 13
   saveAsDialog(): Promise<string | null>
   openDialog(): Promise<string | null>
+  clipboardRead(): Promise<string>
 }
