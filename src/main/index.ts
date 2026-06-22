@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc'
+import { setContextMenu } from './contextMenu'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -29,7 +30,7 @@ app.whenReady().then(() => {
   registerIpc({
     baseDir: app.getPath('userData'),
     getWindow: () => mainWindow,
-    setContextMenu: async () => {} // replaced in Task 14
+    setContextMenu: (enabled) => setContextMenu(enabled, app.getPath('exe'))
   })
   mainWindow = createWindow()
   app.on('activate', () => {
