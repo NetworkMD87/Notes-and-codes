@@ -1,5 +1,8 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
+import { registerIpc } from './ipc'
+
+let mainWindow: BrowserWindow | null = null
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -23,9 +26,14 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
-  createWindow()
+  registerIpc({
+    baseDir: app.getPath('userData'),
+    getWindow: () => mainWindow,
+    setContextMenu: async () => {} // replaced in Task 14
+  })
+  mainWindow = createWindow()
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()
   })
 })
 

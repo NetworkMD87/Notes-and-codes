@@ -37,3 +37,14 @@ export interface OpenedFile {
   content: string
   eol: EolMode
 }
+
+export interface Api {
+  readFile(path: string): Promise<OpenedFile>
+  writeFile(path: string, content: string, eol: EolMode): Promise<void>
+  loadSession(): Promise<SessionData>
+  saveSession(data: SessionData): Promise<void>
+  loadSettings(): Promise<Settings>
+  saveSettings(s: Settings): Promise<void>
+  setContextMenu(enabled: boolean): Promise<void> // implemented in Task 14
+  onOpenFile(cb: (path: string) => void): void     // implemented in Task 13
+}
