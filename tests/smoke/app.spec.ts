@@ -5,14 +5,8 @@ import { join } from 'node:path'
 
 test('launches, creates tabs, splits, toggles theme', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  // 'smoke-sentinel.noop' is appended so that fileArgFrom() in main/index.ts
-  // (which walks argv in reverse for the last non-flag path-like token) finds
-  // this non-existent path instead of 'out/main/index.js'.  readFile() fails
-  // on it (no such file) and the catch branch is toast-only — no extra buffer
-  // is created.  Without this sentinel the entry script itself is mis-identified
-  // as a "file to open", producing a spurious third tab.
   const app = await electron.launch({
-    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, 'smoke-sentinel.noop']
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`]
   })
   try {
     const win = await app.firstWindow()

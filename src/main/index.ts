@@ -7,8 +7,9 @@ let mainWindow: BrowserWindow | null = null
 let pendingFile: string | null = null
 
 function fileArgFrom(argv: string[]): string | null {
-  // last arg that exists as a path and isn't a flag
-  const candidate = argv.slice(1).reverse().find(a => !a.startsWith('-') && /[\\/.]/.test(a))
+  // Packaged: argv = [exe, ...args]. Unpackaged (dev/electron <script>): argv = [electronExe, entryScript, ...args].
+  const args = app.isPackaged ? argv.slice(1) : argv.slice(2)
+  const candidate = args.reverse().find(a => !a.startsWith('-') && /[\\/.]/.test(a))
   return candidate ?? null
 }
 
