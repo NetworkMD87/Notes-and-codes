@@ -4,9 +4,22 @@
     <meta charset="utf-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;" />
     <title>Notes & Codes</title>
+    <style>
+      html,body,#app{height:100%;margin:0;font-family:Segoe UI,system-ui,sans-serif}
+      #app{display:flex;flex-direction:column}
+      #tabbar{height:34px;display:flex;align-items:center;overflow-x:auto;background:#252526}
+      #panes{flex:1;display:flex;min-height:0}
+      .pane{flex:1;min-width:0}
+      .pane.hidden{display:none}
+      #statusbar{height:22px;background:#007acc;color:#fff;font-size:12px;display:flex;align-items:center;gap:12px;padding:0 8px}
+    </style>
   </head>
   <body>
-    <div id="app">Notes &amp; Codes — booting…</div>
+    <div id="app">
+      <div id="tabbar"></div>
+      <div id="panes"><div id="paneA" class="pane"></div><div id="paneB" class="pane hidden"></div></div>
+      <div id="statusbar"></div>
+    </div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
