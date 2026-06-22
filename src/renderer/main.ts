@@ -14,7 +14,10 @@ declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
 const view = new SplitView(document.getElementById('paneA')!, document.getElementById('paneB')!)
-const statusBar = new StatusBar(document.getElementById('statusbar')!)
+const statusBar = new StatusBar(document.getElementById('statusbar')!, {
+  onEol: (eol) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.eol = eol; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave() } },
+  onEncoding: (enc) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.encoding = enc; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave() } }
+})
 const diff = new DiffView(document.getElementById('diff')!)
 const diffPicker = new DiffPicker(document.getElementById('app')!)
 
@@ -29,8 +32,9 @@ document.getElementById('header')!.appendChild(themeBtn)
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
 
 function refreshStatus(): void {
-  const b = manager.get(manager.activeId!)!
-  statusBar.update({ language: b.language, eol: b.eol, cursor: paneFor(view.focusedPane()).getCursor(), dirty: b.dirty })
+  const id = paneFor(view.focusedPane()).currentBufferId() ?? manager.activeId!
+  const b = manager.get(id)!
+  statusBar.update({ language: b.language, eol: b.eol, encoding: b.encoding, cursor: paneFor(view.focusedPane()).getCursor(), dirty: b.dirty })
 }
 
 const tabBar = new TabBar(document.getElementById('tabbar')!, {
