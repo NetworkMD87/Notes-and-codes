@@ -6,7 +6,7 @@
     <title>Notes & Codes</title>
     <style>
       html,body,#app{height:100%;margin:0;font-family:Segoe UI,system-ui,sans-serif}
-      #app{display:flex;flex-direction:column}
+      #app{display:flex;flex-direction:column;position:relative}
       #header{height:34px;display:flex;align-items:center;background:var(--bar)}
       #tabbar{flex:1;min-width:0;height:100%;display:flex;align-items:center;overflow-x:auto}
       #panes{flex:1;display:flex;min-height:0}
@@ -28,12 +28,21 @@
       .palette-list{width:520px;background:var(--bar);max-height:300px;overflow:auto}
       .palette-row{padding:6px 8px;color:var(--bartext);cursor:pointer}
       .palette-row.active{background:#094771;color:#fff}
+      #diff{position:absolute;inset:34px 0 22px 0;background:var(--editorbg)}
+      #diff.hidden{display:none}
+      .diff-picker{position:fixed;inset:0;background:rgba(0,0,0,.3);display:flex;justify-content:center;align-items:flex-start;padding-top:90px}
+      .diff-picker.hidden{display:none}
+      .diff-picker-box{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;background:var(--bar);color:var(--bartext);padding:16px;border-radius:6px}
+      .diff-picker-box button{grid-column:1 / -1}
+      #toast-host{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:50}
+      .toast{background:#333;color:#fff;padding:8px 14px;border-radius:4px;font-size:13px;opacity:.95}
     </style>
   </head>
   <body>
     <div id="app">
       <div id="header"><div id="tabbar"></div></div>
       <div id="panes"><div id="paneA" class="pane"></div><div id="paneB" class="pane hidden"></div></div>
+      <div id="diff" class="hidden"></div>
       <div id="statusbar"></div>
     </div>
     <script type="module" src="./main.ts"></script>

@@ -6,11 +6,16 @@ import { SplitView } from './splitView'
 import { ThemeController } from './theme'
 import { CommandPalette } from './commandPalette'
 import { StatusBar } from './statusBar'
+import { DiffView } from './diffView'
+import { DiffPicker } from './diffPicker'
+import { toast } from './notify'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
 const view = new SplitView(document.getElementById('paneA')!, document.getElementById('paneB')!)
 const statusBar = new StatusBar(document.getElementById('statusbar')!)
+const diff = new DiffView(document.getElementById('diff')!)
+const diffPicker = new DiffPicker(document.getElementById('app')!)
 
 const theme = new ThemeController([view.paneA, view.paneB], (m) => {
   window.api.loadSettings().then(s => window.api.saveSettings({ ...s, theme: m }))
@@ -81,6 +86,19 @@ async function openFromDisk(): Promise<void> {
   manager.open(file); showActive()
 }
 
+function startDiff(): void {
+  const buffers = manager.list()
+  if (buffers.length < 2) { toast('Open at least two tabs to diff.'); return }
+  diffPicker.open(buffers, (leftId, rightId) => {
+    const L = manager.get(leftId), R = manager.get(rightId)
+    if (!L || !R) return
+    diff.show(
+      { title: L.title, content: L.content, language: L.language },
+      { title: R.title, content: R.content, language: R.language }
+    )
+  })
+}
+
 const palette = new CommandPalette()
 palette.register({ id: 'new', label: 'New Tab', run: () => { manager.create(); showActive(); scheduleSessionSave() } })
 palette.register({ id: 'close', label: 'Close Tab', run: () => { manager.close(manager.activeId!); if (!manager.list().length) manager.create(); showActive(); scheduleSessionSave() } })
@@ -89,7 +107,8 @@ palette.register({ id: 'lines', label: 'Toggle Line Numbers', run: () => { paneF
 palette.register({ id: 'theme', label: 'Cycle Theme', run: () => theme.cycle() })
 palette.register({ id: 'save', label: 'Save', run: () => saveActive() })
 palette.register({ id: 'open', label: 'Open File', run: () => openFromDisk() })
-palette.register({ id: 'diff', label: 'Start Diff', run: () => { /* Task 12 */ } })
+palette.register({ id: 'diff', label: 'Start Diff (tab vs tab)', run: () => startDiff() })
+palette.register({ id: 'diff-close', label: 'Close Diff', run: () => diff.hide() })
 palette.register({ id: 'autosave', label: 'Toggle Auto-Save Session', run: async () => {
   autoSave = !autoSave
   const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, autoSaveSession: autoSave })
@@ -100,6 +119,7 @@ window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
   if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); saveActive() }
   if (e.ctrlKey && e.key.toLowerCase() === 'o') { e.preventDefault(); openFromDisk() }
+  if (e.key === 'Escape' && diff.isOpen()) diff.hide()
 })
 
 boot()
