@@ -4,6 +4,7 @@ import { BufferManager } from './bufferManager'
 import { TabBar } from './tabBar'
 import { SplitView } from './splitView'
 import { ThemeController } from './theme'
+import { CommandPalette } from './commandPalette'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -70,8 +71,22 @@ async function openFromDisk(): Promise<void> {
   manager.open(file); showActive()
 }
 
-// temporary keyboard toggle to verify split; replaced by command palette in Task 11
+const palette = new CommandPalette()
+palette.register({ id: 'new', label: 'New Tab', run: () => { manager.create(); showActive(); scheduleSessionSave() } })
+palette.register({ id: 'close', label: 'Close Tab', run: () => { manager.close(manager.activeId!); if (!manager.list().length) manager.create(); showActive(); scheduleSessionSave() } })
+palette.register({ id: 'split', label: 'Toggle Split', run: () => { view.setSplit(!view.isSplit()); showActive() } })
+palette.register({ id: 'lines', label: 'Toggle Line Numbers', run: () => { paneFor(view.focusedPane()).toggleLineNumbers() } })
+palette.register({ id: 'theme', label: 'Cycle Theme', run: () => theme.cycle() })
+palette.register({ id: 'save', label: 'Save', run: () => saveActive() })
+palette.register({ id: 'open', label: 'Open File', run: () => openFromDisk() })
+palette.register({ id: 'diff', label: 'Start Diff', run: () => { /* Task 12 */ } })
+palette.register({ id: 'autosave', label: 'Toggle Auto-Save Session', run: async () => {
+  autoSave = !autoSave
+  const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, autoSaveSession: autoSave })
+} })
+
 window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
   if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); saveActive() }
   if (e.ctrlKey && e.key.toLowerCase() === 'o') { e.preventDefault(); openFromDisk() }
