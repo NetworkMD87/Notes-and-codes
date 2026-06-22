@@ -1,4 +1,5 @@
 export type EolMode = 'LF' | 'CRLF'
+export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 
 export interface BufferState {
   id: string
