@@ -5,10 +5,12 @@ import { TabBar } from './tabBar'
 import { SplitView } from './splitView'
 import { ThemeController } from './theme'
 import { CommandPalette } from './commandPalette'
+import { StatusBar } from './statusBar'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
 const view = new SplitView(document.getElementById('paneA')!, document.getElementById('paneB')!)
+const statusBar = new StatusBar(document.getElementById('statusbar')!)
 
 const theme = new ThemeController([view.paneA, view.paneB], (m) => {
   window.api.loadSettings().then(s => window.api.saveSettings({ ...s, theme: m }))
@@ -20,6 +22,11 @@ document.getElementById('header')!.appendChild(themeBtn)
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
 
+function refreshStatus(): void {
+  const b = manager.get(manager.activeId!)!
+  statusBar.update({ language: b.language, eol: b.eol, cursor: paneFor(view.focusedPane()).getCursor(), dirty: b.dirty })
+}
+
 const tabBar = new TabBar(document.getElementById('tabbar')!, {
   onSelect: (id) => { manager.setActive(id); showActive(); scheduleSessionSave() },
   onClose: (id) => { manager.close(id); if (manager.list().length === 0) manager.create(); showActive(); scheduleSessionSave() },
@@ -30,10 +37,13 @@ function showActive(): void {
   const active = manager.get(manager.activeId!)!
   paneFor(view.focusedPane()).setBuffer(active)
   tabBar.render(manager.list(), manager.activeId)
+  refreshStatus()
 }
 
+for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
+
 for (const which of ['A', 'B'] as const) {
-  paneFor(which).onChange(c => { manager.update(manager.activeId!, c); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave() })
+  paneFor(which).onChange(c => { manager.update(manager.activeId!, c); tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave() })
 }
 
 let autoSave = true
