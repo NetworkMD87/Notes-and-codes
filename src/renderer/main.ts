@@ -113,6 +113,13 @@ palette.register({ id: 'autosave', label: 'Toggle Auto-Save Session', run: async
   autoSave = !autoSave
   const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, autoSaveSession: autoSave })
 } })
+palette.register({ id: 'ctxmenu', label: 'Toggle "Open with Notes & Codes" right-click menu', run: async () => {
+  const s = await window.api.loadSettings()
+  const next = !s.contextMenuEnabled
+  await window.api.setContextMenu(next)
+  await window.api.saveSettings({ ...s, contextMenuEnabled: next })
+  toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`)
+} })
 
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
