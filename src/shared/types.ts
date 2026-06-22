@@ -53,4 +53,6 @@ export interface Api {
   saveAsDialog(): Promise<string | null>
   openDialog(): Promise<string | null>
   clipboardRead(): Promise<string>
+  loadClipboardHistory(): Promise<string[]>
+  saveClipboardHistory(entries: string[]): Promise<void>
 }
