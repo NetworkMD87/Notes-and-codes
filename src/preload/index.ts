@@ -9,7 +9,10 @@ const api: Api = {
   loadSettings: () => ipcRenderer.invoke('settings:load'),
   saveSettings: (s) => ipcRenderer.invoke('settings:save', s),
   setContextMenu: (enabled) => ipcRenderer.invoke('contextmenu:set', enabled),
-  onOpenFile: (cb) => ipcRenderer.on('open-file', (_e, path: string) => cb(path))
+  onOpenFile: (cb) => {
+    ipcRenderer.removeAllListeners('open-file')
+    ipcRenderer.on('open-file', (_e, path: string) => cb(path))
+  }
 }
 
 contextBridge.exposeInMainWorld('api', api)
