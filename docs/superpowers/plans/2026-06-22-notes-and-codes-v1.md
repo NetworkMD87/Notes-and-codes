@@ -895,7 +895,7 @@ git commit -m "feat: add settings/file services, IPC handlers, and typed preload
   - `setBuffer(b: BufferState): void` — loads content + language + readOnly=false.
   - `getContent(): string`
   - `onChange(cb: (content: string) => void): void`
-  - `setLineNumbers(on: boolean): void`
+  - `setLineNumbers(on: boolean): void` / `toggleLineNumbers(): boolean` / `lineNumbersVisible(): boolean` — pane owns its own line-number state (no external flags).
   - `setTheme(monacoTheme: 'vs' | 'vs-dark'): void`
   - `getCursor(): { line: number; col: number }`
   - `onCursor(cb: (pos: {line:number; col:number}) => void): void`
@@ -941,6 +941,7 @@ import type { BufferState } from '../shared/types'
 export class EditorPane {
   private editor: monaco.editor.IStandaloneCodeEditor
   private changeCb: ((content: string) => void) | null = null
+  private lineNumbersOn = true
 
   constructor(container: HTMLElement) {
     this.editor = monaco.editor.create(container, {
@@ -963,7 +964,12 @@ export class EditorPane {
 
   getContent(): string { return this.editor.getValue() }
   onChange(cb: (content: string) => void): void { this.changeCb = cb }
-  setLineNumbers(on: boolean): void { this.editor.updateOptions({ lineNumbers: on ? 'on' : 'off' }) }
+  setLineNumbers(on: boolean): void {
+    this.lineNumbersOn = on
+    this.editor.updateOptions({ lineNumbers: on ? 'on' : 'off' })
+  }
+  toggleLineNumbers(): boolean { this.setLineNumbers(!this.lineNumbersOn); return this.lineNumbersOn }
+  lineNumbersVisible(): boolean { return this.lineNumbersOn }
   setTheme(theme: 'vs' | 'vs-dark'): void { monaco.editor.setTheme(theme) }
 
   getCursor(): { line: number; col: number } {
@@ -1522,7 +1528,7 @@ const palette = new CommandPalette()
 palette.register({ id: 'new', label: 'New Tab', run: () => { manager.create(); showActive(); scheduleSessionSave() } })
 palette.register({ id: 'close', label: 'Close Tab', run: () => { manager.close(manager.activeId!); if (!manager.list().length) manager.create(); showActive(); scheduleSessionSave() } })
 palette.register({ id: 'split', label: 'Toggle Split', run: () => { view.setSplit(!view.isSplit()); showActive() } })
-palette.register({ id: 'lines', label: 'Toggle Line Numbers', run: () => { const p = paneFor(view.focusedPane()); (p as any)._ln = !(p as any)._ln; p.setLineNumbers(!!(p as any)._ln) } })
+palette.register({ id: 'lines', label: 'Toggle Line Numbers', run: () => { paneFor(view.focusedPane()).toggleLineNumbers() } })
 palette.register({ id: 'theme', label: 'Cycle Theme', run: () => theme.cycle() })
 palette.register({ id: 'save', label: 'Save', run: () => saveActive() })
 palette.register({ id: 'open', label: 'Open File', run: () => openFromDisk() })
@@ -1611,17 +1617,21 @@ git commit -m "feat: add status bar with language, EOL, cursor, and save state"
 ### Task 13: Diff view (tab-vs-tab)
 
 **Files:**
-- Create: `src/renderer/diffView.ts`
-- Modify: `src/renderer/main.ts`, `index.html` (diff container + picker CSS)
+- Create: `src/renderer/diffView.ts`, `src/renderer/diffPicker.ts`, `src/renderer/notify.ts`
+- Modify: `src/renderer/main.ts`, `index.html` (diff container + picker/toast CSS)
 
 **Interfaces:**
-- Consumes: Monaco diff editor, `BufferManager`.
+- Consumes: Monaco diff editor, `BufferManager`, `BufferState`.
 - Produces `class DiffView`:
   - `constructor(container: HTMLElement)`
   - `show(left: { title: string; content: string; language: string }, right: {...}): void` — creates a `monaco.editor.createDiffEditor` (read-only) in the container, shown over the panes.
   - `hide(): void`
   - `isOpen(): boolean`
-- A palette command "Start Diff" opens a small two-`<select>` picker (tab A, tab B); confirming calls `DiffView.show`.
+- Produces `class DiffPicker`:
+  - `constructor(host: HTMLElement)`
+  - `open(buffers: BufferState[], onConfirm: (leftId: string, rightId: string) => void): void` — styled overlay with two `<select>`s (default left=first, right=second), Compare/Cancel buttons; Esc cancels. No native `prompt()`.
+- Produces `notify.ts`: `toast(message: string, ms?: number): void` — transient styled toast (no native `alert()`).
+- A palette command "Start Diff" opens the `DiffPicker`; confirming calls `DiffView.show`.
 
 - [ ] **Step 1: Implement `src/renderer/diffView.ts`**
 
@@ -1659,56 +1669,137 @@ export class DiffView {
 }
 ```
 
-- [ ] **Step 2: Add a diff container + picker to `index.html`**
+- [ ] **Step 2: Implement `src/renderer/notify.ts`**
+
+```ts
+export function toast(message: string, ms = 2200): void {
+  let host = document.getElementById('toast-host')
+  if (!host) {
+    host = document.createElement('div')
+    host.id = 'toast-host'
+    document.body.appendChild(host)
+  }
+  const el = document.createElement('div')
+  el.className = 'toast'
+  el.textContent = message
+  host.appendChild(el)
+  setTimeout(() => el.remove(), ms)
+}
+```
+
+- [ ] **Step 3: Implement `src/renderer/diffPicker.ts`**
+
+```ts
+import type { BufferState } from '../shared/types'
+
+export class DiffPicker {
+  private overlay: HTMLDivElement
+  private leftSel: HTMLSelectElement
+  private rightSel: HTMLSelectElement
+  private onConfirm: ((leftId: string, rightId: string) => void) | null = null
+
+  constructor(host: HTMLElement) {
+    this.overlay = document.createElement('div')
+    this.overlay.className = 'diff-picker hidden'
+    this.leftSel = document.createElement('select')
+    this.rightSel = document.createElement('select')
+    const compare = document.createElement('button')
+    compare.textContent = 'Compare'
+    compare.onclick = () => this.confirm()
+    const cancel = document.createElement('button')
+    cancel.textContent = 'Cancel'
+    cancel.onclick = () => this.close()
+    const box = document.createElement('div')
+    box.className = 'diff-picker-box'
+    const lLbl = document.createElement('label'); lLbl.textContent = 'Left'
+    const rLbl = document.createElement('label'); rLbl.textContent = 'Right'
+    box.append(lLbl, this.leftSel, rLbl, this.rightSel, compare, cancel)
+    this.overlay.appendChild(box)
+    host.appendChild(this.overlay)
+    this.overlay.addEventListener('click', (e) => { if (e.target === this.overlay) this.close() })
+    this.overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.close() })
+  }
+
+  open(buffers: BufferState[], onConfirm: (leftId: string, rightId: string) => void): void {
+    this.onConfirm = onConfirm
+    const opts = (sel: HTMLSelectElement, defaultIdx: number) => {
+      sel.replaceChildren(...buffers.map((b, i) => {
+        const o = document.createElement('option'); o.value = b.id; o.textContent = b.title
+        if (i === defaultIdx) o.selected = true
+        return o
+      }))
+    }
+    opts(this.leftSel, 0)
+    opts(this.rightSel, 1)
+    this.overlay.classList.remove('hidden')
+    this.leftSel.focus()
+  }
+
+  private confirm(): void {
+    const l = this.leftSel.value, r = this.rightSel.value
+    this.close()
+    this.onConfirm?.(l, r)
+  }
+  private close(): void { this.overlay.classList.add('hidden') }
+}
+```
+
+- [ ] **Step 4: Add the diff container, picker, and toast CSS to `index.html`**
 
 In `#app`, after `#panes`:
 ```html
       <div id="diff" class="hidden"></div>
 ```
-CSS:
+CSS (`#app` must be `position:relative` for the absolute diff overlay):
 ```css
+      #app{position:relative}
       #diff{position:absolute;inset:34px 0 22px 0;background:var(--editorbg)}
       #diff.hidden{display:none}
-      #app{position:relative}
+      .diff-picker{position:fixed;inset:0;background:rgba(0,0,0,.3);display:flex;justify-content:center;align-items:flex-start;padding-top:90px}
+      .diff-picker.hidden{display:none}
+      .diff-picker-box{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;background:var(--bar);color:var(--bartext);padding:16px;border-radius:6px}
+      .diff-picker-box button{grid-column:1 / -1}
+      #toast-host{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:50}
+      .toast{background:#333;color:#fff;padding:8px 14px;border-radius:4px;font-size:13px;opacity:.95}
 ```
 
-- [ ] **Step 3: Add a tab-picker prompt + register the diff command in `main.ts`**
+- [ ] **Step 5: Register the diff command in `main.ts` (styled picker + toast — no native dialogs)**
 
 ```ts
 import { DiffView } from './diffView'
+import { DiffPicker } from './diffPicker'
+import { toast } from './notify'
 const diff = new DiffView(document.getElementById('diff')!)
+const diffPicker = new DiffPicker(document.getElementById('app')!)
 
 function startDiff(): void {
   const buffers = manager.list()
-  if (buffers.length < 2) { alert('Open at least two tabs to diff.'); return }
-  // minimal picker: prompt with indices
-  const labels = buffers.map((b, i) => `${i}: ${b.title}`).join('\n')
-  const a = Number(prompt(`Left tab index?\n${labels}`, '0'))
-  const b = Number(prompt(`Right tab index?\n${labels}`, '1'))
-  const L = buffers[a], R = buffers[b]
-  if (!L || !R) return
-  diff.show(
-    { title: L.title, content: L.content, language: L.language },
-    { title: R.title, content: R.content, language: R.language }
-  )
+  if (buffers.length < 2) { toast('Open at least two tabs to diff.'); return }
+  diffPicker.open(buffers, (leftId, rightId) => {
+    const L = manager.get(leftId), R = manager.get(rightId)
+    if (!L || !R) return
+    diff.show(
+      { title: L.title, content: L.content, language: L.language },
+      { title: R.title, content: R.content, language: R.language }
+    )
+  })
 }
 palette.register({ id: 'diff', label: 'Start Diff (tab vs tab)', run: () => startDiff() })
 palette.register({ id: 'diff-close', label: 'Close Diff', run: () => diff.hide() })
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && diff.isOpen()) diff.hide() })
 ```
-(The `prompt`-based picker is the minimal v1; a styled two-`<select>` overlay is an easy later polish, not required to ship.)
 
-- [ ] **Step 4: Run the app to verify diffing**
+- [ ] **Step 6: Run the app to verify diffing**
 
 Run: `npm run dev`
-Steps: open two tabs with different text → palette → "Start Diff" → enter indices.
-Expected: side-by-side diff with highlighted changes appears; "Close Diff" or Esc returns to editing. Close to continue.
+Steps: open two tabs with different text → palette → "Start Diff" → pick Left/Right in the styled picker → Compare.
+Expected: side-by-side diff with highlighted changes appears; "Close Diff" or Esc returns to editing; with fewer than two tabs a toast appears instead of a crash. Close to continue.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add -A
-git commit -m "feat: add tab-vs-tab diff view using Monaco diff editor"
+git commit -m "feat: add tab-vs-tab diff with styled picker and toast notifications"
 ```
 
 ---
@@ -1812,7 +1903,7 @@ palette.register({ id: 'ctxmenu', label: 'Toggle "Open with Notes & Codes" right
   const next = !s.contextMenuEnabled
   await window.api.setContextMenu(next)
   await window.api.saveSettings({ ...s, contextMenuEnabled: next })
-  alert(`Right-click menu ${next ? 'enabled' : 'disabled'}.`)
+  toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`)
 } })
 ```
 
@@ -2018,8 +2109,8 @@ git commit -m "test: add Playwright electron smoke test for core flows"
 - §8 roadmap v1 scope only — clipboard/file diff, markdown, hotkey, portable-as-feature deferred (portable build itself comes free with electron-builder in Task 15) ✓
 - §9 testing: Vitest logic + Playwright smoke → Tasks 2–5, 14, 16 ✓
 
-**Placeholder scan:** No "TBD/TODO/handle edge cases" left as instructions; every code step has concrete code. The `prompt()`-based diff picker and the line-numbers `(p as any)._ln` flag are intentionally minimal-but-working v1 choices (noted inline), not placeholders.
+**Placeholder scan:** No "TBD/TODO/handle edge cases" left as instructions; every code step has concrete code. No native `prompt()`/`alert()` — diff uses a styled `DiffPicker` overlay and transient `toast()` notifications.
 
 **Type consistency:** `BufferState`, `Settings`, `SessionData`, `OpenedFile`, `Api` defined in Task 2/5 and used with matching names/signatures throughout. `BufferManager` method names (`create/open/update/markSaved/close/toSession/restore`) consistent across Tasks 3, 7, 8, 10, 11, 13. `setContextMenu` signature consistent across preload (Task 5 Api), ipc (`contextmenu:set`), and main (Task 14).
 
-**Known v1 rough edges (acceptable, documented):** diff picker uses `prompt()`; per-pane line-number state stashed on the pane object; theme toggle button placement note. All are flagged for later polish and do not block a working v1.
+**Known v1 notes:** line-number state lives on `EditorPane` (`lineNumbersOn`); diff uses a styled `DiffPicker` + `toast()`. Remaining minor item: theme toggle button placement relative to `#tabbar` (TabBar.render clears `#tabbar` children, so the button must live outside it — noted in Task 9 Step 3). Not blocking.
