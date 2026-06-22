@@ -1,4 +1,4 @@
-import { dialog, ipcMain, type BrowserWindow } from 'electron'
+import { clipboard, dialog, ipcMain, type BrowserWindow } from 'electron'
 import { readFileForEditor, writeFile } from './fileService'
 import { SessionStore } from './sessionStore'
 import { SettingsStore } from './settingsStore'
@@ -30,4 +30,5 @@ export function registerIpc(deps: IpcDeps): void {
     const r = await dialog.showOpenDialog({ properties: ['openFile'] })
     return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]
   })
+  ipcMain.handle('clipboard:read', () => clipboard.readText())
 }

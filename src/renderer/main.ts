@@ -104,6 +104,28 @@ async function openFromDisk(): Promise<void> {
   manager.open(file); showActive()
 }
 
+async function diffClipboard(): Promise<void> {
+  const pane = paneFor(view.focusedPane())
+  const id = pane.currentBufferId(); if (!id) return
+  const b = manager.get(id)!
+  const clip = await window.api.clipboardRead()
+  if (!clip) { toast('Clipboard is empty.'); return }
+  diff.show(
+    { title: b.title, content: pane.getContent(), language: b.language },
+    { title: 'Clipboard', content: clip, language: b.language }
+  )
+}
+
+async function diffFiles(): Promise<void> {
+  const a = await window.api.openDialog(); if (!a) return
+  const bPath = await window.api.openDialog(); if (!bPath) return
+  const [fa, fb] = await Promise.all([window.api.readFile(a), window.api.readFile(bPath)])
+  diff.show(
+    { title: a.split(/[\\/]/).pop() ?? a, content: fa.content, language: '' },
+    { title: bPath.split(/[\\/]/).pop() ?? bPath, content: fb.content, language: '' }
+  )
+}
+
 function startDiff(): void {
   const buffers = manager.list()
   if (buffers.length < 2) { toast('Open at least two tabs to diff.'); return }
@@ -120,7 +142,7 @@ function startDiff(): void {
 const palette = new CommandPalette()
 registerCommands({
   palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
-  saveActive, openFromDisk, startDiff,
+  saveActive, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v }
 })
 
