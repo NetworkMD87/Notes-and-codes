@@ -3,10 +3,19 @@ import type { Api } from '../shared/types'
 import { BufferManager } from './bufferManager'
 import { TabBar } from './tabBar'
 import { SplitView } from './splitView'
+import { ThemeController } from './theme'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
 const view = new SplitView(document.getElementById('paneA')!, document.getElementById('paneB')!)
+
+const theme = new ThemeController([view.paneA, view.paneB], (m) => {
+  window.api.loadSettings().then(s => window.api.saveSettings({ ...s, theme: m }))
+})
+const themeBtn = document.createElement('button')
+themeBtn.id = 'theme-toggle'; themeBtn.textContent = '◐ theme'
+themeBtn.onclick = () => theme.cycle()
+document.getElementById('tabbar')!.after(themeBtn)
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
 
@@ -33,3 +42,4 @@ window.addEventListener('keydown', (e) => {
 
 manager.create()
 showActive()
+window.api.loadSettings().then(s => theme.apply(s.theme))
