@@ -1,4 +1,4 @@
-import { ipcMain, type BrowserWindow } from 'electron'
+import { dialog, ipcMain, type BrowserWindow } from 'electron'
 import { readFileForEditor, writeFile } from './fileService'
 import { SessionStore } from './sessionStore'
 import { SettingsStore } from './settingsStore'
@@ -21,4 +21,12 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle('settings:load', () => settings.load())
   ipcMain.handle('settings:save', (_e, s: Settings) => settings.save(s))
   ipcMain.handle('contextmenu:set', (_e, enabled: boolean) => deps.setContextMenu(enabled))
+  ipcMain.handle('dialog:saveAs', async () => {
+    const r = await dialog.showSaveDialog({ title: 'Save As' })
+    return r.canceled ? null : r.filePath ?? null
+  })
+  ipcMain.handle('dialog:open', async () => {
+    const r = await dialog.showOpenDialog({ properties: ['openFile'] })
+    return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]
+  })
 }

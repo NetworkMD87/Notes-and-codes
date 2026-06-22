@@ -12,7 +12,9 @@ const api: Api = {
   onOpenFile: (cb) => {
     ipcRenderer.removeAllListeners('open-file')
     ipcRenderer.on('open-file', (_e, path: string) => cb(path))
-  }
+  },
+  saveAsDialog: () => ipcRenderer.invoke('dialog:saveAs'),
+  openDialog: () => ipcRenderer.invoke('dialog:open'),
 }
 
 contextBridge.exposeInMainWorld('api', api)
