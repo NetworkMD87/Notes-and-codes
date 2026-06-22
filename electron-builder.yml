@@ -1,0 +1,16 @@
+appId: com.notesandcodes.app
+productName: Notes & Codes
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**/*
+win:
+  target:
+    - target: nsis
+    - target: portable
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  include: build/installer.nsh

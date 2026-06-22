@@ -129,4 +129,9 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && diff.isOpen()) diff.hide()
 })
 
+window.api.onOpenFile(async (path) => {
+  const file = await window.api.readFile(path)
+  manager.open(file); showActive(); scheduleSessionSave()
+})
+
 boot()
