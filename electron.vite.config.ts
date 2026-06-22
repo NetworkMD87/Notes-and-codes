@@ -6,6 +6,8 @@ export default defineConfig({
   preload: { build: { rollupOptions: { input: resolve(__dirname, 'src/preload/index.ts') } } },
   renderer: {
     root: 'src/renderer',
-    build: { rollupOptions: { input: resolve(__dirname, 'src/renderer/index.html') } }
+    build: { rollupOptions: { input: resolve(__dirname, 'src/renderer/index.html') } },
+    worker: { format: 'es' },
+    optimizeDeps: { include: ['monaco-editor'] }
   }
 })
