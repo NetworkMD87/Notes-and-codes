@@ -1,4 +1,4 @@
-export interface Command { id: string; label: string; run: () => void | Promise<void> }
+export interface Command { id: string; label: string; run: () => void | Promise<void>; hint?: string }
 
 export class CommandPalette {
   private commands: Command[] = []
@@ -33,7 +33,9 @@ export class CommandPalette {
     this.listEl.replaceChildren(...this.filtered.map((c, i) => {
       const row = document.createElement('div')
       row.className = 'palette-row' + (i === this.cursor ? ' active' : '')
-      row.textContent = c.label
+      const label = document.createElement('span'); label.textContent = c.label
+      row.appendChild(label)
+      if (c.hint) { const h = document.createElement('span'); h.className = 'palette-hint'; h.textContent = c.hint; row.appendChild(h) }
       row.onclick = () => { this.exec(c) }
       return row
     }))

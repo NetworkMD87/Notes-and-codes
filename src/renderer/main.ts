@@ -9,6 +9,7 @@ import { StatusBar } from './statusBar'
 import { DiffView } from './diffView'
 import { DiffPicker } from './diffPicker'
 import { toast } from './notify'
+import { registerCommands } from './commands'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -113,26 +114,11 @@ function startDiff(): void {
 }
 
 const palette = new CommandPalette()
-palette.register({ id: 'new', label: 'New Tab', run: () => { manager.create(); showActive(); scheduleSessionSave() } })
-palette.register({ id: 'close', label: 'Close Tab', run: () => { manager.close(manager.activeId!); if (!manager.list().length) manager.create(); showActive(); scheduleSessionSave() } })
-palette.register({ id: 'split', label: 'Toggle Split', run: () => { view.setSplit(!view.isSplit()); showActive() } })
-palette.register({ id: 'lines', label: 'Toggle Line Numbers', run: () => { paneFor(view.focusedPane()).toggleLineNumbers() } })
-palette.register({ id: 'theme', label: 'Cycle Theme', run: () => theme.cycle() })
-palette.register({ id: 'save', label: 'Save', run: () => saveActive() })
-palette.register({ id: 'open', label: 'Open File', run: () => openFromDisk() })
-palette.register({ id: 'diff', label: 'Start Diff (tab vs tab)', run: () => startDiff() })
-palette.register({ id: 'diff-close', label: 'Close Diff', run: () => diff.hide() })
-palette.register({ id: 'autosave', label: 'Toggle Auto-Save Session', run: async () => {
-  autoSave = !autoSave
-  const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, autoSaveSession: autoSave })
-} })
-palette.register({ id: 'ctxmenu', label: 'Toggle "Open with Notes & Codes" right-click menu', run: async () => {
-  const s = await window.api.loadSettings()
-  const next = !s.contextMenuEnabled
-  await window.api.setContextMenu(next)
-  await window.api.saveSettings({ ...s, contextMenuEnabled: next })
-  toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`)
-} })
+registerCommands({
+  palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
+  saveActive, openFromDisk, startDiff,
+  getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v }
+})
 
 const overlayOpen = () =>
   !document.getElementById('palette')?.classList.contains('hidden') ||
