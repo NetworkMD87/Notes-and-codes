@@ -1,4 +1,5 @@
 import type { BufferState, SessionData, EolMode } from '../shared/types'
+import { languageFromPath } from '../shared/language'
 
 export class BufferManager {
   private buffers: BufferState[] = []
@@ -31,7 +32,7 @@ export class BufferManager {
     const existing = this.buffers.find(b => b.filePath === file.filePath)
     if (existing) { this._activeId = existing.id; return existing }
     const title = file.filePath.split(/[\\/]/).pop() ?? file.filePath
-    return this.create({ filePath: file.filePath, content: file.content, eol: file.eol, title })
+    return this.create({ filePath: file.filePath, content: file.content, eol: file.eol, title, language: languageFromPath(file.filePath) })
   }
 
   setActive(id: string): void { if (this.get(id)) this._activeId = id }
@@ -48,6 +49,7 @@ export class BufferManager {
     if (!b) return
     b.filePath = filePath
     b.title = filePath.split(/[\\/]/).pop() ?? filePath
+    b.language = languageFromPath(filePath)
     b.dirty = false
   }
 
