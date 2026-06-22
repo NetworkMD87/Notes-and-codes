@@ -2,7 +2,7 @@ import { dialog, ipcMain, type BrowserWindow } from 'electron'
 import { readFileForEditor, writeFile } from './fileService'
 import { SessionStore } from './sessionStore'
 import { SettingsStore } from './settingsStore'
-import type { SessionData, Settings, EolMode } from '../shared/types'
+import type { SessionData, Settings, EolMode, Encoding } from '../shared/types'
 
 export interface IpcDeps {
   baseDir: string
@@ -15,7 +15,8 @@ export function registerIpc(deps: IpcDeps): void {
   const settings = new SettingsStore(deps.baseDir)
 
   ipcMain.handle('file:read', (_e, path: string) => readFileForEditor(path))
-  ipcMain.handle('file:write', (_e, path: string, content: string, eol: EolMode) => writeFile(path, content, eol))
+  ipcMain.handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding) =>
+    writeFile(path, content, eol, encoding))
   ipcMain.handle('session:load', () => session.load())
   ipcMain.handle('session:save', (_e, data: SessionData) => session.save(data))
   ipcMain.handle('settings:load', () => settings.load())

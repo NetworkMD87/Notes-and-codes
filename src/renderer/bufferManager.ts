@@ -1,4 +1,4 @@
-import type { BufferState, SessionData, EolMode } from '../shared/types'
+import type { BufferState, SessionData, EolMode, Encoding } from '../shared/types'
 import { languageFromPath } from '../shared/language'
 
 export class BufferManager {
@@ -21,6 +21,7 @@ export class BufferManager {
       content: opts.content ?? '',
       language: opts.language ?? 'plaintext',
       eol: opts.eol ?? 'LF',
+      encoding: opts.encoding ?? 'utf8',
       dirty: opts.dirty ?? false
     }
     this.buffers.push(b)
@@ -28,11 +29,11 @@ export class BufferManager {
     return b
   }
 
-  open(file: { filePath: string; content: string; eol: EolMode }): BufferState {
+  open(file: { filePath: string; content: string; eol: EolMode; encoding: Encoding }): BufferState {
     const existing = this.buffers.find(b => b.filePath === file.filePath)
     if (existing) { this._activeId = existing.id; return existing }
     const title = file.filePath.split(/[\\/]/).pop() ?? file.filePath
-    return this.create({ filePath: file.filePath, content: file.content, eol: file.eol, title, language: languageFromPath(file.filePath) })
+    return this.create({ filePath: file.filePath, content: file.content, eol: file.eol, encoding: file.encoding, title, language: languageFromPath(file.filePath) })
   }
 
   setActive(id: string): void { if (this.get(id)) this._activeId = id }
@@ -74,5 +75,6 @@ export class BufferManager {
     this.buffers = data.buffers
     this._activeId = data.activeId
     this.untitledCount = this.buffers.length
+    for (const b of this.buffers) if (!b.encoding) b.encoding = 'utf8'
   }
 }
