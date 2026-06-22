@@ -3,12 +3,15 @@ import type { BufferState } from '../shared/types'
 
 export class EditorPane {
   private editor: monaco.editor.IStandaloneCodeEditor
+  private container: HTMLElement
   private changeCb: ((content: string) => void) | null = null
   private lineNumbersOn = true
   private cursorListener: monaco.IDisposable | null = null
+  private pasteListener: monaco.IDisposable | null = null
   private bufferId: string | null = null
 
   constructor(container: HTMLElement) {
+    this.container = container
     this.editor = monaco.editor.create(container, {
       value: '',
       language: 'plaintext',
@@ -50,6 +53,28 @@ export class EditorPane {
     this.cursorListener?.dispose()
     this.cursorListener = this.editor.onDidChangeCursorPosition(e => cb({ line: e.position.lineNumber, col: e.position.column }))
   }
+  onPaste(cb: (text: string) => void): void {
+    this.pasteListener?.dispose()
+    this.pasteListener = this.editor.onDidPaste(e => {
+      const text = this.editor.getModel()?.getValueInRange(e.range) ?? ''
+      if (text) cb(text)
+    })
+  }
+  onCopyCut(cb: (text: string) => void): void {
+    const handler = () => {
+      const sel = this.editor.getSelection()
+      const text = sel ? this.editor.getModel()?.getValueInRange(sel) ?? '' : ''
+      if (text) cb(text)
+    }
+    this.container.addEventListener('copy', handler)
+    this.container.addEventListener('cut', handler)
+  }
+  insertAtCursor(text: string): void {
+    const sel = this.editor.getSelection()
+    if (!sel) return
+    this.editor.executeEdits('paste-history', [{ range: sel, text, forceMoveMarkers: true }])
+    this.editor.focus()
+  }
   layout(): void { this.editor.layout() }
-  dispose(): void { this.cursorListener?.dispose(); this.editor.getModel()?.dispose(); this.editor.dispose() }
+  dispose(): void { this.cursorListener?.dispose(); this.pasteListener?.dispose(); this.editor.getModel()?.dispose(); this.editor.dispose() }
 }

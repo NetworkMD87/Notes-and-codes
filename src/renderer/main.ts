@@ -11,6 +11,7 @@ import { DiffPicker } from './diffPicker'
 import { toast } from './notify'
 import { registerCommands } from './commands'
 import { MarkdownPreview } from './markdownPreview'
+import { PasteHistoryList } from './pasteHistory'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -35,6 +36,18 @@ themeBtn.onclick = () => theme.cycle()
 document.getElementById('header')!.appendChild(themeBtn)
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
+
+const pasteHistory = new PasteHistoryList()
+let clipSaveTimer: number | undefined
+function persistClipHistory(): void {
+  clearTimeout(clipSaveTimer)
+  clipSaveTimer = setTimeout(() => window.api.saveClipboardHistory(pasteHistory.entries()), 500) as unknown as number
+}
+function captureClip(text: string): void { pasteHistory.add(text); persistClipHistory() }
+for (const which of ['A', 'B'] as const) {
+  paneFor(which).onPaste(captureClip)
+  paneFor(which).onCopyCut(captureClip)
+}
 
 function refreshStatus(): void {
   const id = paneFor(view.focusedPane()).currentBufferId() ?? manager.activeId!
@@ -83,6 +96,7 @@ async function boot(): Promise<void> {
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
   theme.apply(settings.theme)
+  pasteHistory.load(await window.api.loadClipboardHistory())
   const session = await window.api.loadSession()
   if (session.buffers.length > 0) manager.restore(session)
   else manager.create()
