@@ -8,6 +8,7 @@ export class EditorPane {
   private lineNumbersOn = true
   private cursorListener: monaco.IDisposable | null = null
   private pasteListener: monaco.IDisposable | null = null
+  private copyCutHandler: (() => void) | null = null
   private bufferId: string | null = null
 
   constructor(container: HTMLElement) {
@@ -61,11 +62,16 @@ export class EditorPane {
     })
   }
   onCopyCut(cb: (text: string) => void): void {
+    if (this.copyCutHandler) {
+      this.container.removeEventListener('copy', this.copyCutHandler)
+      this.container.removeEventListener('cut', this.copyCutHandler)
+    }
     const handler = () => {
       const sel = this.editor.getSelection()
       const text = sel ? this.editor.getModel()?.getValueInRange(sel) ?? '' : ''
       if (text) cb(text)
     }
+    this.copyCutHandler = handler
     this.container.addEventListener('copy', handler)
     this.container.addEventListener('cut', handler)
   }
@@ -76,5 +82,14 @@ export class EditorPane {
     this.editor.focus()
   }
   layout(): void { this.editor.layout() }
-  dispose(): void { this.cursorListener?.dispose(); this.pasteListener?.dispose(); this.editor.getModel()?.dispose(); this.editor.dispose() }
+  dispose(): void {
+    if (this.copyCutHandler) {
+      this.container.removeEventListener('copy', this.copyCutHandler)
+      this.container.removeEventListener('cut', this.copyCutHandler)
+    }
+    this.cursorListener?.dispose()
+    this.pasteListener?.dispose()
+    this.editor.getModel()?.dispose()
+    this.editor.dispose()
+  }
 }
