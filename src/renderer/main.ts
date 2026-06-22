@@ -87,7 +87,7 @@ async function saveActive(): Promise<void> {
   const oldLang = b.language
   let path = b.filePath
   if (!path) { path = await window.api.saveAsDialog(); if (!path) return }
-  await window.api.writeFile(path, pane.getContent(), b.eol)
+  await window.api.writeFile(path, pane.getContent(), b.eol, b.encoding)
   manager.markSaved(id, path)
   if (manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
   tabBar.render(manager.list(), manager.activeId)

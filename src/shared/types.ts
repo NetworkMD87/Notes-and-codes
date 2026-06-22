@@ -8,6 +8,7 @@ export interface BufferState {
   content: string
   language: string
   eol: EolMode
+  encoding: Encoding
   dirty: boolean
 }
 
@@ -37,11 +38,12 @@ export interface OpenedFile {
   filePath: string
   content: string
   eol: EolMode
+  encoding: Encoding
 }
 
 export interface Api {
   readFile(path: string): Promise<OpenedFile>
-  writeFile(path: string, content: string, eol: EolMode): Promise<void>
+  writeFile(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
   loadSession(): Promise<SessionData>
   saveSession(data: SessionData): Promise<void>
   loadSettings(): Promise<Settings>
