@@ -7,7 +7,8 @@
     <style>
       html,body,#app{height:100%;margin:0;font-family:Segoe UI,system-ui,sans-serif}
       #app{display:flex;flex-direction:column}
-      #tabbar{height:34px;display:flex;align-items:center;overflow-x:auto;background:#252526}
+      #header{height:34px;display:flex;align-items:center;background:var(--bar)}
+      #tabbar{flex:1;min-width:0;height:100%;display:flex;align-items:center;overflow-x:auto}
       #panes{flex:1;display:flex;min-height:0}
       .pane{flex:1;min-width:0}
       .pane.hidden{display:none}
@@ -20,13 +21,12 @@
       .gutter.gutter-horizontal{width:6px}
       body[data-theme="light"]{--bar:#f3f3f3;--bartext:#333;--tabbg:#ececec;--editorbg:#fff}
       body[data-theme="dark"]{--bar:#252526;--bartext:#ccc;--tabbg:#2d2d2d;--editorbg:#1e1e1e}
-      #tabbar{background:var(--bar)}
       #theme-toggle{margin-left:auto;background:none;border:none;color:var(--bartext);cursor:pointer;font-size:14px;padding:0 10px}
     </style>
   </head>
   <body>
     <div id="app">
-      <div id="tabbar"></div>
+      <div id="header"><div id="tabbar"></div></div>
       <div id="panes"><div id="paneA" class="pane"></div><div id="paneB" class="pane hidden"></div></div>
       <div id="statusbar"></div>
     </div>

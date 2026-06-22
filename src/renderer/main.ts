@@ -15,7 +15,7 @@ const theme = new ThemeController([view.paneA, view.paneB], (m) => {
 const themeBtn = document.createElement('button')
 themeBtn.id = 'theme-toggle'; themeBtn.textContent = '◐ theme'
 themeBtn.onclick = () => theme.cycle()
-document.getElementById('tabbar')!.after(themeBtn)
+document.getElementById('header')!.appendChild(themeBtn)
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
 
