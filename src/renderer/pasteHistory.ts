@@ -10,5 +10,8 @@ export class PasteHistoryList {
 
   entries(): string[] { return this.items }
   clear(): void { this.items = [] }
-  load(entries: string[]): void { this.items = entries.slice(0, this.cap) }
+  load(entries: string[]): void {
+    this.items = []
+    for (let i = entries.length - 1; i >= 0; i--) this.add(entries[i])
+  }
 }

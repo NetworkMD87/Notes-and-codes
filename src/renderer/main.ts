@@ -1,5 +1,6 @@
 import './monacoEnv'
-import type { Api } from '../shared/types'
+import type { Api, Encoding } from '../shared/types'
+import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
 import { TabBar } from './tabBar'
 import { SplitView } from './splitView'
@@ -17,9 +18,10 @@ declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
 const view = new SplitView(document.getElementById('paneA')!, document.getElementById('paneB')!)
+const ENC_LABEL: Record<Encoding, string> = { utf8: 'UTF-8', utf8bom: 'UTF-8-BOM', utf16le: 'UTF-16 LE', utf16be: 'UTF-16 BE' }
 const statusBar = new StatusBar(document.getElementById('statusbar')!, {
-  onEol: (eol) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.eol = eol; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave() } },
-  onEncoding: (enc) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.encoding = enc; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave() } }
+  onEol: (eol) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.eol = eol; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave(); toast('Line endings: ' + eol) } },
+  onEncoding: (enc) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.encoding = enc; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave(); toast('Encoding: ' + ENC_LABEL[enc]) } }
 })
 const diff = new DiffView(document.getElementById('diff')!)
 const diffPicker = new DiffPicker(document.getElementById('app')!)
@@ -144,8 +146,8 @@ async function diffFiles(): Promise<void> {
   const bPath = await window.api.openDialog(); if (!bPath) return
   const [fa, fb] = await Promise.all([window.api.readFile(a), window.api.readFile(bPath)])
   diff.show(
-    { title: a.split(/[\\/]/).pop() ?? a, content: fa.content, language: '' },
-    { title: bPath.split(/[\\/]/).pop() ?? bPath, content: fb.content, language: '' }
+    { title: a.split(/[\\/]/).pop() ?? a, content: fa.content, language: languageFromPath(a) },
+    { title: bPath.split(/[\\/]/).pop() ?? bPath, content: fb.content, language: languageFromPath(bPath) }
   )
 }
 
