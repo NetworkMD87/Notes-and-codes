@@ -1,4 +1,4 @@
-export interface Command { id: string; label: string; run: () => void }
+export interface Command { id: string; label: string; run: () => void | Promise<void> }
 
 export class CommandPalette {
   private commands: Command[] = []
@@ -34,16 +34,20 @@ export class CommandPalette {
       const row = document.createElement('div')
       row.className = 'palette-row' + (i === this.cursor ? ' active' : '')
       row.textContent = c.label
-      row.onclick = () => { c.run(); this.close() }
+      row.onclick = () => { this.exec(c) }
       return row
     }))
   }
 
   private onKey(e: KeyboardEvent): void {
     if (e.key === 'Escape') return this.close()
-    if (e.key === 'ArrowDown') { this.cursor = Math.min(this.cursor + 1, this.filtered.length - 1); this.paint() }
-    if (e.key === 'ArrowUp') { this.cursor = Math.max(this.cursor - 1, 0); this.paint() }
-    if (e.key === 'Enter') { const c = this.filtered[this.cursor]; if (c) { c.run(); this.close() } }
+    if (e.key === 'ArrowDown') { if (this.filtered.length === 0) return; this.cursor = Math.min(this.cursor + 1, this.filtered.length - 1); this.paint() }
+    if (e.key === 'ArrowUp') { if (this.filtered.length === 0) return; this.cursor = Math.max(this.cursor - 1, 0); this.paint() }
+    if (e.key === 'Enter') { const c = this.filtered[this.cursor]; if (c) { this.exec(c) } }
+  }
+  private exec(c: Command): void {
+    void Promise.resolve(c.run()).catch(err => console.error('command failed:', err))
+    this.close()
   }
   private paint(): void {
     [...this.listEl.children].forEach((el, i) => el.classList.toggle('active', i === this.cursor))
