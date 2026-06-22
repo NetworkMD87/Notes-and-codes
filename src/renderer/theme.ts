@@ -10,7 +10,7 @@ export class ThemeController {
     return m
   }
 
-  apply(mode: ThemeMode): void {
+  apply(mode: ThemeMode = 'follow-os'): void {
     this.mode = mode
     const resolved = this.resolve(mode)
     document.body.dataset.theme = resolved
