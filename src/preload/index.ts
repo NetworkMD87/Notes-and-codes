@@ -16,6 +16,8 @@ const api: Api = {
   saveAsDialog: () => ipcRenderer.invoke('dialog:saveAs'),
   openDialog: () => ipcRenderer.invoke('dialog:open'),
   clipboardRead: () => ipcRenderer.invoke('clipboard:read'),
+  loadClipboardHistory: () => ipcRenderer.invoke('clipboard-history:load'),
+  saveClipboardHistory: (entries) => ipcRenderer.invoke('clipboard-history:save', entries),
 }
 
 contextBridge.exposeInMainWorld('api', api)
