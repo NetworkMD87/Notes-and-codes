@@ -72,4 +72,7 @@ export interface Api {
   pathForDroppedFile(file: File): string
   watchPaths(paths: string[]): Promise<void>
   onFileChanged(cb: (path: string) => void): void
+  setDirtyCount(n: number): void
+  quitNow(): void
+  onSaveAllAndQuit(cb: () => void): void
 }

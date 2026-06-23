@@ -12,6 +12,8 @@ export interface IpcDeps {
   baseDir: string
   getWindow: () => BrowserWindow | null
   setContextMenu: (enabled: boolean) => Promise<void>
+  onDirtyCount: (n: number) => void
+  onQuitNow: () => void
 }
 
 export function registerIpc(deps: IpcDeps): void {
@@ -48,4 +50,6 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle('recent:load', () => recent.load())
   ipcMain.handle('recent:add', (_e, path: string) => recent.add(path))
   ipcMain.handle('recent:clear', () => recent.clear())
+  ipcMain.on('app:dirtyCount', (_e, n: number) => deps.onDirtyCount(n))
+  ipcMain.on('app:quitNow', () => deps.onQuitNow())
 }

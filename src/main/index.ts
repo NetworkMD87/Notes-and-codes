@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, Tray } from 'electron'
+import { app, BrowserWindow, dialog, globalShortcut, Tray } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc'
 import { setContextMenu } from './contextMenu'
@@ -8,12 +8,25 @@ let mainWindow: BrowserWindow | null = null
 let pendingFile: string | null = null
 let tray: Tray | null = null
 let isQuitting = false
+let dirtyNamedCount = 0
 
 function fileArgFrom(argv: string[]): string | null {
   // Packaged: argv = [exe, ...args]. Unpackaged (dev/electron <script>): argv = [electronExe, entryScript, ...args].
   const args = app.isPackaged ? argv.slice(1) : argv.slice(2)
   const candidate = args.reverse().find(a => !a.startsWith('-') && /[\\/.]/.test(a))
   return candidate ?? null
+}
+
+function requestQuit(): void {
+  if (dirtyNamedCount === 0 || !mainWindow) { isQuitting = true; app.quit(); return }
+  const choice = dialog.showMessageBoxSync(mainWindow, {
+    type: 'warning', buttons: ['Save', "Don't Save", 'Cancel'], defaultId: 0, cancelId: 2,
+    message: `You have unsaved changes in ${dirtyNamedCount} file${dirtyNamedCount === 1 ? '' : 's'}.`,
+    detail: 'Save before quitting?'
+  })
+  if (choice === 2) return                                    // Cancel
+  if (choice === 1) { isQuitting = true; app.quit(); return } // Don't Save
+  mainWindow.webContents.send('app:saveAllAndQuit')           // Save → renderer saves then app:quitNow
 }
 
 function showWindow(): void {
@@ -47,7 +60,7 @@ function createWindow(): BrowserWindow {
   }
   win.on('close', (e) => { if (!isQuitting) { e.preventDefault(); win.hide() } })
   win.webContents.on('before-input-event', (_e, input) => {
-    if (input.control && input.key.toLowerCase() === 'q') { isQuitting = true; app.quit() }
+    if (input.control && input.key.toLowerCase() === 'q') { requestQuit() }
   })
   return win
 }
@@ -69,7 +82,9 @@ if (!gotLock) {
     registerIpc({
       baseDir: app.getPath('userData'),
       getWindow: () => mainWindow,
-      setContextMenu: (enabled) => setContextMenu(enabled, app.getPath('exe'))
+      setContextMenu: (enabled) => setContextMenu(enabled, app.getPath('exe')),
+      onDirtyCount: (n) => { dirtyNamedCount = n },
+      onQuitNow: () => { isQuitting = true; app.quit() }
     })
     pendingFile = fileArgFrom(process.argv)
     mainWindow = createWindow()
@@ -77,7 +92,7 @@ if (!gotLock) {
       if (pendingFile) mainWindow!.webContents.send('open-file', pendingFile)
     })
 
-    tray = createTray({ onShow: showWindow, onQuit: () => { isQuitting = true; app.quit() } })
+    tray = createTray({ onShow: showWindow, onQuit: () => { requestQuit() } })
     const settings = await new (await import('./settingsStore')).SettingsStore(app.getPath('userData')).load()
     const ok = globalShortcut.register(settings.globalHotkey || 'CommandOrControl+Shift+Space', toggleWindow)
     if (!ok) console.error('global hotkey registration failed:', settings.globalHotkey)

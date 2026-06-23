@@ -27,6 +27,9 @@ const api: Api = {
   pathForDroppedFile: (file) => webUtils.getPathForFile(file),
   watchPaths: (paths) => ipcRenderer.invoke('watch:setPaths', paths),
   onFileChanged: (cb) => { ipcRenderer.removeAllListeners('file:changed'); ipcRenderer.on('file:changed', (_e, path: string) => cb(path)) },
+  setDirtyCount: (n) => ipcRenderer.send('app:dirtyCount', n),
+  quitNow: () => ipcRenderer.send('app:quitNow'),
+  onSaveAllAndQuit: (cb) => { ipcRenderer.removeAllListeners('app:saveAllAndQuit'); ipcRenderer.on('app:saveAllAndQuit', () => cb()) },
 }
 
 contextBridge.exposeInMainWorld('api', api)

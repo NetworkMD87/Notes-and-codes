@@ -59,10 +59,15 @@ for (const which of ['A', 'B'] as const) {
   paneFor(which).onCopyCut(captureClip)
 }
 
+function reportDirty(): void {
+  window.api.setDirtyCount(manager.list().filter(b => b.filePath && b.dirty).length)
+}
+
 function refreshStatus(): void {
   const id = paneFor(view.focusedPane()).currentBufferId() ?? manager.activeId!
   const b = manager.get(id)!
   statusBar.update({ language: b.language, eol: b.eol, encoding: b.encoding, cursor: paneFor(view.focusedPane()).getCursor(), dirty: b.dirty })
+  reportDirty()
 }
 
 const tabBar = new TabBar(document.getElementById('tabbar')!, {
@@ -131,7 +136,10 @@ async function boot(): Promise<void> {
   else manager.create()
   if (!manager.activeId) manager.setActive(manager.list()[0].id)
   showActive()
+  reportDirty()
 }
+
+window.api.onSaveAllAndQuit(async () => { await saveAll(); window.api.quitNow() })
 
 async function saveBuffer(id: string): Promise<boolean> {
   const b = manager.get(id); if (!b) return false
