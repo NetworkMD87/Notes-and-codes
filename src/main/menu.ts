@@ -36,7 +36,7 @@ export function buildMenu(d: MenuDeps): void {
       { type: 'separator' }, cmd('Find', 'find'), cmd('Replace', 'replace')
     ] },
     { label: 'View', submenu: [
-      cmd('Toggle Split', 'split', 'CmdOrCtrl+\\'),
+      cmd('Toggle Split', 'split'),
       cmd('Toggle Markdown Preview', 'mdpreview'),
       cmd('Toggle Word Wrap', 'wrap'),
       cmd('Toggle Line Numbers', 'lines'),
