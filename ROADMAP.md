@@ -30,19 +30,21 @@ features twice.
 
 ---
 
-## 🔜 Phase 1 — Safety & basics (v1.0.1)
+## ✅ Phase 1 — Safety & basics (shipped v1.0.1)
 
-*Trust first. Mostly behavioral, little/no new UI, no dependency on later work — so it can't be invalidated by it.*
+- ✅ **Close-last-tab → hide to tray** — closing the only tab hides to tray + leaves a fresh **Untitled-1** (climbing-number bug fixed).
+- ✅ **"Save changes?" prompt on quit** — native Save / Don't Save / Cancel for dirty *named* files (resilient: always quittable).
+- ✅ **Drag & drop files to open**.
+- ✅ **Open Recent** — persisted recent-files list, in the File menu.
+- ✅ **Detect external file changes** — watch open files; clean → silent reload, dirty → non-blocking bar (never clobbers edits).
+- ✅ **Save All**.
+- ✅ **Zoom** — `Ctrl +/-/0` and `Ctrl+scroll`, persisted.
+- ✅ **Native menu bar** — File / Edit / View / Tools / Help (dispatches to existing commands; Edit uses native roles).
 
-- ⬜ **Close-last-tab → hide to tray** (**S**) — *agreed.* Closing the only tab hides to tray + leaves a fresh **Untitled-1**; fixes the climbing-number bug.
-- ⬜ **"Save changes?" prompt on quit/close** (**M**) — guard dirty *named* files before quit (tray Quit / Ctrl+Q / window close). The #1 trust gap today.
-- ⬜ **Drag & drop files to open** (**S**) — drop onto the window → opens in a tab.
-- ⬜ **Open Recent** (**S**) — recent-files list (persisted), in palette + a menu.
-- ⬜ **Detect external file changes** (**M**) — watch open files; offer reload / warn on save-conflict so we never silently overwrite.
-- ⬜ **Save All** (**S**) — save every dirty tab at once.
-- ⬜ **Zoom** (**S**) — `Ctrl +/-` and `Ctrl+scroll` editor zoom.
+**Fast-follow (deferred from Phase 1):**
+- ⬜ **On-save overwrite warning** (**S**) — when a file changed on disk since open, warn before overwriting on Save (spec §7 part 2; the change-bar mitigates the common case today).
 
-## ⬜ Phase 2 — Look & Feel (v1.1)
+## 🔜 Phase 2 — Look & Feel (v1.1)
 
 *Build the styling SYSTEM, then polish every current surface once. Done before big features so those features inherit it instead of forcing a re-polish.*
 
