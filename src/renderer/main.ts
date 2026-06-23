@@ -15,6 +15,10 @@ import { MarkdownPreview } from './markdownPreview'
 import { PasteHistoryList } from './pasteHistory'
 import { PasteHistoryPicker } from './pasteHistoryPicker'
 import { Toolbar } from './toolbar'
+import { SnippetList } from './snippets'
+import { SnippetPicker } from './snippetPicker'
+import { SnippetManager } from './snippetManager'
+import { promptInput } from './inputOverlay'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -91,6 +95,15 @@ for (const which of ['A', 'B'] as const) {
 
 let autoSave = true
 let saveTimer: number | undefined
+let alwaysOnTop = false
+
+async function setAlwaysOnTop(on: boolean): Promise<void> {
+  alwaysOnTop = on
+  await window.api.setAlwaysOnTop(on)
+  const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, alwaysOnTop: on })
+  refreshToolbar()
+}
+const toggleAlwaysOnTop = () => setAlwaysOnTop(!alwaysOnTop)
 
 function scheduleSessionSave(): void {
   if (!autoSave) return
@@ -102,7 +115,9 @@ async function boot(): Promise<void> {
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
   theme.apply(settings.theme)
+  alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
   pasteHistory.load(await window.api.loadClipboardHistory())
+  snippets.load(await window.api.loadSnippets())
   const session = await window.api.loadSession()
   if (session.buffers.length > 0) manager.restore(session)
   else manager.create()
@@ -171,11 +186,36 @@ const togglePreview = () => { mdPreview.toggle(); refreshPreview(); refreshToolb
 const pasteFromHistory = () => phPicker.open(pasteHistory.entries(), (text) => { paneFor(view.focusedPane()).insertAtCursor(text) })
 const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); toast('Paste history cleared.') }
 
+const snippets = new SnippetList(() => crypto.randomUUID())
+const snipPicker = new SnippetPicker(document.getElementById('app')!)
+function persistSnippets(): void { window.api.saveSnippets(snippets.list()) }
+const snipManager = new SnippetManager(document.getElementById('app')!, {
+  list: () => snippets.list(),
+  add: () => snippets.add('New snippet', ''),
+  rename: (id, name) => snippets.rename(id, name),
+  updateBody: (id, body) => snippets.updateBody(id, body),
+  remove: (id) => snippets.remove(id),
+  persist: () => persistSnippets()
+})
+const manageSnippets = () => snipManager.open()
+
+async function saveSelectionAsSnippet(): Promise<void> {
+  const body = paneFor(view.focusedPane()).getSelectionText()
+  if (!body) { toast('Select some text first.'); return }
+  const name = await promptInput('Snippet name')
+  if (!name) return
+  snippets.add(name, body); persistSnippets(); toast(`Saved snippet "${name}".`)
+}
+function insertSnippet(): void {
+  snipPicker.open(snippets.list(), (s) => paneFor(view.focusedPane()).insertAtCursor(s.body))
+}
+
 const toolbar = new Toolbar(document.getElementById('header')!, {
   open: openFromDisk,
   save: saveActive,
   toggleSplit: () => { view.setSplit(!view.isSplit()); showActive() },
   togglePreview,
+  togglePin: toggleAlwaysOnTop,
   startDiff,
   pasteFromHistory
 })
@@ -183,7 +223,7 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
 document.getElementById('header')!.appendChild(themeBtn)
 
 function refreshToolbar(): void {
-  toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible() })
+  toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible(), pin: alwaysOnTop })
 }
 
 const palette = new CommandPalette()
@@ -191,7 +231,8 @@ registerCommands({
   palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
   saveActive, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
-  togglePreview, pasteFromHistory, clearPasteHistory
+  togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
+  toggleAlwaysOnTop
 })
 
 const overlayOpen = () =>

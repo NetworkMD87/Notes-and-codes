@@ -6,6 +6,7 @@ directories:
 files:
   - out/**/*
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
     - target: portable

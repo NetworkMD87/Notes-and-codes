@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="48" fill="#0a66c2"/>
+  <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI, Arial, sans-serif" font-size="150" font-weight="700" fill="#ffffff">N</text>
+  <text x="50%" y="84%" text-anchor="middle" dominant-baseline="middle" font-family="Consolas, monospace" font-size="44" font-weight="700" fill="#bcd8ff">&lt;/&gt;</text>
+</svg>

@@ -24,6 +24,10 @@ export interface CommandDeps {
   togglePreview: () => void
   pasteFromHistory: () => void
   clearPasteHistory: () => void
+  saveSelectionAsSnippet: () => void
+  insertSnippet: () => void
+  manageSnippets: () => void
+  toggleAlwaysOnTop: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -52,4 +56,8 @@ export function registerCommands(d: CommandDeps): void {
     await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next })
     toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`)
   } })
+  p.register({ id: 'snip-save', label: 'Save Selection as Snippet', run: () => d.saveSelectionAsSnippet() })
+  p.register({ id: 'snip-insert', label: 'Insert Snippet', run: () => d.insertSnippet() })
+  p.register({ id: 'snip-manage', label: 'Manage Snippets', run: () => d.manageSnippets() })
+  p.register({ id: 'aot', label: 'Toggle Always on Top', run: () => d.toggleAlwaysOnTop() })
 }

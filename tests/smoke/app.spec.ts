@@ -172,3 +172,39 @@ test('split gutter drag resizes the panes', async () => {
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('snippets save/insert/manage and always-on-top toggle', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+
+    // Manage Snippets -> overlay opens; add a snippet via the manager
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Manage Snippets')
+    await win.keyboard.press('Enter')
+    await expect(win.locator('.snip-mgr')).toBeVisible()
+    await win.locator('.snip-mgr-head button', { hasText: '+ Add' }).click()
+    await expect(win.locator('.snip-mgr-row')).toHaveCount(1)
+    await win.keyboard.press('Escape')
+
+    // Insert Snippet -> picker opens
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Insert Snippet')
+    await win.keyboard.press('Enter')
+    await expect(win.locator('.snip-picker')).toBeVisible()
+    await win.keyboard.press('Escape')
+
+    // Always on top -> reflected in the window state
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Toggle Always on Top')
+    await win.keyboard.press('Enter')
+    await win.waitForTimeout(100)
+    const onTop = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isAlwaysOnTop())
+    expect(onTop).toBe(true)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

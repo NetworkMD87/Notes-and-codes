@@ -18,6 +18,9 @@ const api: Api = {
   clipboardRead: () => ipcRenderer.invoke('clipboard:read'),
   loadClipboardHistory: () => ipcRenderer.invoke('clipboard-history:load'),
   saveClipboardHistory: (entries) => ipcRenderer.invoke('clipboard-history:save', entries),
+  loadSnippets: () => ipcRenderer.invoke('snippets:load'),
+  saveSnippets: (list) => ipcRenderer.invoke('snippets:save', list),
+  setAlwaysOnTop: (enabled) => ipcRenderer.invoke('window:setAlwaysOnTop', enabled),
 }
 
 contextBridge.exposeInMainWorld('api', api)
