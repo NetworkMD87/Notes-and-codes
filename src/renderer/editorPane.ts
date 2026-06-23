@@ -6,6 +6,7 @@ export class EditorPane {
   private container: HTMLElement
   private changeCb: ((content: string) => void) | null = null
   private lineNumbersOn = true
+  private wordWrapOn = true
   private cursorListener: monaco.IDisposable | null = null
   private pasteListener: monaco.IDisposable | null = null
   private copyCutHandler: (() => void) | null = null
@@ -19,6 +20,7 @@ export class EditorPane {
       theme: 'vs-dark',
       automaticLayout: true,
       lineNumbers: 'on',
+      wordWrap: 'on',
       minimap: { enabled: true }
     })
     this.editor.onDidChangeModelContent(() => {
@@ -44,6 +46,12 @@ export class EditorPane {
   }
   toggleLineNumbers(): boolean { this.setLineNumbers(!this.lineNumbersOn); return this.lineNumbersOn }
   lineNumbersVisible(): boolean { return this.lineNumbersOn }
+  setWordWrap(on: boolean): void {
+    this.wordWrapOn = on
+    this.editor.updateOptions({ wordWrap: on ? 'on' : 'off' })
+  }
+  toggleWordWrap(): boolean { this.setWordWrap(!this.wordWrapOn); return this.wordWrapOn }
+  wordWrapEnabled(): boolean { return this.wordWrapOn }
   setTheme(theme: 'vs' | 'vs-dark'): void { monaco.editor.setTheme(theme) }
 
   getCursor(): { line: number; col: number } {
