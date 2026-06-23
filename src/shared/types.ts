@@ -23,6 +23,7 @@ export interface Settings {
   windowBounds: { width: number; height: number } | null
   alwaysOnTop: boolean
   globalHotkey: string
+  fontSize: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -31,7 +32,8 @@ export const DEFAULT_SETTINGS: Settings = {
   contextMenuEnabled: false,
   windowBounds: null,
   alwaysOnTop: false,
-  globalHotkey: 'CommandOrControl+Shift+Space'
+  globalHotkey: 'CommandOrControl+Shift+Space',
+  fontSize: 14
 }
 
 export interface SessionData {

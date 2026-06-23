@@ -96,6 +96,11 @@ for (const which of ['A', 'B'] as const) {
 let autoSave = true
 let saveTimer: number | undefined
 let alwaysOnTop = false
+let fontSize = 14
+function applyFontSize(): void { view.paneA.setFontSize(fontSize); view.paneB.setFontSize(fontSize) }
+function persistFontSize(): void { window.api.loadSettings().then(s => window.api.saveSettings({ ...s, fontSize })) }
+function zoomBy(delta: number): void { fontSize = Math.min(40, Math.max(6, fontSize + delta)); applyFontSize(); persistFontSize() }
+function zoomReset(): void { fontSize = 14; applyFontSize(); persistFontSize() }
 
 async function setAlwaysOnTop(on: boolean): Promise<void> {
   alwaysOnTop = on
@@ -115,6 +120,7 @@ async function boot(): Promise<void> {
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
   theme.apply(settings.theme)
+  fontSize = settings.fontSize ?? 14; applyFontSize()
   alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
   pasteHistory.load(await window.api.loadClipboardHistory())
   snippets.load(await window.api.loadSnippets())
@@ -234,7 +240,8 @@ registerCommands({
   saveActive, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
   togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
-  toggleAlwaysOnTop
+  toggleAlwaysOnTop,
+  zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset
 })
 
 const overlayOpen = () =>
@@ -247,6 +254,9 @@ window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (overlayOpen()) return; saveActive() }
   if (e.ctrlKey && e.key.toLowerCase() === 'o') { e.preventDefault(); if (overlayOpen()) return; openFromDisk() }
   if (e.key === 'Escape' && diff.isOpen()) diff.hide()
+  if (e.ctrlKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoomBy(1) }
+  if (e.ctrlKey && e.key === '-') { e.preventDefault(); zoomBy(-1) }
+  if (e.ctrlKey && e.key === '0') { e.preventDefault(); zoomReset() }
 })
 
 window.api.onOpenFile(async (path) => {

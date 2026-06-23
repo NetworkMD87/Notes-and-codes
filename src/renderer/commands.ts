@@ -28,6 +28,9 @@ export interface CommandDeps {
   insertSnippet: () => void
   manageSnippets: () => void
   toggleAlwaysOnTop: () => void
+  zoomIn: () => void
+  zoomOut: () => void
+  zoomReset: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -60,4 +63,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'snip-insert', label: 'Insert Snippet', run: () => d.insertSnippet() })
   p.register({ id: 'snip-manage', label: 'Manage Snippets', run: () => d.manageSnippets() })
   p.register({ id: 'aot', label: 'Toggle Always on Top', run: () => d.toggleAlwaysOnTop() })
+  p.register({ id: 'zoom-in', label: 'Zoom In', hint: 'Ctrl+=', run: () => d.zoomIn() })
+  p.register({ id: 'zoom-out', label: 'Zoom Out', hint: 'Ctrl+-', run: () => d.zoomOut() })
+  p.register({ id: 'zoom-reset', label: 'Reset Zoom', hint: 'Ctrl+0', run: () => d.zoomReset() })
 }
