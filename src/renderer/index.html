@@ -21,7 +21,12 @@
       .gutter.gutter-horizontal{width:6px}
       body[data-theme="light"]{--bar:#f3f3f3;--bartext:#333;--tabbg:#ececec;--editorbg:#fff}
       body[data-theme="dark"]{--bar:#252526;--bartext:#ccc;--tabbg:#2d2d2d;--editorbg:#1e1e1e}
-      #theme-toggle{margin-left:auto;background:none;border:none;color:var(--bartext);cursor:pointer;font-size:14px;padding:0 10px}
+      #theme-toggle{background:none;border:none;color:var(--bartext);cursor:pointer;font-size:14px;padding:0 10px}
+      #toolbar{margin-left:auto;display:flex;align-items:center;gap:1px;padding:0 2px}
+      .tb-btn{background:none;border:none;color:var(--bartext);cursor:pointer;padding:4px 6px;display:flex;align-items:center;border-radius:4px;line-height:0}
+      .tb-btn:hover{background:rgba(127,127,127,.18)}
+      .tb-btn.tb-active{background:#0a66c2;color:#fff}
+      .tb-sep{width:1px;height:18px;background:rgba(127,127,127,.35);margin:0 4px}
       #palette{position:fixed;inset:0;background:rgba(0,0,0,.3);display:flex;justify-content:center;align-items:flex-start;padding-top:80px}
       #palette.hidden{display:none}
       #palette input{width:520px;padding:8px;font-size:14px}

@@ -60,6 +60,30 @@ test('markdown preview toggles and paste-history picker opens', async () => {
   }
 })
 
+test('toolbar split and preview buttons work and show active state', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#toolbar')).toBeVisible()
+
+    // Split button -> paneB visible + button active
+    const splitBtn = win.locator('.tb-btn[title="Toggle split pane"]')
+    await splitBtn.click()
+    await expect(win.locator('#paneB')).toBeVisible()
+    await expect(splitBtn).toHaveClass(/tb-active/)
+
+    // Preview button -> preview panel visible + button active
+    const previewBtn = win.locator('.tb-btn[title="Toggle markdown preview"]')
+    await previewBtn.click()
+    await expect(win.locator('#mdpreview')).toBeVisible()
+    await expect(previewBtn).toHaveClass(/tb-active/)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('split gutter drag resizes the panes', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
