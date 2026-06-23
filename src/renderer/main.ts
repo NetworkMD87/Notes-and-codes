@@ -131,20 +131,30 @@ async function boot(): Promise<void> {
   showActive()
 }
 
-async function saveActive(): Promise<void> {
-  const pane = paneFor(view.focusedPane())
-  const id = pane.currentBufferId()
-  if (!id) return
-  const b = manager.get(id)!
+async function saveBuffer(id: string): Promise<boolean> {
+  const b = manager.get(id); if (!b) return false
+  const pane = view.paneA.currentBufferId() === id ? view.paneA
+    : view.paneB.currentBufferId() === id ? view.paneB : null
+  const content = pane ? pane.getContent() : b.content
   const oldLang = b.language
   let path = b.filePath
-  if (!path) { path = await window.api.saveAsDialog(); if (!path) return }
-  await window.api.writeFile(path, pane.getContent(), b.eol, b.encoding)
+  if (!path) { path = await window.api.saveAsDialog(); if (!path) return false }
+  await window.api.writeFile(path, content, b.eol, b.encoding)
   manager.markSaved(id, path)
-  await window.api.addRecentFile(path)
-  if (manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
-  tabBar.render(manager.list(), manager.activeId)
-  refreshStatus()
+  window.api.addRecentFile(path)
+  if (pane && manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
+  return true
+}
+async function saveActive(): Promise<void> {
+  const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
+  await saveBuffer(id)
+  tabBar.render(manager.list(), manager.activeId); refreshStatus()
+}
+async function saveAll(): Promise<void> {
+  let saved = 0
+  for (const b of manager.list()) { if (b.dirty) { if (await saveBuffer(b.id)) saved++ } }
+  tabBar.render(manager.list(), manager.activeId); refreshStatus()
+  toast(saved ? `Saved ${saved} file${saved === 1 ? '' : 's'}.` : 'Nothing to save.')
 }
 
 async function openFromDisk(): Promise<void> {
@@ -237,7 +247,7 @@ function refreshToolbar(): void {
 const palette = new CommandPalette()
 registerCommands({
   palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
-  saveActive, openFromDisk, startDiff, diffClipboard, diffFiles,
+  saveActive, saveAll, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
   togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
   toggleAlwaysOnTop,
@@ -251,7 +261,8 @@ const overlayOpen = () =>
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
-  if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (overlayOpen()) return; saveActive() }
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (overlayOpen()) return; saveAll() }
+  if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (overlayOpen()) return; saveActive() }
   if (e.ctrlKey && e.key.toLowerCase() === 'o') { e.preventDefault(); if (overlayOpen()) return; openFromDisk() }
   if (e.key === 'Escape' && diff.isOpen()) diff.hide()
   if (e.ctrlKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoomBy(1) }

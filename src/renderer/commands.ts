@@ -15,6 +15,7 @@ export interface CommandDeps {
   showActive: () => void
   scheduleSessionSave: () => void
   saveActive: () => Promise<void>
+  saveAll: () => Promise<void>
   openFromDisk: () => Promise<void>
   startDiff: () => void
   getAutoSave: () => boolean
@@ -42,6 +43,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'wrap', label: 'Toggle Word Wrap', run: () => { const on = d.paneFor(d.view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) } })
   p.register({ id: 'theme', label: 'Cycle Theme', run: () => d.theme.cycle() })
   p.register({ id: 'save', label: 'Save', hint: 'Ctrl+S', run: () => d.saveActive() })
+  p.register({ id: 'save-all', label: 'Save All', hint: 'Ctrl+Shift+S', run: () => d.saveAll() })
   p.register({ id: 'open', label: 'Open File', hint: 'Ctrl+O', run: () => d.openFromDisk() })
   p.register({ id: 'diff', label: 'Start Diff (tab vs tab)', run: () => d.startDiff() })
   p.register({ id: 'diff-close', label: 'Close Diff', run: () => d.diff.hide() })
