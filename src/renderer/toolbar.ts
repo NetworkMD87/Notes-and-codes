@@ -1,5 +1,4 @@
 export interface ToolbarHandlers {
-  newTab: () => void
   open: () => void
   save: () => void
   toggleSplit: () => void
@@ -10,7 +9,6 @@ export interface ToolbarHandlers {
 
 const S = 'viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
 const ICONS = {
-  new: `<svg ${S}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 11v6"/><path d="M9 14h6"/></svg>`,
   open: `<svg ${S}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
   save: `<svg ${S}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>`,
   split: `<svg ${S}><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>`,
@@ -45,7 +43,6 @@ export class Toolbar {
     this.splitBtn = mk('Toggle split pane', ICONS.split, h.toggleSplit)
     this.previewBtn = mk('Toggle markdown preview', ICONS.preview, h.togglePreview)
     this.el.append(
-      mk('New tab', ICONS.new, h.newTab),
       mk('Open file', ICONS.open, h.open),
       mk('Save', ICONS.save, h.save),
       sep(),

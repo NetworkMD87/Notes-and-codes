@@ -172,7 +172,6 @@ const pasteFromHistory = () => phPicker.open(pasteHistory.entries(), (text) => {
 const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); toast('Paste history cleared.') }
 
 const toolbar = new Toolbar(document.getElementById('header')!, {
-  newTab: () => { manager.create(); showActive(); scheduleSessionSave() },
   open: openFromDisk,
   save: saveActive,
   toggleSplit: () => { view.setSplit(!view.isSplit()); showActive() },
