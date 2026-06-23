@@ -84,6 +84,65 @@ test('toolbar split and preview buttons work and show active state', async () =>
   }
 })
 
+test('paste-history picker renders above the editor minimap in split mode', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+
+    // Split: pane A's minimap then sits mid-viewport, under the centered picker.
+    await win.keyboard.press('Control+Backslash')
+    await expect(win.locator('#paneB')).toBeVisible()
+
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Paste from History')
+    await win.keyboard.press('Enter')
+    await expect(win.locator('.ph-picker')).toBeVisible()
+
+    // No point across the picker list may be occluded by a non-picker (Monaco) element.
+    const occluders = await win.evaluate(() => {
+      const list = document.querySelector('.ph-list') as HTMLElement
+      const r = list.getBoundingClientRect()
+      const found: string[] = []
+      for (let x = r.left + 4; x < r.right - 4; x += 24) {
+        for (let y = r.top + 4; y < r.bottom - 4; y += 12) {
+          const el = document.elementFromPoint(Math.round(x), Math.round(y))
+          if (el && !el.closest('.ph-picker')) found.push(el.tagName)
+        }
+      }
+      return found
+    })
+    expect(occluders).toEqual([])
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('editor clips to its pane and word-wraps long lines', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+
+    // Pane clips its editor so content can't bleed under the neighbour pane.
+    const overflow = await win.evaluate(() => getComputedStyle(document.querySelector('#paneA')!).overflow)
+    expect(overflow).toBe('hidden')
+
+    // Type one long logical line; with word wrap on it renders as multiple visual lines.
+    await win.locator('#paneA .monaco-editor').click()
+    await win.keyboard.type('lorem ipsum dolor sit amet '.repeat(40))
+    await win.waitForTimeout(200)
+    const visualLines = await win.locator('#paneA .view-line').count()
+    expect(visualLines).toBeGreaterThan(1)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('split gutter drag resizes the panes', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })

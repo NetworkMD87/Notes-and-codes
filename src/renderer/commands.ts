@@ -32,6 +32,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'close', label: 'Close Tab', run: () => { d.manager.close(d.manager.activeId!); if (!d.manager.list().length) d.manager.create(); d.showActive(); d.scheduleSessionSave() } })
   p.register({ id: 'split', label: 'Toggle Split', hint: 'Ctrl+\\', run: () => { d.view.setSplit(!d.view.isSplit()); d.showActive() } })
   p.register({ id: 'lines', label: 'Toggle Line Numbers', run: () => { d.paneFor(d.view.focusedPane()).toggleLineNumbers() } })
+  p.register({ id: 'wrap', label: 'Toggle Word Wrap', run: () => { const on = d.paneFor(d.view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) } })
   p.register({ id: 'theme', label: 'Cycle Theme', run: () => d.theme.cycle() })
   p.register({ id: 'save', label: 'Save', hint: 'Ctrl+S', run: () => d.saveActive() })
   p.register({ id: 'open', label: 'Open File', hint: 'Ctrl+O', run: () => d.openFromDisk() })
