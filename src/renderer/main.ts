@@ -140,7 +140,14 @@ async function boot(): Promise<void> {
   reportDirty()
 }
 
-window.api.onSaveAllAndQuit(async () => { await saveAll(); window.api.quitNow() })
+window.api.onSaveAllAndQuit(async () => {
+  try {
+    for (const b of manager.list()) { if (b.filePath && b.dirty) await saveBuffer(b.id) }
+    tabBar.render(manager.list(), manager.activeId); refreshStatus()
+  } finally {
+    window.api.quitNow()
+  }
+})
 
 async function saveBuffer(id: string): Promise<boolean> {
   const b = manager.get(id); if (!b) return false

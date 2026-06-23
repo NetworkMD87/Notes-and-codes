@@ -41,6 +41,7 @@ function requestQuit(): void {
   if (choice === 2) return                                    // Cancel
   if (choice === 1) { isQuitting = true; app.quit(); return } // Don't Save
   mainWindow.webContents.send('app:saveAllAndQuit')           // Save → renderer saves then app:quitNow
+  setTimeout(() => { if (!isQuitting) { isQuitting = true; app.quit() } }, 4000)
 }
 
 function showWindow(): void {
