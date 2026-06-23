@@ -89,6 +89,10 @@ export class EditorPane {
     this.editor.executeEdits('paste-history', [{ range: sel, text, forceMoveMarkers: true }])
     this.editor.focus()
   }
+  getSelectionText(): string {
+    const sel = this.editor.getSelection()
+    return sel ? this.editor.getModel()?.getValueInRange(sel) ?? '' : ''
+  }
   layout(): void { this.editor.layout() }
   dispose(): void {
     if (this.copyCutHandler) {

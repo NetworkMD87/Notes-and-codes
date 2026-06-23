@@ -15,6 +15,9 @@ import { MarkdownPreview } from './markdownPreview'
 import { PasteHistoryList } from './pasteHistory'
 import { PasteHistoryPicker } from './pasteHistoryPicker'
 import { Toolbar } from './toolbar'
+import { SnippetList } from './snippets'
+import { SnippetPicker } from './snippetPicker'
+import { promptInput } from './inputOverlay'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -103,6 +106,7 @@ async function boot(): Promise<void> {
   autoSave = settings.autoSaveSession
   theme.apply(settings.theme)
   pasteHistory.load(await window.api.loadClipboardHistory())
+  snippets.load(await window.api.loadSnippets())
   const session = await window.api.loadSession()
   if (session.buffers.length > 0) manager.restore(session)
   else manager.create()
@@ -171,6 +175,21 @@ const togglePreview = () => { mdPreview.toggle(); refreshPreview(); refreshToolb
 const pasteFromHistory = () => phPicker.open(pasteHistory.entries(), (text) => { paneFor(view.focusedPane()).insertAtCursor(text) })
 const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); toast('Paste history cleared.') }
 
+const snippets = new SnippetList(() => crypto.randomUUID())
+const snipPicker = new SnippetPicker(document.getElementById('app')!)
+function persistSnippets(): void { window.api.saveSnippets(snippets.list()) }
+
+async function saveSelectionAsSnippet(): Promise<void> {
+  const body = paneFor(view.focusedPane()).getSelectionText()
+  if (!body) { toast('Select some text first.'); return }
+  const name = await promptInput('Snippet name')
+  if (!name) return
+  snippets.add(name, body); persistSnippets(); toast(`Saved snippet "${name}".`)
+}
+function insertSnippet(): void {
+  snipPicker.open(snippets.list(), (s) => paneFor(view.focusedPane()).insertAtCursor(s.body))
+}
+
 const toolbar = new Toolbar(document.getElementById('header')!, {
   open: openFromDisk,
   save: saveActive,
@@ -191,7 +210,7 @@ registerCommands({
   palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
   saveActive, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
-  togglePreview, pasteFromHistory, clearPasteHistory
+  togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet
 })
 
 const overlayOpen = () =>

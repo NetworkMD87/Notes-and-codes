@@ -53,6 +53,13 @@
       .ph-list{width:560px;max-height:340px;overflow:auto;background:var(--bar);color:var(--bartext)}
       .ph-row{padding:6px 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid rgba(127,127,127,.15)}
       .ph-row:hover{background:#094771;color:#fff}
+      .input-overlay,.snip-picker{position:fixed;inset:0;background:rgba(0,0,0,.3);display:flex;justify-content:center;align-items:flex-start;padding-top:90px;z-index:100}
+      .input-overlay.hidden,.snip-picker.hidden{display:none}
+      .input-box{display:flex;flex-direction:column;gap:8px;background:var(--bar);color:var(--bartext);padding:16px;border-radius:6px;width:360px}
+      .input-box input{padding:6px}
+      .snip-list{width:480px;max-height:340px;overflow:auto;background:var(--bar);color:var(--bartext)}
+      .snip-row{padding:6px 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid rgba(127,127,127,.15)}
+      .snip-row:hover{background:#094771;color:#fff}
     </style>
   </head>
   <body>
