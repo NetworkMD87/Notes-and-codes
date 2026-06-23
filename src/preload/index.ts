@@ -18,6 +18,8 @@ const api: Api = {
   clipboardRead: () => ipcRenderer.invoke('clipboard:read'),
   loadClipboardHistory: () => ipcRenderer.invoke('clipboard-history:load'),
   saveClipboardHistory: (entries) => ipcRenderer.invoke('clipboard-history:save', entries),
+  loadSnippets: () => ipcRenderer.invoke('snippets:load'),
+  saveSnippets: (list) => ipcRenderer.invoke('snippets:save', list),
 }
 
 contextBridge.exposeInMainWorld('api', api)

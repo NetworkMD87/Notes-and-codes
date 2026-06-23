@@ -1,6 +1,8 @@
 export type EolMode = 'LF' | 'CRLF'
 export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 
+export interface Snippet { id: string; name: string; body: string }
+
 export interface BufferState {
   id: string
   title: string
@@ -55,4 +57,6 @@ export interface Api {
   clipboardRead(): Promise<string>
   loadClipboardHistory(): Promise<string[]>
   saveClipboardHistory(entries: string[]): Promise<void>
+  loadSnippets(): Promise<Snippet[]>
+  saveSnippets(list: Snippet[]): Promise<void>
 }
