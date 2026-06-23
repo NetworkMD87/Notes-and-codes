@@ -17,6 +17,7 @@ import { PasteHistoryPicker } from './pasteHistoryPicker'
 import { Toolbar } from './toolbar'
 import { SnippetList } from './snippets'
 import { SnippetPicker } from './snippetPicker'
+import { SnippetManager } from './snippetManager'
 import { promptInput } from './inputOverlay'
 declare global { interface Window { api: Api } }
 
@@ -178,6 +179,15 @@ const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); to
 const snippets = new SnippetList(() => crypto.randomUUID())
 const snipPicker = new SnippetPicker(document.getElementById('app')!)
 function persistSnippets(): void { window.api.saveSnippets(snippets.list()) }
+const snipManager = new SnippetManager(document.getElementById('app')!, {
+  list: () => snippets.list(),
+  add: () => snippets.add('New snippet', ''),
+  rename: (id, name) => snippets.rename(id, name),
+  updateBody: (id, body) => snippets.updateBody(id, body),
+  remove: (id) => snippets.remove(id),
+  persist: () => persistSnippets()
+})
+const manageSnippets = () => snipManager.open()
 
 async function saveSelectionAsSnippet(): Promise<void> {
   const body = paneFor(view.focusedPane()).getSelectionText()
@@ -210,7 +220,7 @@ registerCommands({
   palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
   saveActive, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
-  togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet
+  togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets
 })
 
 const overlayOpen = () =>

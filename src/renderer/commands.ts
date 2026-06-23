@@ -26,6 +26,7 @@ export interface CommandDeps {
   clearPasteHistory: () => void
   saveSelectionAsSnippet: () => void
   insertSnippet: () => void
+  manageSnippets: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -56,4 +57,5 @@ export function registerCommands(d: CommandDeps): void {
   } })
   p.register({ id: 'snip-save', label: 'Save Selection as Snippet', run: () => d.saveSelectionAsSnippet() })
   p.register({ id: 'snip-insert', label: 'Insert Snippet', run: () => d.insertSnippet() })
+  p.register({ id: 'snip-manage', label: 'Manage Snippets', run: () => d.manageSnippets() })
 }
