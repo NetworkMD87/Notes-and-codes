@@ -64,4 +64,7 @@ export interface Api {
   loadSnippets(): Promise<Snippet[]>
   saveSnippets(list: Snippet[]): Promise<void>
   setAlwaysOnTop(enabled: boolean): Promise<void>
+  loadRecentFiles(): Promise<string[]>
+  addRecentFile(path: string): Promise<string[]>
+  clearRecentFiles(): Promise<void>
 }

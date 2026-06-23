@@ -135,6 +135,7 @@ async function saveActive(): Promise<void> {
   if (!path) { path = await window.api.saveAsDialog(); if (!path) return }
   await window.api.writeFile(path, pane.getContent(), b.eol, b.encoding)
   manager.markSaved(id, path)
+  await window.api.addRecentFile(path)
   if (manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
   tabBar.render(manager.list(), manager.activeId)
   refreshStatus()
@@ -144,6 +145,7 @@ async function openFromDisk(): Promise<void> {
   const path = await window.api.openDialog(); if (!path) return
   const file = await window.api.readFile(path)
   manager.open(file); showActive()
+  await window.api.addRecentFile(path)
 }
 
 async function diffClipboard(): Promise<void> {
@@ -253,6 +255,7 @@ window.api.onOpenFile(async (path) => {
     manager.open(file)
     showActive()
     scheduleSessionSave()
+    await window.api.addRecentFile(path)
   } catch (err) {
     console.error('failed to open file:', path, err)
     toast(`Could not open: ${path}`)

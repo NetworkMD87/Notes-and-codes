@@ -21,6 +21,9 @@ const api: Api = {
   loadSnippets: () => ipcRenderer.invoke('snippets:load'),
   saveSnippets: (list) => ipcRenderer.invoke('snippets:save', list),
   setAlwaysOnTop: (enabled) => ipcRenderer.invoke('window:setAlwaysOnTop', enabled),
+  loadRecentFiles: () => ipcRenderer.invoke('recent:load'),
+  addRecentFile: (path) => ipcRenderer.invoke('recent:add', path),
+  clearRecentFiles: () => ipcRenderer.invoke('recent:clear'),
 }
 
 contextBridge.exposeInMainWorld('api', api)
