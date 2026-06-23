@@ -3,12 +3,26 @@ import { join } from 'node:path'
 import { registerIpc } from './ipc'
 import { setContextMenu } from './contextMenu'
 import { createTray } from './tray'
+import { buildMenu } from './menu'
+import { RecentFilesStore } from './recentFilesStore'
 
 let mainWindow: BrowserWindow | null = null
 let pendingFile: string | null = null
 let tray: Tray | null = null
 let isQuitting = false
 let dirtyNamedCount = 0
+let recentStore: RecentFilesStore | null = null
+
+async function rebuildMenu(): Promise<void> {
+  if (!recentStore) return
+  buildMenu({
+    send: (id) => mainWindow?.webContents.send('menu:command', id),
+    requestQuit,
+    recent: await recentStore.load(),
+    openRecent: (p) => mainWindow?.webContents.send('open-file', p),
+    clearRecent: async () => { await recentStore!.clear(); void rebuildMenu() }
+  })
+}
 
 function fileArgFrom(argv: string[]): string | null {
   // Packaged: argv = [exe, ...args]. Unpackaged (dev/electron <script>): argv = [electronExe, entryScript, ...args].
@@ -79,15 +93,18 @@ if (!gotLock) {
   })
 
   app.whenReady().then(async () => {
+    recentStore = new RecentFilesStore(app.getPath('userData'))
     registerIpc({
       baseDir: app.getPath('userData'),
       getWindow: () => mainWindow,
       setContextMenu: (enabled) => setContextMenu(enabled, app.getPath('exe')),
       onDirtyCount: (n) => { dirtyNamedCount = n },
-      onQuitNow: () => { isQuitting = true; app.quit() }
+      onQuitNow: () => { isQuitting = true; app.quit() },
+      onRecentChanged: () => { void rebuildMenu() }
     })
     pendingFile = fileArgFrom(process.argv)
     mainWindow = createWindow()
+    void rebuildMenu()
     mainWindow.webContents.on('did-finish-load', () => {
       if (pendingFile) mainWindow!.webContents.send('open-file', pendingFile)
     })

@@ -30,6 +30,7 @@ const api: Api = {
   setDirtyCount: (n) => ipcRenderer.send('app:dirtyCount', n),
   quitNow: () => ipcRenderer.send('app:quitNow'),
   onSaveAllAndQuit: (cb) => { ipcRenderer.removeAllListeners('app:saveAllAndQuit'); ipcRenderer.on('app:saveAllAndQuit', () => cb()) },
+  onMenuCommand: (cb) => { ipcRenderer.removeAllListeners('menu:command'); ipcRenderer.on('menu:command', (_e, id: string) => cb(id)) },
 }
 
 contextBridge.exposeInMainWorld('api', api)

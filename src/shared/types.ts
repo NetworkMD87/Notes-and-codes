@@ -75,4 +75,5 @@ export interface Api {
   setDirtyCount(n: number): void
   quitNow(): void
   onSaveAllAndQuit(cb: () => void): void
+  onMenuCommand(cb: (id: string) => void): void
 }

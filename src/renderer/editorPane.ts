@@ -96,6 +96,8 @@ export class EditorPane {
     const sel = this.editor.getSelection()
     return sel ? this.editor.getModel()?.getValueInRange(sel) ?? '' : ''
   }
+  triggerFind(): void { this.editor.getAction('actions.find')?.run() }
+  triggerReplace(): void { this.editor.getAction('editor.action.startFindReplaceAction')?.run() }
   layout(): void { this.editor.layout() }
   dispose(): void {
     if (this.copyCutHandler) {

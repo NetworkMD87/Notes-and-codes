@@ -14,6 +14,7 @@ export interface IpcDeps {
   setContextMenu: (enabled: boolean) => Promise<void>
   onDirtyCount: (n: number) => void
   onQuitNow: () => void
+  onRecentChanged?: () => void
 }
 
 export function registerIpc(deps: IpcDeps): void {
@@ -48,7 +49,7 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle('snippets:save', (_e, list) => snippets.save(list))
   ipcMain.handle('window:setAlwaysOnTop', (_e, enabled: boolean) => { deps.getWindow()?.setAlwaysOnTop(enabled) })
   ipcMain.handle('recent:load', () => recent.load())
-  ipcMain.handle('recent:add', (_e, path: string) => recent.add(path))
+  ipcMain.handle('recent:add', async (_e, path: string) => { const result = await recent.add(path); deps.onRecentChanged?.(); return result })
   ipcMain.handle('recent:clear', () => recent.clear())
   ipcMain.on('app:dirtyCount', (_e, n: number) => deps.onDirtyCount(n))
   ipcMain.on('app:quitNow', () => deps.onQuitNow())

@@ -1,4 +1,5 @@
 import './monacoEnv'
+import { installMenuCommands } from './menuCommands'
 import type { Api, Encoding } from '../shared/types'
 import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
@@ -272,13 +273,7 @@ const overlayOpen = () =>
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
-  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (overlayOpen()) return; saveAll() }
-  if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (overlayOpen()) return; saveActive() }
-  if (e.ctrlKey && e.key.toLowerCase() === 'o') { e.preventDefault(); if (overlayOpen()) return; openFromDisk() }
   if (e.key === 'Escape' && diff.isOpen()) diff.hide()
-  if (e.ctrlKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoomBy(1) }
-  if (e.ctrlKey && e.key === '-') { e.preventDefault(); zoomBy(-1) }
-  if (e.ctrlKey && e.key === '0') { e.preventDefault(); zoomReset() }
 })
 
 async function openPath(path: string): Promise<void> {
@@ -314,5 +309,24 @@ window.api.onFileChanged((path) => {
 installDropOpen((p) => { void openPath(p) })
 
 window.api.onOpenFile((path) => { void openPath(path) })
+
+installMenuCommands({
+  new: () => { manager.create(); showActive(); scheduleSessionSave() },
+  open: () => void openFromDisk(),
+  'save-as': async () => { const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return; const b = manager.get(id)!; b.filePath = null; await saveBuffer(id); tabBar.render(manager.list(), manager.activeId); refreshStatus() },
+  save: () => void saveActive(),
+  'save-all': () => void saveAll(),
+  close: () => { manager.close(manager.activeId!); if (!manager.list().length) manager.create(); showActive(); scheduleSessionSave() },
+  split: () => { view.setSplit(!view.isSplit()); showActive() },
+  mdpreview: togglePreview,
+  wrap: () => { const on = paneFor(view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) },
+  lines: () => paneFor(view.focusedPane()).toggleLineNumbers(),
+  'zoom-in': () => zoomBy(1), 'zoom-out': () => zoomBy(-1), 'zoom-reset': zoomReset,
+  theme: () => theme.cycle(), aot: toggleAlwaysOnTop,
+  diff: startDiff, 'diff-clip': () => void diffClipboard(), 'diff-files': () => void diffFiles(),
+  'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
+  find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
+  ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) }
+})
 
 boot()
