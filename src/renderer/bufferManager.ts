@@ -63,6 +63,7 @@ export class BufferManager {
     if (idx === -1) return
     const wasActive = this._activeId === id
     this.buffers.splice(idx, 1)
+    if (this.buffers.length === 0) this.untitledCount = 0
     if (wasActive) {
       const neighbor = this.buffers[idx] ?? this.buffers[idx - 1] ?? null
       this._activeId = neighbor ? neighbor.id : null

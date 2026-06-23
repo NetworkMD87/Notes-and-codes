@@ -73,6 +73,7 @@ export interface Api {
   watchPaths(paths: string[]): Promise<void>
   onFileChanged(cb: (path: string) => void): void
   setDirtyCount(n: number): void
+  hideWindow(): void
   quitNow(): void
   onSaveAllAndQuit(cb: () => void): void
   onMenuCommand(cb: (id: string) => void): void

@@ -49,4 +49,13 @@ describe('BufferManager', () => {
     expect(m2.get('id-1')!.content).toBe('x')
     expect(m2.activeId).toBe('id-1')
   })
+
+  it('resets untitled counter when all buffers are closed so next buffer is Untitled-1', () => {
+    const a = m.create()  // Untitled-1, id-1
+    const b = m.create()  // Untitled-2, id-2
+    m.close(a.id)
+    m.close(b.id)
+    const c = m.create()  // should be Untitled-1, not Untitled-3
+    expect(c.title).toBe('Untitled-1')
+  })
 })

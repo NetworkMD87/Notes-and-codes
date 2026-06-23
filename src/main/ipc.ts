@@ -52,5 +52,6 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle('recent:add', async (_e, path: string) => { const result = await recent.add(path); deps.onRecentChanged?.(); return result })
   ipcMain.handle('recent:clear', () => recent.clear())
   ipcMain.on('app:dirtyCount', (_e, n: number) => deps.onDirtyCount(n))
+  ipcMain.on('window:hide', () => deps.getWindow()?.hide())
   ipcMain.on('app:quitNow', () => deps.onQuitNow())
 }

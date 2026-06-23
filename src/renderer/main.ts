@@ -71,9 +71,17 @@ function refreshStatus(): void {
   reportDirty()
 }
 
+function closeTab(id: string): void {
+  const wasLast = manager.list().length === 1
+  manager.close(id)
+  if (manager.list().length === 0) manager.create()
+  showActive(); scheduleSessionSave()
+  if (wasLast) window.api.hideWindow()
+}
+
 const tabBar = new TabBar(document.getElementById('tabbar')!, {
   onSelect: (id) => { manager.setActive(id); showActive(); scheduleSessionSave() },
-  onClose: (id) => { manager.close(id); if (manager.list().length === 0) manager.create(); showActive(); scheduleSessionSave() },
+  onClose: (id) => closeTab(id),
   onNew: () => { manager.create(); showActive(); scheduleSessionSave() }
 })
 
@@ -323,7 +331,7 @@ installMenuCommands({
   'save-as': async () => { const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return; const b = manager.get(id)!; b.filePath = null; await saveBuffer(id); tabBar.render(manager.list(), manager.activeId); refreshStatus() },
   save: () => void saveActive(),
   'save-all': () => void saveAll(),
-  close: () => { manager.close(manager.activeId!); if (!manager.list().length) manager.create(); showActive(); scheduleSessionSave() },
+  close: () => closeTab(manager.activeId!),
   split: () => { view.setSplit(!view.isSplit()); showActive() },
   mdpreview: togglePreview,
   wrap: () => { const on = paneFor(view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) },

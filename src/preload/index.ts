@@ -28,6 +28,7 @@ const api: Api = {
   watchPaths: (paths) => ipcRenderer.invoke('watch:setPaths', paths),
   onFileChanged: (cb) => { ipcRenderer.removeAllListeners('file:changed'); ipcRenderer.on('file:changed', (_e, path: string) => cb(path)) },
   setDirtyCount: (n) => ipcRenderer.send('app:dirtyCount', n),
+  hideWindow: () => ipcRenderer.send('window:hide'),
   quitNow: () => ipcRenderer.send('app:quitNow'),
   onSaveAllAndQuit: (cb) => { ipcRenderer.removeAllListeners('app:saveAllAndQuit'); ipcRenderer.on('app:saveAllAndQuit', () => cb()) },
   onMenuCommand: (cb) => { ipcRenderer.removeAllListeners('menu:command'); ipcRenderer.on('menu:command', (_e, id: string) => cb(id)) },
