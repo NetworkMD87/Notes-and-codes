@@ -59,3 +59,57 @@ test('markdown preview toggles and paste-history picker opens', async () => {
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('toolbar split and preview buttons work and show active state', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#toolbar')).toBeVisible()
+
+    // Split button -> paneB visible + button active
+    const splitBtn = win.locator('.tb-btn[title="Toggle split pane"]')
+    await splitBtn.click()
+    await expect(win.locator('#paneB')).toBeVisible()
+    await expect(splitBtn).toHaveClass(/tb-active/)
+
+    // Preview button -> preview panel visible + button active
+    const previewBtn = win.locator('.tb-btn[title="Toggle markdown preview"]')
+    await previewBtn.click()
+    await expect(win.locator('#mdpreview')).toBeVisible()
+    await expect(previewBtn).toHaveClass(/tb-active/)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('split gutter drag resizes the panes', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+
+    // Toggle Split via palette, then the gutter should exist
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Toggle Split')
+    await win.keyboard.press('Enter')
+    await expect(win.locator('#paneB')).toBeVisible()
+    const gutter = win.locator('.gutter')
+    await expect(gutter).toBeVisible()
+
+    // Measure pane A, drag the gutter right ~150px, expect pane A to widen
+    const before = (await win.locator('#paneA').boundingBox())!.width
+    const g = (await gutter.boundingBox())!
+    await win.mouse.move(g.x + g.width / 2, g.y + g.height / 2)
+    await win.mouse.down()
+    await win.mouse.move(g.x + 150, g.y + g.height / 2, { steps: 12 })
+    await win.mouse.up()
+    const after = (await win.locator('#paneA').boundingBox())!.width
+    expect(after).toBeGreaterThan(before + 80)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

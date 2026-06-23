@@ -14,6 +14,7 @@ import { registerCommands } from './commands'
 import { MarkdownPreview } from './markdownPreview'
 import { PasteHistoryList } from './pasteHistory'
 import { PasteHistoryPicker } from './pasteHistoryPicker'
+import { Toolbar } from './toolbar'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -71,6 +72,7 @@ function showActive(): void {
   tabBar.render(manager.list(), manager.activeId)
   refreshStatus()
   refreshPreview()
+  refreshToolbar()
 }
 
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
@@ -164,10 +166,26 @@ function startDiff(): void {
   })
 }
 
-const togglePreview = () => { mdPreview.toggle(); refreshPreview() }
+const togglePreview = () => { mdPreview.toggle(); refreshPreview(); refreshToolbar() }
 
 const pasteFromHistory = () => phPicker.open(pasteHistory.entries(), (text) => { paneFor(view.focusedPane()).insertAtCursor(text) })
 const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); toast('Paste history cleared.') }
+
+const toolbar = new Toolbar(document.getElementById('header')!, {
+  newTab: () => { manager.create(); showActive(); scheduleSessionSave() },
+  open: openFromDisk,
+  save: saveActive,
+  toggleSplit: () => { view.setSplit(!view.isSplit()); showActive() },
+  togglePreview,
+  startDiff,
+  pasteFromHistory
+})
+// keep the theme toggle as the right-most element in the header
+document.getElementById('header')!.appendChild(themeBtn)
+
+function refreshToolbar(): void {
+  toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible() })
+}
 
 const palette = new CommandPalette()
 registerCommands({
