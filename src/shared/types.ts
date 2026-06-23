@@ -70,4 +70,6 @@ export interface Api {
   addRecentFile(path: string): Promise<string[]>
   clearRecentFiles(): Promise<void>
   pathForDroppedFile(file: File): string
+  watchPaths(paths: string[]): Promise<void>
+  onFileChanged(cb: (path: string) => void): void
 }

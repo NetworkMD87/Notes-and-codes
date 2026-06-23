@@ -5,6 +5,7 @@ import { SettingsStore } from './settingsStore'
 import { ClipboardHistoryStore } from './clipboardHistoryStore'
 import { SnippetStore } from './snippetStore'
 import { RecentFilesStore } from './recentFilesStore'
+import { FileWatcher } from './fileWatcher'
 import type { SessionData, Settings, EolMode, Encoding } from '../shared/types'
 
 export interface IpcDeps {
@@ -19,6 +20,8 @@ export function registerIpc(deps: IpcDeps): void {
   const clip = new ClipboardHistoryStore(deps.baseDir)
   const snippets = new SnippetStore(deps.baseDir)
   const recent = new RecentFilesStore(deps.baseDir)
+  const watcher = new FileWatcher((path) => deps.getWindow()?.webContents.send('file:changed', path))
+  ipcMain.handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))
 
   ipcMain.handle('file:read', (_e, path: string) => readFileForEditor(path))
   ipcMain.handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding) =>

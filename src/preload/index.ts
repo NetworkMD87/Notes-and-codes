@@ -25,6 +25,8 @@ const api: Api = {
   addRecentFile: (path) => ipcRenderer.invoke('recent:add', path),
   clearRecentFiles: () => ipcRenderer.invoke('recent:clear'),
   pathForDroppedFile: (file) => webUtils.getPathForFile(file),
+  watchPaths: (paths) => ipcRenderer.invoke('watch:setPaths', paths),
+  onFileChanged: (cb) => { ipcRenderer.removeAllListeners('file:changed'); ipcRenderer.on('file:changed', (_e, path: string) => cb(path)) },
 }
 
 contextBridge.exposeInMainWorld('api', api)

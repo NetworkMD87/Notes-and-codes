@@ -78,6 +78,7 @@ function showActive(): void {
   refreshStatus()
   refreshPreview()
   refreshToolbar()
+  syncWatch()
 }
 
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
@@ -144,6 +145,7 @@ async function saveBuffer(id: string): Promise<boolean> {
   manager.markSaved(id, path)
   window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
+  syncWatch()
   return true
 }
 async function saveActive(): Promise<void> {
@@ -275,6 +277,32 @@ async function openPath(path: string): Promise<void> {
   try { const file = await window.api.readFile(path); manager.open(file); window.api.addRecentFile(path); showActive(); scheduleSessionSave() }
   catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`) }
 }
+
+function openPaths(): string[] { return manager.list().map(b => b.filePath).filter((p): p is string => !!p) }
+function syncWatch(): void { window.api.watchPaths(openPaths()) }
+
+async function reloadBuffer(id: string): Promise<void> {
+  const b = manager.get(id); if (!b || !b.filePath) return
+  const file = await window.api.readFile(b.filePath)
+  b.content = file.content; b.eol = file.eol; b.encoding = file.encoding; b.dirty = false
+  if (paneFor(view.focusedPane()).currentBufferId() === id) paneFor(view.focusedPane()).setBuffer(b)
+  refreshStatus(); tabBar.render(manager.list(), manager.activeId)
+}
+const changeBar = document.getElementById('change-bar')!
+function showChangeBar(id: string, name: string): void {
+  changeBar.replaceChildren()
+  const msg = document.createElement('span'); msg.textContent = `"${name}" changed on disk.`
+  const reload = document.createElement('button'); reload.textContent = 'Reload (discard mine)'
+  reload.onclick = () => { void reloadBuffer(id); changeBar.classList.add('hidden') }
+  const keep = document.createElement('button'); keep.textContent = 'Keep mine'
+  keep.onclick = () => changeBar.classList.add('hidden')
+  changeBar.append(msg, reload, keep); changeBar.classList.remove('hidden')
+}
+window.api.onFileChanged((path) => {
+  const b = manager.list().find(x => x.filePath === path); if (!b) return
+  if (b.dirty) showChangeBar(b.id, b.title); else void reloadBuffer(b.id)
+})
+
 installDropOpen((p) => { void openPath(p) })
 
 window.api.onOpenFile((path) => { void openPath(path) })
