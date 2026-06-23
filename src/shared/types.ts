@@ -69,4 +69,5 @@ export interface Api {
   loadRecentFiles(): Promise<string[]>
   addRecentFile(path: string): Promise<string[]>
   clearRecentFiles(): Promise<void>
+  pathForDroppedFile(file: File): string
 }

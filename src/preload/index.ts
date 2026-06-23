@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { Api } from '../shared/types'
 
 const api: Api = {
@@ -24,6 +24,7 @@ const api: Api = {
   loadRecentFiles: () => ipcRenderer.invoke('recent:load'),
   addRecentFile: (path) => ipcRenderer.invoke('recent:add', path),
   clearRecentFiles: () => ipcRenderer.invoke('recent:clear'),
+  pathForDroppedFile: (file) => webUtils.getPathForFile(file),
 }
 
 contextBridge.exposeInMainWorld('api', api)

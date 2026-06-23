@@ -14,6 +14,7 @@ import { registerCommands } from './commands'
 import { MarkdownPreview } from './markdownPreview'
 import { PasteHistoryList } from './pasteHistory'
 import { PasteHistoryPicker } from './pasteHistoryPicker'
+import { installDropOpen } from './dropOpen'
 import { Toolbar } from './toolbar'
 import { SnippetList } from './snippets'
 import { SnippetPicker } from './snippetPicker'
@@ -270,17 +271,12 @@ window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key === '0') { e.preventDefault(); zoomReset() }
 })
 
-window.api.onOpenFile(async (path) => {
-  try {
-    const file = await window.api.readFile(path)
-    manager.open(file)
-    showActive()
-    scheduleSessionSave()
-    await window.api.addRecentFile(path)
-  } catch (err) {
-    console.error('failed to open file:', path, err)
-    toast(`Could not open: ${path}`)
-  }
-})
+async function openPath(path: string): Promise<void> {
+  try { const file = await window.api.readFile(path); manager.open(file); window.api.addRecentFile(path); showActive(); scheduleSessionSave() }
+  catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`) }
+}
+installDropOpen((p) => { void openPath(p) })
+
+window.api.onOpenFile((path) => { void openPath(path) })
 
 boot()
