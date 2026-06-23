@@ -22,6 +22,7 @@ export interface Settings {
   contextMenuEnabled: boolean
   windowBounds: { width: number; height: number } | null
   alwaysOnTop: boolean
+  globalHotkey: string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -29,7 +30,8 @@ export const DEFAULT_SETTINGS: Settings = {
   autoSaveSession: true,
   contextMenuEnabled: false,
   windowBounds: null,
-  alwaysOnTop: false
+  alwaysOnTop: false,
+  globalHotkey: 'CommandOrControl+Shift+Space'
 }
 
 export interface SessionData {
