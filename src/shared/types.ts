@@ -23,6 +23,7 @@ export interface Settings {
   windowBounds: { width: number; height: number } | null
   alwaysOnTop: boolean
   globalHotkey: string
+  fontSize: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -31,7 +32,8 @@ export const DEFAULT_SETTINGS: Settings = {
   contextMenuEnabled: false,
   windowBounds: null,
   alwaysOnTop: false,
-  globalHotkey: 'CommandOrControl+Shift+Space'
+  globalHotkey: 'CommandOrControl+Shift+Space',
+  fontSize: 14
 }
 
 export interface SessionData {
@@ -64,4 +66,15 @@ export interface Api {
   loadSnippets(): Promise<Snippet[]>
   saveSnippets(list: Snippet[]): Promise<void>
   setAlwaysOnTop(enabled: boolean): Promise<void>
+  loadRecentFiles(): Promise<string[]>
+  addRecentFile(path: string): Promise<string[]>
+  clearRecentFiles(): Promise<void>
+  pathForDroppedFile(file: File): string
+  watchPaths(paths: string[]): Promise<void>
+  onFileChanged(cb: (path: string) => void): void
+  setDirtyCount(n: number): void
+  hideWindow(): void
+  quitNow(): void
+  onSaveAllAndQuit(cb: () => void): void
+  onMenuCommand(cb: (id: string) => void): void
 }

@@ -15,6 +15,7 @@ export interface CommandDeps {
   showActive: () => void
   scheduleSessionSave: () => void
   saveActive: () => Promise<void>
+  saveAll: () => Promise<void>
   openFromDisk: () => Promise<void>
   startDiff: () => void
   getAutoSave: () => boolean
@@ -28,6 +29,9 @@ export interface CommandDeps {
   insertSnippet: () => void
   manageSnippets: () => void
   toggleAlwaysOnTop: () => void
+  zoomIn: () => void
+  zoomOut: () => void
+  zoomReset: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -39,6 +43,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'wrap', label: 'Toggle Word Wrap', run: () => { const on = d.paneFor(d.view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) } })
   p.register({ id: 'theme', label: 'Cycle Theme', run: () => d.theme.cycle() })
   p.register({ id: 'save', label: 'Save', hint: 'Ctrl+S', run: () => d.saveActive() })
+  p.register({ id: 'save-all', label: 'Save All', hint: 'Ctrl+Shift+S', run: () => d.saveAll() })
   p.register({ id: 'open', label: 'Open File', hint: 'Ctrl+O', run: () => d.openFromDisk() })
   p.register({ id: 'diff', label: 'Start Diff (tab vs tab)', run: () => d.startDiff() })
   p.register({ id: 'diff-close', label: 'Close Diff', run: () => d.diff.hide() })
@@ -60,4 +65,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'snip-insert', label: 'Insert Snippet', run: () => d.insertSnippet() })
   p.register({ id: 'snip-manage', label: 'Manage Snippets', run: () => d.manageSnippets() })
   p.register({ id: 'aot', label: 'Toggle Always on Top', run: () => d.toggleAlwaysOnTop() })
+  p.register({ id: 'zoom-in', label: 'Zoom In', hint: 'Ctrl+=', run: () => d.zoomIn() })
+  p.register({ id: 'zoom-out', label: 'Zoom Out', hint: 'Ctrl+-', run: () => d.zoomOut() })
+  p.register({ id: 'zoom-reset', label: 'Reset Zoom', hint: 'Ctrl+0', run: () => d.zoomReset() })
 }

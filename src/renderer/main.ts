@@ -1,4 +1,5 @@
 import './monacoEnv'
+import { installMenuCommands } from './menuCommands'
 import type { Api, Encoding } from '../shared/types'
 import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
@@ -14,6 +15,7 @@ import { registerCommands } from './commands'
 import { MarkdownPreview } from './markdownPreview'
 import { PasteHistoryList } from './pasteHistory'
 import { PasteHistoryPicker } from './pasteHistoryPicker'
+import { installDropOpen } from './dropOpen'
 import { Toolbar } from './toolbar'
 import { SnippetList } from './snippets'
 import { SnippetPicker } from './snippetPicker'
@@ -58,15 +60,28 @@ for (const which of ['A', 'B'] as const) {
   paneFor(which).onCopyCut(captureClip)
 }
 
+function reportDirty(): void {
+  window.api.setDirtyCount(manager.list().filter(b => b.filePath && b.dirty).length)
+}
+
 function refreshStatus(): void {
   const id = paneFor(view.focusedPane()).currentBufferId() ?? manager.activeId!
   const b = manager.get(id)!
   statusBar.update({ language: b.language, eol: b.eol, encoding: b.encoding, cursor: paneFor(view.focusedPane()).getCursor(), dirty: b.dirty })
+  reportDirty()
+}
+
+function closeTab(id: string): void {
+  const wasLast = manager.list().length === 1
+  manager.close(id)
+  if (manager.list().length === 0) manager.create()
+  showActive(); scheduleSessionSave()
+  if (wasLast) window.api.hideWindow()
 }
 
 const tabBar = new TabBar(document.getElementById('tabbar')!, {
   onSelect: (id) => { manager.setActive(id); showActive(); scheduleSessionSave() },
-  onClose: (id) => { manager.close(id); if (manager.list().length === 0) manager.create(); showActive(); scheduleSessionSave() },
+  onClose: (id) => closeTab(id),
   onNew: () => { manager.create(); showActive(); scheduleSessionSave() }
 })
 
@@ -77,6 +92,7 @@ function showActive(): void {
   refreshStatus()
   refreshPreview()
   refreshToolbar()
+  syncWatch()
 }
 
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
@@ -96,6 +112,11 @@ for (const which of ['A', 'B'] as const) {
 let autoSave = true
 let saveTimer: number | undefined
 let alwaysOnTop = false
+let fontSize = 14
+function applyFontSize(): void { view.paneA.setFontSize(fontSize); view.paneB.setFontSize(fontSize) }
+function persistFontSize(): void { window.api.loadSettings().then(s => window.api.saveSettings({ ...s, fontSize })) }
+function zoomBy(delta: number): void { fontSize = Math.min(40, Math.max(6, fontSize + delta)); applyFontSize(); persistFontSize() }
+function zoomReset(): void { fontSize = 14; applyFontSize(); persistFontSize() }
 
 async function setAlwaysOnTop(on: boolean): Promise<void> {
   alwaysOnTop = on
@@ -115,6 +136,7 @@ async function boot(): Promise<void> {
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
   theme.apply(settings.theme)
+  fontSize = settings.fontSize ?? 14; applyFontSize()
   alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
   pasteHistory.load(await window.api.loadClipboardHistory())
   snippets.load(await window.api.loadSnippets())
@@ -123,27 +145,50 @@ async function boot(): Promise<void> {
   else manager.create()
   if (!manager.activeId) manager.setActive(manager.list()[0].id)
   showActive()
+  reportDirty()
 }
 
-async function saveActive(): Promise<void> {
-  const pane = paneFor(view.focusedPane())
-  const id = pane.currentBufferId()
-  if (!id) return
-  const b = manager.get(id)!
+window.api.onSaveAllAndQuit(async () => {
+  try {
+    for (const b of manager.list()) { if (b.filePath && b.dirty) await saveBuffer(b.id) }
+    tabBar.render(manager.list(), manager.activeId); refreshStatus()
+  } finally {
+    window.api.quitNow()
+  }
+})
+
+async function saveBuffer(id: string): Promise<boolean> {
+  const b = manager.get(id); if (!b) return false
+  const pane = view.paneA.currentBufferId() === id ? view.paneA
+    : view.paneB.currentBufferId() === id ? view.paneB : null
+  const content = pane ? pane.getContent() : b.content
   const oldLang = b.language
   let path = b.filePath
-  if (!path) { path = await window.api.saveAsDialog(); if (!path) return }
-  await window.api.writeFile(path, pane.getContent(), b.eol, b.encoding)
+  if (!path) { path = await window.api.saveAsDialog(); if (!path) return false }
+  await window.api.writeFile(path, content, b.eol, b.encoding)
   manager.markSaved(id, path)
-  if (manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
-  tabBar.render(manager.list(), manager.activeId)
-  refreshStatus()
+  window.api.addRecentFile(path)
+  if (pane && manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
+  syncWatch()
+  return true
+}
+async function saveActive(): Promise<void> {
+  const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
+  await saveBuffer(id)
+  tabBar.render(manager.list(), manager.activeId); refreshStatus()
+}
+async function saveAll(): Promise<void> {
+  let saved = 0
+  for (const b of manager.list()) { if (b.dirty) { if (await saveBuffer(b.id)) saved++ } }
+  tabBar.render(manager.list(), manager.activeId); refreshStatus()
+  toast(saved ? `Saved ${saved} file${saved === 1 ? '' : 's'}.` : 'Nothing to save.')
 }
 
 async function openFromDisk(): Promise<void> {
   const path = await window.api.openDialog(); if (!path) return
   const file = await window.api.readFile(path)
   manager.open(file); showActive()
+  await window.api.addRecentFile(path)
 }
 
 async function diffClipboard(): Promise<void> {
@@ -229,10 +274,11 @@ function refreshToolbar(): void {
 const palette = new CommandPalette()
 registerCommands({
   palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
-  saveActive, openFromDisk, startDiff, diffClipboard, diffFiles,
+  saveActive, saveAll, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
   togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
-  toggleAlwaysOnTop
+  toggleAlwaysOnTop,
+  zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset
 })
 
 const overlayOpen = () =>
@@ -242,21 +288,60 @@ const overlayOpen = () =>
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
-  if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (overlayOpen()) return; saveActive() }
-  if (e.ctrlKey && e.key.toLowerCase() === 'o') { e.preventDefault(); if (overlayOpen()) return; openFromDisk() }
   if (e.key === 'Escape' && diff.isOpen()) diff.hide()
 })
 
-window.api.onOpenFile(async (path) => {
-  try {
-    const file = await window.api.readFile(path)
-    manager.open(file)
-    showActive()
-    scheduleSessionSave()
-  } catch (err) {
-    console.error('failed to open file:', path, err)
-    toast(`Could not open: ${path}`)
-  }
+async function openPath(path: string): Promise<void> {
+  try { const file = await window.api.readFile(path); manager.open(file); window.api.addRecentFile(path); showActive(); scheduleSessionSave() }
+  catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`) }
+}
+
+function openPaths(): string[] { return manager.list().map(b => b.filePath).filter((p): p is string => !!p) }
+function syncWatch(): void { window.api.watchPaths(openPaths()) }
+
+async function reloadBuffer(id: string): Promise<void> {
+  const b = manager.get(id); if (!b || !b.filePath) return
+  const file = await window.api.readFile(b.filePath)
+  b.content = file.content; b.eol = file.eol; b.encoding = file.encoding; b.dirty = false
+  if (paneFor(view.focusedPane()).currentBufferId() === id) paneFor(view.focusedPane()).setBuffer(b)
+  refreshStatus(); tabBar.render(manager.list(), manager.activeId)
+}
+const changeBar = document.getElementById('change-bar')!
+function showChangeBar(id: string, name: string): void {
+  changeBar.replaceChildren()
+  const msg = document.createElement('span'); msg.textContent = `"${name}" changed on disk.`
+  const reload = document.createElement('button'); reload.textContent = 'Reload (discard mine)'
+  reload.onclick = () => { void reloadBuffer(id); changeBar.classList.add('hidden') }
+  const keep = document.createElement('button'); keep.textContent = 'Keep mine'
+  keep.onclick = () => changeBar.classList.add('hidden')
+  changeBar.append(msg, reload, keep); changeBar.classList.remove('hidden')
+}
+window.api.onFileChanged((path) => {
+  const b = manager.list().find(x => x.filePath === path); if (!b) return
+  if (b.dirty) showChangeBar(b.id, b.title); else void reloadBuffer(b.id)
+})
+
+installDropOpen((p) => { void openPath(p) })
+
+window.api.onOpenFile((path) => { void openPath(path) })
+
+installMenuCommands({
+  new: () => { manager.create(); showActive(); scheduleSessionSave() },
+  open: () => void openFromDisk(),
+  'save-as': async () => { const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return; const b = manager.get(id)!; b.filePath = null; await saveBuffer(id); tabBar.render(manager.list(), manager.activeId); refreshStatus() },
+  save: () => void saveActive(),
+  'save-all': () => void saveAll(),
+  close: () => closeTab(manager.activeId!),
+  split: () => { view.setSplit(!view.isSplit()); showActive() },
+  mdpreview: togglePreview,
+  wrap: () => { const on = paneFor(view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) },
+  lines: () => paneFor(view.focusedPane()).toggleLineNumbers(),
+  'zoom-in': () => zoomBy(1), 'zoom-out': () => zoomBy(-1), 'zoom-reset': zoomReset,
+  theme: () => theme.cycle(), aot: toggleAlwaysOnTop,
+  diff: startDiff, 'diff-clip': () => void diffClipboard(), 'diff-files': () => void diffFiles(),
+  'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
+  find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
+  ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) }
 })
 
 boot()

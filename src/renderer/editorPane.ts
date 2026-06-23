@@ -21,7 +21,9 @@ export class EditorPane {
       automaticLayout: true,
       lineNumbers: 'on',
       wordWrap: 'on',
-      minimap: { enabled: true }
+      minimap: { enabled: true },
+      fontSize: 14,
+      mouseWheelZoom: true
     })
     this.editor.onDidChangeModelContent(() => {
       this.changeCb?.(this.editor.getValue())
@@ -52,6 +54,7 @@ export class EditorPane {
   }
   toggleWordWrap(): boolean { this.setWordWrap(!this.wordWrapOn); return this.wordWrapOn }
   wordWrapEnabled(): boolean { return this.wordWrapOn }
+  setFontSize(px: number): void { this.editor.updateOptions({ fontSize: px }) }
   setTheme(theme: 'vs' | 'vs-dark'): void { monaco.editor.setTheme(theme) }
 
   getCursor(): { line: number; col: number } {
@@ -93,6 +96,8 @@ export class EditorPane {
     const sel = this.editor.getSelection()
     return sel ? this.editor.getModel()?.getValueInRange(sel) ?? '' : ''
   }
+  triggerFind(): void { this.editor.getAction('actions.find')?.run() }
+  triggerReplace(): void { this.editor.getAction('editor.action.startFindReplaceAction')?.run() }
   layout(): void { this.editor.layout() }
   dispose(): void {
     if (this.copyCutHandler) {

@@ -4,12 +4,17 @@ import { SessionStore } from './sessionStore'
 import { SettingsStore } from './settingsStore'
 import { ClipboardHistoryStore } from './clipboardHistoryStore'
 import { SnippetStore } from './snippetStore'
+import { RecentFilesStore } from './recentFilesStore'
+import { FileWatcher } from './fileWatcher'
 import type { SessionData, Settings, EolMode, Encoding } from '../shared/types'
 
 export interface IpcDeps {
   baseDir: string
   getWindow: () => BrowserWindow | null
   setContextMenu: (enabled: boolean) => Promise<void>
+  onDirtyCount: (n: number) => void
+  onQuitNow: () => void
+  onRecentChanged?: () => void
 }
 
 export function registerIpc(deps: IpcDeps): void {
@@ -17,6 +22,9 @@ export function registerIpc(deps: IpcDeps): void {
   const settings = new SettingsStore(deps.baseDir)
   const clip = new ClipboardHistoryStore(deps.baseDir)
   const snippets = new SnippetStore(deps.baseDir)
+  const recent = new RecentFilesStore(deps.baseDir)
+  const watcher = new FileWatcher((path) => deps.getWindow()?.webContents.send('file:changed', path))
+  ipcMain.handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))
 
   ipcMain.handle('file:read', (_e, path: string) => readFileForEditor(path))
   ipcMain.handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding) =>
@@ -40,4 +48,10 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle('snippets:load', () => snippets.load())
   ipcMain.handle('snippets:save', (_e, list) => snippets.save(list))
   ipcMain.handle('window:setAlwaysOnTop', (_e, enabled: boolean) => { deps.getWindow()?.setAlwaysOnTop(enabled) })
+  ipcMain.handle('recent:load', () => recent.load())
+  ipcMain.handle('recent:add', async (_e, path: string) => { const result = await recent.add(path); deps.onRecentChanged?.(); return result })
+  ipcMain.handle('recent:clear', () => recent.clear())
+  ipcMain.on('app:dirtyCount', (_e, n: number) => deps.onDirtyCount(n))
+  ipcMain.on('window:hide', () => deps.getWindow()?.hide())
+  ipcMain.on('app:quitNow', () => deps.onQuitNow())
 }
