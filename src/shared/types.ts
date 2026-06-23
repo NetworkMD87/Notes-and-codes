@@ -21,13 +21,15 @@ export interface Settings {
   autoSaveSession: boolean
   contextMenuEnabled: boolean
   windowBounds: { width: number; height: number } | null
+  alwaysOnTop: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'follow-os',
   autoSaveSession: true,
   contextMenuEnabled: false,
-  windowBounds: null
+  windowBounds: null,
+  alwaysOnTop: false
 }
 
 export interface SessionData {
@@ -59,4 +61,5 @@ export interface Api {
   saveClipboardHistory(entries: string[]): Promise<void>
   loadSnippets(): Promise<Snippet[]>
   saveSnippets(list: Snippet[]): Promise<void>
+  setAlwaysOnTop(enabled: boolean): Promise<void>
 }

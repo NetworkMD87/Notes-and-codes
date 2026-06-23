@@ -39,4 +39,5 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle('clipboard-history:save', (_e, entries: string[]) => clip.save(entries))
   ipcMain.handle('snippets:load', () => snippets.load())
   ipcMain.handle('snippets:save', (_e, list) => snippets.save(list))
+  ipcMain.handle('window:setAlwaysOnTop', (_e, enabled: boolean) => { deps.getWindow()?.setAlwaysOnTop(enabled) })
 }

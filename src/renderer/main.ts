@@ -95,6 +95,15 @@ for (const which of ['A', 'B'] as const) {
 
 let autoSave = true
 let saveTimer: number | undefined
+let alwaysOnTop = false
+
+async function setAlwaysOnTop(on: boolean): Promise<void> {
+  alwaysOnTop = on
+  await window.api.setAlwaysOnTop(on)
+  const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, alwaysOnTop: on })
+  refreshToolbar()
+}
+const toggleAlwaysOnTop = () => setAlwaysOnTop(!alwaysOnTop)
 
 function scheduleSessionSave(): void {
   if (!autoSave) return
@@ -106,6 +115,7 @@ async function boot(): Promise<void> {
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
   theme.apply(settings.theme)
+  alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
   pasteHistory.load(await window.api.loadClipboardHistory())
   snippets.load(await window.api.loadSnippets())
   const session = await window.api.loadSession()
@@ -205,6 +215,7 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
   save: saveActive,
   toggleSplit: () => { view.setSplit(!view.isSplit()); showActive() },
   togglePreview,
+  togglePin: toggleAlwaysOnTop,
   startDiff,
   pasteFromHistory
 })
@@ -212,7 +223,7 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
 document.getElementById('header')!.appendChild(themeBtn)
 
 function refreshToolbar(): void {
-  toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible() })
+  toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible(), pin: alwaysOnTop })
 }
 
 const palette = new CommandPalette()
@@ -220,7 +231,8 @@ registerCommands({
   palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
   saveActive, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
-  togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets
+  togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
+  toggleAlwaysOnTop
 })
 
 const overlayOpen = () =>
