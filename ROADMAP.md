@@ -56,11 +56,9 @@ features twice.
 - ⬜ Status-bar secondary-text dimming via `--muted` (spec §7; status bar currently uses the accent background).
 - ⬜ Accent-text auto-contrast (derive from accent luminance instead of fixed white) if light accents are added later.
 
-## ❓ Decision — Identity fork (before Phase 3)
+## ✅ Decision — Identity fork (resolved: **Hybrid**)
 
-*Answer this BEFORE building Phase 3 so we scope it right and don't build features twice.*
-
-- ❓ **Stay a fast scratchpad, or grow a workspace?** — i.e. add **open-a-folder + file-tree sidebar + quick-open (`Ctrl+P`)**. Highest-impact next-level feature, but it shifts identity toward "lite editor" and risks the "fast & lightweight" promise. Decide on purpose. If **yes**, the folder/tree/Ctrl+P item activates in Phase 3.
+- ✅ **Hybrid (Option C).** Stay a fast scratchpad **by default**; add an **optional, toggleable** folder sidebar (file tree) + `Ctrl+P` quick-open for project work. Lightweight by default, powerful on demand — the folder mode never gets in the way and can be toggled off. The folder/tree/quick-open item is **activated** in Phase 3 (built as an opt-in mode, not always-on chrome).
 
 ## ⬜ Phase 3 — Power features (v1.2)
 
@@ -70,7 +68,7 @@ features twice.
 - ⬜ **Markdown export** (**M**) — export the rendered preview to HTML / PDF.
 - ⬜ **Optional autosave-to-disk** (**S–M**) — debounced / on-focus-loss autosave for named files; off by default.
 - ⬜ **Format Document** (**M**) — lightweight code prettify.
-- ⬜ **Folder / workspace + file tree + quick-open** (**L**) — *only if the fork above = yes.*
+- ⬜ **Optional folder mode: sidebar file-tree + quick-open** (**L**) — *activated (Hybrid).* Opt-in "Open Folder" → toggleable left sidebar tree + `Ctrl+P` quick-open; scratchpad stays the default with no folder open.
 
 ## 🧊 Phase 4 — Platform & power (parked)
 
