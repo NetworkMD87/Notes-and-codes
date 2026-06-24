@@ -162,7 +162,8 @@ window.api.onSaveAllAndQuit(async () => {
     }
   } catch (err) {
     console.error('save-on-quit failed', err)
-    toast('Could not save — quit cancelled.'); refreshStatus()
+    toast('Could not save — quit cancelled.')
+    tabBar.render(manager.list(), manager.activeId); refreshStatus()
     return
   }
   tabBar.render(manager.list(), manager.activeId); refreshStatus()
