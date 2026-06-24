@@ -10,7 +10,7 @@ let mainWindow: BrowserWindow | null = null
 let pendingFile: string | null = null
 let tray: Tray | null = null
 let isQuitting = false
-let dirtyNamedCount = 0
+let unsavedCount = 0
 let recentStore: RecentFilesStore | null = null
 
 async function rebuildMenu(): Promise<void> {
@@ -32,16 +32,18 @@ function fileArgFrom(argv: string[]): string | null {
 }
 
 function requestQuit(): void {
-  if (dirtyNamedCount === 0 || !mainWindow) { isQuitting = true; app.quit(); return }
+  if (unsavedCount === 0 || !mainWindow) { isQuitting = true; app.quit(); return }
   const choice = dialog.showMessageBoxSync(mainWindow, {
     type: 'warning', buttons: ['Save', "Don't Save", 'Cancel'], defaultId: 0, cancelId: 2,
-    message: `You have unsaved changes in ${dirtyNamedCount} file${dirtyNamedCount === 1 ? '' : 's'}.`,
+    message: `You have unsaved changes in ${unsavedCount} tab${unsavedCount === 1 ? '' : 's'}.`,
     detail: 'Save before quitting?'
   })
   if (choice === 2) return                                    // Cancel
   if (choice === 1) { isQuitting = true; app.quit(); return } // Don't Save
-  mainWindow.webContents.send('app:saveAllAndQuit')           // Save → renderer saves then app:quitNow
-  setTimeout(() => { if (!isQuitting) { isQuitting = true; app.quit() } }, 4000)
+  // Save → renderer saves each unsaved buffer (untitled via Save-As) then sends
+  // app:quitNow. No force-timer here: a Save-As dialog is user-paced, and if the
+  // user cancels it the renderer aborts the quit. "Don't Save" is the guaranteed exit.
+  mainWindow.webContents.send('app:saveAllAndQuit')
 }
 
 function showWindow(): void {
@@ -74,9 +76,9 @@ function createWindow(): BrowserWindow {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
   win.on('close', (e) => { if (!isQuitting) { e.preventDefault(); win.hide() } })
-  win.webContents.on('before-input-event', (_e, input) => {
-    if (input.control && input.key.toLowerCase() === 'q') { requestQuit() }
-  })
+  // Ctrl+Q is owned solely by the File ▸ Exit menu accelerator (CmdOrCtrl+Q).
+  // No before-input-event handler here — it would double-fire requestQuit (the
+  // event fires on both keyDown and keyUp, and again via the menu accelerator).
   return win
 }
 
@@ -99,7 +101,7 @@ if (!gotLock) {
       baseDir: app.getPath('userData'),
       getWindow: () => mainWindow,
       setContextMenu: (enabled) => setContextMenu(enabled, app.getPath('exe')),
-      onDirtyCount: (n) => { dirtyNamedCount = n },
+      onDirtyCount: (n) => { unsavedCount = n },
       onQuitNow: () => { isQuitting = true; app.quit() },
       onRecentChanged: () => { void rebuildMenu() }
     })

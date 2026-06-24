@@ -61,7 +61,8 @@ for (const which of ['A', 'B'] as const) {
 }
 
 function reportDirty(): void {
-  window.api.setDirtyCount(manager.list().filter(b => b.filePath && b.dirty).length)
+  // Count ALL unsaved buffers (named + untitled) so quit warns about any unsaved work.
+  window.api.setDirtyCount(manager.list().filter(b => b.dirty).length)
 }
 
 function refreshStatus(): void {
@@ -149,12 +150,24 @@ async function boot(): Promise<void> {
 }
 
 window.api.onSaveAllAndQuit(async () => {
+  // Save every unsaved buffer (named in place, untitled via Save-As). If a Save-As
+  // is cancelled or a write fails, abort the quit (stay open) — "Don't Save" remains
+  // the guaranteed quit path, so we never trap the user.
   try {
-    for (const b of manager.list()) { if (b.filePath && b.dirty) await saveBuffer(b.id) }
+    for (const b of manager.list()) {
+      if (b.dirty) {
+        const ok = await saveBuffer(b.id)
+        if (!ok) { tabBar.render(manager.list(), manager.activeId); refreshStatus(); return }
+      }
+    }
+  } catch (err) {
+    console.error('save-on-quit failed', err)
+    toast('Could not save — quit cancelled.')
     tabBar.render(manager.list(), manager.activeId); refreshStatus()
-  } finally {
-    window.api.quitNow()
+    return
   }
+  tabBar.render(manager.list(), manager.activeId); refreshStatus()
+  window.api.quitNow()
 })
 
 async function saveBuffer(id: string): Promise<boolean> {
