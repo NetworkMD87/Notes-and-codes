@@ -26,10 +26,12 @@ test('launches, creates tabs, splits, toggles theme', async () => {
     await win.keyboard.press('Enter')
     await expect(win.locator('#paneB')).toBeVisible()
 
-    // Theme toggle sets body dataset
+    // Theme button opens the Appearance panel; clicking a theme row applies it
     await win.click('#theme-toggle')
+    await expect(win.locator('#appearance')).toBeVisible()
+    await win.locator('#appearance .appearance-theme').getByText('Light', { exact: true }).click()
     const theme = await win.evaluate(() => document.body.dataset.theme)
-    expect(['light', 'dark']).toContain(theme)
+    expect(theme).toBe('light')
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })

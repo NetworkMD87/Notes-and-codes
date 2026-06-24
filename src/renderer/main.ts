@@ -25,6 +25,7 @@ import { SnippetList } from './snippets'
 import { SnippetPicker } from './snippetPicker'
 import { SnippetManager } from './snippetManager'
 import { promptInput } from './inputOverlay'
+import { AppearancePanel } from './appearancePanel'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -47,7 +48,6 @@ const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) =>
 })
 const themeBtn = document.createElement('button')
 themeBtn.id = 'theme-toggle'; themeBtn.textContent = '◐ theme'
-themeBtn.onclick = () => theme.pick(theme.currentId() === 'dark' ? 'light' : 'dark')
 document.getElementById('header')!.appendChild(themeBtn)
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
@@ -131,6 +131,10 @@ function applyFont(): void {
   view.paneA.setLigatures(fontLigatures); view.paneB.setLigatures(fontLigatures)
 }
 function persistFont(): void { window.api.loadSettings().then(s => window.api.saveSettings({ ...s, fontFamily, fontLigatures })) }
+
+function setFontFamilyState(name: string): void { fontFamily = name; applyFont(); persistFont() }
+function setLigaturesState(on: boolean): void { fontLigatures = on; applyFont(); persistFont() }
+function setFontSizeState(px: number): void { fontSize = Math.min(40, Math.max(6, px)); applyFontSize(); persistFontSize() }
 
 async function setAlwaysOnTop(on: boolean): Promise<void> {
   alwaysOnTop = on
@@ -295,6 +299,16 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
 })
 // keep the theme toggle as the right-most element in the header
 document.getElementById('header')!.appendChild(themeBtn)
+
+const appearance = new AppearancePanel(document.getElementById('app')!, {
+  currentThemeId: () => theme.currentId(), currentAccent: () => theme.currentAccent(),
+  pickTheme: (id) => theme.pick(id), setAccent: (a) => theme.setAccent(a),
+  fontFamily: () => fontFamily, setFontFamily: setFontFamilyState,
+  fontLigatures: () => fontLigatures, setLigatures: setLigaturesState,
+  fontSize: () => fontSize, setFontSize: setFontSizeState
+})
+const openAppearance = () => appearance.open()
+themeBtn.onclick = openAppearance
 
 function refreshToolbar(): void {
   toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible(), pin: alwaysOnTop })
