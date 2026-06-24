@@ -12,6 +12,7 @@ import { DiffView } from './diffView'
 import { DiffPicker } from './diffPicker'
 import { toast } from './notify'
 import { registerCommands } from './commands'
+import { migrateThemeId } from './themes'
 import { MarkdownPreview } from './markdownPreview'
 import { PasteHistoryList } from './pasteHistory'
 import { PasteHistoryPicker } from './pasteHistoryPicker'
@@ -38,12 +39,12 @@ const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, () 
 function previewContent(): string { return paneFor(view.focusedPane()).getContent() }
 function refreshPreview(): void { mdPreview.update(previewContent()) }
 
-const theme = new ThemeController([view.paneA, view.paneB], (m) => {
-  window.api.loadSettings().then(s => window.api.saveSettings({ ...s, theme: m }))
+const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) => {
+  window.api.loadSettings().then(s => window.api.saveSettings({ ...s, themeId, accent }))
 })
 const themeBtn = document.createElement('button')
 themeBtn.id = 'theme-toggle'; themeBtn.textContent = '◐ theme'
-themeBtn.onclick = () => theme.cycle()
+themeBtn.onclick = () => theme.pick(theme.currentId() === 'dark' ? 'light' : 'dark')
 document.getElementById('header')!.appendChild(themeBtn)
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
@@ -136,7 +137,7 @@ function scheduleSessionSave(): void {
 async function boot(): Promise<void> {
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
-  theme.apply(settings.theme)
+  theme.apply(migrateThemeId(settings), settings.accent ?? null)
   fontSize = settings.fontSize ?? 14; applyFontSize()
   alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
   pasteHistory.load(await window.api.loadClipboardHistory())
@@ -350,7 +351,7 @@ installMenuCommands({
   wrap: () => { const on = paneFor(view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) },
   lines: () => paneFor(view.focusedPane()).toggleLineNumbers(),
   'zoom-in': () => zoomBy(1), 'zoom-out': () => zoomBy(-1), 'zoom-reset': zoomReset,
-  theme: () => theme.cycle(), aot: toggleAlwaysOnTop,
+  theme: () => theme.pick(theme.currentId() === 'dark' ? 'light' : 'dark'), aot: toggleAlwaysOnTop,
   diff: startDiff, 'diff-clip': () => void diffClipboard(), 'diff-files': () => void diffFiles(),
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
