@@ -5,6 +5,7 @@ import type { FileVersion, EolMode, Encoding } from '../shared/types'
 
 export class FileHistoryStore {
   private dir: string
+  private chains = new Map<string, Promise<void>>()
   constructor(baseDir: string, private cap = 50) { this.dir = join(baseDir, 'file-history') }
 
   private fileFor(path: string): string {
@@ -21,7 +22,7 @@ export class FileHistoryStore {
     } catch { return [] }
   }
 
-  async snapshot(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void> {
+  private async doSnapshot(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void> {
     const versions = await this.read(path)
     if (versions.length && versions[versions.length - 1].content === content) return
     const last = versions.length ? versions[versions.length - 1].ts : 0
@@ -30,6 +31,13 @@ export class FileHistoryStore {
     while (versions.length > this.cap) versions.shift()
     await fs.mkdir(this.dir, { recursive: true })
     await fs.writeFile(this.fileFor(path), JSON.stringify({ path, versions }), 'utf8')
+  }
+
+  async snapshot(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void> {
+    const prev = this.chains.get(path) ?? Promise.resolve()
+    const next = prev.then(() => this.doSnapshot(path, content, eol, encoding))
+    this.chains.set(path, next.catch(() => {}))
+    return next
   }
 
   async list(path: string): Promise<{ ts: number }[]> {

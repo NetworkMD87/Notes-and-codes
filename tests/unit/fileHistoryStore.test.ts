@@ -49,4 +49,12 @@ describe('FileHistoryStore', () => {
     writeFileSync(join(dir, 'file-history', createHash('sha256').update('C:/a.txt').digest('hex') + '.json'), '{bad')
     expect(await s.list('C:/a.txt')).toEqual([])
   })
+  it('serializes concurrent snapshots for the same path (no lost update)', async () => {
+    const s = new FileHistoryStore(dir)
+    await Promise.all([
+      s.snapshot('C:/a.txt', 'first', 'LF', 'utf8'),
+      s.snapshot('C:/a.txt', 'second', 'LF', 'utf8')
+    ])
+    expect(await s.list('C:/a.txt')).toHaveLength(2)
+  })
 })
