@@ -1,5 +1,6 @@
 import { app, Menu, shell } from 'electron'
 import type { MenuItemConstructorOptions } from 'electron'
+import { THEME_LIST } from '../renderer/themes'
 
 export interface MenuDeps {
   send: (id: string) => void
@@ -45,7 +46,8 @@ export function buildMenu(d: MenuDeps): void {
       cmd('Zoom Out', 'zoom-out', 'CmdOrCtrl+-'),
       cmd('Reset Zoom', 'zoom-reset', 'CmdOrCtrl+0'),
       { type: 'separator' },
-      cmd('Cycle Theme', 'theme'),
+      cmd('Appearance…', 'appearance'),
+      { label: 'Theme', submenu: THEME_LIST.map(t => ({ label: t.label, click: () => d.send('theme:' + t.id) })) },
       cmd('Always on Top', 'aot')
     ] },
     { label: 'Tools', submenu: [

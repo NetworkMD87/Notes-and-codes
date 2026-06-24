@@ -316,12 +316,13 @@ function refreshToolbar(): void {
 
 const palette = new CommandPalette()
 registerCommands({
-  palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
+  palette, manager, view, diff, paneFor, showActive, scheduleSessionSave,
   saveActive, saveAll, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
   togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
   toggleAlwaysOnTop,
-  zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset
+  zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset,
+  openAppearance
 })
 
 const overlayOpen = () =>
@@ -380,11 +381,11 @@ installMenuCommands({
   wrap: () => { const on = paneFor(view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) },
   lines: () => paneFor(view.focusedPane()).toggleLineNumbers(),
   'zoom-in': () => zoomBy(1), 'zoom-out': () => zoomBy(-1), 'zoom-reset': zoomReset,
-  theme: () => theme.pick(theme.currentId() === 'dark' ? 'light' : 'dark'), aot: toggleAlwaysOnTop,
+  appearance: openAppearance, aot: toggleAlwaysOnTop,
   diff: startDiff, 'diff-clip': () => void diffClipboard(), 'diff-files': () => void diffFiles(),
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
   ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) }
-})
+}, (id) => theme.pick(id))
 
 boot()
