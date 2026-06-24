@@ -55,6 +55,8 @@ export function buildMenu(d: MenuDeps): void {
       cmd('Diff: current vs clipboard', 'diff-clip'),
       cmd('Diff: two files', 'diff-files'),
       { type: 'separator' },
+      cmd('File History', 'history'),
+      { type: 'separator' },
       cmd('Paste from History', 'paste-history'),
       cmd('Insert Snippet', 'snip-insert'),
       cmd('Save Selection as Snippet', 'snip-save'),

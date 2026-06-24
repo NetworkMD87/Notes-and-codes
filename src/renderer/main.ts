@@ -408,6 +408,7 @@ installMenuCommands({
   'zoom-in': () => zoomBy(1), 'zoom-out': () => zoomBy(-1), 'zoom-reset': zoomReset,
   appearance: openAppearance, aot: toggleAlwaysOnTop,
   diff: startDiff, 'diff-clip': () => void diffClipboard(), 'diff-files': () => void diffFiles(),
+  history: openHistory,
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
   ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) }

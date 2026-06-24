@@ -1,5 +1,5 @@
 import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -258,6 +258,40 @@ test('appearance panel changes theme, accent, and font', async () => {
     await win.waitForTimeout(200)
     const fam = await win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).fontFamily)
     expect(fam.toLowerCase()).toContain('fira')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('file history captures versions and restores in-editor', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const filePath = join(userDataDir, 'hist.txt')
+  writeFileSync(filePath, 'version-one')
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('#paneA .view-lines')).toContainText('version-one')
+
+    const runCmd = async (label: string) => {
+      await win.keyboard.press('Control+Shift+P')
+      await win.locator('#palette input').fill(label)
+      await win.keyboard.press('Enter')
+    }
+    // Save v1 via palette (Ctrl+S is a native-menu accelerator Playwright can't trigger)
+    await runCmd('Save')
+    // edit → v2
+    await win.locator('#paneA .monaco-editor').click()
+    await win.keyboard.press('Control+A'); await win.keyboard.type('version-two')
+    await runCmd('Save')
+
+    await runCmd('File History')
+    await expect(win.locator('#file-history .fh-row')).toHaveCount(2)
+
+    // restore the oldest (last row, since newest-first) → editor shows version-one
+    await win.locator('#file-history .fh-row').last().locator('button', { hasText: 'Restore' }).click()
+    await expect(win.locator('#paneA .view-lines')).toContainText('version-one')
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
