@@ -31,7 +31,7 @@ export class AppearancePanel {
   private render(): void {
     const box = document.createElement('div'); box.className = 'appearance-box'
 
-    const themeWrap = document.createElement('div'); themeWrap.className = 'appearance'
+    const themeWrap = document.createElement('div')
     const th = document.createElement('h3'); th.textContent = 'Theme'
     const grid = document.createElement('div'); grid.className = 'appearance-themes'
     for (const t of THEME_LIST) {
