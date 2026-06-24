@@ -199,6 +199,7 @@ async function saveBuffer(id: string): Promise<boolean> {
   let path = b.filePath
   if (!path) { path = await window.api.saveAsDialog(); if (!path) return false }
   await window.api.writeFile(path, content, b.eol, b.encoding)
+  window.api.snapshotHistory(path, content, b.eol, b.encoding)
   manager.markSaved(id, path)
   window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
@@ -389,3 +390,10 @@ installMenuCommands({
 }, (id) => theme.pick(id))
 
 boot()
+
+const HISTORY_INTERVAL_MS = 5 * 60 * 1000
+setInterval(() => {
+  for (const b of manager.list()) {
+    if (b.filePath && b.dirty) window.api.snapshotHistory(b.filePath, b.content, b.eol, b.encoding)
+  }
+}, HISTORY_INTERVAL_MS)
