@@ -1,4 +1,7 @@
 import './monacoEnv'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/700.css'
+import '@fontsource/fira-code/400.css'
 import { installMenuCommands } from './menuCommands'
 import type { Api, Encoding } from '../shared/types'
 import { languageFromPath } from '../shared/language'
@@ -120,6 +123,15 @@ function persistFontSize(): void { window.api.loadSettings().then(s => window.ap
 function zoomBy(delta: number): void { fontSize = Math.min(40, Math.max(6, fontSize + delta)); applyFontSize(); persistFontSize() }
 function zoomReset(): void { fontSize = 14; applyFontSize(); persistFontSize() }
 
+let fontFamily = 'JetBrains Mono'
+let fontLigatures = true
+function fontStack(name: string): string { return `'${name}', Consolas, monospace` }
+function applyFont(): void {
+  view.paneA.setFontFamily(fontStack(fontFamily)); view.paneB.setFontFamily(fontStack(fontFamily))
+  view.paneA.setLigatures(fontLigatures); view.paneB.setLigatures(fontLigatures)
+}
+function persistFont(): void { window.api.loadSettings().then(s => window.api.saveSettings({ ...s, fontFamily, fontLigatures })) }
+
 async function setAlwaysOnTop(on: boolean): Promise<void> {
   alwaysOnTop = on
   await window.api.setAlwaysOnTop(on)
@@ -138,6 +150,9 @@ async function boot(): Promise<void> {
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
   theme.apply(migrateThemeId(settings), settings.accent ?? null)
+  fontFamily = settings.fontFamily ?? 'JetBrains Mono'
+  fontLigatures = settings.fontLigatures ?? true
+  applyFont()
   fontSize = settings.fontSize ?? 14; applyFontSize()
   alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
   pasteHistory.load(await window.api.loadClipboardHistory())
