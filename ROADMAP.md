@@ -33,7 +33,7 @@ features twice.
 ## ✅ Phase 1 — Safety & basics (shipped v1.0.1)
 
 - ✅ **Close-last-tab → hide to tray** — closing the only tab hides to tray + leaves a fresh **Untitled-1** (climbing-number bug fixed).
-- ✅ **"Save changes?" prompt on quit** — native Save / Don't Save / Cancel for dirty *named* files (resilient: always quittable).
+- ✅ **"Save changes?" prompt on quit** — native Save / Don't Save / Cancel for **any** unsaved tab (named + untitled); single-fire on Ctrl+Q; resilient (always quittable). *(untitled coverage + double-fire fixed in v1.0.2)*
 - ✅ **Drag & drop files to open**.
 - ✅ **Open Recent** — persisted recent-files list, in the File menu.
 - ✅ **Detect external file changes** — watch open files; clean → silent reload, dirty → non-blocking bar (never clobbers edits).
