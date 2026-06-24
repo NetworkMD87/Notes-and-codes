@@ -6,6 +6,7 @@ import { ClipboardHistoryStore } from './clipboardHistoryStore'
 import { SnippetStore } from './snippetStore'
 import { RecentFilesStore } from './recentFilesStore'
 import { FileWatcher } from './fileWatcher'
+import { FileHistoryStore } from './fileHistoryStore'
 import type { SessionData, Settings, EolMode, Encoding } from '../shared/types'
 
 export interface IpcDeps {
@@ -23,6 +24,7 @@ export function registerIpc(deps: IpcDeps): void {
   const clip = new ClipboardHistoryStore(deps.baseDir)
   const snippets = new SnippetStore(deps.baseDir)
   const recent = new RecentFilesStore(deps.baseDir)
+  const history = new FileHistoryStore(deps.baseDir)
   const watcher = new FileWatcher((path) => deps.getWindow()?.webContents.send('file:changed', path))
   ipcMain.handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))
 
@@ -51,6 +53,10 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle('recent:load', () => recent.load())
   ipcMain.handle('recent:add', async (_e, path: string) => { const result = await recent.add(path); deps.onRecentChanged?.(); return result })
   ipcMain.handle('recent:clear', () => recent.clear())
+  ipcMain.handle('history:snapshot', (_e, path: string, content: string, eol: EolMode, encoding: Encoding) =>
+    history.snapshot(path, content, eol, encoding))
+  ipcMain.handle('history:list', (_e, path: string) => history.list(path))
+  ipcMain.handle('history:get', (_e, path: string, ts: number) => history.get(path, ts))
   ipcMain.on('app:dirtyCount', (_e, n: number) => deps.onDirtyCount(n))
   ipcMain.on('window:hide', () => deps.getWindow()?.hide())
   ipcMain.on('app:quitNow', () => deps.onQuitNow())
