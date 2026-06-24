@@ -1,5 +1,36 @@
 # Notes & Codes — Roadmap
 
+---
+
+## ▶ RESUME HERE — test v1.2.0, then merge + tag
+
+**File history / timeline is BUILT but NOT merged or tagged.** It's on branch
+`feat/file-history` (version already bumped to **1.2.0**), waiting on a manual test.
+All automated checks pass (66 unit + 10 smoke, build clean, opus whole-branch review = merge-ready).
+
+**Step 1 — install & test** `dist/Notes & Codes Setup 1.2.0.exe` (or portable `dist/Notes & Codes 1.2.0.exe`):
+- Open a real file, edit + **Save** (Ctrl+S) 2–3× with different changes.
+- **Tools ▸ File History** (or palette → "File History") → versions listed newest-first ("just now", "5 min ago"…).
+- **Diff** a row → opens the diff view (that version vs current).
+- **Restore** an older row → editor rolls back (tab goes dirty; Save to keep). Pre-restore content is itself snapshotted, so you can roll forward.
+- On an **Untitled/unsaved** tab → shows "Save this file first…".
+- *(optional, patience)* leave an edited-unsaved file ~5 min → an auto-snapshot appears.
+
+**Step 2 — if it works, merge + tag** (the master push needs the user's go-ahead):
+```
+git checkout master
+git merge --no-ff feat/file-history -m "Merge feat/file-history: per-file version history (v1.2.0)"
+git push origin master
+git tag -a v1.2.0 -m "v1.2.0 — file history / timeline"
+git push origin v1.2.0
+git branch -d feat/file-history
+```
+Then **delete this RESUME block** and the matching note at the top of `CLAUDE.md`.
+
+**If anything's off** → fix on `feat/file-history` first, rebuild the installer (`npm run package`), re-verify.
+
+---
+
 Living checklist. Glance the emoji to see status; phases are ordered for flow with
 **minimal backtracking**. Each item still gets a full design → plan → build pass
 when picked up.
