@@ -10,12 +10,12 @@
       body{background:var(--editorbg);color:var(--bartext)}
       #app{display:flex;flex-direction:column;position:relative}
       #header{height:34px;display:flex;align-items:center;background:var(--bar);border-bottom:1px solid var(--border)}
-      #tabbar{flex:1;min-width:0;height:100%;display:flex;align-items:center;overflow-x:auto}
+      #tabbar{flex:1;min-width:0;height:100%;display:flex;align-items:center;overflow-x:auto;overflow-y:hidden}
       #panes{flex:1;display:flex;min-height:0}
       .pane{flex:1;min-width:0;overflow:hidden}
       .pane.hidden{display:none}
       #statusbar{height:22px;background:var(--accent);color:var(--accent-text);font-size:12px;display:flex;align-items:center;gap:12px;padding:0 8px}
-      .tab{display:flex;align-items:center;gap:6px;padding:0 10px;height:100%;color:var(--tab-inactive-text);border-right:1px solid var(--border);border-top:2px solid transparent;cursor:pointer;white-space:nowrap}
+      .tab{box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px;height:100%;color:var(--tab-inactive-text);border-right:1px solid var(--border);border-top:2px solid transparent;cursor:pointer;white-space:nowrap}
       .tab:hover{background:var(--bar-hover)}
       .tab.active{background:var(--tab-active-bg);color:var(--bartext);border-top:2px solid var(--accent)}
       .tab-close{opacity:.6}.tab-close:hover{opacity:1}
