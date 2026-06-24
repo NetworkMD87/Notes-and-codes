@@ -64,7 +64,7 @@ features twice.
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
-- ⬜ **Local file history / timeline** (**L**) — timestamped local versions you can **diff & restore** (reuses the diff engine). Top pick; doubles down on "never lose work".
+- ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). *Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation.*
 - ⬜ **Markdown export** (**M**) — export the rendered preview to HTML / PDF.
 - ⬜ **Optional autosave-to-disk** (**S–M**) — debounced / on-focus-loss autosave for named files; off by default.
 - ⬜ **Format Document** (**M**) — lightweight code prettify.
