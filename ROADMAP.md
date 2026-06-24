@@ -44,15 +44,17 @@ features twice.
 **Fast-follow (deferred from Phase 1):**
 - ⬜ **On-save overwrite warning** (**S**) — when a file changed on disk since open, warn before overwriting on Save (spec §7 part 2; the change-bar mitigates the common case today).
 
-## 🔜 Phase 2 — Look & Feel (v1.1)
+## ✅ Phase 2 — Look & Feel (shipped v1.1)
 
-*Build the styling SYSTEM, then polish every current surface once. Done before big features so those features inherit it instead of forcing a re-polish.*
+- ✅ **Theme/design-token system** — 14 chrome CSS-variable tokens + shape tokens, single-source `themes.ts`; all chrome reads tokens.
+- ✅ **8 cohesive themes + accent** — Light, Dark, Dark Dimmed, Solarized Dark/Light, One Dark, Monokai, High-Contrast (+ Follow-OS); per-theme accent + curated swatch override.
+- ✅ **Tab styling** — hairline borders, accent active top-border, hover.
+- ✅ **Font options** — bundled JetBrains Mono + Fira Code (+ system fonts + custom), size, ligatures; in the Appearance panel; persisted.
+- ✅ **UI polish** — Appearance panel (theme/accent/font), overlay depth/shadows, header divider, tokenized chrome.
 
-- ⬜ **Theme/design-token system** (**M**) — CSS variables/tokens for color, spacing, elevation; all chrome + future panels read from it. The thing that prevents re-polishing later.
-- ⬜ **More themes / colours** (**M**) — editor-theme picker with several presets (Monokai / Solarized / etc. via `monaco.editor.defineTheme`) + matching chrome palette; optional accent colour. *(note #4b)*
-- ⬜ **Tab styling** (**S**) — hairline outline, clear active indicator (accent top-border), better hover. *(note #2)*
-- ⬜ **Font options** (**S–M**) — editor `fontFamily` + `fontSize` + ligatures toggle via a "Change Font" picker; persisted. *(note #1)*
-- ⬜ **UI polish** (**M**) — spacing/contrast/depth, toolbar + status-bar refinement; kill the "bland". *(note #4a)*
+**Polish follow-ups (deferred, minor):**
+- ⬜ Status-bar secondary-text dimming via `--muted` (spec §7; status bar currently uses the accent background).
+- ⬜ Accent-text auto-contrast (derive from accent luminance instead of fixed white) if light accents are added later.
 
 ## ❓ Decision — Identity fork (before Phase 3)
 
