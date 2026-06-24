@@ -76,9 +76,9 @@ function createWindow(): BrowserWindow {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
   win.on('close', (e) => { if (!isQuitting) { e.preventDefault(); win.hide() } })
-  win.webContents.on('before-input-event', (_e, input) => {
-    if (input.control && input.key.toLowerCase() === 'q') { requestQuit() }
-  })
+  // Ctrl+Q is owned solely by the File ▸ Exit menu accelerator (CmdOrCtrl+Q).
+  // No before-input-event handler here — it would double-fire requestQuit (the
+  // event fires on both keyDown and keyUp, and again via the menu accelerator).
   return win
 }
 
