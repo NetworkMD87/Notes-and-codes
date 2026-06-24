@@ -26,10 +26,12 @@ test('launches, creates tabs, splits, toggles theme', async () => {
     await win.keyboard.press('Enter')
     await expect(win.locator('#paneB')).toBeVisible()
 
-    // Theme toggle sets body dataset
+    // Theme button opens the Appearance panel; clicking a theme row applies it
     await win.click('#theme-toggle')
+    await expect(win.locator('#appearance')).toBeVisible()
+    await win.locator('#appearance .appearance-theme').getByText('Light', { exact: true }).click()
     const theme = await win.evaluate(() => document.body.dataset.theme)
-    expect(['light', 'dark']).toContain(theme)
+    expect(theme).toBe('light')
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
@@ -226,6 +228,36 @@ test('zoom changes font size and the app menu exists', async () => {
     await win.waitForTimeout(150)
     const after = await win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).fontSize)
     expect(parseFloat(after)).toBeGreaterThan(parseFloat(before))
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('appearance panel changes theme, accent, and font', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await win.locator('#theme-toggle').click()
+    await expect(win.locator('#appearance')).toBeVisible()
+
+    // pick a distinctive theme (Monokai) → body[data-theme] changes
+    await win.locator('.appearance-theme', { hasText: 'Monokai' }).click()
+    await expect(win.locator('body')).toHaveAttribute('data-theme', 'monokai')
+
+    // accent swatch → --accent custom property changes
+    const before = await win.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim())
+    await win.locator('.appearance-sw .swatch').nth(2).click()
+    const after = await win.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim())
+    expect(after).not.toBe(before)
+
+    // font family → editor option reflects it
+    await win.locator('#appearance select').selectOption('Fira Code')
+    await win.waitForTimeout(200)
+    const fam = await win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).fontFamily)
+    expect(fam.toLowerCase()).toContain('fira')
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })

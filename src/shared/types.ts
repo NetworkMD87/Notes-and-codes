@@ -24,6 +24,10 @@ export interface Settings {
   alwaysOnTop: boolean
   globalHotkey: string
   fontSize: number
+  themeId: string
+  accent: string | null
+  fontFamily: string
+  fontLigatures: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -33,7 +37,11 @@ export const DEFAULT_SETTINGS: Settings = {
   windowBounds: null,
   alwaysOnTop: false,
   globalHotkey: 'CommandOrControl+Shift+Space',
-  fontSize: 14
+  fontSize: 14,
+  themeId: 'dark',
+  accent: null,
+  fontFamily: 'JetBrains Mono',
+  fontLigatures: true
 }
 
 export interface SessionData {

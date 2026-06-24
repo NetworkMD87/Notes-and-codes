@@ -1,4 +1,7 @@
 import './monacoEnv'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/700.css'
+import '@fontsource/fira-code/400.css'
 import { installMenuCommands } from './menuCommands'
 import type { Api, Encoding } from '../shared/types'
 import { languageFromPath } from '../shared/language'
@@ -12,6 +15,7 @@ import { DiffView } from './diffView'
 import { DiffPicker } from './diffPicker'
 import { toast } from './notify'
 import { registerCommands } from './commands'
+import { migrateThemeId } from './themes'
 import { MarkdownPreview } from './markdownPreview'
 import { PasteHistoryList } from './pasteHistory'
 import { PasteHistoryPicker } from './pasteHistoryPicker'
@@ -21,6 +25,7 @@ import { SnippetList } from './snippets'
 import { SnippetPicker } from './snippetPicker'
 import { SnippetManager } from './snippetManager'
 import { promptInput } from './inputOverlay'
+import { AppearancePanel } from './appearancePanel'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -38,12 +43,11 @@ const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, () 
 function previewContent(): string { return paneFor(view.focusedPane()).getContent() }
 function refreshPreview(): void { mdPreview.update(previewContent()) }
 
-const theme = new ThemeController([view.paneA, view.paneB], (m) => {
-  window.api.loadSettings().then(s => window.api.saveSettings({ ...s, theme: m }))
+const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) => {
+  window.api.loadSettings().then(s => window.api.saveSettings({ ...s, themeId, accent }))
 })
 const themeBtn = document.createElement('button')
 themeBtn.id = 'theme-toggle'; themeBtn.textContent = '◐ theme'
-themeBtn.onclick = () => theme.cycle()
 document.getElementById('header')!.appendChild(themeBtn)
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
@@ -119,6 +123,19 @@ function persistFontSize(): void { window.api.loadSettings().then(s => window.ap
 function zoomBy(delta: number): void { fontSize = Math.min(40, Math.max(6, fontSize + delta)); applyFontSize(); persistFontSize() }
 function zoomReset(): void { fontSize = 14; applyFontSize(); persistFontSize() }
 
+let fontFamily = 'JetBrains Mono'
+let fontLigatures = true
+function fontStack(name: string): string { return `'${name}', Consolas, monospace` }
+function applyFont(): void {
+  view.paneA.setFontFamily(fontStack(fontFamily)); view.paneB.setFontFamily(fontStack(fontFamily))
+  view.paneA.setLigatures(fontLigatures); view.paneB.setLigatures(fontLigatures)
+}
+function persistFont(): void { window.api.loadSettings().then(s => window.api.saveSettings({ ...s, fontFamily, fontLigatures })) }
+
+function setFontFamilyState(name: string): void { fontFamily = name; applyFont(); persistFont() }
+function setLigaturesState(on: boolean): void { fontLigatures = on; applyFont(); persistFont() }
+function setFontSizeState(px: number): void { fontSize = Math.min(40, Math.max(6, px)); applyFontSize(); persistFontSize() }
+
 async function setAlwaysOnTop(on: boolean): Promise<void> {
   alwaysOnTop = on
   await window.api.setAlwaysOnTop(on)
@@ -136,7 +153,10 @@ function scheduleSessionSave(): void {
 async function boot(): Promise<void> {
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
-  theme.apply(settings.theme)
+  theme.apply(migrateThemeId(settings), settings.accent ?? null)
+  fontFamily = settings.fontFamily ?? 'JetBrains Mono'
+  fontLigatures = settings.fontLigatures ?? true
+  applyFont()
   fontSize = settings.fontSize ?? 14; applyFontSize()
   alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
   pasteHistory.load(await window.api.loadClipboardHistory())
@@ -280,18 +300,29 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
 // keep the theme toggle as the right-most element in the header
 document.getElementById('header')!.appendChild(themeBtn)
 
+const appearance = new AppearancePanel(document.getElementById('app')!, {
+  currentThemeId: () => theme.currentId(), currentAccent: () => theme.currentAccent(),
+  pickTheme: (id) => theme.pick(id), setAccent: (a) => theme.setAccent(a),
+  fontFamily: () => fontFamily, setFontFamily: setFontFamilyState,
+  fontLigatures: () => fontLigatures, setLigatures: setLigaturesState,
+  fontSize: () => fontSize, setFontSize: setFontSizeState
+})
+const openAppearance = () => appearance.open()
+themeBtn.onclick = openAppearance
+
 function refreshToolbar(): void {
   toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible(), pin: alwaysOnTop })
 }
 
 const palette = new CommandPalette()
 registerCommands({
-  palette, manager, view, theme, diff, paneFor, showActive, scheduleSessionSave,
+  palette, manager, view, diff, paneFor, showActive, scheduleSessionSave,
   saveActive, saveAll, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
   togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
   toggleAlwaysOnTop,
-  zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset
+  zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset,
+  openAppearance
 })
 
 const overlayOpen = () =>
@@ -350,11 +381,11 @@ installMenuCommands({
   wrap: () => { const on = paneFor(view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) },
   lines: () => paneFor(view.focusedPane()).toggleLineNumbers(),
   'zoom-in': () => zoomBy(1), 'zoom-out': () => zoomBy(-1), 'zoom-reset': zoomReset,
-  theme: () => theme.cycle(), aot: toggleAlwaysOnTop,
+  appearance: openAppearance, aot: toggleAlwaysOnTop,
   diff: startDiff, 'diff-clip': () => void diffClipboard(), 'diff-files': () => void diffFiles(),
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
   ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) }
-})
+}, (id) => theme.pick(id))
 
 boot()

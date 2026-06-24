@@ -23,7 +23,9 @@ export class EditorPane {
       wordWrap: 'on',
       minimap: { enabled: true },
       fontSize: 14,
-      mouseWheelZoom: true
+      mouseWheelZoom: true,
+      fontFamily: "'JetBrains Mono', Consolas, monospace",
+      fontLigatures: true
     })
     this.editor.onDidChangeModelContent(() => {
       this.changeCb?.(this.editor.getValue())
@@ -55,7 +57,9 @@ export class EditorPane {
   toggleWordWrap(): boolean { this.setWordWrap(!this.wordWrapOn); return this.wordWrapOn }
   wordWrapEnabled(): boolean { return this.wordWrapOn }
   setFontSize(px: number): void { this.editor.updateOptions({ fontSize: px }) }
-  setTheme(theme: 'vs' | 'vs-dark'): void { monaco.editor.setTheme(theme) }
+  setFontFamily(css: string): void { this.editor.updateOptions({ fontFamily: css }) }
+  setLigatures(on: boolean): void { this.editor.updateOptions({ fontLigatures: on }) }
+  setTheme(themeId: string): void { monaco.editor.setTheme(themeId) }
 
   getCursor(): { line: number; col: number } {
     const p = this.editor.getPosition()

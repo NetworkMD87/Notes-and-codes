@@ -1,7 +1,6 @@
 import type { CommandPalette } from './commandPalette'
 import type { BufferManager } from './bufferManager'
 import type { SplitView } from './splitView'
-import type { ThemeController } from './theme'
 import type { DiffView } from './diffView'
 import { toast } from './notify'
 
@@ -9,7 +8,6 @@ export interface CommandDeps {
   palette: CommandPalette
   manager: BufferManager
   view: SplitView
-  theme: ThemeController
   diff: DiffView
   paneFor: (which: 'A' | 'B') => import('./editorPane').EditorPane
   showActive: () => void
@@ -32,6 +30,7 @@ export interface CommandDeps {
   zoomIn: () => void
   zoomOut: () => void
   zoomReset: () => void
+  openAppearance: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -41,7 +40,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'split', label: 'Toggle Split', hint: 'Ctrl+\\', run: () => { d.view.setSplit(!d.view.isSplit()); d.showActive() } })
   p.register({ id: 'lines', label: 'Toggle Line Numbers', run: () => { d.paneFor(d.view.focusedPane()).toggleLineNumbers() } })
   p.register({ id: 'wrap', label: 'Toggle Word Wrap', run: () => { const on = d.paneFor(d.view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) } })
-  p.register({ id: 'theme', label: 'Cycle Theme', run: () => d.theme.cycle() })
+  p.register({ id: 'appearance', label: 'Appearance…', run: () => d.openAppearance() })
   p.register({ id: 'save', label: 'Save', hint: 'Ctrl+S', run: () => d.saveActive() })
   p.register({ id: 'save-all', label: 'Save All', hint: 'Ctrl+Shift+S', run: () => d.saveAll() })
   p.register({ id: 'open', label: 'Open File', hint: 'Ctrl+O', run: () => d.openFromDisk() })

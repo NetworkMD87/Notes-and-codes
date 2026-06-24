@@ -1,26 +1,27 @@
+import * as monaco from 'monaco-editor'
 import type { EditorPane } from './editorPane'
-import type { ThemeMode } from '../shared/types'
+import { THEMES, chromeVars, resolveThemeId } from './themes'
 
 export class ThemeController {
-  private mode: ThemeMode = 'follow-os'
-  constructor(private panes: EditorPane[], private onPersist: (m: ThemeMode) => void) {}
+  private themeId = 'dark'
+  private accent: string | null = null
 
-  private resolve(m: ThemeMode): 'light' | 'dark' {
-    if (m === 'follow-os') return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    return m
+  constructor(private panes: EditorPane[], private onPersist: (themeId: string, accent: string | null) => void) {
+    for (const t of Object.values(THEMES)) monaco.editor.defineTheme(t.id, t.monaco)
   }
 
-  apply(mode: ThemeMode = 'follow-os'): void {
-    this.mode = mode
-    const resolved = this.resolve(mode)
+  apply(themeId: string, accent: string | null = null): void {
+    this.themeId = themeId
+    this.accent = accent
+    const resolved = resolveThemeId(themeId)
+    const vars = chromeVars(themeId, accent)
     document.body.dataset.theme = resolved
-    for (const p of this.panes) p.setTheme(resolved === 'dark' ? 'vs-dark' : 'vs')
+    for (const [k, v] of Object.entries(vars)) document.body.style.setProperty(k, v)
+    for (const p of this.panes) p.setTheme(resolved)
   }
 
-  current(): ThemeMode { return this.mode }
-
-  cycle(): ThemeMode {
-    const next: ThemeMode = this.mode === 'light' ? 'dark' : this.mode === 'dark' ? 'follow-os' : 'light'
-    this.apply(next); this.onPersist(next); return next
-  }
+  pick(themeId: string): void { this.apply(themeId, this.accent); this.onPersist(this.themeId, this.accent) }
+  setAccent(accent: string | null): void { this.apply(this.themeId, accent); this.onPersist(this.themeId, this.accent) }
+  currentId(): string { return this.themeId }
+  currentAccent(): string | null { return this.accent }
 }
