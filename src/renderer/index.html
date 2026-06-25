@@ -51,6 +51,14 @@
       .sb-row.active{background:var(--accent);color:var(--accent-text)}
       .sb-twisty{width:12px;flex:none;text-align:center;opacity:.7}
       .sb-label{overflow:hidden;text-overflow:ellipsis}
+      #quick-open{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;justify-content:center;align-items:flex-start;padding-top:80px;z-index:100}
+      #quick-open.hidden{display:none}
+      .qo-box{width:560px;background:var(--panel-bg);box-shadow:var(--shadow);border-radius:var(--radius);overflow:hidden}
+      .qo-box input{width:100%;box-sizing:border-box;padding:10px;font-size:14px;background:var(--panel-bg);color:var(--panel-text);border:none;border-bottom:1px solid var(--border)}
+      .qo-list{max-height:320px;overflow:auto}
+      .qo-row{display:flex;align-items:baseline;gap:10px;padding:6px 10px;color:var(--panel-text);cursor:pointer}
+      .qo-row.active,.qo-row:hover{background:var(--accent);color:var(--accent-text)}
+      .qo-path{opacity:.55;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .diff-picker{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;justify-content:center;align-items:flex-start;padding-top:90px;z-index:100}
       .diff-picker.hidden{display:none}
       .diff-picker-box{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;background:var(--panel-bg);color:var(--panel-text);padding:16px;border-radius:var(--radius);box-shadow:var(--shadow)}
