@@ -8,7 +8,8 @@
       :root{--radius:4px;--gap:8px;--shadow:0 6px 24px rgba(0,0,0,.28)}
       html,body,#app{height:100%;margin:0;font-family:Segoe UI,system-ui,sans-serif}
       body{background:var(--editorbg);color:var(--bartext)}
-      #app{display:flex;flex-direction:column;position:relative}
+      #app{display:flex;flex-direction:row}
+      #main{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;position:relative}
       #header{height:34px;display:flex;align-items:center;background:var(--bar);border-bottom:1px solid var(--border)}
       #tabbar{flex:1;min-width:0;height:100%;display:flex;align-items:center;overflow-x:auto;overflow-y:hidden}
       #panes{flex:1;display:flex;min-height:0}
@@ -115,11 +116,14 @@
   </head>
   <body>
     <div id="app">
-      <div id="header"><div id="tabbar"></div></div>
-      <div id="panes"><div id="paneA" class="pane"></div><div id="paneB" class="pane hidden"></div><div id="mdpreview" class="hidden"></div></div>
-      <div id="diff" class="hidden"></div>
-      <div id="change-bar" class="hidden"></div>
-      <div id="statusbar"></div>
+      <div id="sidebar" class="hidden"></div>
+      <div id="main">
+        <div id="header"><div id="tabbar"></div></div>
+        <div id="panes"><div id="paneA" class="pane"></div><div id="paneB" class="pane hidden"></div><div id="mdpreview" class="hidden"></div></div>
+        <div id="diff" class="hidden"></div>
+        <div id="change-bar" class="hidden"></div>
+        <div id="statusbar"></div>
+      </div>
     </div>
     <script type="module" src="./main.ts"></script>
   </body>
