@@ -11,6 +11,10 @@ export interface AppearanceDeps {
   setLigatures: (on: boolean) => void
   fontSize: () => number
   setFontSize: (px: number) => void
+  showAllFiles: () => boolean
+  setShowAllFiles: (on: boolean) => void
+  restoreFolder: () => boolean
+  setRestoreFolder: (on: boolean) => void
 }
 
 const FONTS = ['JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Courier New']
@@ -89,7 +93,22 @@ export class AppearancePanel {
     ligRow.append(ligLabel, lig)
 
     fontWrap.append(fh, famRow, sizeRow, ligRow)
-    box.append(themeWrap, accWrap, fontWrap)
+
+    const folderWrap = document.createElement('div')
+    const foh = document.createElement('h3'); foh.textContent = 'Folder'
+    const allRow = document.createElement('div'); allRow.className = 'appearance-row'
+    const allLabel = document.createElement('label'); allLabel.textContent = 'Show all files (incl. node_modules / .git)'
+    const all = document.createElement('input'); all.type = 'checkbox'; all.checked = this.d.showAllFiles()
+    all.onchange = () => this.d.setShowAllFiles(all.checked)
+    allRow.append(allLabel, all)
+    const resRow = document.createElement('div'); resRow.className = 'appearance-row'
+    const resLabel = document.createElement('label'); resLabel.textContent = 'Reopen last folder on launch'
+    const res = document.createElement('input'); res.type = 'checkbox'; res.checked = this.d.restoreFolder()
+    res.onchange = () => this.d.setRestoreFolder(res.checked)
+    resRow.append(resLabel, res)
+    folderWrap.append(foh, allRow, resRow)
+
+    box.append(themeWrap, accWrap, fontWrap, folderWrap)
     this.host.replaceChildren(box)
   }
 }

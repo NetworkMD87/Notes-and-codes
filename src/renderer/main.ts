@@ -127,6 +127,8 @@ function zoomReset(): void { fontSize = 14; applyFontSize(); persistFontSize() }
 
 let fontFamily = 'JetBrains Mono'
 let fontLigatures = true
+let showAllFiles = false
+let restoreFolder = true
 function fontStack(name: string): string { return `'${name}', Consolas, monospace` }
 function applyFont(): void {
   view.paneA.setFontFamily(fontStack(fontFamily)); view.paneB.setFontFamily(fontStack(fontFamily))
@@ -158,6 +160,8 @@ async function boot(): Promise<void> {
   theme.apply(migrateThemeId(settings), settings.accent ?? null)
   fontFamily = settings.fontFamily ?? 'JetBrains Mono'
   fontLigatures = settings.fontLigatures ?? true
+  showAllFiles = settings.showAllFiles
+  restoreFolder = settings.restoreFolderOnLaunch
   applyFont()
   fontSize = settings.fontSize ?? 14; applyFontSize()
   alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
@@ -169,6 +173,7 @@ async function boot(): Promise<void> {
   if (!manager.activeId) manager.setActive(manager.list()[0].id)
   showActive()
   reportDirty()
+  await folder.restore()
 }
 
 window.api.onSaveAllAndQuit(async () => {
@@ -308,7 +313,11 @@ const appearance = new AppearancePanel(document.getElementById('app')!, {
   pickTheme: (id) => theme.pick(id), setAccent: (a) => theme.setAccent(a),
   fontFamily: () => fontFamily, setFontFamily: setFontFamilyState,
   fontLigatures: () => fontLigatures, setLigatures: setLigaturesState,
-  fontSize: () => fontSize, setFontSize: setFontSizeState
+  fontSize: () => fontSize, setFontSize: setFontSizeState,
+  showAllFiles: () => showAllFiles,
+  setShowAllFiles: (on) => { showAllFiles = on; void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, showAllFiles: on })) },
+  restoreFolder: () => restoreFolder,
+  setRestoreFolder: (on) => { restoreFolder = on; void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, restoreFolderOnLaunch: on })) },
 })
 const openAppearance = () => appearance.open()
 themeBtn.onclick = openAppearance
