@@ -1,6 +1,8 @@
 export type EolMode = 'LF' | 'CRLF'
 export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 
+export interface FileVersion { ts: number; content: string; eol: EolMode; encoding: Encoding }
+
 export interface Snippet { id: string; name: string; body: string }
 
 export interface BufferState {
@@ -85,4 +87,7 @@ export interface Api {
   quitNow(): void
   onSaveAllAndQuit(cb: () => void): void
   onMenuCommand(cb: (id: string) => void): void
+  snapshotHistory(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
+  listHistory(path: string): Promise<{ ts: number }[]>
+  getHistory(path: string, ts: number): Promise<FileVersion | null>
 }

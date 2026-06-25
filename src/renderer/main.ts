@@ -26,6 +26,7 @@ import { SnippetPicker } from './snippetPicker'
 import { SnippetManager } from './snippetManager'
 import { promptInput } from './inputOverlay'
 import { AppearancePanel } from './appearancePanel'
+import { FileHistoryPanel } from './fileHistoryPanel'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -199,6 +200,7 @@ async function saveBuffer(id: string): Promise<boolean> {
   let path = b.filePath
   if (!path) { path = await window.api.saveAsDialog(); if (!path) return false }
   await window.api.writeFile(path, content, b.eol, b.encoding)
+  window.api.snapshotHistory(path, content, b.eol, b.encoding)
   manager.markSaved(id, path)
   window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
@@ -310,6 +312,28 @@ const appearance = new AppearancePanel(document.getElementById('app')!, {
 const openAppearance = () => appearance.open()
 themeBtn.onclick = openAppearance
 
+const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
+  current: () => {
+    const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null
+    const b = manager.get(id); if (!b || !b.filePath) return null
+    return { path: b.filePath, title: b.title, content: paneFor(view.focusedPane()).getContent(), language: b.language }
+  },
+  openDiff: (v, cur) => diff.show(
+    { title: `${cur.title} — ${new Date(v.ts).toLocaleString()}`, content: v.content, language: cur.language },
+    { title: `${cur.title} (current)`, content: cur.content, language: cur.language }
+  ),
+  restore: (v) => {
+    const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
+    const b = manager.get(id); if (!b || !b.filePath) return
+    window.api.snapshotHistory(b.filePath, paneFor(view.focusedPane()).getContent(), b.eol, b.encoding)
+    manager.update(id, v.content)
+    paneFor(view.focusedPane()).setBuffer(b)
+    tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
+    toast('Restored an earlier version — unsaved, Save to keep it.')
+  }
+})
+const openHistory = () => void fileHistory.open()
+
 function refreshToolbar(): void {
   toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible(), pin: alwaysOnTop })
 }
@@ -322,7 +346,8 @@ registerCommands({
   togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
   toggleAlwaysOnTop,
   zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset,
-  openAppearance
+  openAppearance,
+  openHistory
 })
 
 const overlayOpen = () =>
@@ -383,9 +408,17 @@ installMenuCommands({
   'zoom-in': () => zoomBy(1), 'zoom-out': () => zoomBy(-1), 'zoom-reset': zoomReset,
   appearance: openAppearance, aot: toggleAlwaysOnTop,
   diff: startDiff, 'diff-clip': () => void diffClipboard(), 'diff-files': () => void diffFiles(),
+  history: openHistory,
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
   ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) }
 }, (id) => theme.pick(id))
 
 boot()
+
+const HISTORY_INTERVAL_MS = 5 * 60 * 1000
+setInterval(() => {
+  for (const b of manager.list()) {
+    if (b.filePath && b.dirty) window.api.snapshotHistory(b.filePath, b.content, b.eol, b.encoding)
+  }
+}, HISTORY_INTERVAL_MS)

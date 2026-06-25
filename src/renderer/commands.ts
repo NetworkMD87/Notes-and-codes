@@ -31,6 +31,7 @@ export interface CommandDeps {
   zoomOut: () => void
   zoomReset: () => void
   openAppearance: () => void
+  openHistory: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -48,6 +49,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'diff-close', label: 'Close Diff', run: () => d.diff.hide() })
   p.register({ id: 'diff-clip', label: 'Diff: current vs clipboard', run: () => d.diffClipboard() })
   p.register({ id: 'diff-files', label: 'Diff: two files on disk', run: () => d.diffFiles() })
+  p.register({ id: 'history', label: 'File History', run: () => d.openHistory() })
   p.register({ id: 'autosave', label: 'Toggle Auto-Save Session', run: async () => {
     const next = !d.getAutoSave(); d.setAutoSave(next)
     const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, autoSaveSession: next })
