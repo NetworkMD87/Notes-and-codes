@@ -82,6 +82,22 @@ features twice.
 - ⬜ **Format Document** (**M**) — lightweight code prettify.
 - ⬜ **Optional folder mode: sidebar file-tree + quick-open** (**L**) — *activated (Hybrid).* Opt-in "Open Folder" → toggleable left sidebar tree + `Ctrl+P` quick-open; scratchpad stays the default with no folder open.
 
+## ⬜ Phase 3.5 — Design polish pass (do AFTER Phase 3 surfaces land)
+
+*Holistic "does it feel as premium as it can?" pass. Deliberately sequenced **after** the
+Phase 3 structural features (folder tree, quick-open, export view) so every surface is
+polished **once** — re-polishing after each new surface lands is exactly what the sequencing
+logic above is meant to avoid. The token system already gives new surfaces the right
+colours; this pass tunes what tokens don't fix — spacing, density, type scale, hierarchy,
+micro-motion.*
+
+- ⬜ **Whole-app visual critique + targeted upgrade** (**M**) — review the real surfaces
+  (tabs, toolbar, status bar, file-history / appearance panels, overlays, empty states) for
+  spacing, density, type scale, hierarchy, and micro-motion; apply refinements through the
+  existing token system. Kicked off by a design-critique session on the running app.
+- ⬜ Fold in the two deferred **Phase-2 token tweaks**: status-bar `--muted` dimming, and
+  accent-text auto-contrast (both listed under Phase 2 follow-ups above).
+
 ## 🧊 Phase 4 — Platform & power (parked)
 
 - 🧊 **Code signing** (**M**, needs a purchased cert) — removes the SmartScreen warning.
