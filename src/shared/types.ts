@@ -102,4 +102,13 @@ export interface Api {
   snapshotHistory(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
   listHistory(path: string): Promise<{ ts: number }[]>
   getHistory(path: string, ts: number): Promise<FileVersion | null>
+  openFolderDialog(): Promise<string | null>
+  readDir(path: string, showAll: boolean): Promise<DirEntry[]>
+  walkFiles(path: string, showAll: boolean): Promise<string[]>
+  createFile(path: string): Promise<boolean>
+  createFolder(path: string): Promise<boolean>
+  renamePath(from: string, to: string): Promise<boolean>
+  trashPath(path: string): Promise<boolean>
+  watchDir(path: string | null): Promise<void>
+  onDirChanged(cb: () => void): void
 }

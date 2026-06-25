@@ -35,6 +35,15 @@ const api: Api = {
   snapshotHistory: (path, content, eol, encoding) => ipcRenderer.invoke('history:snapshot', path, content, eol, encoding),
   listHistory: (path) => ipcRenderer.invoke('history:list', path),
   getHistory: (path, ts) => ipcRenderer.invoke('history:get', path, ts),
+  openFolderDialog: () => ipcRenderer.invoke('dialog:openFolder'),
+  readDir: (path, showAll) => ipcRenderer.invoke('dir:read', path, showAll),
+  walkFiles: (path, showAll) => ipcRenderer.invoke('dir:walk', path, showAll),
+  createFile: (path) => ipcRenderer.invoke('fs:createFile', path),
+  createFolder: (path) => ipcRenderer.invoke('fs:createFolder', path),
+  renamePath: (from, to) => ipcRenderer.invoke('fs:rename', from, to),
+  trashPath: (path) => ipcRenderer.invoke('fs:trash', path),
+  watchDir: (path) => ipcRenderer.invoke('dir:watch', path),
+  onDirChanged: (cb) => { ipcRenderer.removeAllListeners('dir:changed'); ipcRenderer.on('dir:changed', () => cb()) },
 }
 
 contextBridge.exposeInMainWorld('api', api)

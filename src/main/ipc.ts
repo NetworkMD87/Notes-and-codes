@@ -1,5 +1,7 @@
-import { clipboard, dialog, ipcMain, type BrowserWindow } from 'electron'
+import { clipboard, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { readFileForEditor, writeFile } from './fileService'
+import { readDir, walkFiles, createFile, createFolder, renamePath } from './fsService'
+import { DirWatcher } from './dirWatcher'
 import { SessionStore } from './sessionStore'
 import { SettingsStore } from './settingsStore'
 import { ClipboardHistoryStore } from './clipboardHistoryStore'
@@ -26,6 +28,7 @@ export function registerIpc(deps: IpcDeps): void {
   const recent = new RecentFilesStore(deps.baseDir)
   const history = new FileHistoryStore(deps.baseDir)
   const watcher = new FileWatcher((path) => deps.getWindow()?.webContents.send('file:changed', path))
+  const dirWatcher = new DirWatcher(() => deps.getWindow()?.webContents.send('dir:changed'))
   ipcMain.handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))
 
   ipcMain.handle('file:read', (_e, path: string) => readFileForEditor(path))
@@ -57,6 +60,19 @@ export function registerIpc(deps: IpcDeps): void {
     history.snapshot(path, content, eol, encoding))
   ipcMain.handle('history:list', (_e, path: string) => history.list(path))
   ipcMain.handle('history:get', (_e, path: string, ts: number) => history.get(path, ts))
+  ipcMain.handle('dialog:openFolder', async () => {
+    const r = await dialog.showOpenDialog({ properties: ['openDirectory'] })
+    return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]
+  })
+  ipcMain.handle('dir:read', (_e, path: string, showAll: boolean) => readDir(path, showAll))
+  ipcMain.handle('dir:walk', (_e, path: string, showAll: boolean) => walkFiles(path, showAll))
+  ipcMain.handle('fs:createFile', (_e, path: string) => createFile(path))
+  ipcMain.handle('fs:createFolder', (_e, path: string) => createFolder(path))
+  ipcMain.handle('fs:rename', (_e, from: string, to: string) => renamePath(from, to))
+  ipcMain.handle('fs:trash', async (_e, path: string) => {
+    try { await shell.trashItem(path); return true } catch { return false }
+  })
+  ipcMain.handle('dir:watch', (_e, path: string | null) => dirWatcher.watch(path))
   ipcMain.on('app:dirtyCount', (_e, n: number) => deps.onDirtyCount(n))
   ipcMain.on('window:hide', () => deps.getWindow()?.hide())
   ipcMain.on('app:quitNow', () => deps.onQuitNow())
