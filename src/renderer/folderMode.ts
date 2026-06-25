@@ -43,6 +43,7 @@ export class FolderMode {
     this.showAll = s.showAllFiles
     this.model.setRoot(root)
     await this.loadChildren(root)
+    this.hideSidebar()
     this.showSidebar(s.sidebarWidth)
     this.sidebar.render()
     await window.api.watchDir(root)
@@ -73,13 +74,14 @@ export class FolderMode {
   async revealActive(): Promise<void> {
     const path = this.d.activePath(); const root = this.model.root
     if (!path || !root || !path.startsWith(root)) { toast('Active file is not in the open folder.'); return }
+    const sep = root.includes('\\') ? '\\' : '/'
     const rel = path.slice(root.length).replace(/^[\\/]/, '')
     const segs = rel.split(/[\\/]/); segs.pop() // drop filename
     let dir = root
     for (const seg of segs) {
       if (!this.model.hasChildren(dir)) await this.loadChildren(dir)
       this.model.setExpanded(dir, true)
-      dir = dir.replace(/[\\/]$/, '') + '/' + seg
+      dir = dir.replace(/[\\/]$/, '') + sep + seg
     }
     if (!this.model.hasChildren(dir)) await this.loadChildren(dir)
     this.model.setExpanded(dir, true)
