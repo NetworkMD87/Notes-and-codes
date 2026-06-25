@@ -32,6 +32,11 @@ export interface CommandDeps {
   zoomReset: () => void
   openAppearance: () => void
   openHistory: () => void
+  openFolder: () => Promise<void>
+  closeFolder: () => void
+  toggleSidebar: () => void
+  revealActive: () => void
+  quickOpen: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -50,6 +55,11 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'diff-clip', label: 'Diff: current vs clipboard', run: () => d.diffClipboard() })
   p.register({ id: 'diff-files', label: 'Diff: two files on disk', run: () => d.diffFiles() })
   p.register({ id: 'history', label: 'File History', run: () => d.openHistory() })
+  p.register({ id: 'folder-open', label: 'Open Folder…', run: () => d.openFolder() })
+  p.register({ id: 'folder-close', label: 'Close Folder', run: () => d.closeFolder() })
+  p.register({ id: 'sidebar-toggle', label: 'Toggle Sidebar', run: () => d.toggleSidebar() })
+  p.register({ id: 'reveal', label: 'Reveal Active File in Sidebar', run: () => d.revealActive() })
+  p.register({ id: 'quick-open', label: 'Quick Open File', hint: 'Ctrl+P', run: () => d.quickOpen() })
   p.register({ id: 'autosave', label: 'Toggle Auto-Save Session', run: async () => {
     const next = !d.getAutoSave(); d.setAutoSave(next)
     const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, autoSaveSession: next })

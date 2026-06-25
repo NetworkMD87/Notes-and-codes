@@ -27,6 +27,7 @@ import { SnippetManager } from './snippetManager'
 import { promptInput } from './inputOverlay'
 import { AppearancePanel } from './appearancePanel'
 import { FileHistoryPanel } from './fileHistoryPanel'
+import { FolderMode } from './folderMode'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -334,6 +335,20 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
 })
 const openHistory = () => void fileHistory.open()
 
+const folder = new FolderMode({
+  sidebarEl: document.getElementById('sidebar')!,
+  mainEl: document.getElementById('main')!,
+  openFile: (path) => void openPath(path),
+  activePath: () => {
+    const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null
+    return manager.get(id)?.filePath ?? null
+  }
+})
+async function openFolderFromDialog(): Promise<void> {
+  const root = await window.api.openFolderDialog(); if (!root) return
+  await folder.openFolder(root)
+}
+
 function refreshToolbar(): void {
   toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible(), pin: alwaysOnTop })
 }
@@ -347,7 +362,12 @@ registerCommands({
   toggleAlwaysOnTop,
   zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset,
   openAppearance,
-  openHistory
+  openHistory,
+  openFolder: openFolderFromDialog,
+  closeFolder: () => folder.closeFolder(),
+  toggleSidebar: () => folder.toggleSidebar(),
+  revealActive: () => void folder.revealActive(),
+  quickOpen: () => folder.openQuickOpen(),
 })
 
 const overlayOpen = () =>
@@ -356,6 +376,7 @@ const overlayOpen = () =>
 
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
+  if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
   if (e.key === 'Escape' && diff.isOpen()) diff.hide()
 })
@@ -411,7 +432,12 @@ installMenuCommands({
   history: openHistory,
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
-  ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) }
+  ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) },
+  'folder-open': () => void openFolderFromDialog(),
+  'folder-close': () => folder.closeFolder(),
+  'sidebar-toggle': () => folder.toggleSidebar(),
+  'quick-open': () => folder.openQuickOpen(),
+  reveal: () => void folder.revealActive(),
 }, (id) => theme.pick(id))
 
 boot()
