@@ -2,6 +2,16 @@
 
 ---
 
+## ▶ PENDING TEST — v1.2.1 (diff close button)
+
+Merged to `master`, version bumped to **1.2.1**, build clean — but **NOT tagged**.
+The user merged on trust and will verify later. **Test:** open a diff (Tools / palette),
+confirm the floating **✕** (top-right) closes it and **Esc** still works, in a light + a
+dark theme. Then `npm run package` → tag `v1.2.1` → push. Delete this block after tagging.
+*(Follow-up: no smoke coverage for the diff view yet — add one when convenient.)*
+
+---
+
 Living checklist. Glance the emoji to see status; phases are ordered for flow with
 **minimal backtracking**. Each item still gets a full design → plan → build pass
 when picked up.
