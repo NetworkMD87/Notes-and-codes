@@ -2,16 +2,6 @@
 
 ---
 
-## ▶ PENDING TEST — v1.2.1 (diff close button)
-
-Merged to `master`, version bumped to **1.2.1**, build clean — but **NOT tagged**.
-The user merged on trust and will verify later. **Test:** open a diff (Tools / palette),
-confirm the floating **✕** (top-right) closes it and **Esc** still works, in a light + a
-dark theme. Then `npm run package` → tag `v1.2.1` → push. Delete this block after tagging.
-*(Follow-up: no smoke coverage for the diff view yet — add one when convenient.)*
-
----
-
 Living checklist. Glance the emoji to see status; phases are ordered for flow with
 **minimal backtracking**. Each item still gets a full design → plan → build pass
 when picked up.
@@ -80,7 +70,7 @@ features twice.
 - ⬜ **Markdown export** (**M**) — export the rendered preview to HTML / PDF.
 - ⬜ **Optional autosave-to-disk** (**S–M**) — debounced / on-focus-loss autosave for named files; off by default.
 - ⬜ **Format Document** (**M**) — lightweight code prettify.
-- ⬜ **Optional folder mode: sidebar file-tree + quick-open** (**L**) — *activated (Hybrid).* Opt-in "Open Folder" → toggleable left sidebar tree + `Ctrl+P` quick-open; scratchpad stays the default with no folder open.
+- ✅ **Folder mode: sidebar file-tree + quick-open** (shipped v1.3) — opt-in "Open Folder" → toggleable, resizable left sidebar tree (lazy-loaded) + basic file ops (New File/Folder, Rename, Delete→Recycle Bin) + `Ctrl+P` quick-open; `.git`/`node_modules` hidden by default (Show-all toggle); startup-restore of the last folder. Scratchpad stays the default with no folder open. *Deferred: drag-to-move, cut/copy/paste, multi-root, content search in quick-open, `.gitignore` awareness.*
 
 ## ⬜ Phase 3.5 — Design polish pass (do AFTER Phase 3 surfaces land)
 
