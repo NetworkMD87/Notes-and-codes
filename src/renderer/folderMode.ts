@@ -174,7 +174,7 @@ export class FolderMode {
     else toast('Could not rename (name in use?).')
   }
   private async remove(entry: DirEntry): Promise<void> {
-    if (!await confirmDialog(`Move "${entry.name}" to the Recycle Bin?`)) return
+    if (!await confirmDialog(`Delete "${entry.name}"? It will be moved to the Recycle Bin.`)) return
     const parent = entry.path.replace(/[\\/][^\\/]+$/, '')
     if (await window.api.trashPath(entry.path)) { await this.refreshDir(parent); toast(`Moved "${entry.name}" to Recycle Bin.`) }
     else toast('Could not delete.')
