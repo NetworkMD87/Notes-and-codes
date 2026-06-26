@@ -282,7 +282,8 @@ async function exportActive(format: ExportFormat): Promise<void> {
   const r = format === 'html'
     ? await window.api.exportHtml(html, suggested, sourcePath)
     : await window.api.exportPdf(html, suggested, sourcePath)
-  if (r.ok && !r.canceled) toast(`Exported ${suggested}.`)
+  const savedName = r.path ? r.path.replace(/^.*[\\/]/, '') : suggested
+  if (r.ok && !r.canceled) toast(`Exported ${savedName}.`)
   else if (!r.ok) toast('Export failed.')
 }
 const exportHtml = () => void exportActive('html')

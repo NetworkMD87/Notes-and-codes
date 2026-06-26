@@ -23,7 +23,8 @@ export async function saveHtml(
   try {
     await writeFile(r.filePath, html, 'utf8')
     return { ok: true, path: r.filePath }
-  } catch {
+  } catch (e) {
+    console.error('[export] saveHtml failed', e)
     return { ok: false }
   }
 }
@@ -40,11 +41,13 @@ export async function savePdf(
   let win: BrowserWindow | null = null
   try {
     win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
+    // Note: typical notes fit fine; very large HTML (>~Chromium's data-URL ceiling) would fail the load and return { ok: false }.
     await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))
     const pdf = await win.webContents.printToPDF({ printBackground: true })
     await writeFile(r.filePath, pdf)
     return { ok: true, path: r.filePath }
-  } catch {
+  } catch (e) {
+    console.error('[export] savePdf failed', e)
     return { ok: false }
   } finally {
     win?.destroy()
