@@ -3,6 +3,8 @@ export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 
 export interface FileVersion { ts: number; content: string; eol: EolMode; encoding: Encoding }
 
+export interface DirEntry { name: string; path: string; isDir: boolean }
+
 export interface Snippet { id: string; name: string; body: string }
 
 export interface BufferState {
@@ -30,6 +32,11 @@ export interface Settings {
   accent: string | null
   fontFamily: string
   fontLigatures: boolean
+  showAllFiles: boolean
+  restoreFolderOnLaunch: boolean
+  lastFolder: string | null
+  sidebarVisible: boolean
+  sidebarWidth: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -43,7 +50,12 @@ export const DEFAULT_SETTINGS: Settings = {
   themeId: 'dark',
   accent: null,
   fontFamily: 'JetBrains Mono',
-  fontLigatures: true
+  fontLigatures: true,
+  showAllFiles: false,
+  restoreFolderOnLaunch: true,
+  lastFolder: null,
+  sidebarVisible: false,
+  sidebarWidth: 240
 }
 
 export interface SessionData {
@@ -90,4 +102,14 @@ export interface Api {
   snapshotHistory(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
   listHistory(path: string): Promise<{ ts: number }[]>
   getHistory(path: string, ts: number): Promise<FileVersion | null>
+  openFolderDialog(): Promise<string | null>
+  readDir(path: string, showAll: boolean): Promise<DirEntry[]>
+  walkFiles(path: string, showAll: boolean): Promise<string[]>
+  createFile(path: string): Promise<boolean>
+  createFolder(path: string): Promise<boolean>
+  renamePath(from: string, to: string): Promise<boolean>
+  trashPath(path: string): Promise<boolean>
+  watchDir(path: string | null): Promise<void>
+  onDirChanged(cb: () => void): void
+  dirExists(path: string): Promise<boolean>
 }

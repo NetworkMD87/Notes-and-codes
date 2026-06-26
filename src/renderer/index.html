@@ -8,7 +8,8 @@
       :root{--radius:4px;--gap:8px;--shadow:0 6px 24px rgba(0,0,0,.28)}
       html,body,#app{height:100%;margin:0;font-family:Segoe UI,system-ui,sans-serif}
       body{background:var(--editorbg);color:var(--bartext)}
-      #app{display:flex;flex-direction:column;position:relative}
+      #app{display:flex;flex-direction:row}
+      #main{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;position:relative}
       #header{height:34px;display:flex;align-items:center;background:var(--bar);border-bottom:1px solid var(--border)}
       #tabbar{flex:1;min-width:0;height:100%;display:flex;align-items:center;overflow-x:auto;overflow-y:hidden}
       #panes{flex:1;display:flex;min-height:0}
@@ -41,6 +42,24 @@
       #diff.hidden{display:none}
       .diff-close{position:absolute;top:8px;right:8px;z-index:20;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;border-radius:var(--radius);background:var(--panel-bg);color:var(--panel-text);box-shadow:var(--shadow);font-size:13px;line-height:1;cursor:pointer}
       .diff-close:hover{background:var(--accent);color:var(--accent-text)}
+      #ctx-menu{position:fixed;z-index:100;min-width:150px;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:4px 0;font-size:13px}
+      .ctx-item{padding:6px 14px;cursor:pointer;white-space:nowrap}
+      .ctx-item:hover{background:var(--accent);color:var(--accent-text)}
+      #sidebar{background:var(--bar);color:var(--bartext);border-right:1px solid var(--border);overflow:auto;min-width:0;font-size:13px;user-select:none}
+      #sidebar.hidden{display:none}
+      .sb-row{display:flex;align-items:center;gap:4px;height:24px;cursor:pointer;white-space:nowrap;overflow:hidden}
+      .sb-row:hover{background:var(--bar-hover)}
+      .sb-row.active{background:var(--accent);color:var(--accent-text)}
+      .sb-twisty{width:12px;flex:none;text-align:center;opacity:.7}
+      .sb-label{overflow:hidden;text-overflow:ellipsis}
+      #quick-open{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;justify-content:center;align-items:flex-start;padding-top:80px;z-index:100}
+      #quick-open.hidden{display:none}
+      .qo-box{width:560px;background:var(--panel-bg);box-shadow:var(--shadow);border-radius:var(--radius);overflow:hidden}
+      .qo-box input{width:100%;box-sizing:border-box;padding:10px;font-size:14px;background:var(--panel-bg);color:var(--panel-text);border:none;border-bottom:1px solid var(--border)}
+      .qo-list{max-height:320px;overflow:auto}
+      .qo-row{display:flex;align-items:baseline;gap:10px;padding:6px 10px;color:var(--panel-text);cursor:pointer}
+      .qo-row.active,.qo-row:hover{background:var(--accent);color:var(--accent-text)}
+      .qo-path{opacity:.55;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .diff-picker{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;justify-content:center;align-items:flex-start;padding-top:90px;z-index:100}
       .diff-picker.hidden{display:none}
       .diff-picker-box{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;background:var(--panel-bg);color:var(--panel-text);padding:16px;border-radius:var(--radius);box-shadow:var(--shadow)}
@@ -97,11 +116,14 @@
   </head>
   <body>
     <div id="app">
-      <div id="header"><div id="tabbar"></div></div>
-      <div id="panes"><div id="paneA" class="pane"></div><div id="paneB" class="pane hidden"></div><div id="mdpreview" class="hidden"></div></div>
-      <div id="diff" class="hidden"></div>
-      <div id="change-bar" class="hidden"></div>
-      <div id="statusbar"></div>
+      <div id="sidebar" class="hidden"></div>
+      <div id="main">
+        <div id="header"><div id="tabbar"></div></div>
+        <div id="panes"><div id="paneA" class="pane"></div><div id="paneB" class="pane hidden"></div><div id="mdpreview" class="hidden"></div></div>
+        <div id="diff" class="hidden"></div>
+        <div id="change-bar" class="hidden"></div>
+        <div id="statusbar"></div>
+      </div>
     </div>
     <script type="module" src="./main.ts"></script>
   </body>

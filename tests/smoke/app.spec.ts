@@ -1,5 +1,5 @@
 import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -295,5 +295,36 @@ test('file history captures versions and restores in-editor', async () => {
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('folder mode: restores a folder, shows the tree, quick-open finds a file', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const projectDir = mkdtempSync(join(tmpdir(), 'notes-proj-'))
+  mkdirSync(join(projectDir, 'src'))
+  writeFileSync(join(projectDir, 'src', 'alpha.ts'), '// alpha')
+  writeFileSync(join(projectDir, 'readme.md'), '# hi')
+  // Seed settings so startup-restore opens the folder (no native dialog needed).
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true, lastFolder: projectDir, sidebarVisible: true
+  }))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#sidebar')).toBeVisible()
+    // top-level entries render (dir 'src' + file 'readme.md')
+    await expect(win.locator('.sb-row', { hasText: 'readme.md' })).toBeVisible()
+    await expect(win.locator('.sb-row', { hasText: 'src' })).toBeVisible()
+    // quick-open finds the nested file by name
+    await win.keyboard.press('Control+p')
+    await expect(win.locator('#quick-open')).toBeVisible()
+    await win.locator('#quick-open input').fill('alpha')
+    await expect(win.locator('.qo-row', { hasText: 'alpha.ts' })).toBeVisible()
+    await win.keyboard.press('Enter')
+    await expect(win.locator('.tab', { hasText: 'alpha.ts' })).toBeVisible()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+    rmSync(projectDir, { recursive: true, force: true })
   }
 })
