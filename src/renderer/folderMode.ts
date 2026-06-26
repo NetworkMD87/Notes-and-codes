@@ -4,7 +4,7 @@ import { TreeModel } from './treeModel'
 import { Sidebar } from './sidebar'
 import { QuickOpen } from './quickOpen'
 import { showContextMenu } from './contextMenu'
-import { promptInput } from './inputOverlay'
+import { promptInput, confirmDialog } from './inputOverlay'
 import { toast } from './notify'
 
 export interface FolderModeDeps {
@@ -174,8 +174,7 @@ export class FolderMode {
     else toast('Could not rename (name in use?).')
   }
   private async remove(entry: DirEntry): Promise<void> {
-    const ok = await promptInput(`Type "delete" to move "${entry.name}" to the Recycle Bin`)
-    if (ok?.toLowerCase() !== 'delete') return
+    if (!await confirmDialog(`Move "${entry.name}" to the Recycle Bin?`)) return
     const parent = entry.path.replace(/[\\/][^\\/]+$/, '')
     if (await window.api.trashPath(entry.path)) { await this.refreshDir(parent); toast(`Moved "${entry.name}" to Recycle Bin.`) }
     else toast('Could not delete.')
