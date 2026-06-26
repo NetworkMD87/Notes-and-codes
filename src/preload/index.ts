@@ -45,6 +45,8 @@ const api: Api = {
   watchDir: (path) => ipcRenderer.invoke('dir:watch', path),
   onDirChanged: (cb) => { ipcRenderer.removeAllListeners('dir:changed'); ipcRenderer.on('dir:changed', () => cb()) },
   dirExists: (path) => ipcRenderer.invoke('dir:exists', path),
+  exportHtml: (html, suggestedName, sourcePath) => ipcRenderer.invoke('export:html', html, suggestedName, sourcePath),
+  exportPdf: (html, suggestedName, sourcePath) => ipcRenderer.invoke('export:pdf', html, suggestedName, sourcePath),
 }
 
 contextBridge.exposeInMainWorld('api', api)

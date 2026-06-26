@@ -9,6 +9,7 @@ import { SnippetStore } from './snippetStore'
 import { RecentFilesStore } from './recentFilesStore'
 import { FileWatcher } from './fileWatcher'
 import { FileHistoryStore } from './fileHistoryStore'
+import { saveHtml, savePdf } from './exportService'
 import type { SessionData, Settings, EolMode, Encoding } from '../shared/types'
 
 export interface IpcDeps {
@@ -74,6 +75,10 @@ export function registerIpc(deps: IpcDeps): void {
   })
   ipcMain.handle('dir:watch', (_e, path: string | null) => dirWatcher.watch(path))
   ipcMain.handle('dir:exists', (_e, path: string) => dirExists(path))
+  ipcMain.handle('export:html', (_e, html: string, suggestedName: string, sourcePath: string | null) =>
+    saveHtml(deps.getWindow(), html, suggestedName, sourcePath))
+  ipcMain.handle('export:pdf', (_e, html: string, suggestedName: string, sourcePath: string | null) =>
+    savePdf(deps.getWindow(), html, suggestedName, sourcePath))
   ipcMain.on('app:dirtyCount', (_e, n: number) => deps.onDirtyCount(n))
   ipcMain.on('window:hide', () => deps.getWindow()?.hide())
   ipcMain.on('app:quitNow', () => deps.onQuitNow())

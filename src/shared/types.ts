@@ -71,6 +71,8 @@ export interface OpenedFile {
   encoding: Encoding
 }
 
+export interface ExportResult { ok: boolean; canceled?: boolean; path?: string }
+
 export interface Api {
   readFile(path: string): Promise<OpenedFile>
   writeFile(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
@@ -112,4 +114,6 @@ export interface Api {
   watchDir(path: string | null): Promise<void>
   onDirChanged(cb: () => void): void
   dirExists(path: string): Promise<boolean>
+  exportHtml(html: string, suggestedName: string, sourcePath: string | null): Promise<ExportResult>
+  exportPdf(html: string, suggestedName: string, sourcePath: string | null): Promise<ExportResult>
 }
