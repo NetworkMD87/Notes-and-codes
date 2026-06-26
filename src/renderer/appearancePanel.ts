@@ -15,6 +15,8 @@ export interface AppearanceDeps {
   setShowAllFiles: (on: boolean) => void
   restoreFolder: () => boolean
   setRestoreFolder: (on: boolean) => void
+  autoSaveToDisk: () => boolean
+  setAutoSaveToDisk: (on: boolean) => void
 }
 
 const FONTS = ['JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Courier New']
@@ -108,7 +110,16 @@ export class AppearancePanel {
     resRow.append(resLabel, res)
     folderWrap.append(foh, allRow, resRow)
 
-    box.append(themeWrap, accWrap, fontWrap, folderWrap)
+    const editorWrap = document.createElement('div')
+    const eh = document.createElement('h3'); eh.textContent = 'Editor'
+    const asRow = document.createElement('div'); asRow.className = 'appearance-row'
+    const asLabel = document.createElement('label'); asLabel.textContent = 'Auto-save changes to disk (named files)'
+    const as = document.createElement('input'); as.type = 'checkbox'; as.checked = this.d.autoSaveToDisk()
+    as.onchange = () => this.d.setAutoSaveToDisk(as.checked)
+    asRow.append(asLabel, as)
+    editorWrap.append(eh, asRow)
+
+    box.append(themeWrap, accWrap, fontWrap, editorWrap, folderWrap)
     this.host.replaceChildren(box)
   }
 }

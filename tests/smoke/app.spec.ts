@@ -1,5 +1,5 @@
 import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -342,6 +342,35 @@ test('export commands are wired into the File ▸ Export menu', async () => {
     })
     expect(labels).toContain('Export to HTML…')
     expect(labels).toContain('Export to PDF…')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('autosave-to-disk writes a named file on blur without a conflict bar', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-as-'))
+  const filePath = join(userDataDir, 'note.txt')
+  writeFileSync(filePath, 'before')
+  // Seed the setting so autosave is on at launch.
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ autoSaveToDisk: true }))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#paneA .view-lines')).toContainText('before')
+
+    // Replace the content, then blur the window to trigger flushNow().
+    await win.locator('#paneA .monaco-editor').click()
+    await win.keyboard.press('Control+A')
+    await win.keyboard.type('after-autosave')
+    await win.evaluate(() => window.dispatchEvent(new Event('blur')))
+
+    // The file on disk now holds the new content.
+    await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('after-autosave')
+
+    // Self-write suppression: the watcher must NOT raise a "changed on disk" bar.
+    await win.waitForTimeout(1500)
+    await expect(win.locator('#change-bar')).toBeHidden()
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })

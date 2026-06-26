@@ -29,6 +29,7 @@ import { AppearancePanel } from './appearancePanel'
 import { FileHistoryPanel } from './fileHistoryPanel'
 import { FolderMode } from './folderMode'
 import { buildExportHtml, suggestExportName, type ExportFormat } from './exportDoc'
+import { AutoSaveController, eligibleForAutosave } from './autoSaveController'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -101,6 +102,7 @@ function showActive(): void {
   refreshPreview()
   refreshToolbar()
   syncWatch()
+  autosave.flushNow()
 }
 
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
@@ -113,11 +115,17 @@ for (const which of ['A', 'B'] as const) {
     tabBar.render(manager.list(), manager.activeId)
     refreshStatus()
     scheduleSessionSave()
+    autosave.noteEdit()
     refreshPreview()
   })
 }
 
 let autoSave = true
+let autoSaveToDisk = false
+const conflicts = new Set<string>()
+const selfWrites = new Map<string, number>()
+const autosaveFailed = new Set<string>()
+const SELF_WRITE_WINDOW_MS = 2500
 let saveTimer: number | undefined
 let alwaysOnTop = false
 let fontSize = 14
@@ -158,6 +166,7 @@ function scheduleSessionSave(): void {
 async function boot(): Promise<void> {
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
+  autoSaveToDisk = settings.autoSaveToDisk
   theme.apply(migrateThemeId(settings), settings.accent ?? null)
   fontFamily = settings.fontFamily ?? 'JetBrains Mono'
   fontLigatures = settings.fontLigatures ?? true
@@ -198,18 +207,26 @@ window.api.onSaveAllAndQuit(async () => {
   window.api.quitNow()
 })
 
-async function saveBuffer(id: string): Promise<boolean> {
+interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean }
+const MANUAL_SAVE: SaveOpts = { snapshot: true, recent: true, allowDialog: true }
+
+async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boolean> {
   const b = manager.get(id); if (!b) return false
   const pane = view.paneA.currentBufferId() === id ? view.paneA
     : view.paneB.currentBufferId() === id ? view.paneB : null
   const content = pane ? pane.getContent() : b.content
   const oldLang = b.language
   let path = b.filePath
-  if (!path) { path = await window.api.saveAsDialog(); if (!path) return false }
+  if (!path) {
+    if (!opts.allowDialog) return false
+    path = await window.api.saveAsDialog(); if (!path) return false
+  }
   await window.api.writeFile(path, content, b.eol, b.encoding)
-  window.api.snapshotHistory(path, content, b.eol, b.encoding)
+  selfWrites.set(path, Date.now())
+  if (opts.snapshot) window.api.snapshotHistory(path, content, b.eol, b.encoding)
   manager.markSaved(id, path)
-  window.api.addRecentFile(path)
+  conflicts.delete(id)
+  if (opts.recent) window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
   syncWatch()
   return true
@@ -225,6 +242,34 @@ async function saveAll(): Promise<void> {
   tabBar.render(manager.list(), manager.activeId); refreshStatus()
   toast(saved ? `Saved ${saved} file${saved === 1 ? '' : 's'}.` : 'Nothing to save.')
 }
+
+function autosaveFlush(): void {
+  for (const id of eligibleForAutosave(manager.list(), conflicts)) {
+    saveBuffer(id, { snapshot: false, recent: false, allowDialog: false })
+      .then(ok => { if (ok) { autosaveFailed.delete(id); tabBar.render(manager.list(), manager.activeId); refreshStatus() } })
+      .catch(() => {
+        // Leave the buffer dirty (markSaved was never reached). Toast once per failure streak.
+        if (!autosaveFailed.has(id)) {
+          autosaveFailed.add(id)
+          toast(`Auto-save failed for "${manager.get(id)?.title ?? 'file'}" — save manually.`)
+        }
+      })
+  }
+}
+const autosave = new AutoSaveController({ enabled: () => autoSaveToDisk, delayMs: 1500, flush: autosaveFlush })
+
+function setAutoSaveToDisk(on: boolean): void {
+  autoSaveToDisk = on
+  void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, autoSaveToDisk: on }))
+  if (on) autosave.flushNow(); else autosave.cancel()
+}
+function toggleAutoSaveToDisk(): void {
+  setAutoSaveToDisk(!autoSaveToDisk)
+  toast(`Auto-save to disk: ${autoSaveToDisk ? 'on' : 'off'}`)
+}
+
+window.addEventListener('blur', () => autosave.flushNow())
+document.addEventListener('visibilitychange', () => { if (document.hidden) autosave.flushNow() })
 
 async function openFromDisk(): Promise<void> {
   const path = await window.api.openDialog(); if (!path) return
@@ -338,6 +383,8 @@ const appearance = new AppearancePanel(document.getElementById('app')!, {
   setShowAllFiles: (on) => { showAllFiles = on; void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, showAllFiles: on })) },
   restoreFolder: () => restoreFolder,
   setRestoreFolder: (on) => { restoreFolder = on; void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, restoreFolderOnLaunch: on })) },
+  autoSaveToDisk: () => autoSaveToDisk,
+  setAutoSaveToDisk: (on) => setAutoSaveToDisk(on),
 })
 const openAppearance = () => appearance.open()
 themeBtn.onclick = openAppearance
@@ -397,6 +444,7 @@ registerCommands({
   toggleSidebar: () => folder.toggleSidebar(),
   revealActive: () => void folder.revealActive(),
   quickOpen: () => folder.openQuickOpen(),
+  toggleAutoSaveToDisk,
   exportHtml,
   exportPdf,
 })
@@ -424,6 +472,7 @@ async function reloadBuffer(id: string): Promise<void> {
   const b = manager.get(id); if (!b || !b.filePath) return
   const file = await window.api.readFile(b.filePath)
   b.content = file.content; b.eol = file.eol; b.encoding = file.encoding; b.dirty = false
+  conflicts.delete(id)
   if (paneFor(view.focusedPane()).currentBufferId() === id) paneFor(view.focusedPane()).setBuffer(b)
   refreshStatus(); tabBar.render(manager.list(), manager.activeId)
 }
@@ -434,12 +483,15 @@ function showChangeBar(id: string, name: string): void {
   const reload = document.createElement('button'); reload.textContent = 'Reload (discard mine)'
   reload.onclick = () => { void reloadBuffer(id); changeBar.classList.add('hidden') }
   const keep = document.createElement('button'); keep.textContent = 'Keep mine'
-  keep.onclick = () => changeBar.classList.add('hidden')
+  keep.onclick = () => { conflicts.delete(id); changeBar.classList.add('hidden') }
   changeBar.append(msg, reload, keep); changeBar.classList.remove('hidden')
 }
 window.api.onFileChanged((path) => {
+  const ts = selfWrites.get(path)
+  if (ts !== undefined && Date.now() - ts < SELF_WRITE_WINDOW_MS) { selfWrites.delete(path); return }
   const b = manager.list().find(x => x.filePath === path); if (!b) return
-  if (b.dirty) showChangeBar(b.id, b.title); else void reloadBuffer(b.id)
+  if (b.dirty) { conflicts.add(b.id); showChangeBar(b.id, b.title) }
+  else void reloadBuffer(b.id)
 })
 
 installDropOpen((p) => { void openPath(p) })
