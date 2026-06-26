@@ -111,4 +111,5 @@ export interface Api {
   trashPath(path: string): Promise<boolean>
   watchDir(path: string | null): Promise<void>
   onDirChanged(cb: () => void): void
+  dirExists(path: string): Promise<boolean>
 }

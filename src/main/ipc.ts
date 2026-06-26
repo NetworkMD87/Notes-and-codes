@@ -1,6 +1,6 @@
 import { clipboard, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { readFileForEditor, writeFile } from './fileService'
-import { readDir, walkFiles, createFile, createFolder, renamePath } from './fsService'
+import { readDir, walkFiles, createFile, createFolder, renamePath, dirExists } from './fsService'
 import { DirWatcher } from './dirWatcher'
 import { SessionStore } from './sessionStore'
 import { SettingsStore } from './settingsStore'
@@ -73,6 +73,7 @@ export function registerIpc(deps: IpcDeps): void {
     try { await shell.trashItem(path); return true } catch { return false }
   })
   ipcMain.handle('dir:watch', (_e, path: string | null) => dirWatcher.watch(path))
+  ipcMain.handle('dir:exists', (_e, path: string) => dirExists(path))
   ipcMain.on('app:dirtyCount', (_e, n: number) => deps.onDirtyCount(n))
   ipcMain.on('window:hide', () => deps.getWindow()?.hide())
   ipcMain.on('app:quitNow', () => deps.onQuitNow())

@@ -45,7 +45,7 @@ export function buildMenu(d: MenuDeps): void {
       cmd('Toggle Word Wrap', 'wrap'),
       cmd('Toggle Line Numbers', 'lines'),
       cmd('Toggle Sidebar', 'sidebar-toggle'),
-      cmd('Quick Open File', 'quick-open', 'CmdOrCtrl+P'),
+      cmd('Quick Open File', 'quick-open'),
       cmd('Reveal Active File in Sidebar', 'reveal'),
       { type: 'separator' },
       cmd('Zoom In', 'zoom-in', 'CmdOrCtrl+='),

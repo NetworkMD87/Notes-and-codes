@@ -90,7 +90,12 @@ export class FolderMode {
 
   async restore(): Promise<void> {
     const s = await window.api.loadSettings()
-    if (s.restoreFolderOnLaunch && s.lastFolder) await this.openFolder(s.lastFolder)
+    if (!s.restoreFolderOnLaunch || !s.lastFolder) return
+    if (await window.api.dirExists(s.lastFolder)) {
+      await this.openFolder(s.lastFolder)
+    } else {
+      await window.api.saveSettings({ ...s, lastFolder: null, sidebarVisible: false })
+    }
   }
 
   // --- internals ---
@@ -104,7 +109,8 @@ export class FolderMode {
   }
 
   private async onDiskChange(): Promise<void> {
-    for (const p of [this.model.root!, ...this.model.expandedPaths()]) {
+    if (!this.model.root) return
+    for (const p of [this.model.root, ...this.model.expandedPaths()]) {
       if (this.model.hasChildren(p)) this.model.setChildren(p, await window.api.readDir(p, this.showAll))
     }
     this.sidebar.render()

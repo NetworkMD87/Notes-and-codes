@@ -53,3 +53,7 @@ export async function createFolder(path: string): Promise<boolean> {
 export async function renamePath(from: string, to: string): Promise<boolean> {
   try { await fs.rename(from, to); return true } catch { return false }
 }
+
+export async function dirExists(path: string): Promise<boolean> {
+  try { return (await fs.stat(path)).isDirectory() } catch { return false }
+}

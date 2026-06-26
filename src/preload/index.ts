@@ -44,6 +44,7 @@ const api: Api = {
   trashPath: (path) => ipcRenderer.invoke('fs:trash', path),
   watchDir: (path) => ipcRenderer.invoke('dir:watch', path),
   onDirChanged: (cb) => { ipcRenderer.removeAllListeners('dir:changed'); ipcRenderer.on('dir:changed', () => cb()) },
+  dirExists: (path) => ipcRenderer.invoke('dir:exists', path),
 }
 
 contextBridge.exposeInMainWorld('api', api)
