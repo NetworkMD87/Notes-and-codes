@@ -328,3 +328,22 @@ test('folder mode: restores a folder, shows the tree, quick-open finds a file', 
     rmSync(projectDir, { recursive: true, force: true })
   }
 })
+
+test('export commands are wired into the File ▸ Export menu', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    const labels = await app.evaluate(({ Menu }) => {
+      const file = Menu.getApplicationMenu()!.items.find(i => i.label === 'File')!
+      const exp = file.submenu!.items.find(i => i.label === 'Export')!
+      return exp.submenu!.items.map(i => i.label)
+    })
+    expect(labels).toContain('Export to HTML…')
+    expect(labels).toContain('Export to PDF…')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

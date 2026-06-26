@@ -32,6 +32,11 @@ export function buildMenu(d: MenuDeps): void {
       cmd('Save All', 'save-all', 'CmdOrCtrl+Shift+S'),
       cmd('Close Tab', 'close', 'CmdOrCtrl+W'),
       { type: 'separator' },
+      { label: 'Export', submenu: [
+        cmd('Export to HTML…', 'export-html'),
+        cmd('Export to PDF…', 'export-pdf')
+      ] },
+      { type: 'separator' },
       { label: 'Exit', accelerator: 'CmdOrCtrl+Q', click: () => d.requestQuit() }
     ] },
     { label: 'Edit', submenu: [
