@@ -28,6 +28,7 @@ import { promptInput } from './inputOverlay'
 import { AppearancePanel } from './appearancePanel'
 import { FileHistoryPanel } from './fileHistoryPanel'
 import { FolderMode } from './folderMode'
+import { buildExportHtml, suggestExportName, type ExportFormat } from './exportDoc'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -269,6 +270,25 @@ function startDiff(): void {
 
 const togglePreview = () => { mdPreview.toggle(); refreshPreview(); refreshToolbar() }
 
+async function exportActive(format: ExportFormat): Promise<void> {
+  const content = paneFor(view.focusedPane()).getContent()
+  if (!content.trim()) { toast('Nothing to export.'); return }
+  const id = paneFor(view.focusedPane()).currentBufferId()
+  const b = id ? manager.get(id) : null
+  const title = b?.title ?? 'untitled'
+  const sourcePath = b?.filePath ?? null
+  const suggested = suggestExportName(sourcePath, title, format)
+  const html = buildExportHtml(content, title)
+  const r = format === 'html'
+    ? await window.api.exportHtml(html, suggested, sourcePath)
+    : await window.api.exportPdf(html, suggested, sourcePath)
+  const savedName = r.path ? r.path.replace(/^.*[\\/]/, '') : suggested
+  if (r.ok && !r.canceled) toast(`Exported ${savedName}.`)
+  else if (!r.ok) toast('Export failed.')
+}
+const exportHtml = () => void exportActive('html')
+const exportPdf = () => void exportActive('pdf')
+
 const pasteFromHistory = () => phPicker.open(pasteHistory.entries(), (text) => { paneFor(view.focusedPane()).insertAtCursor(text) })
 const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); toast('Paste history cleared.') }
 
@@ -377,6 +397,8 @@ registerCommands({
   toggleSidebar: () => folder.toggleSidebar(),
   revealActive: () => void folder.revealActive(),
   quickOpen: () => folder.openQuickOpen(),
+  exportHtml,
+  exportPdf,
 })
 
 const overlayOpen = () =>
@@ -447,6 +469,8 @@ installMenuCommands({
   'sidebar-toggle': () => folder.toggleSidebar(),
   'quick-open': () => folder.openQuickOpen(),
   reveal: () => void folder.revealActive(),
+  'export-html': exportHtml,
+  'export-pdf': exportPdf,
 }, (id) => theme.pick(id))
 
 boot()

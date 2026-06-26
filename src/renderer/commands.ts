@@ -37,6 +37,8 @@ export interface CommandDeps {
   toggleSidebar: () => void
   revealActive: () => void
   quickOpen: () => void
+  exportHtml: () => void
+  exportPdf: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -60,6 +62,8 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'sidebar-toggle', label: 'Toggle Sidebar', run: () => d.toggleSidebar() })
   p.register({ id: 'reveal', label: 'Reveal Active File in Sidebar', run: () => d.revealActive() })
   p.register({ id: 'quick-open', label: 'Quick Open File', hint: 'Ctrl+P', run: () => d.quickOpen() })
+  p.register({ id: 'export-html', label: 'Export to HTML…', run: () => d.exportHtml() })
+  p.register({ id: 'export-pdf', label: 'Export to PDF…', run: () => d.exportPdf() })
   p.register({ id: 'autosave', label: 'Toggle Auto-Save Session', run: async () => {
     const next = !d.getAutoSave(); d.setAutoSave(next)
     const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, autoSaveSession: next })
