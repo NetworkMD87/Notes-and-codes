@@ -16,7 +16,8 @@ summon hotkey — all in a lightweight tray app.
 - Light / dark / follow-OS theme; word wrap (toggle in the palette).
 - Session auto-save + crash recovery (never lose a scratch buffer).
 - Diffs: tab-vs-tab, current-vs-clipboard, file-vs-file.
-- Live markdown preview; UTF-8 / UTF-16 encoding + LF/CRLF control.
+- Live markdown preview + **export to HTML / PDF** (clean light document style).
+- UTF-8 / UTF-16 encoding + LF/CRLF control.
 - Paste history and reusable snippets.
 - System tray: closing hides to the tray; summon from anywhere.
 
