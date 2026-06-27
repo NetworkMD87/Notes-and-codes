@@ -37,6 +37,7 @@ export interface CommandDeps {
   toggleSidebar: () => void
   revealActive: () => void
   quickOpen: () => void
+  toggleAutoSaveToDisk: () => void
   exportHtml: () => void
   exportPdf: () => void
 }
@@ -68,6 +69,7 @@ export function registerCommands(d: CommandDeps): void {
     const next = !d.getAutoSave(); d.setAutoSave(next)
     const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, autoSaveSession: next })
   } })
+  p.register({ id: 'autosave-disk', label: 'Toggle Auto-Save to Disk', run: () => d.toggleAutoSaveToDisk() })
   p.register({ id: 'mdpreview', label: 'Toggle Markdown Preview', run: () => d.togglePreview() })
   p.register({ id: 'paste-history', label: 'Paste from History', run: () => d.pasteFromHistory() })
   p.register({ id: 'clear-paste-history', label: 'Clear Paste History', run: () => d.clearPasteHistory() })

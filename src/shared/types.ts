@@ -34,6 +34,7 @@ export interface Settings {
   fontLigatures: boolean
   showAllFiles: boolean
   restoreFolderOnLaunch: boolean
+  autoSaveToDisk: boolean
   lastFolder: string | null
   sidebarVisible: boolean
   sidebarWidth: number
@@ -53,6 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fontLigatures: true,
   showAllFiles: false,
   restoreFolderOnLaunch: true,
+  autoSaveToDisk: false,
   lastFolder: null,
   sidebarVisible: false,
   sidebarWidth: 240
