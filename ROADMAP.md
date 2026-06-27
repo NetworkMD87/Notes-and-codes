@@ -66,10 +66,19 @@ features twice.
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
+> ▶ **NEXT ACTION — manually test Format Document, then ship v1.6.0.** Code-complete +
+> whole-branch-reviewed on branch `feat/format-document`; the installer
+> `dist/Notes & Codes Setup 1.6.0.exe` is built; all automatable checklist items are
+> smoke-verified. Two manual checks remain (under the Format Document item below); if both
+> pass, merge `feat/format-document` → `master` and tag **v1.6.0**.
+
 - ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). *Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation.*
 - ✅ **Markdown export** (shipped v1.4) — export the active tab (rendered as Markdown) to a standalone **HTML** file or **PDF** via File ▸ Export or the palette; clean light document style, self-contained (no CDN). *Deferred: relative-image embedding, custom page size/margins, batch export, code syntax highlighting.*
 - ✅ **Optional autosave-to-disk** (shipped v1.5) — opt-in autosave for **named** files: debounced after you stop typing (~1.5s) + flushed on focus loss (window blur / hide / tab switch); off by default (toggle in Appearance ▸ Editor or the palette). Skips untitled buffers and unresolved external-change conflicts; no history snapshot per autosave. Whole-branch reviewed; manual focus-loss / cursor-jump checklist passed on the 1.5.0 installer. *Deferred: autosaving untitled buffers, per-file opt-out, configurable delay.*
-- ✅ **Format Document** (shipped v1.6) — prettify the active buffer (prettier standalone, lazy-loaded) for JS/TS, JSON, CSS/SCSS/LESS, HTML, Markdown, YAML; palette + Edit menu + `Shift+Alt+F` + Format Selection; optional manual-save-only format-on-save. *Deferred: configurable options UI, more languages, `.prettierrc` discovery.*
+- 🟨 **Format Document** (built v1.6 — **awaiting manual test before ship**) — prettify the active buffer (prettier standalone, lazy-loaded) for JS/TS, JSON, CSS/SCSS/LESS, HTML, Markdown, YAML; palette + Edit menu + `Shift+Alt+F` + Format Selection; optional manual-save-only format-on-save. Code-complete + whole-branch reviewed on `feat/format-document` (1 Important found + fixed: stale-text overwrite guard). Smoke-verified: palette reformat, Format Selection, format-on-save + toggle persist, unsupported-language no-op + toast, syntax-error buffer-untouched + toast, Edit-menu items + `Shift+Alt+F` accelerator registered. **Manual checks to run on the 1.6.0 installer (then merge + tag v1.6.0):**
+    1. **Native hotkey + menu fire** — press `Shift+Alt+F` in the editor, and click Edit ▸ Format Document → each reformats. *(The OS-level accelerator/menu-click can't be automated, same as Ctrl+S; the command behind both is already smoke-verified.)*
+    2. **No cursor/scroll jump** after a format fires. *Key feel check.*
+    *Deferred: configurable options UI, more languages, `.prettierrc` discovery.*
 - ✅ **Folder mode: sidebar file-tree + quick-open** (shipped v1.3) — opt-in "Open Folder" → toggleable, resizable left sidebar tree (lazy-loaded) + basic file ops (New File/Folder, Rename, Delete→Recycle Bin) + `Ctrl+P` quick-open; `.git`/`node_modules` hidden by default (Show-all toggle); startup-restore of the last folder. Scratchpad stays the default with no folder open. *Deferred: drag-to-move, cut/copy/paste, multi-root, content search in quick-open, `.gitignore` awareness.*
 
 ## ⬜ Phase 3.5 — Design polish pass (do AFTER Phase 3 surfaces land)
