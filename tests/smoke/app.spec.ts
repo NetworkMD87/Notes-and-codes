@@ -373,6 +373,29 @@ test('Format Document reformats the active buffer via the palette', async () => 
   }
 })
 
+test('format-on-save reformats on manual Save when enabled', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fos-'))
+  const filePath = join(userDataDir, 'ugly.js')
+  writeFileSync(filePath, 'const   y=2')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ formatOnSave: true }))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#paneA .view-lines')).toContainText('const')
+    // Touch the buffer so Save has something to write, then Save via palette.
+    await win.locator('#paneA .monaco-editor').click()
+    await win.keyboard.press('End')
+    await win.keyboard.type(' ')
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Save')
+    await win.keyboard.press('Enter')
+    await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('const y = 2;')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('autosave-to-disk writes a named file on blur without a conflict bar', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-as-'))
   const filePath = join(userDataDir, 'note.txt')

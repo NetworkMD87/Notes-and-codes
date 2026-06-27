@@ -35,6 +35,7 @@ export interface Settings {
   showAllFiles: boolean
   restoreFolderOnLaunch: boolean
   autoSaveToDisk: boolean
+  formatOnSave: boolean
   lastFolder: string | null
   sidebarVisible: boolean
   sidebarWidth: number
@@ -55,6 +56,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showAllFiles: false,
   restoreFolderOnLaunch: true,
   autoSaveToDisk: false,
+  formatOnSave: false,
   lastFolder: null,
   sidebarVisible: false,
   sidebarWidth: 240
