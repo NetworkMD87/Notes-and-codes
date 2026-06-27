@@ -18,6 +18,7 @@ summon hotkey — all in a lightweight tray app.
 - Optional **auto-save to disk** for named files (off by default; toggle in Appearance or the palette).
 - Diffs: tab-vs-tab, current-vs-clipboard, file-vs-file.
 - Live markdown preview + **export to HTML / PDF** (clean light document style).
+- **Format Document** — prettify the active file (JS/TS, JSON, CSS/SCSS/LESS, HTML, Markdown, YAML) via the palette, Edit menu, or `Shift+Alt+F`; optional format-on-save (Appearance ▸ Editor).
 - UTF-8 / UTF-16 encoding + LF/CRLF control.
 - Paste history and reusable snippets.
 - System tray: closing hides to the tray; summon from anywhere.
