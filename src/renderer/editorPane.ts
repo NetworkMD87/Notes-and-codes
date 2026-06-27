@@ -131,7 +131,7 @@ export class EditorPane {
       return
     }
     if (formatted === text) return
-    const model = this.editor.getModel(); if (!model) return
+    const model = this.editor.getModel(); if (!model || model.getValue() !== text) return
     const viewState = this.editor.saveViewState()
     this.editor.executeEdits('format', [{ range: model.getFullModelRange(), text: formatted }])
     if (viewState) this.editor.restoreViewState(viewState)

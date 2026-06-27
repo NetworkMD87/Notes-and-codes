@@ -366,7 +366,7 @@ test('Format Document reformats the active buffer via the palette', async () => 
     // Save (Ctrl+S is a native-menu accelerator Playwright can't trigger) then read disk.
     await runCmd('Save')
     await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('const x = 1;')
-    await expect.poll(() => readFileSync(filePath, 'utf8')).toContain('function f() {')
+    await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('function f() {')
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
