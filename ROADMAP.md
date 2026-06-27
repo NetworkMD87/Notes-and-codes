@@ -66,24 +66,9 @@ features twice.
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
-> ▶ **NEXT ACTION — manually test autosave-to-disk, then ship v1.5.0.** The feature is
-> code-complete and reviewed on branch `feat/autosave-to-disk`; the installer
-> `dist/Notes & Codes Setup 1.5.0.exe` is built. Run the checklist under the autosave
-> item below on the real installer; if all pass, merge `feat/autosave-to-disk` → `master`
-> and tag **v1.5.0**.
-
 - ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). *Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation.*
 - ✅ **Markdown export** (shipped v1.4) — export the active tab (rendered as Markdown) to a standalone **HTML** file or **PDF** via File ▸ Export or the palette; clean light document style, self-contained (no CDN). *Deferred: relative-image embedding, custom page size/margins, batch export, code syntax highlighting.*
-- 🟨 **Optional autosave-to-disk** (built v1.5 — **awaiting manual test before ship**) — opt-in autosave for **named** files: debounced after you stop typing (~1.5s) + flushed on focus loss (window blur / hide / tab switch); off by default (toggle in Appearance ▸ Editor or the palette). Skips untitled buffers and unresolved external-change conflicts; no history snapshot per autosave. Code complete + whole-branch reviewed on `feat/autosave-to-disk`; auto-verified: autosave-on writes named file on blur + no phantom conflict bar (suppression), untitled never autosaved, controller unit tests. **Manual checklist to run on the 1.5.0 installer (then merge + tag v1.5.0):**
-    1. **Off by default** — fresh start, edit a *saved* file, wait ~3s → disk unchanged + unsaved-dot stays until manual Save.
-    2. **Toggle on** — Appearance ▸ Editor ▸ "Auto-save changes to disk", or palette → "Toggle Auto-Save to Disk".
-    3. **Debounce save** — edit a saved file, stop typing ~2s → unsaved-dot clears, disk updates.
-    4. **Focus-loss save** — edit, switch window/tab → file written.
-    5. **No cursor/scroll jump** after an autosave fires (self-write suppression must hold). *Key feel check.*
-    6. **Untitled stays untitled** — type in a new untitled tab with autosave on → no Save-As dialog, nothing written.
-    7. **External-change safety** — edit an open file, then modify it in another editor + save → "changed on disk" bar appears, autosave does **not** clobber until you Reload/Keep.
-    8. **Toggle off** — edits stop hitting disk.
-    *Deferred: autosaving untitled buffers, per-file opt-out, configurable delay.*
+- ✅ **Optional autosave-to-disk** (shipped v1.5) — opt-in autosave for **named** files: debounced after you stop typing (~1.5s) + flushed on focus loss (window blur / hide / tab switch); off by default (toggle in Appearance ▸ Editor or the palette). Skips untitled buffers and unresolved external-change conflicts; no history snapshot per autosave. Whole-branch reviewed; manual focus-loss / cursor-jump checklist passed on the 1.5.0 installer. *Deferred: autosaving untitled buffers, per-file opt-out, configurable delay.*
 - ⬜ **Format Document** (**M**) — lightweight code prettify.
 - ✅ **Folder mode: sidebar file-tree + quick-open** (shipped v1.3) — opt-in "Open Folder" → toggleable, resizable left sidebar tree (lazy-loaded) + basic file ops (New File/Folder, Rename, Delete→Recycle Bin) + `Ctrl+P` quick-open; `.git`/`node_modules` hidden by default (Show-all toggle); startup-restore of the last folder. Scratchpad stays the default with no folder open. *Deferred: drag-to-move, cut/copy/paste, multi-root, content search in quick-open, `.gitignore` awareness.*
 
