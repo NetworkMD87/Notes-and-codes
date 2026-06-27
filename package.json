@@ -32,6 +32,7 @@
     "dompurify": "^3.4.10",
     "markdown-it": "^14.2.0",
     "monaco-editor": "^0.50.0",
+    "prettier": "^3.8.4",
     "split.js": "^1.6.5"
   },
   "allowScripts": {
