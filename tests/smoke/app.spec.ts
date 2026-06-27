@@ -348,6 +348,31 @@ test('export commands are wired into the File ▸ Export menu', async () => {
   }
 })
 
+test('Format Document reformats the active buffer via the palette', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fmt-'))
+  const filePath = join(userDataDir, 'ugly.js')
+  writeFileSync(filePath, 'const   x=1\nfunction  f( ){return   x}')
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#paneA .view-lines')).toContainText('const')
+
+    const runCmd = async (label: string) => {
+      await win.keyboard.press('Control+Shift+P')
+      await win.locator('#palette input').fill(label)
+      await win.keyboard.press('Enter')
+    }
+    await runCmd('Format Document')
+    // Save (Ctrl+S is a native-menu accelerator Playwright can't trigger) then read disk.
+    await runCmd('Save')
+    await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('const x = 1;')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toContain('function f() {')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('autosave-to-disk writes a named file on blur without a conflict bar', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-as-'))
   const filePath = join(userDataDir, 'note.txt')

@@ -1,5 +1,7 @@
 import * as monaco from 'monaco-editor'
 import type { BufferState } from '../shared/types'
+import { formatText, UnsupportedLanguageError, type FormatRange } from './formatter'
+import { toast } from './notify'
 
 export class EditorPane {
   private editor: monaco.editor.IStandaloneCodeEditor
@@ -30,6 +32,7 @@ export class EditorPane {
     this.editor.onDidChangeModelContent(() => {
       this.changeCb?.(this.editor.getValue())
     })
+    this.editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => { void this.formatDocument() })
   }
 
   setBuffer(b: BufferState): void {
@@ -100,6 +103,41 @@ export class EditorPane {
     const sel = this.editor.getSelection()
     return sel ? this.editor.getModel()?.getValueInRange(sel) ?? '' : ''
   }
+
+  async formatDocument(): Promise<void> {
+    const model = this.editor.getModel(); if (!model) return
+    const text = model.getValue(); if (!text.trim()) return
+    await this.applyFormat(text, model.getLanguageId())
+  }
+
+  async formatSelection(): Promise<void> {
+    const model = this.editor.getModel(); if (!model) return
+    const sel = this.editor.getSelection()
+    if (!sel || sel.isEmpty()) { await this.formatDocument(); return }
+    const range: FormatRange = {
+      start: model.getOffsetAt(sel.getStartPosition()),
+      end: model.getOffsetAt(sel.getEndPosition()),
+    }
+    await this.applyFormat(model.getValue(), model.getLanguageId(), range)
+  }
+
+  private async applyFormat(text: string, lang: string, range?: FormatRange): Promise<void> {
+    let formatted: string
+    try {
+      formatted = await formatText(text, lang, range)
+    } catch (err) {
+      if (err instanceof UnsupportedLanguageError) toast(`Can't format — ${lang} isn't supported.`)
+      else toast(`Format failed: ${(err as Error).message.split('\n')[0]}`)
+      return
+    }
+    if (formatted === text) return
+    const model = this.editor.getModel(); if (!model) return
+    const viewState = this.editor.saveViewState()
+    this.editor.executeEdits('format', [{ range: model.getFullModelRange(), text: formatted }])
+    if (viewState) this.editor.restoreViewState(viewState)
+    this.editor.focus()
+  }
+
   triggerFind(): void { this.editor.getAction('actions.find')?.run() }
   triggerReplace(): void { this.editor.getAction('editor.action.startFindReplaceAction')?.run() }
   layout(): void { this.editor.layout() }

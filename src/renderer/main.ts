@@ -447,6 +447,8 @@ registerCommands({
   toggleAutoSaveToDisk,
   exportHtml,
   exportPdf,
+  formatDocument: () => void paneFor(view.focusedPane()).formatDocument(),
+  formatSelection: () => void paneFor(view.focusedPane()).formatSelection(),
 })
 
 const overlayOpen = () =>
@@ -515,6 +517,8 @@ installMenuCommands({
   history: openHistory,
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
+  'format-doc': () => void paneFor(view.focusedPane()).formatDocument(),
+  'format-selection': () => void paneFor(view.focusedPane()).formatSelection(),
   ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) },
   'folder-open': () => void openFolderFromDialog(),
   'folder-close': () => folder.closeFolder(),

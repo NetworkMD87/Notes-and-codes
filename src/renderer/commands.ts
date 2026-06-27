@@ -40,6 +40,8 @@ export interface CommandDeps {
   toggleAutoSaveToDisk: () => void
   exportHtml: () => void
   exportPdf: () => void
+  formatDocument: () => void
+  formatSelection: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -71,6 +73,8 @@ export function registerCommands(d: CommandDeps): void {
   } })
   p.register({ id: 'autosave-disk', label: 'Toggle Auto-Save to Disk', run: () => d.toggleAutoSaveToDisk() })
   p.register({ id: 'mdpreview', label: 'Toggle Markdown Preview', run: () => d.togglePreview() })
+  p.register({ id: 'format-doc', label: 'Format Document', hint: 'Shift+Alt+F', run: () => d.formatDocument() })
+  p.register({ id: 'format-selection', label: 'Format Selection', run: () => d.formatSelection() })
   p.register({ id: 'paste-history', label: 'Paste from History', run: () => d.pasteFromHistory() })
   p.register({ id: 'clear-paste-history', label: 'Clear Paste History', run: () => d.clearPasteHistory() })
   p.register({ id: 'ctxmenu', label: 'Toggle "Open with Notes & Codes" right-click menu', run: async () => {
