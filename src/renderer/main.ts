@@ -400,6 +400,11 @@ const appearance = new AppearancePanel(document.getElementById('app')!, {
   setRestoreFolder: (on) => { restoreFolder = on; void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, restoreFolderOnLaunch: on })) },
   autoSaveToDisk: () => autoSaveToDisk,
   setAutoSaveToDisk: (on) => setAutoSaveToDisk(on),
+  formatOnSave: () => formatOnSave,
+  setFormatOnSave: (on) => {
+    formatOnSave = on
+    void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, formatOnSave: on }))
+  },
 })
 const openAppearance = () => appearance.open()
 themeBtn.onclick = openAppearance

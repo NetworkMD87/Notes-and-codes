@@ -424,3 +424,24 @@ test('autosave-to-disk writes a named file on blur without a conflict bar', asyn
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('Appearance has a Format on save toggle that persists', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fosui-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await win.locator('#theme-toggle').click()
+    await expect(win.locator('#appearance')).toBeVisible()
+    const row = win.locator('.appearance-row', { hasText: 'Format on save' })
+    await expect(row).toBeVisible()
+    await row.locator('input[type=checkbox]').check()
+    await expect.poll(
+      () => JSON.parse(readFileSync(join(userDataDir, 'settings.json'), 'utf8')).formatOnSave,
+      { timeout: 5000 }
+    ).toBe(true)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
