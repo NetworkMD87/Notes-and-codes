@@ -7,6 +7,9 @@ export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface Snippet { id: string; name: string; body: string }
 
+export type HighlightColour = 'yellow' | 'green' | 'blue' | 'pink'
+export interface Highlight { start: number; end: number; colour: HighlightColour }
+
 export interface BufferState {
   id: string
   title: string
@@ -16,6 +19,7 @@ export interface BufferState {
   eol: EolMode
   encoding: Encoding
   dirty: boolean
+  highlights?: Highlight[]
 }
 
 export type ThemeMode = 'light' | 'dark' | 'follow-os'
