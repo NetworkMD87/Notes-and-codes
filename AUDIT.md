@@ -6,6 +6,39 @@ security-boundary violations. No features or restyling.
 
 ---
 
+## Triage outcome (2026-06-30, shipped v1.7.1 · commit `a135da2`)
+
+Every finding was verified against the code ("audit the audit"). **16 confirmed and fixed**,
+2 confirmed-but-downgraded (still fixed defensively), **1 rejected**. Fixes built clean +
+131 unit tests green; manually verified on the 1.7.1 portable build. Plan:
+`docs/superpowers/plans/audit-triage-fixes.md`.
+
+| ID | Verdict | Resolution |
+|----|---------|------------|
+| C1 | ✅ Confirmed | Fixed — `atomicWrite` (tmp + `fs.rename`) in `fileService.writeFile`. |
+| C2 | ✅ Confirmed | Fixed — all 7 stores routed through `atomicWrite`. |
+| C3 | ✅ Confirmed (sev High, not Critical) | Fixed — session-timer `.catch` + one-shot toast. |
+| I1 | ✅ Confirmed | Fixed — `try/catch` + toast in `saveActive`/`saveAll`. |
+| I2 | ✅ Confirmed (low) | Fixed — `highlightStore.load` awaits the write chain. |
+| I3 | ⚠️ Partial / theoretical | Fixed defensively — `restore` backfills `eol`/`language`/`dirty`. |
+| I4 | ✅ Confirmed (low) | Fixed — `recentFilesStore` writes serialized through a chain. |
+| I5 | ❌ Rejected | No change — `showMessageBoxSync` blocks the event loop; dialogs can't stack. |
+| I6 | ✅ Confirmed (downgraded — bounded by distinct paths) | Fixed — stale `selfWrites` swept on each `file:changed`. |
+| I7 | ✅ Confirmed | Fixed — discard-confirm on dirty named-file tab close. |
+| I8 | ✅ Confirmed (partial) | Fixed for the Save-on-quit path (flush clip+session). **Residual:** a clean quit (no unsaved tabs) bypasses the flush — documented, deferred. |
+| M1 | ✅ Confirmed | Fixed — `dialog.showErrorBox` on hotkey-register failure. |
+| M2 | ✅ Confirmed | Fixed — `matchMedia` change listener re-applies `follow-os`. |
+| M3 | ✅ Confirmed (dev-only) | Fixed — `clearInterval` on `beforeunload`. |
+| M4 | ✅ Confirmed | Fixed — `console.error` in the history/highlight `.catch` chains. |
+| M5 | ✅ Confirmed (theoretical) | Fixed — `promptInput` uses document capture-phase keydown. |
+| M6 | ✅ Confirmed | Fixed — PDF render via temp file + `loadFile` (no data-URL ceiling). |
+| M7 | ✅ Confirmed | Fixed — `window.api` guard at the top of `boot()`. |
+| M8 | ✅ Confirmed (dup of C3) | Fixed — `mkdir` rejection now surfaced by the C3 catch. |
+
+Bonus (not in audit): removed a dead `overlayOpen` const in `renderer/main.ts`.
+
+---
+
 ## CRITICAL
 
 ### C1 — Non-atomic file writes can corrupt user data on crash
