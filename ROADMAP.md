@@ -69,8 +69,10 @@ features twice.
 > ▶ **STATUS (2026-06-30) — v1.7.0 shipped; Phase 3 complete.** All power features shipped:
 > file history, Markdown export, autosave-to-disk, Format Document, folder mode, and the
 > **text highlighter** (v1.7.0 — whole-branch reviewed, manual highlighter eyeball passed on
-> the installer, merged to `master` + tagged). **Next up:** the **Phase 3.5** design-polish
-> pass (the accent/theme/toast items below).
+> the installer, merged to `master` + tagged). **Next up:** **triage the external bug/error
+> audit** — review `AUDIT.md` (outside-eyes findings). *Audit the audit:* verify each finding
+> against the code, reject false positives, turn confirmed defects into prioritized fixes
+> before new feature work. Then the **Phase 3.5** design-polish pass (accent/theme/toast below).
 > **Carried known issue (deferred):** the native `Shift+Alt+F` hotkey does nothing in the
 > editor — Format works via palette + Edit menu, so it's a polish gap, not a blocker. Details
 > under **Format Document** below.
