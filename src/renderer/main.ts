@@ -70,7 +70,7 @@ function applyHighlightsToPanes(bufferId: string, hs: Highlight[]): void {
 const hlSaveTimers = new Map<string, number>()
 function scheduleHighlightSave(bufferId: string): void {
   clearTimeout(hlSaveTimers.get(bufferId))
-  hlSaveTimers.set(bufferId, setTimeout(() => persistHighlights(bufferId), 600) as unknown as number)
+  hlSaveTimers.set(bufferId, setTimeout(() => { persistHighlights(bufferId); hlSaveTimers.delete(bufferId) }, 600) as unknown as number)
 }
 function persistHighlights(bufferId: string): void {
   const b = manager.get(bufferId); if (!b) return
@@ -81,10 +81,14 @@ function persistHighlights(bufferId: string): void {
 async function loadHighlightsFor(b: { id: string; filePath: string | null; content: string; highlights?: Highlight[] }): Promise<void> {
   if (hlLoaded.has(b.id)) return
   hlLoaded.add(b.id)
-  let hs = b.filePath ? await window.api.loadHighlights(b.filePath) : (b.highlights ?? [])
-  hs = clampToLength(hs, b.content.length)
-  highlights.load(b.id, hs)
-  applyHighlightsToPanes(b.id, hs)
+  try {
+    let hs = b.filePath ? await window.api.loadHighlights(b.filePath) : (b.highlights ?? [])
+    hs = clampToLength(hs, b.content.length)
+    highlights.load(b.id, hs)
+    applyHighlightsToPanes(b.id, hs)
+  } catch {
+    hlLoaded.delete(b.id) // allow retry on next showActive
+  }
 }
 
 const pasteHistory = new PasteHistoryList()
@@ -117,6 +121,7 @@ function closeTab(id: string): void {
   if (manager.list().length === 0) manager.create()
   showActive(); scheduleSessionSave()
   view.paneA.forgetBuffer(id); view.paneB.forgetBuffer(id)
+  clearTimeout(hlSaveTimers.get(id)); hlSaveTimers.delete(id)
   highlights.forget(id); hlLoaded.delete(id)
   if (wasLast) window.api.hideWindow()
 }
