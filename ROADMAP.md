@@ -80,6 +80,7 @@ features twice.
     - ⬜ **Known issue (deferred): native `Shift+Alt+F` hotkey does nothing in the editor.** Command works via palette + Edit menu, so it's a polish gap, not a blocker. One fix attempt (remove Monaco's no-op built-in `editor.action.formatDocument` binding via `addKeybindingRules`) did not work and was reverted — hypothesis insufficient. Revisit: confirm the `editorPane.ts` `addCommand` handler fires at all; check whether Electron suppresses `Alt`-combo menu accelerators on Windows while the Monaco webview is focused; or register a real Monaco formatting provider. (OS keypress can't be smoke-tested, same as Ctrl+S.)
     *Deferred: configurable options UI, more languages, `.prettierrc` discovery.*
 - ✅ **Folder mode: sidebar file-tree + quick-open** (shipped v1.3) — opt-in "Open Folder" → toggleable, resizable left sidebar tree (lazy-loaded) + basic file ops (New File/Folder, Rename, Delete→Recycle Bin) + `Ctrl+P` quick-open; `.git`/`node_modules` hidden by default (Show-all toggle); startup-restore of the last folder. Scratchpad stays the default with no folder open. *Deferred: drag-to-move, cut/copy/paste, multi-root, content search in quick-open, `.gitignore` awareness.*
+- ⬜ **Text highlighter / pen** (**M**) — paint a persistent coloured background over selected text (annotation, survives deselect), via Monaco decorations — distinct from selection/copy. On-brand for the *notes* half of the hybrid identity. **Design first:** where highlights persist (session? sidecar per file?) and how they track across edits (offset shift / deletion). Palette + toolbar; a small swatch set for highlight colours, plus clear-highlight. *(Multi-part select → copy/paste is already native in Monaco — `Alt+Click` / `Ctrl+D` — so it's only a docs/shortcut-discoverability gap, not a feature.)*
 
 ## ⬜ Phase 3.5 — Design polish pass (do AFTER Phase 3 surfaces land)
 
@@ -96,6 +97,16 @@ micro-motion.*
   existing token system. Kicked off by a design-critique session on the running app.
 - ⬜ Fold in the two deferred **Phase-2 token tweaks**: status-bar `--muted` dimming, and
   accent-text auto-contrast (both listed under Phase 2 follow-ups above).
+- ⬜ **More accent colours + a real picker** (**S–M**) — expand the curated accent presets
+  (**S**) and replace the swatch-only override with a proper colour picker (hue/sat/value or
+  hex input) (**M**). Pairs with the accent-text auto-contrast tweak above so light accents
+  stay legible.
+- ⬜ **More bundled themes + fonts** (**S**) — additional cohesive themes (near-free: just new
+  token sets in `themes.ts`) and a few more font choices. **Watch installer bloat:** bundle
+  fonts sparingly — prefer surfacing more system fonts over shipping new font files.
+- ⬜ **Toast polish** (**S**) — give the theme/notify toast (`notify.ts`) an outline/border,
+  refined shadow + spacing so it reads as intentional chrome, not a bare label. Part of the
+  overlays/micro-motion sweep.
 
 ## 🧊 Phase 4 — Platform & power (parked)
 

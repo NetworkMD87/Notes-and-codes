@@ -86,6 +86,7 @@ function closeTab(id: string): void {
   manager.close(id)
   if (manager.list().length === 0) manager.create()
   showActive(); scheduleSessionSave()
+  view.paneA.forgetBuffer(id); view.paneB.forgetBuffer(id)
   if (wasLast) window.api.hideWindow()
 }
 
@@ -237,7 +238,7 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   manager.markSaved(id, path)
   conflicts.delete(id)
   if (opts.recent) window.api.addRecentFile(path)
-  if (pane && manager.get(id)!.language !== oldLang) pane.setBuffer(manager.get(id)!)
+  if (pane && manager.get(id)!.language !== oldLang) pane.refreshBuffer(manager.get(id)!)
   syncWatch()
   return true
 }
@@ -424,7 +425,7 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
     const b = manager.get(id); if (!b || !b.filePath) return
     window.api.snapshotHistory(b.filePath, paneFor(view.focusedPane()).getContent(), b.eol, b.encoding)
     manager.update(id, v.content)
-    paneFor(view.focusedPane()).setBuffer(b)
+    paneFor(view.focusedPane()).refreshBuffer(b)
     tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
     toast('Restored an earlier version — unsaved, Save to keep it.')
   }
@@ -496,7 +497,7 @@ async function reloadBuffer(id: string): Promise<void> {
   const file = await window.api.readFile(b.filePath)
   b.content = file.content; b.eol = file.eol; b.encoding = file.encoding; b.dirty = false
   conflicts.delete(id)
-  if (paneFor(view.focusedPane()).currentBufferId() === id) paneFor(view.focusedPane()).setBuffer(b)
+  if (paneFor(view.focusedPane()).currentBufferId() === id) paneFor(view.focusedPane()).refreshBuffer(b)
   refreshStatus(); tabBar.render(manager.list(), manager.activeId)
 }
 const changeBar = document.getElementById('change-bar')!
