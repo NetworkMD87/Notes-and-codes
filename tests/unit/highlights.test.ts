@@ -33,6 +33,21 @@ describe('applyStroke', () => {
     const existing: Highlight[] = [{ start: 0, end: 5, colour: 'yellow' }]
     expect(applyStroke(existing, { start: 4, end: 4 }, 'green')).toEqual(existing)
   })
+  it('erases across two touching same-colour segments (multi-segment fullyCovered sweep)', () => {
+    const out = applyStroke(
+      [{ start: 0, end: 5, colour: 'yellow' }, { start: 5, end: 10, colour: 'yellow' }],
+      { start: 2, end: 8 }, 'yellow')
+    expect(out).toEqual([
+      { start: 0, end: 2, colour: 'yellow' },
+      { start: 8, end: 10, colour: 'yellow' },
+    ])
+  })
+  it('paints across a gap between two same-colour segments and merges (fullyCovered early-false)', () => {
+    const out = applyStroke(
+      [{ start: 0, end: 3, colour: 'yellow' }, { start: 7, end: 10, colour: 'yellow' }],
+      { start: 0, end: 10 }, 'yellow')
+    expect(out).toEqual([{ start: 0, end: 10, colour: 'yellow' }])
+  })
 })
 
 describe('clampToLength', () => {
