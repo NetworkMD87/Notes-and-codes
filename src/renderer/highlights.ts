@@ -1,7 +1,5 @@
 import type { Highlight, HighlightColour } from '../shared/types'
 
-export const HIGHLIGHT_COLOURS: HighlightColour[] = ['yellow', 'green', 'blue', 'pink']
-
 /** Remove [start,end) from every segment, splitting/trimming overlaps. */
 function subtract(hs: Highlight[], start: number, end: number): Highlight[] {
   const out: Highlight[] = []

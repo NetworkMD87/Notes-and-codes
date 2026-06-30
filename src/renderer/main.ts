@@ -465,6 +465,7 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
   pasteFromHistory,
   toggleHighlighter,
   pickHighlightColour: setHighlightColour,
+  clearHighlights,
 })
 // keep the theme toggle as the right-most element in the header
 document.getElementById('header')!.appendChild(themeBtn)

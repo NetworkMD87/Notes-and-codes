@@ -1,14 +1,12 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import type { Highlight, HighlightColour } from '../shared/types'
-
-const COLOURS: HighlightColour[] = ['yellow', 'green', 'blue', 'pink']
+import { HIGHLIGHT_COLOURS, type Highlight } from '../shared/types'
 
 function sanitize(v: unknown): Highlight[] {
   if (!Array.isArray(v)) return []
   return v.filter((h): h is Highlight =>
     !!h && typeof h.start === 'number' && typeof h.end === 'number'
-    && h.end > h.start && COLOURS.includes((h as Highlight).colour))
+    && h.end > h.start && (HIGHLIGHT_COLOURS as readonly string[]).includes((h as Highlight).colour))
 }
 
 export class HighlightStore {

@@ -7,7 +7,8 @@ export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface Snippet { id: string; name: string; body: string }
 
-export type HighlightColour = 'yellow' | 'green' | 'blue' | 'pink'
+export const HIGHLIGHT_COLOURS = ['yellow', 'green', 'blue', 'pink', 'orange', 'purple', 'red'] as const
+export type HighlightColour = typeof HIGHLIGHT_COLOURS[number]
 export interface Highlight { start: number; end: number; colour: HighlightColour }
 
 export interface BufferState {
