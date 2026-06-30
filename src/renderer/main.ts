@@ -72,11 +72,16 @@ function scheduleHighlightSave(bufferId: string): void {
   clearTimeout(hlSaveTimers.get(bufferId))
   hlSaveTimers.set(bufferId, setTimeout(() => { persistHighlights(bufferId); hlSaveTimers.delete(bufferId) }, 600) as unknown as number)
 }
-function persistHighlights(bufferId: string): void {
+function persistHighlights(bufferId: string): Promise<void> | void {
   const b = manager.get(bufferId); if (!b) return
   const hs = highlights.get(bufferId)
-  if (b.filePath) void window.api.saveHighlights(b.filePath, hs)
-  else { b.highlights = hs; scheduleSessionSave() }
+  if (b.filePath) return window.api.saveHighlights(b.filePath, hs)
+  b.highlights = hs; scheduleSessionSave()
+}
+/** Flush a buffer's pending debounced highlight save immediately (cancels the timer first). */
+function flushHighlightSave(bufferId: string): Promise<void> | void {
+  clearTimeout(hlSaveTimers.get(bufferId)); hlSaveTimers.delete(bufferId)
+  return persistHighlights(bufferId)
 }
 async function loadHighlightsFor(b: { id: string; filePath: string | null; content: string; highlights?: Highlight[] }): Promise<void> {
   if (hlLoaded.has(b.id)) return
@@ -117,11 +122,11 @@ function refreshStatus(): void {
 
 function closeTab(id: string): void {
   const wasLast = manager.list().length === 1
+  void flushHighlightSave(id) // persist a just-painted highlight before the buffer is gone
   manager.close(id)
   if (manager.list().length === 0) manager.create()
   showActive(); scheduleSessionSave()
   view.paneA.forgetBuffer(id); view.paneB.forgetBuffer(id)
-  clearTimeout(hlSaveTimers.get(id)); hlSaveTimers.delete(id)
   highlights.forget(id); hlLoaded.delete(id)
   if (wasLast) window.api.hideWindow()
 }
@@ -161,8 +166,10 @@ for (const which of ['A', 'B'] as const) {
     const id = paneFor(which).currentBufferId()
     if (!id) return
     manager.update(id, c)
-    highlights.sync(id, paneFor(which).readHighlights())
-    scheduleHighlightSave(id)
+    if (highlights.get(id).length) {
+      highlights.sync(id, paneFor(which).readHighlights())
+      scheduleHighlightSave(id)
+    }
     tabBar.render(manager.list(), manager.activeId)
     refreshStatus()
     scheduleSessionSave()
@@ -257,6 +264,7 @@ window.api.onSaveAllAndQuit(async () => {
     return
   }
   tabBar.render(manager.list(), manager.activeId); refreshStatus()
+  await Promise.all([...hlSaveTimers.keys()].map(id => flushHighlightSave(id) ?? Promise.resolve()))
   window.api.quitNow()
 })
 
@@ -285,7 +293,7 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   selfWrites.set(path, Date.now())
   if (opts.snapshot) window.api.snapshotHistory(path, content, b.eol, b.encoding)
   manager.markSaved(id, path)
-  void window.api.saveHighlights(path, highlights.get(id))
+  await window.api.saveHighlights(path, highlights.get(id))
   manager.get(id)!.highlights = undefined
   conflicts.delete(id)
   if (opts.recent) window.api.addRecentFile(path)
