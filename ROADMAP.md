@@ -62,16 +62,18 @@ features twice.
 
 - ✅ **Hybrid (Option C).** Stay a fast scratchpad **by default**; add an **optional, toggleable** folder sidebar (file tree) + `Ctrl+P` quick-open for project work. Lightweight by default, powerful on demand — the folder mode never gets in the way and can be toggled off. The folder/tree/quick-open item is **activated** in Phase 3 (built as an opt-in mode, not always-on chrome).
 
-## ⬜ Phase 3 — Power features (v1.2)
+## 🚧 Phase 3 — Power features (v1.2–v1.6; only the text-highlighter remains)
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
-> ▶ **NEXT ACTION — ship v1.6.0 (merge `feat/format-document` → `master`, tag).** Manual
-> test done (2026-06-30): Edit-menu Format Document **pass**, no cursor/scroll jump **pass**.
-> **Known issue (deferred):** the native `Shift+Alt+F` hotkey does nothing in the editor —
-> the command works via menu/palette, so this is a polish gap, not a blocker. One fix attempt
-> (removing Monaco's no-op built-in `editor.action.formatDocument` binding) did not work and
-> was reverted; revisit as a standalone fix.
+> ▶ **STATUS (2026-06-30) — v1.6.1 shipped.** All Phase-3 power features are live
+> (file history, Markdown export, autosave-to-disk, Format Document, folder mode). Latest
+> patch v1.6.1: tab switch now restores scroll/cursor + undo history (model-per-buffer cache
+> in `editorPane.ts`). **Next up:** the **Phase 3.5** design-polish pass (the accent/theme/
+> toast items below), or the new Phase-3 **text-highlighter**.
+> **Carried known issue (deferred):** the native `Shift+Alt+F` hotkey does nothing in the
+> editor — Format works via palette + Edit menu, so it's a polish gap, not a blocker. Details
+> under **Format Document** below.
 
 - ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). *Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation.*
 - ✅ **Markdown export** (shipped v1.4) — export the active tab (rendered as Markdown) to a standalone **HTML** file or **PDF** via File ▸ Export or the palette; clean light document style, self-contained (no CDN). *Deferred: relative-image embedding, custom page size/margins, batch export, code syntax highlighting.*
