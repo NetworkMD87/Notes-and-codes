@@ -13,6 +13,8 @@ export class EditorPane {
   private pasteListener: monaco.IDisposable | null = null
   private copyCutHandler: (() => void) | null = null
   private bufferId: string | null = null
+  private models = new Map<string, monaco.editor.ITextModel>()
+  private viewStates = new Map<string, monaco.editor.ICodeEditorViewState>()
 
   constructor(container: HTMLElement) {
     this.container = container
@@ -35,12 +37,46 @@ export class EditorPane {
     this.editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => { void this.formatDocument() })
   }
 
+  /** Switch the visible buffer, preserving each buffer's scroll/cursor (view state) and undo history. */
   setBuffer(b: BufferState): void {
+    if (b.id === this.bufferId) return
+    if (this.bufferId) {
+      const vs = this.editor.saveViewState()
+      if (vs) this.viewStates.set(this.bufferId, vs)
+    } else {
+      this.editor.getModel()?.dispose() // drop the throwaway model created in the constructor
+    }
     this.bufferId = b.id
-    const old = this.editor.getModel()
+    this.editor.setModel(this.modelFor(b))
+    const vs = this.viewStates.get(b.id)
+    if (vs) this.editor.restoreViewState(vs)
+  }
+
+  /** Replace a buffer's model out-of-band (external reload, history restore, post-save language change). */
+  refreshBuffer(b: BufferState): void {
+    const old = this.models.get(b.id)
     const model = monaco.editor.createModel(b.content, b.language)
-    this.editor.setModel(model)
+    this.models.set(b.id, model)
+    this.viewStates.delete(b.id)
+    if (this.bufferId === b.id) this.editor.setModel(model)
     old?.dispose()
+  }
+
+  /** Drop a closed buffer's cached model + view state. */
+  forgetBuffer(id: string): void {
+    if (id === this.bufferId) return // still on screen — keep the live model
+    this.models.get(id)?.dispose()
+    this.models.delete(id)
+    this.viewStates.delete(id)
+  }
+
+  private modelFor(b: BufferState): monaco.editor.ITextModel {
+    let model = this.models.get(b.id)
+    if (!model || model.isDisposed()) {
+      model = monaco.editor.createModel(b.content, b.language)
+      this.models.set(b.id, model)
+    }
+    return model
   }
 
   currentBufferId(): string | null { return this.bufferId }
@@ -148,7 +184,8 @@ export class EditorPane {
     }
     this.cursorListener?.dispose()
     this.pasteListener?.dispose()
-    this.editor.getModel()?.dispose()
+    for (const m of this.models.values()) m.dispose()
+    this.models.clear()
     this.editor.dispose()
   }
 }
