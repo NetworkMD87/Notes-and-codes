@@ -17,6 +17,8 @@ export class EditorPane {
   private viewStates = new Map<string, monaco.editor.ICodeEditorViewState>()
   private highlightDecorations!: monaco.editor.IEditorDecorationsCollection
   private hlColours: HighlightColour[] = []
+  private highlighterOn = false
+  private paintCb: ((range: { start: number; end: number }) => void) | null = null
 
   constructor(container: HTMLElement) {
     this.container = container
@@ -34,6 +36,7 @@ export class EditorPane {
       fontLigatures: true
     })
     this.highlightDecorations = this.editor.createDecorationsCollection()
+    this.editor.onMouseUp(() => this.handleHighlighterMouseUp())
     this.editor.onDidChangeModelContent(() => {
       this.changeCb?.(this.editor.getValue())
     })
@@ -99,6 +102,24 @@ export class EditorPane {
       if (end > start) out.push({ start, end, colour: this.hlColours[i] })
     }
     return out
+  }
+
+  setHighlighterMode(on: boolean): void {
+    this.highlighterOn = on
+    this.container.classList.toggle('hl-mode', on)
+  }
+
+  onHighlightPaint(cb: (range: { start: number; end: number }) => void): void { this.paintCb = cb }
+
+  private handleHighlighterMouseUp(): void {
+    if (!this.highlighterOn) return
+    const sel = this.editor.getSelection(); if (!sel || sel.isEmpty()) return
+    const model = this.editor.getModel(); if (!model) return
+    const start = model.getOffsetAt(sel.getStartPosition())
+    const end = model.getOffsetAt(sel.getEndPosition())
+    if (end <= start) return
+    this.paintCb?.({ start, end })
+    this.editor.setSelection(monaco.Range.fromPositions(sel.getStartPosition())) // collapse the selection
   }
 
   private modelFor(b: BufferState): monaco.editor.ITextModel {
