@@ -7,6 +7,10 @@ export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface Snippet { id: string; name: string; body: string }
 
+export const HIGHLIGHT_COLOURS = ['yellow', 'green', 'blue', 'pink', 'orange', 'purple', 'red'] as const
+export type HighlightColour = typeof HIGHLIGHT_COLOURS[number]
+export interface Highlight { start: number; end: number; colour: HighlightColour }
+
 export interface BufferState {
   id: string
   title: string
@@ -16,6 +20,7 @@ export interface BufferState {
   eol: EolMode
   encoding: Encoding
   dirty: boolean
+  highlights?: Highlight[]
 }
 
 export type ThemeMode = 'light' | 'dark' | 'follow-os'
@@ -108,6 +113,8 @@ export interface Api {
   snapshotHistory(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
   listHistory(path: string): Promise<{ ts: number }[]>
   getHistory(path: string, ts: number): Promise<FileVersion | null>
+  loadHighlights(path: string): Promise<Highlight[]>
+  saveHighlights(path: string, highlights: Highlight[]): Promise<void>
   openFolderDialog(): Promise<string | null>
   readDir(path: string, showAll: boolean): Promise<DirEntry[]>
   walkFiles(path: string, showAll: boolean): Promise<string[]>

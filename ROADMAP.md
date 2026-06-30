@@ -62,15 +62,15 @@ features twice.
 
 - ✅ **Hybrid (Option C).** Stay a fast scratchpad **by default**; add an **optional, toggleable** folder sidebar (file tree) + `Ctrl+P` quick-open for project work. Lightweight by default, powerful on demand — the folder mode never gets in the way and can be toggled off. The folder/tree/quick-open item is **activated** in Phase 3 (built as an opt-in mode, not always-on chrome).
 
-## 🚧 Phase 3 — Power features (v1.2–v1.6; only the text-highlighter remains)
+## ✅ Phase 3 — Power features (shipped v1.2–v1.7)
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
-> ▶ **STATUS (2026-06-30) — v1.6.1 shipped.** All Phase-3 power features are live
-> (file history, Markdown export, autosave-to-disk, Format Document, folder mode). Latest
-> patch v1.6.1: tab switch now restores scroll/cursor + undo history (model-per-buffer cache
-> in `editorPane.ts`). **Next up:** the **Phase 3.5** design-polish pass (the accent/theme/
-> toast items below), or the new Phase-3 **text-highlighter**.
+> ▶ **STATUS (2026-06-30) — v1.7.0 shipped; Phase 3 complete.** All power features shipped:
+> file history, Markdown export, autosave-to-disk, Format Document, folder mode, and the
+> **text highlighter** (v1.7.0 — whole-branch reviewed, manual highlighter eyeball passed on
+> the installer, merged to `master` + tagged). **Next up:** the **Phase 3.5** design-polish
+> pass (the accent/theme/toast items below).
 > **Carried known issue (deferred):** the native `Shift+Alt+F` hotkey does nothing in the
 > editor — Format works via palette + Edit menu, so it's a polish gap, not a blocker. Details
 > under **Format Document** below.
@@ -82,7 +82,7 @@ features twice.
     - ⬜ **Known issue (deferred): native `Shift+Alt+F` hotkey does nothing in the editor.** Command works via palette + Edit menu, so it's a polish gap, not a blocker. One fix attempt (remove Monaco's no-op built-in `editor.action.formatDocument` binding via `addKeybindingRules`) did not work and was reverted — hypothesis insufficient. Revisit: confirm the `editorPane.ts` `addCommand` handler fires at all; check whether Electron suppresses `Alt`-combo menu accelerators on Windows while the Monaco webview is focused; or register a real Monaco formatting provider. (OS keypress can't be smoke-tested, same as Ctrl+S.)
     *Deferred: configurable options UI, more languages, `.prettierrc` discovery.*
 - ✅ **Folder mode: sidebar file-tree + quick-open** (shipped v1.3) — opt-in "Open Folder" → toggleable, resizable left sidebar tree (lazy-loaded) + basic file ops (New File/Folder, Rename, Delete→Recycle Bin) + `Ctrl+P` quick-open; `.git`/`node_modules` hidden by default (Show-all toggle); startup-restore of the last folder. Scratchpad stays the default with no folder open. *Deferred: drag-to-move, cut/copy/paste, multi-root, content search in quick-open, `.gitignore` awareness.*
-- ⬜ **Text highlighter / pen** (**M**) — paint a persistent coloured background over selected text (annotation, survives deselect), via Monaco decorations — distinct from selection/copy. On-brand for the *notes* half of the hybrid identity. **Design first:** where highlights persist (session? sidecar per file?) and how they track across edits (offset shift / deletion). Palette + toolbar; a small swatch set for highlight colours, plus clear-highlight. *(Multi-part select → copy/paste is already native in Monaco — `Alt+Click` / `Ctrl+D` — so it's only a docs/shortcut-discoverability gap, not a feature.)*
+- ✅ **Text highlighter / pen** (shipped v1.7) — toolbar toggle + **7-colour** swatch dropdown (yellow/green/blue/pink/orange/purple/red) with a **Clear highlights** action in the dropdown; the button underline shows the active colour. With the mode on, drag-select paints a persistent semi-transparent highlight (Monaco decorations), re-stroking the same colour erases, dragging a different colour recolours; also a **Clear Highlights** palette command. Persists **per file on disk** (path-keyed store in `userData`), untitled buffers via the session (migrated on Save-As); highlights ride edits (decoration read-back), clamp on reload, and flush on tab close / quit. Pure interval engine + store are unit-tested; paint / clear / persistence are smoke-tested (incl. relaunch). Code-complete + whole-branch reviewed on `feat/text-highlighter`. *Deferred: external-edit re-anchoring, highlights list panel, carrying highlights into HTML/PDF export, a free custom colour picker, an Edit-menu item, keyboard-only painting. (Multi-part select → copy/paste is already native in Monaco — `Alt+Click` / `Ctrl+D`.)*
 
 ## ⬜ Phase 3.5 — Design polish pass (do AFTER Phase 3 surfaces land)
 
