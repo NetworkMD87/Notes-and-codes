@@ -66,10 +66,19 @@ features twice.
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
+> ▶ **NEXT ACTION — ship v1.6.0 (merge `feat/format-document` → `master`, tag).** Manual
+> test done (2026-06-30): Edit-menu Format Document **pass**, no cursor/scroll jump **pass**.
+> **Known issue (deferred):** the native `Shift+Alt+F` hotkey does nothing in the editor —
+> the command works via menu/palette, so this is a polish gap, not a blocker. One fix attempt
+> (removing Monaco's no-op built-in `editor.action.formatDocument` binding) did not work and
+> was reverted; revisit as a standalone fix.
+
 - ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). *Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation.*
 - ✅ **Markdown export** (shipped v1.4) — export the active tab (rendered as Markdown) to a standalone **HTML** file or **PDF** via File ▸ Export or the palette; clean light document style, self-contained (no CDN). *Deferred: relative-image embedding, custom page size/margins, batch export, code syntax highlighting.*
 - ✅ **Optional autosave-to-disk** (shipped v1.5) — opt-in autosave for **named** files: debounced after you stop typing (~1.5s) + flushed on focus loss (window blur / hide / tab switch); off by default (toggle in Appearance ▸ Editor or the palette). Skips untitled buffers and unresolved external-change conflicts; no history snapshot per autosave. Whole-branch reviewed; manual focus-loss / cursor-jump checklist passed on the 1.5.0 installer. *Deferred: autosaving untitled buffers, per-file opt-out, configurable delay.*
-- ⬜ **Format Document** (**M**) — lightweight code prettify.
+- ✅ **Format Document** (shipped v1.6) — prettify the active buffer (prettier standalone, lazy-loaded) for JS/TS, JSON, CSS/SCSS/LESS, HTML, Markdown, YAML; palette + Edit menu + Format Selection; optional manual-save-only format-on-save. Code-complete + whole-branch reviewed on `feat/format-document` (1 Important found + fixed: stale-text overwrite guard). Smoke-verified: palette reformat, Format Selection, format-on-save + toggle persist, unsupported-language no-op + toast, syntax-error buffer-untouched + toast, Edit-menu items + `Shift+Alt+F` accelerator registered. Manual test passed: Edit-menu reformat, no cursor/scroll jump.
+    - ⬜ **Known issue (deferred): native `Shift+Alt+F` hotkey does nothing in the editor.** Command works via palette + Edit menu, so it's a polish gap, not a blocker. One fix attempt (remove Monaco's no-op built-in `editor.action.formatDocument` binding via `addKeybindingRules`) did not work and was reverted — hypothesis insufficient. Revisit: confirm the `editorPane.ts` `addCommand` handler fires at all; check whether Electron suppresses `Alt`-combo menu accelerators on Windows while the Monaco webview is focused; or register a real Monaco formatting provider. (OS keypress can't be smoke-tested, same as Ctrl+S.)
+    *Deferred: configurable options UI, more languages, `.prettierrc` discovery.*
 - ✅ **Folder mode: sidebar file-tree + quick-open** (shipped v1.3) — opt-in "Open Folder" → toggleable, resizable left sidebar tree (lazy-loaded) + basic file ops (New File/Folder, Rename, Delete→Recycle Bin) + `Ctrl+P` quick-open; `.git`/`node_modules` hidden by default (Show-all toggle); startup-restore of the last folder. Scratchpad stays the default with no folder open. *Deferred: drag-to-move, cut/copy/paste, multi-root, content search in quick-open, `.gitignore` awareness.*
 
 ## ⬜ Phase 3.5 — Design polish pass (do AFTER Phase 3 surfaces land)

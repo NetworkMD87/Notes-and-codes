@@ -30,6 +30,7 @@ import { FileHistoryPanel } from './fileHistoryPanel'
 import { FolderMode } from './folderMode'
 import { buildExportHtml, suggestExportName, type ExportFormat } from './exportDoc'
 import { AutoSaveController, eligibleForAutosave } from './autoSaveController'
+import { formatText, isFormattable } from './formatter'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -122,6 +123,7 @@ for (const which of ['A', 'B'] as const) {
 
 let autoSave = true
 let autoSaveToDisk = false
+let formatOnSave = false
 const conflicts = new Set<string>()
 const selfWrites = new Map<string, number>()
 const autosaveFailed = new Set<string>()
@@ -167,6 +169,7 @@ async function boot(): Promise<void> {
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
   autoSaveToDisk = settings.autoSaveToDisk
+  formatOnSave = settings.formatOnSave
   theme.apply(migrateThemeId(settings), settings.accent ?? null)
   fontFamily = settings.fontFamily ?? 'JetBrains Mono'
   fontLigatures = settings.fontLigatures ?? true
@@ -207,13 +210,20 @@ window.api.onSaveAllAndQuit(async () => {
   window.api.quitNow()
 })
 
-interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean }
-const MANUAL_SAVE: SaveOpts = { snapshot: true, recent: true, allowDialog: true }
+interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean; format: boolean }
+const MANUAL_SAVE: SaveOpts = { snapshot: true, recent: true, allowDialog: true, format: true }
 
 async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boolean> {
   const b = manager.get(id); if (!b) return false
   const pane = view.paneA.currentBufferId() === id ? view.paneA
     : view.paneB.currentBufferId() === id ? view.paneB : null
+  if (opts.format && formatOnSave && isFormattable(b.language)) {
+    if (pane) await pane.formatDocument()
+    else {
+      try { manager.update(id, await formatText(b.content, b.language)) }
+      catch { /* leave unformatted — never block a save */ }
+    }
+  }
   const content = pane ? pane.getContent() : b.content
   const oldLang = b.language
   let path = b.filePath
@@ -245,7 +255,7 @@ async function saveAll(): Promise<void> {
 
 function autosaveFlush(): void {
   for (const id of eligibleForAutosave(manager.list(), conflicts)) {
-    saveBuffer(id, { snapshot: false, recent: false, allowDialog: false })
+    saveBuffer(id, { snapshot: false, recent: false, allowDialog: false, format: false })
       .then(ok => { if (ok) { autosaveFailed.delete(id); tabBar.render(manager.list(), manager.activeId); refreshStatus() } })
       .catch(() => {
         // Leave the buffer dirty (markSaved was never reached). Toast once per failure streak.
@@ -266,6 +276,11 @@ function setAutoSaveToDisk(on: boolean): void {
 function toggleAutoSaveToDisk(): void {
   setAutoSaveToDisk(!autoSaveToDisk)
   toast(`Auto-save to disk: ${autoSaveToDisk ? 'on' : 'off'}`)
+}
+function toggleFormatOnSave(): void {
+  formatOnSave = !formatOnSave
+  void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, formatOnSave }))
+  toast(`Format on save: ${formatOnSave ? 'on' : 'off'}`)
 }
 
 window.addEventListener('blur', () => autosave.flushNow())
@@ -385,6 +400,11 @@ const appearance = new AppearancePanel(document.getElementById('app')!, {
   setRestoreFolder: (on) => { restoreFolder = on; void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, restoreFolderOnLaunch: on })) },
   autoSaveToDisk: () => autoSaveToDisk,
   setAutoSaveToDisk: (on) => setAutoSaveToDisk(on),
+  formatOnSave: () => formatOnSave,
+  setFormatOnSave: (on) => {
+    formatOnSave = on
+    void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, formatOnSave: on }))
+  },
 })
 const openAppearance = () => appearance.open()
 themeBtn.onclick = openAppearance
@@ -447,6 +467,9 @@ registerCommands({
   toggleAutoSaveToDisk,
   exportHtml,
   exportPdf,
+  formatDocument: () => void paneFor(view.focusedPane()).formatDocument(),
+  formatSelection: () => void paneFor(view.focusedPane()).formatSelection(),
+  toggleFormatOnSave,
 })
 
 const overlayOpen = () =>
@@ -515,6 +538,8 @@ installMenuCommands({
   history: openHistory,
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
+  'format-doc': () => void paneFor(view.focusedPane()).formatDocument(),
+  'format-selection': () => void paneFor(view.focusedPane()).formatSelection(),
   ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) },
   'folder-open': () => void openFolderFromDialog(),
   'folder-close': () => folder.closeFolder(),

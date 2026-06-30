@@ -1,6 +1,6 @@
 {
   "name": "notes-and-codes",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Notes & Codes — a fast dev scratchpad",
   "main": "out/main/index.js",
   "scripts": {
@@ -32,6 +32,7 @@
     "dompurify": "^3.4.10",
     "markdown-it": "^14.2.0",
     "monaco-editor": "^0.50.0",
+    "prettier": "^3.8.4",
     "split.js": "^1.6.5"
   },
   "allowScripts": {

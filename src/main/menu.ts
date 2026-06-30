@@ -42,7 +42,10 @@ export function buildMenu(d: MenuDeps): void {
     { label: 'Edit', submenu: [
       { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
       { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
-      { type: 'separator' }, cmd('Find', 'find'), cmd('Replace', 'replace')
+      { type: 'separator' }, cmd('Find', 'find'), cmd('Replace', 'replace'),
+      { type: 'separator' },
+      cmd('Format Document', 'format-doc', 'Shift+Alt+F'),
+      cmd('Format Selection', 'format-selection')
     ] },
     { label: 'View', submenu: [
       cmd('Toggle Split', 'split'),

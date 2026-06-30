@@ -348,6 +348,54 @@ test('export commands are wired into the File ▸ Export menu', async () => {
   }
 })
 
+test('Format Document reformats the active buffer via the palette', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fmt-'))
+  const filePath = join(userDataDir, 'ugly.js')
+  writeFileSync(filePath, 'const   x=1\nfunction  f( ){return   x}')
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#paneA .view-lines')).toContainText('const')
+
+    const runCmd = async (label: string) => {
+      await win.keyboard.press('Control+Shift+P')
+      await win.locator('#palette input').fill(label)
+      await win.keyboard.press('Enter')
+    }
+    await runCmd('Format Document')
+    // Save (Ctrl+S is a native-menu accelerator Playwright can't trigger) then read disk.
+    await runCmd('Save')
+    await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('const x = 1;')
+    await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('function f() {')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('format-on-save reformats on manual Save when enabled', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fos-'))
+  const filePath = join(userDataDir, 'ugly.js')
+  writeFileSync(filePath, 'const   y=2')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ formatOnSave: true }))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#paneA .view-lines')).toContainText('const')
+    // Touch the buffer so Save has something to write, then Save via palette.
+    await win.locator('#paneA .monaco-editor').click()
+    await win.keyboard.press('End')
+    await win.keyboard.type(' ')
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Save')
+    await win.keyboard.press('Enter')
+    await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('const y = 2;')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('autosave-to-disk writes a named file on blur without a conflict bar', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-as-'))
   const filePath = join(userDataDir, 'note.txt')
@@ -376,3 +424,24 @@ test('autosave-to-disk writes a named file on blur without a conflict bar', asyn
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('Appearance has a Format on save toggle that persists', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fosui-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await win.locator('#theme-toggle').click()
+    await expect(win.locator('#appearance')).toBeVisible()
+    const row = win.locator('.appearance-row', { hasText: 'Format on save' })
+    await expect(row).toBeVisible()
+    await row.locator('input[type=checkbox]').check()
+    await expect.poll(
+      () => JSON.parse(readFileSync(join(userDataDir, 'settings.json'), 'utf8')).formatOnSave,
+      { timeout: 5000 }
+    ).toBe(true)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
