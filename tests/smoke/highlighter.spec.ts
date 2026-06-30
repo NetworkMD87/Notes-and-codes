@@ -47,13 +47,16 @@ test('highlights persist across a relaunch', async () => {
   writeFileSync(filePath, TEXT)
 
   const app1 = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
-  const win1 = await app1.firstWindow()
-  await expect(win1.locator('#paneA .view-lines')).toContainText('hello')
-  await runCmd(win1, 'Toggle Highlighter')
-  await dragPaint(win1)
-  await expect(win1.locator('#paneA .hl-yellow').first()).toBeVisible()
-  await win1.waitForTimeout(800) // let the ~600ms debounced save flush
-  await app1.close()
+  try {
+    const win1 = await app1.firstWindow()
+    await expect(win1.locator('#paneA .view-lines')).toContainText('hello')
+    await runCmd(win1, 'Toggle Highlighter')
+    await dragPaint(win1)
+    await expect(win1.locator('#paneA .hl-yellow').first()).toBeVisible()
+    await win1.waitForTimeout(800) // let the ~600ms debounced save flush
+  } finally {
+    await app1.close()
+  }
 
   const app2 = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
   try {
