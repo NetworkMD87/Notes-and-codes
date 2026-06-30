@@ -114,8 +114,15 @@ if (!gotLock) {
 
     tray = createTray({ onShow: showWindow, onQuit: () => { requestQuit() } })
     const settings = await new (await import('./settingsStore')).SettingsStore(app.getPath('userData')).load()
-    const ok = globalShortcut.register(settings.globalHotkey || 'CommandOrControl+Shift+Space', toggleWindow)
-    if (!ok) console.error('global hotkey registration failed:', settings.globalHotkey)
+    const hotkey = settings.globalHotkey || 'CommandOrControl+Shift+Space'
+    const ok = globalShortcut.register(hotkey, toggleWindow)
+    if (!ok) {
+      console.error('global hotkey registration failed:', hotkey)
+      dialog.showErrorBox(
+        'Global hotkey unavailable',
+        `Could not register the summon hotkey "${hotkey}". Another app may already be using it. You can change it in settings.`
+      )
+    }
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()

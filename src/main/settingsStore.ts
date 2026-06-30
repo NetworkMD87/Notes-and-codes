@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types'
+import { atomicWrite } from './atomicWrite'
 
 export class SettingsStore {
   private file: string
@@ -16,6 +17,6 @@ export class SettingsStore {
   }
 
   async save(s: Settings): Promise<void> {
-    await fs.writeFile(this.file, JSON.stringify(s, null, 2), 'utf8')
+    await atomicWrite(this.file, JSON.stringify(s, null, 2))
   }
 }

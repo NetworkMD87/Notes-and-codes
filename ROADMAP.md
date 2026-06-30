@@ -66,16 +66,18 @@ features twice.
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
-> ▶ **STATUS (2026-06-30) — v1.7.0 shipped; Phase 3 complete.** All power features shipped:
-> file history, Markdown export, autosave-to-disk, Format Document, folder mode, and the
-> **text highlighter** (v1.7.0 — whole-branch reviewed, manual highlighter eyeball passed on
-> the installer, merged to `master` + tagged). **Next up:** **triage the external bug/error
-> audit** — review `AUDIT.md` (outside-eyes findings). *Audit the audit:* verify each finding
-> against the code, reject false positives, turn confirmed defects into prioritized fixes
-> before new feature work. Then the **Phase 3.5** design-polish pass (accent/theme/toast below).
-> **Carried known issue (deferred):** the native `Shift+Alt+F` hotkey does nothing in the
-> editor — Format works via palette + Edit menu, so it's a polish gap, not a blocker. Details
-> under **Format Document** below.
+> ▶ **STATUS (2026-06-30) — v1.7.1 shipped; Phase 3 complete + audit triaged.** All power
+> features shipped (file history, Markdown export, autosave-to-disk, Format Document, folder
+> mode, text highlighter). The **external bug/error audit is triaged** (v1.7.1): all 19
+> `AUDIT.md` findings verified against the code — **16 confirmed + fixed**, 2 fixed
+> defensively, **1 rejected (I5)**. Headline fixes: atomic writes (`atomicWrite` tmp+rename
+> across `fileService` + all 7 stores), surfaced save-failure toasts, dirty-tab-close + quit
+> flush. Build clean + 131 unit tests; manually eyeballed on the 1.7.1 build. See
+> `AUDIT.md` ▸ *Triage outcome* and `docs/superpowers/plans/audit-triage-fixes.md`.
+> **Next up:** the **Phase 3.5** design-polish pass (accent/theme/toast below).
+> **Carried known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing
+> (works via palette + Edit menu — details under **Format Document**); ② audit I8 residual —
+> a *clean* quit (no unsaved tabs) bypasses the clipboard/session flush.
 
 - ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). *Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation.*
 - ✅ **Markdown export** (shipped v1.4) — export the active tab (rendered as Markdown) to a standalone **HTML** file or **PDF** via File ▸ Export or the palette; clean light document style, self-contained (no CDN). *Deferred: relative-image embedding, custom page size/margins, batch export, code syntax highlighting.*

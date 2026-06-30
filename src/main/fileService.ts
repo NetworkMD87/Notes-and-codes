@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs'
 import type { EolMode, OpenedFile, Encoding } from '../shared/types'
 import { detectEncoding, decode, encode } from './encoding'
+import { atomicWrite } from './atomicWrite'
 
 export function detectEol(content: string): EolMode {
   return content.includes('\r\n') ? 'CRLF' : 'LF'
@@ -16,5 +17,5 @@ export async function readFileForEditor(path: string): Promise<OpenedFile> {
 export async function writeFile(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void> {
   const normalized = content.replace(/\r\n/g, '\n')
   const withEol = eol === 'CRLF' ? normalized.replace(/\n/g, '\r\n') : normalized
-  await fs.writeFile(path, encode(withEol, encoding))
+  await atomicWrite(path, encode(withEol, encoding))
 }

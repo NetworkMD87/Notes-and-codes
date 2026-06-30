@@ -24,7 +24,7 @@ import { Toolbar } from './toolbar'
 import { SnippetList } from './snippets'
 import { SnippetPicker } from './snippetPicker'
 import { SnippetManager } from './snippetManager'
-import { promptInput } from './inputOverlay'
+import { promptInput, confirmDialog } from './inputOverlay'
 import { AppearancePanel } from './appearancePanel'
 import { FileHistoryPanel } from './fileHistoryPanel'
 import { FolderMode } from './folderMode'
@@ -120,7 +120,13 @@ function refreshStatus(): void {
   reportDirty()
 }
 
-function closeTab(id: string): void {
+async function closeTab(id: string): Promise<void> {
+  const b = manager.get(id)
+  if (b && b.dirty && b.filePath) {
+    // Named file with unsaved edits: closing drops them from disk silently. Warn first.
+    const ok = await confirmDialog(`"${b.title}" has unsaved changes. Discard and close?`, 'Discard')
+    if (!ok) return
+  }
   const wasLast = manager.list().length === 1
   void flushHighlightSave(id) // persist a just-painted highlight before the buffer is gone
   manager.close(id)
@@ -133,7 +139,7 @@ function closeTab(id: string): void {
 
 const tabBar = new TabBar(document.getElementById('tabbar')!, {
   onSelect: (id) => { manager.setActive(id); showActive(); scheduleSessionSave() },
-  onClose: (id) => closeTab(id),
+  onClose: (id) => void closeTab(id),
   onNew: () => { manager.create(); showActive(); scheduleSessionSave() }
 })
 
@@ -186,6 +192,7 @@ const selfWrites = new Map<string, number>()
 const autosaveFailed = new Set<string>()
 const SELF_WRITE_WINDOW_MS = 2500
 let saveTimer: number | undefined
+let sessionSaveFailed = false
 let alwaysOnTop = false
 let fontSize = 14
 function applyFontSize(): void { view.paneA.setFontSize(fontSize); view.paneB.setFontSize(fontSize) }
@@ -219,10 +226,21 @@ const toggleAlwaysOnTop = () => setAlwaysOnTop(!alwaysOnTop)
 function scheduleSessionSave(): void {
   if (!autoSave) return
   clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => window.api.saveSession(manager.toSession()), 500) as unknown as number
+  saveTimer = setTimeout(() => {
+    window.api.saveSession(manager.toSession())
+      .then(() => { sessionSaveFailed = false })
+      .catch(err => {
+        console.error('session save failed', err)
+        if (!sessionSaveFailed) { sessionSaveFailed = true; toast('Session save failed — check disk space / permissions.') }
+      })
+  }, 500) as unknown as number
 }
 
 async function boot(): Promise<void> {
+  if (!window.api) {
+    document.body.textContent = 'Failed to initialize: the preload bridge did not load.'
+    return
+  }
   const settings = await window.api.loadSettings()
   autoSave = settings.autoSaveSession
   autoSaveToDisk = settings.autoSaveToDisk
@@ -265,6 +283,14 @@ window.api.onSaveAllAndQuit(async () => {
   }
   tabBar.render(manager.list(), manager.activeId); refreshStatus()
   await Promise.all([...hlSaveTimers.keys()].map(id => flushHighlightSave(id) ?? Promise.resolve()))
+  // Flush debounced clipboard-history + session writes so the last ~500ms isn't lost on quit.
+  clearTimeout(clipSaveTimer); clearTimeout(saveTimer)
+  try {
+    await window.api.saveClipboardHistory(pasteHistory.entries())
+    await window.api.saveSession(manager.toSession())
+  } catch (err) {
+    console.error('final flush before quit failed', err)
+  }
   window.api.quitNow()
 })
 
@@ -303,14 +329,25 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
 }
 async function saveActive(): Promise<void> {
   const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
-  await saveBuffer(id)
+  try {
+    await saveBuffer(id)
+  } catch (err) {
+    console.error('save failed', err)
+    toast('Save failed — check disk space / permissions.')
+  }
   tabBar.render(manager.list(), manager.activeId); refreshStatus()
 }
 async function saveAll(): Promise<void> {
-  let saved = 0
-  for (const b of manager.list()) { if (b.dirty) { if (await saveBuffer(b.id)) saved++ } }
+  let saved = 0, failed = 0
+  for (const b of manager.list()) {
+    if (b.dirty) {
+      try { if (await saveBuffer(b.id)) saved++ }
+      catch (err) { console.error('save failed', b.title, err); failed++ }
+    }
+  }
   tabBar.render(manager.list(), manager.activeId); refreshStatus()
-  toast(saved ? `Saved ${saved} file${saved === 1 ? '' : 's'}.` : 'Nothing to save.')
+  if (failed) toast(`Saved ${saved} file${saved === 1 ? '' : 's'}, ${failed} failed.`)
+  else toast(saved ? `Saved ${saved} file${saved === 1 ? '' : 's'}.` : 'Nothing to save.')
 }
 
 function autosaveFlush(): void {
@@ -556,10 +593,6 @@ registerCommands({
   clearHighlights,
 })
 
-const overlayOpen = () =>
-  !document.getElementById('palette')?.classList.contains('hidden') ||
-  !!document.querySelector('.diff-picker:not(.hidden)')
-
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }
@@ -594,8 +627,12 @@ function showChangeBar(id: string, name: string): void {
   changeBar.append(msg, reload, keep); changeBar.classList.remove('hidden')
 }
 window.api.onFileChanged((path) => {
+  // Purge self-write markers past their window so a late/never-matching watcher event
+  // (slow or unwatchable filesystem) can't leave dead entries in the Map.
+  const now = Date.now()
+  for (const [p, t] of selfWrites) if (now - t >= SELF_WRITE_WINDOW_MS) selfWrites.delete(p)
   const ts = selfWrites.get(path)
-  if (ts !== undefined && Date.now() - ts < SELF_WRITE_WINDOW_MS) { selfWrites.delete(path); return }
+  if (ts !== undefined && now - ts < SELF_WRITE_WINDOW_MS) { selfWrites.delete(path); return }
   const b = manager.list().find(x => x.filePath === path); if (!b) return
   if (b.dirty) { conflicts.add(b.id); showChangeBar(b.id, b.title) }
   else void reloadBuffer(b.id)
@@ -611,7 +648,7 @@ installMenuCommands({
   'save-as': async () => { const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return; const b = manager.get(id)!; b.filePath = null; await saveBuffer(id); tabBar.render(manager.list(), manager.activeId); refreshStatus() },
   save: () => void saveActive(),
   'save-all': () => void saveAll(),
-  close: () => closeTab(manager.activeId!),
+  close: () => void closeTab(manager.activeId!),
   split: () => { view.setSplit(!view.isSplit()); showActive() },
   mdpreview: togglePreview,
   wrap: () => { const on = paneFor(view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) },
@@ -637,8 +674,10 @@ installMenuCommands({
 boot()
 
 const HISTORY_INTERVAL_MS = 5 * 60 * 1000
-setInterval(() => {
+const historyTimer = setInterval(() => {
   for (const b of manager.list()) {
     if (b.filePath && b.dirty) window.api.snapshotHistory(b.filePath, b.content, b.eol, b.encoding)
   }
 }, HISTORY_INTERVAL_MS)
+// Clear on unload so HMR dev reloads don't stack duplicate timers.
+window.addEventListener('beforeunload', () => clearInterval(historyTimer))

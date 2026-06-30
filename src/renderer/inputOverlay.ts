@@ -11,14 +11,15 @@ export function promptInput(title: string, initial = ''): Promise<string | null>
     box.append(label, field, ok, cancel)
     overlay.appendChild(box)
     document.body.appendChild(overlay)
-    const done = (val: string | null) => { overlay.remove(); resolve(val) }
+    const done = (val: string | null) => { document.removeEventListener('keydown', onKey, true); overlay.remove(); resolve(val) }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') { e.preventDefault(); done(field.value.trim() || null) }
+      else if (e.key === 'Escape') { e.preventDefault(); done(null) }
+    }
     ok.onclick = () => done(field.value.trim() || null)
     cancel.onclick = () => done(null)
     overlay.addEventListener('click', (e) => { if (e.target === overlay) done(null) })
-    field.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') done(field.value.trim() || null)
-      if (e.key === 'Escape') done(null)
-    })
+    document.addEventListener('keydown', onKey, true)
     field.focus()
   })
 }

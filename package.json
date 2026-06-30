@@ -1,6 +1,6 @@
 {
   "name": "notes-and-codes",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Notes & Codes — a fast dev scratchpad",
   "main": "out/main/index.js",
   "scripts": {
