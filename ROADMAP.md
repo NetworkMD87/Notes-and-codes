@@ -66,11 +66,11 @@ features twice.
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
-> ▶ **STATUS (2026-06-30) — Phase 3 complete.** All power features shipped: file history,
-> Markdown export, autosave-to-disk, Format Document, folder mode, and the **text highlighter**
-> (code-complete + whole-branch reviewed on `feat/text-highlighter`; ships as **v1.7.0** at
-> merge — version bump + installer + manual tray/hotkey + highlighter checklist + tag pending).
-> **Next up:** the **Phase 3.5** design-polish pass (the accent/theme/toast items below).
+> ▶ **STATUS (2026-06-30) — v1.7.0 shipped; Phase 3 complete.** All power features shipped:
+> file history, Markdown export, autosave-to-disk, Format Document, folder mode, and the
+> **text highlighter** (v1.7.0 — whole-branch reviewed, manual highlighter eyeball passed on
+> the installer, merged to `master` + tagged). **Next up:** the **Phase 3.5** design-polish
+> pass (the accent/theme/toast items below).
 > **Carried known issue (deferred):** the native `Shift+Alt+F` hotkey does nothing in the
 > editor — Format works via palette + Edit menu, so it's a polish gap, not a blocker. Details
 > under **Format Document** below.
