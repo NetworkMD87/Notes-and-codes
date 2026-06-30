@@ -43,6 +43,8 @@ export interface CommandDeps {
   formatDocument: () => void
   formatSelection: () => void
   toggleFormatOnSave: () => void
+  toggleHighlighter: () => void
+  clearHighlights: () => void
 }
 
 export function registerCommands(d: CommandDeps): void {
@@ -77,6 +79,8 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'format-doc', label: 'Format Document', hint: 'Shift+Alt+F', run: () => d.formatDocument() })
   p.register({ id: 'format-selection', label: 'Format Selection', run: () => d.formatSelection() })
   p.register({ id: 'format-on-save', label: 'Toggle Format on Save', run: () => d.toggleFormatOnSave() })
+  p.register({ id: 'highlighter', label: 'Toggle Highlighter', run: () => d.toggleHighlighter() })
+  p.register({ id: 'clear-highlights', label: 'Clear Highlights (current file)', run: () => d.clearHighlights() })
   p.register({ id: 'paste-history', label: 'Paste from History', run: () => d.pasteFromHistory() })
   p.register({ id: 'clear-paste-history', label: 'Clear Paste History', run: () => d.clearPasteHistory() })
   p.register({ id: 'ctxmenu', label: 'Toggle "Open with Notes & Codes" right-click menu', run: async () => {

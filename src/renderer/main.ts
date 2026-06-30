@@ -31,10 +31,15 @@ import { FolderMode } from './folderMode'
 import { buildExportHtml, suggestExportName, type ExportFormat } from './exportDoc'
 import { AutoSaveController, eligibleForAutosave } from './autoSaveController'
 import { formatText, isFormattable } from './formatter'
+import { HighlightManager } from './highlightManager'
+import { clampToLength } from './highlights'
+import type { Highlight, HighlightColour } from '../shared/types'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
 const view = new SplitView(document.getElementById('paneA')!, document.getElementById('paneB')!)
+const highlights = new HighlightManager()
+const hlLoaded = new Set<string>()
 const ENC_LABEL: Record<Encoding, string> = { utf8: 'UTF-8', utf8bom: 'UTF-8-BOM', utf16le: 'UTF-16 LE', utf16be: 'UTF-16 BE' }
 const statusBar = new StatusBar(document.getElementById('statusbar')!, {
   onEol: (eol) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.eol = eol; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave(); toast('Line endings: ' + eol) } },
@@ -56,6 +61,31 @@ themeBtn.id = 'theme-toggle'; themeBtn.textContent = '◐ theme'
 document.getElementById('header')!.appendChild(themeBtn)
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
+
+function applyHighlightsToPanes(bufferId: string, hs: Highlight[]): void {
+  for (const which of ['A', 'B'] as const) {
+    if (paneFor(which).currentBufferId() === bufferId) paneFor(which).setHighlights(hs)
+  }
+}
+const hlSaveTimers = new Map<string, number>()
+function scheduleHighlightSave(bufferId: string): void {
+  clearTimeout(hlSaveTimers.get(bufferId))
+  hlSaveTimers.set(bufferId, setTimeout(() => persistHighlights(bufferId), 600) as unknown as number)
+}
+function persistHighlights(bufferId: string): void {
+  const b = manager.get(bufferId); if (!b) return
+  const hs = highlights.get(bufferId)
+  if (b.filePath) void window.api.saveHighlights(b.filePath, hs)
+  else { b.highlights = hs; scheduleSessionSave() }
+}
+async function loadHighlightsFor(b: { id: string; filePath: string | null; content: string; highlights?: Highlight[] }): Promise<void> {
+  if (hlLoaded.has(b.id)) return
+  hlLoaded.add(b.id)
+  let hs = b.filePath ? await window.api.loadHighlights(b.filePath) : (b.highlights ?? [])
+  hs = clampToLength(hs, b.content.length)
+  highlights.load(b.id, hs)
+  applyHighlightsToPanes(b.id, hs)
+}
 
 const pasteHistory = new PasteHistoryList()
 let clipSaveTimer: number | undefined
@@ -87,6 +117,7 @@ function closeTab(id: string): void {
   if (manager.list().length === 0) manager.create()
   showActive(); scheduleSessionSave()
   view.paneA.forgetBuffer(id); view.paneB.forgetBuffer(id)
+  highlights.forget(id); hlLoaded.delete(id)
   if (wasLast) window.api.hideWindow()
 }
 
@@ -99,6 +130,8 @@ const tabBar = new TabBar(document.getElementById('tabbar')!, {
 function showActive(): void {
   const active = manager.get(manager.activeId!)!
   paneFor(view.focusedPane()).setBuffer(active)
+  applyHighlightsToPanes(active.id, highlights.get(active.id))
+  void loadHighlightsFor(active)
   tabBar.render(manager.list(), manager.activeId)
   refreshStatus()
   refreshPreview()
@@ -110,10 +143,21 @@ function showActive(): void {
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
 
 for (const which of ['A', 'B'] as const) {
+  paneFor(which).onHighlightPaint(range => {
+    const id = paneFor(which).currentBufferId(); if (!id) return
+    const hs = highlights.paint(id, range)
+    applyHighlightsToPanes(id, hs)
+    scheduleHighlightSave(id)
+  })
+}
+
+for (const which of ['A', 'B'] as const) {
   paneFor(which).onChange(c => {
     const id = paneFor(which).currentBufferId()
     if (!id) return
     manager.update(id, c)
+    highlights.sync(id, paneFor(which).readHighlights())
+    scheduleHighlightSave(id)
     tabBar.render(manager.list(), manager.activeId)
     refreshStatus()
     scheduleSessionSave()
@@ -236,6 +280,8 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   selfWrites.set(path, Date.now())
   if (opts.snapshot) window.api.snapshotHistory(path, content, b.eol, b.encoding)
   manager.markSaved(id, path)
+  void window.api.saveHighlights(path, highlights.get(id))
+  manager.get(id)!.highlights = undefined
   conflicts.delete(id)
   if (opts.recent) window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) pane.refreshBuffer(manager.get(id)!)
@@ -353,6 +399,25 @@ const exportPdf = () => void exportActive('pdf')
 const pasteFromHistory = () => phPicker.open(pasteHistory.entries(), (text) => { paneFor(view.focusedPane()).insertAtCursor(text) })
 const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); toast('Paste history cleared.') }
 
+function toggleHighlighter(): void {
+  const on = highlights.toggleMode()
+  view.paneA.setHighlighterMode(on); view.paneB.setHighlighterMode(on)
+  toolbar.syncHighlighter(on, highlights.colour())
+  toast(`Highlighter: ${on ? 'on' : 'off'}`)
+}
+function setHighlightColour(c: HighlightColour): void {
+  highlights.setColour(c)
+  if (!highlights.isOn()) { toggleHighlighter(); return }
+  toolbar.syncHighlighter(true, c)
+}
+function clearHighlights(): void {
+  const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
+  const hs = highlights.clear(id)
+  applyHighlightsToPanes(id, hs)
+  scheduleHighlightSave(id)
+  toast('Highlights cleared.')
+}
+
 const snippets = new SnippetList(() => crypto.randomUUID())
 const snipPicker = new SnippetPicker(document.getElementById('app')!)
 function persistSnippets(): void { window.api.saveSnippets(snippets.list()) }
@@ -384,7 +449,9 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
   togglePreview,
   togglePin: toggleAlwaysOnTop,
   startDiff,
-  pasteFromHistory
+  pasteFromHistory,
+  toggleHighlighter,
+  pickHighlightColour: setHighlightColour,
 })
 // keep the theme toggle as the right-most element in the header
 document.getElementById('header')!.appendChild(themeBtn)
@@ -471,6 +538,8 @@ registerCommands({
   formatDocument: () => void paneFor(view.focusedPane()).formatDocument(),
   formatSelection: () => void paneFor(view.focusedPane()).formatSelection(),
   toggleFormatOnSave,
+  toggleHighlighter,
+  clearHighlights,
 })
 
 const overlayOpen = () =>
