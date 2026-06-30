@@ -1,5 +1,5 @@
 import * as monaco from 'monaco-editor'
-import type { BufferState } from '../shared/types'
+import type { BufferState, Highlight, HighlightColour } from '../shared/types'
 import { formatText, UnsupportedLanguageError, type FormatRange } from './formatter'
 import { toast } from './notify'
 
@@ -15,6 +15,8 @@ export class EditorPane {
   private bufferId: string | null = null
   private models = new Map<string, monaco.editor.ITextModel>()
   private viewStates = new Map<string, monaco.editor.ICodeEditorViewState>()
+  private highlightDecorations!: monaco.editor.IEditorDecorationsCollection
+  private hlColours: HighlightColour[] = []
 
   constructor(container: HTMLElement) {
     this.container = container
@@ -31,6 +33,7 @@ export class EditorPane {
       fontFamily: "'JetBrains Mono', Consolas, monospace",
       fontLigatures: true
     })
+    this.highlightDecorations = this.editor.createDecorationsCollection()
     this.editor.onDidChangeModelContent(() => {
       this.changeCb?.(this.editor.getValue())
     })
@@ -68,6 +71,34 @@ export class EditorPane {
     this.models.get(id)?.dispose()
     this.models.delete(id)
     this.viewStates.delete(id)
+  }
+
+  /** Render the buffer's highlights as inline decorations (replaces any current set). */
+  setHighlights(hs: Highlight[]): void {
+    const model = this.editor.getModel()
+    if (!model) { this.highlightDecorations.clear(); this.hlColours = []; return }
+    this.hlColours = hs.map(h => h.colour)
+    const decos = hs.map(h => ({
+      range: monaco.Range.fromPositions(model.getPositionAt(h.start), model.getPositionAt(h.end)),
+      options: {
+        inlineClassName: 'hl-' + h.colour,
+        stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+      },
+    }))
+    this.highlightDecorations.set(decos)
+  }
+
+  /** Read the live (edit-shifted) decoration ranges back into offsets. */
+  readHighlights(): Highlight[] {
+    const model = this.editor.getModel(); if (!model) return []
+    const out: Highlight[] = []
+    for (let i = 0; i < this.highlightDecorations.length; i++) {
+      const r = this.highlightDecorations.getRange(i); if (!r) continue
+      const start = model.getOffsetAt(r.getStartPosition())
+      const end = model.getOffsetAt(r.getEndPosition())
+      if (end > start) out.push({ start, end, colour: this.hlColours[i] })
+    }
+    return out
   }
 
   private modelFor(b: BufferState): monaco.editor.ITextModel {
