@@ -1,10 +1,8 @@
-import { Tray, Menu, nativeImage } from 'electron'
-import { Buffer } from 'node:buffer'
-import { TRAY_PNG_BASE64 } from './trayImage'
+import { Tray, Menu, nativeTheme } from 'electron'
+import { glyphImage } from './themeIcon'
 
 export function createTray(deps: { onShow: () => void; onQuit: () => void }): Tray {
-  const img = nativeImage.createFromBuffer(Buffer.from(TRAY_PNG_BASE64, 'base64'))
-  const tray = new Tray(img)
+  const tray = new Tray(glyphImage())
   tray.setToolTip('Notes & Codes')
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Show Notes & Codes', click: deps.onShow },
@@ -12,5 +10,9 @@ export function createTray(deps: { onShow: () => void; onQuit: () => void }): Tr
     { label: 'Quit', click: deps.onQuit }
   ]))
   tray.on('click', deps.onShow)
+  // Re-evaluate the glyph when the OS theme changes (fires on taskbar light/dark switches).
+  nativeTheme.on('updated', () => {
+    if (!tray.isDestroyed()) tray.setImage(glyphImage())
+  })
   return tray
 }
