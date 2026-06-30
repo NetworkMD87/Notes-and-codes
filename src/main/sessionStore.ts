@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import type { SessionData } from '../shared/types'
+import { atomicWrite } from './atomicWrite'
 
 const EMPTY: SessionData = { buffers: [], activeId: null }
 
@@ -14,7 +15,7 @@ export class SessionStore {
 
   async save(data: SessionData): Promise<void> {
     await fs.mkdir(this.dir, { recursive: true })
-    await fs.writeFile(this.file, JSON.stringify(data, null, 2), 'utf8')
+    await atomicWrite(this.file, JSON.stringify(data, null, 2))
   }
 
   async load(): Promise<SessionData> {

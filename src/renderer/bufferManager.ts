@@ -76,6 +76,13 @@ export class BufferManager {
     this.buffers = data.buffers
     this._activeId = data.activeId
     this.untitledCount = this.buffers.length
-    for (const b of this.buffers) if (!b.encoding) b.encoding = 'utf8'
+    // Backfill any field a session from an older schema may be missing, so downstream
+    // reads (status bar, writeFile) never hit undefined.
+    for (const b of this.buffers) {
+      if (!b.encoding) b.encoding = 'utf8'
+      if (!b.eol) b.eol = 'LF'
+      if (!b.language) b.language = 'plaintext'
+      if (typeof b.dirty !== 'boolean') b.dirty = false
+    }
   }
 }

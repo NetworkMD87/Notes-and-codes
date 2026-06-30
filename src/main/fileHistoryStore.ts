@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import type { FileVersion, EolMode, Encoding } from '../shared/types'
+import { atomicWrite } from './atomicWrite'
 
 export class FileHistoryStore {
   private dir: string
@@ -30,13 +31,13 @@ export class FileHistoryStore {
     versions.push({ ts, content, eol, encoding })
     while (versions.length > this.cap) versions.shift()
     await fs.mkdir(this.dir, { recursive: true })
-    await fs.writeFile(this.fileFor(path), JSON.stringify({ path, versions }), 'utf8')
+    await atomicWrite(this.fileFor(path), JSON.stringify({ path, versions }))
   }
 
   async snapshot(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void> {
     const prev = this.chains.get(path) ?? Promise.resolve()
     const next = prev.then(() => this.doSnapshot(path, content, eol, encoding))
-    this.chains.set(path, next.catch(() => {}))
+    this.chains.set(path, next.catch(err => console.error('[fileHistoryStore] snapshot failed for', path, err)))
     return next
   }
 

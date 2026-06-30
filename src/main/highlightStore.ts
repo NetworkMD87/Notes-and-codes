@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { HIGHLIGHT_COLOURS, type Highlight } from '../shared/types'
+import { atomicWrite } from './atomicWrite'
 
 function sanitize(v: unknown): Highlight[] {
   if (!Array.isArray(v)) return []
@@ -29,6 +30,8 @@ export class HighlightStore {
   }
 
   async load(path: string): Promise<Highlight[]> {
+    // Wait for any in-flight save so a save→load on the same path can't read stale data.
+    await this.chain
     return (await this.readAll())[path] ?? []
   }
 
@@ -39,9 +42,9 @@ export class HighlightStore {
       if (clean.length) all[path] = clean
       else delete all[path]
       await fs.mkdir(this.dir, { recursive: true })
-      await fs.writeFile(this.file, JSON.stringify(all), 'utf8')
+      await atomicWrite(this.file, JSON.stringify(all))
     })
-    this.chain = next.catch(() => {})
+    this.chain = next.catch(err => console.error('[highlightStore] save failed for', path, err))
     return next
   }
 }

@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import type { Snippet } from '../shared/types'
+import { atomicWrite } from './atomicWrite'
 
 function valid(x: unknown): x is Snippet {
   return !!x && typeof x === 'object'
@@ -21,6 +22,6 @@ export class SnippetStore {
   }
 
   async save(list: Snippet[]): Promise<void> {
-    await fs.writeFile(this.file, JSON.stringify(list), 'utf8')
+    await atomicWrite(this.file, JSON.stringify(list))
   }
 }

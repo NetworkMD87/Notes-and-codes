@@ -8,6 +8,12 @@ export class ThemeController {
 
   constructor(private panes: EditorPane[], private onPersist: (themeId: string, accent: string | null) => void) {
     for (const t of Object.values(THEMES)) monaco.editor.defineTheme(t.id, t.monaco)
+    // Re-resolve 'follow-os' live when the OS theme flips while the app is running.
+    if (typeof matchMedia !== 'undefined') {
+      matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (this.themeId === 'follow-os') this.apply('follow-os', this.accent)
+      })
+    }
   }
 
   apply(themeId: string, accent: string | null = null): void {

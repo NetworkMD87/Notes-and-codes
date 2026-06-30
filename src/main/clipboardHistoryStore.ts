@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
+import { atomicWrite } from './atomicWrite'
 
 export class ClipboardHistoryStore {
   private file: string
@@ -13,6 +14,6 @@ export class ClipboardHistoryStore {
   }
 
   async save(entries: string[]): Promise<void> {
-    await fs.writeFile(this.file, JSON.stringify(entries), 'utf8')
+    await atomicWrite(this.file, JSON.stringify(entries))
   }
 }

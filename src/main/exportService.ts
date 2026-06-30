@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, type SaveDialogOptions } from 'electron'
-import { writeFile } from 'node:fs/promises'
+import { writeFile, unlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { tmpdir } from 'node:os'
 import type { ExportResult } from '../shared/types'
 
 function defaultPath(sourcePath: string | null, suggestedName: string): string {
@@ -39,10 +40,13 @@ export async function savePdf(
   })
   if (r.canceled || !r.filePath) return { ok: true, canceled: true }
   let win: BrowserWindow | null = null
+  // Render via a temp file + loadFile rather than a data: URL — data: URLs hit Chromium's
+  // ~2 MB ceiling, silently failing large documents.
+  const tmpHtml = join(tmpdir(), `nc-export-${process.pid}-${Date.now()}.html`)
   try {
     win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
-    // Note: typical notes fit fine; very large HTML (>~Chromium's data-URL ceiling) would fail the load and return { ok: false }.
-    await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))
+    await writeFile(tmpHtml, html, 'utf8')
+    await win.loadFile(tmpHtml)
     const pdf = await win.webContents.printToPDF({ printBackground: true })
     await writeFile(r.filePath, pdf)
     return { ok: true, path: r.filePath }
@@ -51,5 +55,6 @@ export async function savePdf(
     return { ok: false }
   } finally {
     win?.destroy()
+    await unlink(tmpHtml).catch(() => {})
   }
 }
