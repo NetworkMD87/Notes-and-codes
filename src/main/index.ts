@@ -1,8 +1,9 @@
-import { app, BrowserWindow, dialog, globalShortcut, Tray } from 'electron'
+import { app, BrowserWindow, dialog, globalShortcut, nativeTheme, Tray } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc'
 import { setContextMenu } from './contextMenu'
 import { createTray } from './tray'
+import { glyphImage } from './themeIcon'
 import { buildMenu } from './menu'
 import { RecentFilesStore } from './recentFilesStore'
 
@@ -63,6 +64,10 @@ function createWindow(): BrowserWindow {
     height: 720,
     title: 'Notes & Codes',
     backgroundColor: '#1e1e1e',
+    // Live window icon = the contrast-aware {&} glyph (taskbar button + title bar). The
+    // static exe/installer icon stays build/icon.ico (the dark tile). Swapped on theme
+    // change below.
+    icon: glyphImage(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -115,6 +120,9 @@ if (!gotLock) {
     tray = createTray({ onShow: showWindow, onQuit: () => { requestQuit() } })
     const settings = await new (await import('./settingsStore')).SettingsStore(app.getPath('userData')).load()
     const hotkey = settings.globalHotkey || 'CommandOrControl+Shift+Space'
+    // Keep the live window/taskbar glyph contrasting when the taskbar theme flips.
+    nativeTheme.on('updated', () => mainWindow?.setIcon(glyphImage()))
+
     const ok = globalShortcut.register(hotkey, toggleWindow)
     if (!ok) {
       console.error('global hotkey registration failed:', hotkey)
