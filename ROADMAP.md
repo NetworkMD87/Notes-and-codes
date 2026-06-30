@@ -66,18 +66,22 @@ features twice.
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
-> ▶ **STATUS (2026-06-30) — v1.7.1 shipped; Phase 3 complete + audit triaged.** All power
-> features shipped (file history, Markdown export, autosave-to-disk, Format Document, folder
-> mode, text highlighter). The **external bug/error audit is triaged** (v1.7.1): all 19
-> `AUDIT.md` findings verified against the code — **16 confirmed + fixed**, 2 fixed
-> defensively, **1 rejected (I5)**. Headline fixes: atomic writes (`atomicWrite` tmp+rename
-> across `fileService` + all 7 stores), surfaced save-failure toasts, dirty-tab-close + quit
-> flush. Build clean + 131 unit tests; manually eyeballed on the 1.7.1 build. See
-> `AUDIT.md` ▸ *Triage outcome* and `docs/superpowers/plans/audit-triage-fixes.md`.
+> ▶ **STATUS (2026-06-30) — v1.8.0 shipped; Phase 3 complete, audit triaged, brand identity in.**
+> All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
+> folder mode, text highlighter).
+> • **Robustness (v1.7.1):** the external `AUDIT.md` bug audit is triaged — all 19 findings
+> verified, **16 fixed**, 2 defensive, **1 rejected (I5)**. Headline: atomic writes
+> (`atomicWrite` tmp+rename across `fileService` + all 7 stores), surfaced save-failure toasts,
+> dirty-tab-close + quit flush. See `AUDIT.md` ▸ *Triage outcome*.
+> • **Identity (v1.8.0):** app logo + **theme-aware small icons** — the tray and live
+> window/taskbar button use the `{&}` glyph and swap bright/dark with the Windows taskbar
+> theme; static exe/installer icon is the dark `{N&C}` tile. Brand pack in `assets/branding/`.
+> Manually eyeballed + released (GitHub release v1.8.0, installer attached).
 > **Next up:** the **Phase 3.5** design-polish pass (accent/theme/toast below).
 > **Carried known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing
 > (works via palette + Edit menu — details under **Format Document**); ② audit I8 residual —
-> a *clean* quit (no unsaved tabs) bypasses the clipboard/session flush.
+> a *clean* quit (no unsaved tabs) bypasses the clipboard/session flush; ③ static exe/installer
+> icon can't theme-swap (uses the contrast-safe dark tile).
 
 - ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). *Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation.*
 - ✅ **Markdown export** (shipped v1.4) — export the active tab (rendered as Markdown) to a standalone **HTML** file or **PDF** via File ▸ Export or the palette; clean light document style, self-contained (no CDN). *Deferred: relative-image embedding, custom page size/margins, batch export, code syntax highlighting.*
