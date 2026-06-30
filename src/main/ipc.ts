@@ -9,6 +9,7 @@ import { SnippetStore } from './snippetStore'
 import { RecentFilesStore } from './recentFilesStore'
 import { FileWatcher } from './fileWatcher'
 import { FileHistoryStore } from './fileHistoryStore'
+import { HighlightStore } from './highlightStore'
 import { saveHtml, savePdf } from './exportService'
 import type { SessionData, Settings, EolMode, Encoding } from '../shared/types'
 
@@ -28,6 +29,7 @@ export function registerIpc(deps: IpcDeps): void {
   const snippets = new SnippetStore(deps.baseDir)
   const recent = new RecentFilesStore(deps.baseDir)
   const history = new FileHistoryStore(deps.baseDir)
+  const highlights = new HighlightStore(deps.baseDir)
   const watcher = new FileWatcher((path) => deps.getWindow()?.webContents.send('file:changed', path))
   const dirWatcher = new DirWatcher(() => deps.getWindow()?.webContents.send('dir:changed'))
   ipcMain.handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))
@@ -61,6 +63,9 @@ export function registerIpc(deps: IpcDeps): void {
     history.snapshot(path, content, eol, encoding))
   ipcMain.handle('history:list', (_e, path: string) => history.list(path))
   ipcMain.handle('history:get', (_e, path: string, ts: number) => history.get(path, ts))
+  ipcMain.handle('highlights:load', (_e, path: string) => highlights.load(path))
+  ipcMain.handle('highlights:save', (_e, path: string, hs: import('../shared/types').Highlight[]) =>
+    highlights.save(path, hs))
   ipcMain.handle('dialog:openFolder', async () => {
     const r = await dialog.showOpenDialog({ properties: ['openDirectory'] })
     return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]

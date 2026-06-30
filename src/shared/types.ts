@@ -112,6 +112,8 @@ export interface Api {
   snapshotHistory(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
   listHistory(path: string): Promise<{ ts: number }[]>
   getHistory(path: string, ts: number): Promise<FileVersion | null>
+  loadHighlights(path: string): Promise<Highlight[]>
+  saveHighlights(path: string, highlights: Highlight[]): Promise<void>
   openFolderDialog(): Promise<string | null>
   readDir(path: string, showAll: boolean): Promise<DirEntry[]>
   walkFiles(path: string, showAll: boolean): Promise<string[]>
