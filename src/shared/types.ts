@@ -127,4 +127,6 @@ export interface Api {
   dirExists(path: string): Promise<boolean>
   exportHtml(html: string, suggestedName: string, sourcePath: string | null): Promise<ExportResult>
   exportPdf(html: string, suggestedName: string, sourcePath: string | null): Promise<ExportResult>
+  getAppVersion(): Promise<string>
+  openExternal(url: string): Promise<void>
 }

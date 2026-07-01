@@ -127,6 +127,27 @@
       .fh-when{flex:1}
       .fh-row button{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:3px 10px;cursor:pointer}
       .fh-row button:hover{background:var(--bar-hover)}
+      .help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;justify-content:center;align-items:flex-start;padding-top:60px;z-index:100}
+      .help-overlay.hidden{display:none}
+      .help-box{position:relative;width:560px;max-height:84vh;display:flex;flex-direction:column;background:var(--panel-bg);color:var(--panel-text);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+      .help-search{width:100%;box-sizing:border-box;padding:10px 36px 10px 12px;font-size:14px;background:var(--bar);color:var(--panel-text);border:none;border-bottom:1px solid var(--border)}
+      .help-close{position:absolute;top:8px;right:8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:none;border-radius:var(--radius);background:var(--bar);color:var(--panel-text);cursor:pointer;font-size:13px;line-height:1;z-index:2}
+      .help-close:hover{background:var(--accent);color:var(--accent-text)}
+      .help-body{overflow:auto;padding:8px 12px 14px}
+      .help-cat{margin-top:10px}
+      .help-cat:first-child{margin-top:2px}
+      .help-cat-title{font-size:12px;text-transform:uppercase;letter-spacing:.04em;opacity:.7;padding:2px 0 6px;border-bottom:1px solid var(--border)}
+      .help-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:4px 2px}
+      .help-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .help-kbd{flex:none;font-family:'JetBrains Mono',Consolas,monospace;font-size:12px;background:var(--bar);border:1px solid var(--border);border-radius:var(--radius);padding:1px 6px;white-space:nowrap}
+      .help-empty{padding:16px 2px;opacity:.7}
+      .about-card{padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:8px}
+      .about-name{font-size:22px;font-weight:600}
+      .about-version{opacity:.75;font-size:13px}
+      .about-tagline{opacity:.8;font-size:14px;margin-bottom:8px}
+      .about-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+      .about-link{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;cursor:pointer;font-size:13px}
+      .about-link:hover{background:var(--accent);color:var(--accent-text)}
     </style>
   </head>
   <body>

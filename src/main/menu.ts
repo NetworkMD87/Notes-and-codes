@@ -1,4 +1,4 @@
-import { app, Menu, shell } from 'electron'
+import { Menu } from 'electron'
 import type { MenuItemConstructorOptions } from 'electron'
 import { THEME_LIST } from '../renderer/themes'
 
@@ -79,8 +79,8 @@ export function buildMenu(d: MenuDeps): void {
       cmd('Toggle "Open with" right-click menu', 'ctxmenu')
     ] },
     { label: 'Help', submenu: [
-      { label: 'Open README', click: () => shell.openExternal('https://github.com/NetworkMD87/Notes-and-codes#readme') },
-      { label: `About Notes & Codes ${app.getVersion()}`, enabled: false }
+      cmd('Keyboard Shortcuts…', 'help-shortcuts'),
+      cmd('About Notes & Codes', 'help-about')
     ] }
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))

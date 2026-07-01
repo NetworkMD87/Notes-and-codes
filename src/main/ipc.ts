@@ -1,4 +1,4 @@
-import { clipboard, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
+import { app, clipboard, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { readFileForEditor, writeFile } from './fileService'
 import { readDir, walkFiles, createFile, createFolder, renamePath, dirExists } from './fsService'
 import { DirWatcher } from './dirWatcher'
@@ -87,4 +87,8 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.on('app:dirtyCount', (_e, n: number) => deps.onDirtyCount(n))
   ipcMain.on('window:hide', () => deps.getWindow()?.hide())
   ipcMain.on('app:quitNow', () => deps.onQuitNow())
+  ipcMain.handle('app:getVersion', () => app.getVersion())
+  ipcMain.handle('app:openExternal', (_e, url: string) => {
+    try { if (new URL(url).protocol === 'https:') return shell.openExternal(url) } catch { /* ignore */ }
+  })
 }

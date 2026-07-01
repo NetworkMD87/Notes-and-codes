@@ -1,0 +1,68 @@
+import { test, expect, _electron as electron } from '@playwright/test'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+const VERSION = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8')).version
+
+async function runCmd(win: Awaited<ReturnType<Awaited<ReturnType<typeof electron.launch>>['firstWindow']>>, label: string) {
+  await win.keyboard.press('Control+Shift+P')
+  await win.locator('#palette input').fill(label)
+  await win.keyboard.press('Enter')
+}
+
+test('Help: Keyboard Shortcuts overlay renders, filters, and closes on Esc', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-help-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+
+    await runCmd(win, 'Help: Keyboard Shortcuts')
+    await expect(win.locator('.help-overlay')).toBeVisible()
+    // six categories render
+    await expect(win.locator('.help-cat')).toHaveCount(6)
+
+    // total rows before filtering
+    const total = await win.locator('.help-row').count()
+    expect(total).toBeGreaterThan(0)
+
+    // type "save" → only matching rows stay visible
+    await win.locator('.help-search').fill('save')
+    const visibleAfter = win.locator('.help-row:visible')
+    await expect.poll(() => visibleAfter.count(), { timeout: 3000 }).toBeLessThan(total)
+    await expect.poll(() => visibleAfter.count(), { timeout: 3000 }).toBeGreaterThan(0)
+    // every visible row matches the query (via label or keys)
+    await expect(win.locator('.help-row:visible', { hasText: /save/i })).toHaveCount(await visibleAfter.count())
+
+    // clear the query → all rows return
+    await win.locator('.help-search').fill('')
+    await expect.poll(() => win.locator('.help-row:visible').count(), { timeout: 3000 }).toBe(total)
+
+    // Esc closes
+    await win.locator('.help-search').press('Escape')
+    await expect(win.locator('.help-overlay')).toBeHidden()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Help: About shows the live version and link buttons', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-help-about-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+
+    await runCmd(win, 'Help: About Notes & Codes')
+    await expect(win.locator('.help-overlay')).toBeVisible()
+    await expect(win.locator('.about-name')).toHaveText('Notes & Codes')
+    // version resolves to the package version
+    await expect(win.locator('.about-version')).toHaveText('v' + VERSION, { timeout: 3000 })
+    await expect(win.locator('.about-link')).toHaveCount(3)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

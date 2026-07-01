@@ -33,6 +33,7 @@ import { AutoSaveController, eligibleForAutosave } from './autoSaveController'
 import { formatText, isFormattable } from './formatter'
 import { HighlightManager } from './highlightManager'
 import { clampToLength } from './highlights'
+import { HelpOverlay } from './helpOverlay'
 import type { Highlight, HighlightColour } from '../shared/types'
 declare global { interface Window { api: Api } }
 
@@ -569,6 +570,7 @@ function refreshToolbar(): void {
 }
 
 const palette = new CommandPalette()
+const helpOverlay = new HelpOverlay()
 registerCommands({
   palette, manager, view, diff, paneFor, showActive, scheduleSessionSave,
   saveActive, saveAll, openFromDisk, startDiff, diffClipboard, diffFiles,
@@ -591,6 +593,8 @@ registerCommands({
   toggleFormatOnSave,
   toggleHighlighter,
   clearHighlights,
+  openHelp: () => helpOverlay.openShortcuts(),
+  openAbout: () => helpOverlay.openAbout(),
 })
 
 window.addEventListener('keydown', (e) => {
@@ -669,6 +673,8 @@ installMenuCommands({
   reveal: () => void folder.revealActive(),
   'export-html': exportHtml,
   'export-pdf': exportPdf,
+  'help-shortcuts': () => helpOverlay.openShortcuts(),
+  'help-about': () => helpOverlay.openAbout(),
 }, (id) => theme.pick(id))
 
 boot()
