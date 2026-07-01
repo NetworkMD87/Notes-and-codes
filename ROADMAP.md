@@ -77,7 +77,10 @@ features twice.
 > window/taskbar button use the `{&}` glyph and swap bright/dark with the Windows taskbar
 > theme; static exe/installer icon is the dark `{N&C}` tile. Brand pack in `assets/branding/`.
 > Manually eyeballed + released (GitHub release v1.8.0, installer attached).
-> **Next up:** the **Phase 3.5** design-polish pass (accent/theme/toast below).
+> **Next up:** **Phase 3.6 drag-to-reorder tabs**, then the **Phase 3.5** design-polish pass
+> (which sweeps in the shipped Help surface + the highlighter-cursor fix). *(In-app Help /
+> cheat-sheet shipped v1.9.0 — the first 3.6 surface, built before the polish pass per the
+> surfaces-then-polish rule.)*
 > **Carried known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing
 > (works via palette + Edit menu — details under **Format Document**); ② audit I8 residual —
 > a *clean* quit (no unsaved tabs) bypasses the clipboard/session flush; ③ static exe/installer
@@ -117,6 +120,27 @@ micro-motion.*
 - ⬜ **Toast polish** (**S**) — give the theme/notify toast (`notify.ts`) an outline/border,
   refined shadow + spacing so it reads as intentional chrome, not a bare label. Part of the
   overlays/micro-motion sweep.
+- ⬜ **Highlighter cursor polish** (**S**) — paint mode currently shows the browser `cell`
+  cursor (`.hl-mode .view-lines{cursor:cell}` in `index.html`); swap it for a pen-tip cursor
+  that matches the toolbar highlighter icon (custom `cursor:url(...)` SVG, or at least
+  `crosshair`) so it reads intentionally.
+
+## ⬜ Phase 3.6 — Quality-of-life & UX (independent of 3.5 — can interleave)
+
+*Small functional niceties, not visual polish, so they sit outside the 3.5 design pass.
+Neither depends on 3.5 — they can land before, during, or after it.*
+
+- ⬜ **Drag-to-reorder tabs** (**M**) — pointer/HTML5-drag reordering in `tabBar.ts` (today
+  tabs render in fixed open order with no drag handlers); persist the new order to the session
+  so it survives restart. Standard editor affordance users expect.
+- ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
+  **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
+  from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco
+  owns it). Real **About** dialog: live version, tagline, https links (README/repo/issues). Two
+  new IPCs (`getAppVersion`, https-guarded `openExternal`). Unit + smoke tested; whole-branch
+  reviewed on `feat/in-app-help` (2 bugs found + fixed: stale empty-state on repeat no-match,
+  Esc not closing the About view). *Deferred: a dedicated hotkey (F1/Monaco conflict),
+  clickable-to-run rows, auto-derived content, a shared shortcut-constants refactor.*
 
 ## 🧊 Phase 4 — Platform & power (parked)
 
