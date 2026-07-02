@@ -521,6 +521,7 @@ const appearance = new AppearancePanel(document.getElementById('app')!, {
   pickTheme: (id) => theme.pick(id), setAccent: (a) => theme.setAccent(a),
   fontFamily: () => fontFamily, setFontFamily: setFontFamilyState,
   fontLigatures: () => fontLigatures, setLigatures: setLigaturesState,
+  uiFontFamily: () => uiFontFamily, setUiFontFamily: setUiFontFamilyState,
   fontSize: () => fontSize, setFontSize: setFontSizeState,
   showAllFiles: () => showAllFiles,
   setShowAllFiles: (on) => { showAllFiles = on; void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, showAllFiles: on })) },
