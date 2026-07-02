@@ -33,3 +33,22 @@ test('Appearance: Interface font sets --ui-font; Editor font is relabeled', asyn
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('Appearance: renders landscape — theme list left, settings right', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-cols-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openAppearance(win)
+
+    await expect(win.locator('.appearance-col-left')).toBeVisible()
+    await expect(win.locator('.appearance-col-right')).toBeVisible()
+    // theme list is in the left column; accent swatches in the right
+    await expect(win.locator('.appearance-col-left .appearance-themes')).toBeVisible()
+    await expect(win.locator('.appearance-col-right .appearance-sw')).toBeVisible()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

@@ -143,7 +143,11 @@ export class AppearancePanel {
     fosRow.append(fosLabel, fos)
     editorWrap.append(eh, asRow, fosRow)
 
-    box.append(themeWrap, accWrap, fontWrap, editorWrap, folderWrap)
+    const left = document.createElement('div'); left.className = 'appearance-col-left'
+    left.append(themeWrap)
+    const right = document.createElement('div'); right.className = 'appearance-col-right'
+    right.append(accWrap, fontWrap, editorWrap, folderWrap)
+    box.append(left, right)
     this.host.replaceChildren(box)
   }
 }
