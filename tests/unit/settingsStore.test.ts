@@ -26,4 +26,13 @@ describe('SettingsStore', () => {
     expect(s.theme).toBe('light')
     expect(s.autoSaveSession).toBe(false)
   })
+  it('defaults uiFontFamily to System', async () => {
+    const s = await new SettingsStore(dir).load()
+    expect(s.uiFontFamily).toBe('System')
+  })
+  it('persists a chosen uiFontFamily', async () => {
+    const store = new SettingsStore(dir)
+    await store.save({ ...DEFAULT_SETTINGS, uiFontFamily: 'Fira Code' })
+    expect((await new SettingsStore(dir).load()).uiFontFamily).toBe('Fira Code')
+  })
 })
