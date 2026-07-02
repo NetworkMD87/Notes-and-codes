@@ -77,10 +77,11 @@ features twice.
 > window/taskbar button use the `{&}` glyph and swap bright/dark with the Windows taskbar
 > theme; static exe/installer icon is the dark `{N&C}` tile. Brand pack in `assets/branding/`.
 > Manually eyeballed + released (GitHub release v1.8.0, installer attached).
-> **Next up:** **Phase 3.6 drag-to-reorder tabs**, then finish the **Phase 3.5** design-polish
-> pass (whole-app visual critique; sweeps in the Help surface + highlighter-cursor fix). *(v1.9.0
-> shipped in-app Help; v1.10.0 shipped the Appearance-panel polish — separate interface font +
-> landscape + accent styling — the first 3.5 surface. Both eyeballed, merged, tagged.)*
+> **Next up:** finish the **Phase 3.5** design-polish pass (whole-app visual critique; sweeps in
+> the Help surface + highlighter-cursor fix); **Phase 3.6 drag-to-reorder tabs shipped** — only
+> its deferred live-shift/FLIP animation follow-up remains. *(v1.9.0 shipped in-app Help; v1.10.0
+> shipped the Appearance-panel polish — separate interface font + landscape + accent styling —
+> the first 3.5 surface. Both eyeballed, merged, tagged.)*
 > **Carried known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing
 > (works via palette + Edit menu — details under **Format Document**); ② audit I8 residual —
 > a *clean* quit (no unsaved tabs) bypasses the clipboard/session flush; ③ static exe/installer
@@ -136,9 +137,10 @@ micro-motion.*
 *Small functional niceties, not visual polish, so they sit outside the 3.5 design pass.
 Neither depends on 3.5 — they can land before, during, or after it.*
 
-- ⬜ **Drag-to-reorder tabs** (**M**) — pointer/HTML5-drag reordering in `tabBar.ts` (today
-  tabs render in fixed open order with no drag handlers); persist the new order to the session
-  so it survives restart. Standard editor affordance users expect.
+- ✅ **Drag-to-reorder tabs** (shipped) — HTML5 native drag in `tabBar.ts` with an accent
+  insertion mark; `BufferManager.move()` reorders the buffer array; new order persists via the
+  existing session serialization (survives restart). Unit-tested (`move`) + smoke-tested (drag +
+  relaunch). *Deferred: live-shift/FLIP animation of neighbouring tabs (Phase 3.5 polish).*
 - ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
   **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
   from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco
