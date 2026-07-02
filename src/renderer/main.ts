@@ -142,7 +142,8 @@ async function closeTab(id: string): Promise<void> {
 const tabBar = new TabBar(document.getElementById('tabbar')!, {
   onSelect: (id) => { manager.setActive(id); showActive(); scheduleSessionSave() },
   onClose: (id) => void closeTab(id),
-  onNew: () => { manager.create(); showActive(); scheduleSessionSave() }
+  onNew: () => { manager.create(); showActive(); scheduleSessionSave() },
+  onReorder: (id, toIndex) => { manager.move(id, toIndex); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave() }
 })
 
 function showActive(): void {
