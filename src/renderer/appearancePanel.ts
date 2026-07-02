@@ -144,9 +144,9 @@ export class AppearancePanel {
     editorWrap.append(eh, asRow, fosRow)
 
     const left = document.createElement('div'); left.className = 'appearance-col-left'
-    left.append(themeWrap)
+    left.append(themeWrap, accWrap)
     const right = document.createElement('div'); right.className = 'appearance-col-right'
-    right.append(accWrap, fontWrap, editorWrap, folderWrap)
+    right.append(fontWrap, editorWrap, folderWrap)
     box.append(left, right)
     this.host.replaceChildren(box)
   }

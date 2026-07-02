@@ -44,9 +44,10 @@ test('Appearance: renders landscape — theme list left, settings right', async 
 
     await expect(win.locator('.appearance-col-left')).toBeVisible()
     await expect(win.locator('.appearance-col-right')).toBeVisible()
-    // theme list is in the left column; accent swatches in the right
+    // theme list + accent swatches are in the left column; font settings in the right
     await expect(win.locator('.appearance-col-left .appearance-themes')).toBeVisible()
-    await expect(win.locator('.appearance-col-right .appearance-sw')).toBeVisible()
+    await expect(win.locator('.appearance-col-left .appearance-sw')).toBeVisible()
+    await expect(win.locator('.appearance-col-right .appearance-row', { hasText: 'Interface font' })).toBeVisible()
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
