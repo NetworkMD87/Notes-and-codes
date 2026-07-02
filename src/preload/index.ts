@@ -49,6 +49,8 @@ const api: Api = {
   dirExists: (path) => ipcRenderer.invoke('dir:exists', path),
   exportHtml: (html, suggestedName, sourcePath) => ipcRenderer.invoke('export:html', html, suggestedName, sourcePath),
   exportPdf: (html, suggestedName, sourcePath) => ipcRenderer.invoke('export:pdf', html, suggestedName, sourcePath),
+  getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+  openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
 }
 
 contextBridge.exposeInMainWorld('api', api)
