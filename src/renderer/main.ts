@@ -34,6 +34,7 @@ import { formatText, isFormattable } from './formatter'
 import { HighlightManager } from './highlightManager'
 import { clampToLength } from './highlights'
 import { HelpOverlay } from './helpOverlay'
+import { uiFontStack } from './uiFont'
 import type { Highlight, HighlightColour } from '../shared/types'
 declare global { interface Window { api: Api } }
 
@@ -216,6 +217,11 @@ function setFontFamilyState(name: string): void { fontFamily = name; applyFont()
 function setLigaturesState(on: boolean): void { fontLigatures = on; applyFont(); persistFont() }
 function setFontSizeState(px: number): void { fontSize = Math.min(40, Math.max(6, px)); applyFontSize(); persistFontSize() }
 
+let uiFontFamily = 'System'
+function applyUiFont(): void { document.body.style.setProperty('--ui-font', uiFontStack(uiFontFamily)) }
+function persistUiFont(): void { window.api.loadSettings().then(s => window.api.saveSettings({ ...s, uiFontFamily })) }
+function setUiFontFamilyState(name: string): void { uiFontFamily = name; applyUiFont(); persistUiFont() }
+
 async function setAlwaysOnTop(on: boolean): Promise<void> {
   alwaysOnTop = on
   await window.api.setAlwaysOnTop(on)
@@ -248,10 +254,12 @@ async function boot(): Promise<void> {
   formatOnSave = settings.formatOnSave
   theme.apply(migrateThemeId(settings), settings.accent ?? null)
   fontFamily = settings.fontFamily ?? 'JetBrains Mono'
+  uiFontFamily = settings.uiFontFamily ?? 'System'
   fontLigatures = settings.fontLigatures ?? true
   showAllFiles = settings.showAllFiles
   restoreFolder = settings.restoreFolderOnLaunch
   applyFont()
+  applyUiFont()
   fontSize = settings.fontSize ?? 14; applyFontSize()
   alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
   pasteHistory.load(await window.api.loadClipboardHistory())
