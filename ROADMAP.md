@@ -66,7 +66,7 @@ features twice.
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
-> ▶ **STATUS (2026-06-30) — v1.8.0 shipped; Phase 3 complete, audit triaged, brand identity in.**
+> ▶ **STATUS (2026-07-02) — v1.9.0 shipped (in-app Help); Phase 3 complete, audit triaged, brand identity in.**
 > All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
 > folder mode, text highlighter).
 > • **Robustness (v1.7.1):** the external `AUDIT.md` bug audit is triaged — all 19 findings
@@ -80,7 +80,7 @@ features twice.
 > **Next up:** **Phase 3.6 drag-to-reorder tabs**, then the **Phase 3.5** design-polish pass
 > (which sweeps in the shipped Help surface + the highlighter-cursor fix). *(In-app Help /
 > cheat-sheet shipped v1.9.0 — the first 3.6 surface, built before the polish pass per the
-> surfaces-then-polish rule.)*
+> surfaces-then-polish rule; manual eyeball test passed, merged + tagged.)*
 > **Carried known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing
 > (works via palette + Edit menu — details under **Format Document**); ② audit I8 residual —
 > a *clean* quit (no unsaved tabs) bypasses the clipboard/session flush; ③ static exe/installer

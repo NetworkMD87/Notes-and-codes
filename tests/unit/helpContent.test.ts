@@ -19,6 +19,16 @@ describe('helpContent', () => {
     }
   })
 
+  it('descriptions, where present, are non-empty', () => {
+    for (const cat of HELP_SECTIONS) {
+      for (const e of cat.entries) {
+        if (e.desc !== undefined) {
+          expect(e.desc.trim().length, `empty desc on "${e.label}"`).toBeGreaterThan(0)
+        }
+      }
+    }
+  })
+
   it('APP_LINKS urls parse and are https', () => {
     const all: HelpLink[] = [...APP_LINKS]
     for (const l of all) {

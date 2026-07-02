@@ -97,6 +97,6 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'zoom-in', label: 'Zoom In', hint: 'Ctrl+=', run: () => d.zoomIn() })
   p.register({ id: 'zoom-out', label: 'Zoom Out', hint: 'Ctrl+-', run: () => d.zoomOut() })
   p.register({ id: 'zoom-reset', label: 'Reset Zoom', hint: 'Ctrl+0', run: () => d.zoomReset() })
-  p.register({ id: 'help',  label: 'Help: Keyboard Shortcuts',  run: () => d.openHelp() })
+  p.register({ id: 'help',  label: 'Help: Shortcuts & Commands',  run: () => d.openHelp() })
   p.register({ id: 'about', label: 'Help: About Notes & Codes', run: () => d.openAbout() })
 }

@@ -79,7 +79,7 @@ export function buildMenu(d: MenuDeps): void {
       cmd('Toggle "Open with" right-click menu', 'ctxmenu')
     ] },
     { label: 'Help', submenu: [
-      cmd('Keyboard Shortcuts…', 'help-shortcuts'),
+      cmd('Shortcuts & Commands…', 'help-shortcuts'),
       cmd('About Notes & Codes', 'help-about')
     ] }
   ]

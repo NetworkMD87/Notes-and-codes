@@ -18,7 +18,7 @@ test('Help: Keyboard Shortcuts overlay renders, filters, and closes on Esc', asy
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
-    await runCmd(win, 'Help: Keyboard Shortcuts')
+    await runCmd(win, 'Help: Shortcuts & Commands')
     await expect(win.locator('.help-overlay')).toBeVisible()
     // six categories render
     await expect(win.locator('.help-cat')).toHaveCount(6)
@@ -57,7 +57,8 @@ test('Help: About shows the live version and link buttons', async () => {
 
     await runCmd(win, 'Help: About Notes & Codes')
     await expect(win.locator('.help-overlay')).toBeVisible()
-    await expect(win.locator('.about-name')).toHaveText('Notes & Codes')
+    // wordmark logo renders (replaces the old text name)
+    await expect(win.locator('.about-logo svg')).toBeVisible()
     // version resolves to the package version
     await expect(win.locator('.about-version')).toHaveText('v' + VERSION, { timeout: 3000 })
     await expect(win.locator('.about-link')).toHaveCount(3)
