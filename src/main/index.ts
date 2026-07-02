@@ -138,7 +138,7 @@ if (!gotLock) {
   })
 
   app.on('before-quit', () => { isQuitting = true })
-  app.on('will-quit', () => { globalShortcut.unregisterAll() })
+  app.on('will-quit', () => { globalShortcut.unregisterAll(); tray?.destroy(); tray = null })
 }
 
 app.on('window-all-closed', () => {
