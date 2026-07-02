@@ -6,8 +6,9 @@
     <title>Notes & Codes</title>
     <style>
       :root{--radius:4px;--gap:8px;--shadow:0 6px 24px rgba(0,0,0,.28)}
-      html,body,#app{height:100%;margin:0;font-family:Segoe UI,system-ui,sans-serif}
+      html,body,#app{height:100%;margin:0;font-family:var(--ui-font,Segoe UI,system-ui,sans-serif)}
       body{background:var(--editorbg);color:var(--bartext)}
+      button,select,input,textarea{font-family:inherit}
       #app{display:flex;flex-direction:row}
       #main{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;position:relative}
       #header{height:34px;display:flex;align-items:center;background:var(--bar);border-bottom:1px solid var(--border)}
@@ -107,8 +108,10 @@
       #change-bar{position:absolute;left:0;right:0;top:34px;background:var(--accent);color:var(--accent-text);font-size:13px;display:flex;align-items:center;gap:12px;padding:6px 12px;z-index:90}
       #change-bar.hidden{display:none}
       #change-bar button{background:rgba(255,255,255,.18);border:none;color:var(--accent-text);padding:3px 10px;border-radius:3px;cursor:pointer}
-      .appearance-box{width:480px;max-height:80vh;overflow:auto;background:var(--panel-bg);color:var(--panel-text);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:14px}
-      .appearance h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;opacity:.7}
+      .appearance-box{width:720px;max-width:92vw;max-height:80vh;overflow:auto;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;display:flex;flex-wrap:wrap;gap:20px}
+      .appearance-col-left{flex:1 1 240px;min-width:220px;display:flex;flex-direction:column;gap:14px}
+      .appearance-col-right{flex:1 1 320px;min-width:260px;display:flex;flex-direction:column;gap:14px}
+      .appearance h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
       .appearance-themes{display:grid;grid-template-columns:1fr 1fr;gap:6px}
       .appearance-theme{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer}
       .appearance-theme.active{border-color:var(--accent);outline:1px solid var(--accent)}
@@ -116,8 +119,10 @@
       .swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent}
       .swatch.active{border-color:var(--bartext)}
       .appearance-row{display:flex;align-items:center;gap:8px}
+      .appearance-row + .appearance-row{margin-top:8px}
       .appearance-row label{flex:1}
       .appearance select,.appearance input[type=number],.appearance input[type=text]{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);padding:4px}
+      .appearance select{min-width:150px}
       .file-history{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;justify-content:center;align-items:flex-start;padding-top:80px;z-index:100}
       .file-history.hidden{display:none}
       .fh-box{width:460px;max-height:80vh;overflow:auto;background:var(--panel-bg);color:var(--panel-text);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}

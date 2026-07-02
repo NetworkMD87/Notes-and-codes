@@ -9,6 +9,8 @@ export interface AppearanceDeps {
   setFontFamily: (name: string) => void
   fontLigatures: () => boolean
   setLigatures: (on: boolean) => void
+  uiFontFamily: () => string
+  setUiFontFamily: (name: string) => void
   fontSize: () => number
   setFontSize: (px: number) => void
   showAllFiles: () => boolean
@@ -22,6 +24,7 @@ export interface AppearanceDeps {
 }
 
 const FONTS = ['JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Courier New']
+const UI_FONTS = ['System', 'Segoe UI', 'system-ui', ...FONTS]
 
 export class AppearancePanel {
   private host: HTMLElement
@@ -71,7 +74,7 @@ export class AppearancePanel {
     const fontWrap = document.createElement('div')
     const fh = document.createElement('h3'); fh.textContent = 'Font'
     const famRow = document.createElement('div'); famRow.className = 'appearance-row'
-    const famLabel = document.createElement('label'); famLabel.textContent = 'Family'
+    const famLabel = document.createElement('label'); famLabel.textContent = 'Editor font'
     const sel = document.createElement('select')
     for (const f of [...FONTS, 'Custom…']) { const o = document.createElement('option'); o.value = f; o.textContent = f; sel.appendChild(o) }
     const custom = document.createElement('input'); custom.type = 'text'; custom.placeholder = 'Font name'
@@ -83,6 +86,20 @@ export class AppearancePanel {
     }
     custom.onchange = () => { if (custom.value) this.d.setFontFamily(custom.value) }
     famRow.append(famLabel, sel, custom)
+
+    const uiRow = document.createElement('div'); uiRow.className = 'appearance-row'
+    const uiLabel = document.createElement('label'); uiLabel.textContent = 'Interface font'
+    const uiSel = document.createElement('select')
+    for (const f of [...UI_FONTS, 'Custom…']) { const o = document.createElement('option'); o.value = f; o.textContent = f; uiSel.appendChild(o) }
+    const uiCustom = document.createElement('input'); uiCustom.type = 'text'; uiCustom.placeholder = 'Font name'
+    const uiCur = this.d.uiFontFamily()
+    if (UI_FONTS.includes(uiCur)) { uiSel.value = uiCur; uiCustom.style.display = 'none' } else { uiSel.value = 'Custom…'; uiCustom.value = uiCur }
+    uiSel.onchange = () => {
+      if (uiSel.value === 'Custom…') { uiCustom.style.display = ''; if (uiCustom.value) this.d.setUiFontFamily(uiCustom.value) }
+      else { uiCustom.style.display = 'none'; this.d.setUiFontFamily(uiSel.value) }
+    }
+    uiCustom.onchange = () => { if (uiCustom.value) this.d.setUiFontFamily(uiCustom.value) }
+    uiRow.append(uiLabel, uiSel, uiCustom)
 
     const sizeRow = document.createElement('div'); sizeRow.className = 'appearance-row'
     const sizeLabel = document.createElement('label'); sizeLabel.textContent = 'Size'
@@ -96,7 +113,7 @@ export class AppearancePanel {
     lig.onchange = () => this.d.setLigatures(lig.checked)
     ligRow.append(ligLabel, lig)
 
-    fontWrap.append(fh, famRow, sizeRow, ligRow)
+    fontWrap.append(fh, famRow, uiRow, sizeRow, ligRow)
 
     const folderWrap = document.createElement('div')
     const foh = document.createElement('h3'); foh.textContent = 'Folder'
@@ -126,7 +143,11 @@ export class AppearancePanel {
     fosRow.append(fosLabel, fos)
     editorWrap.append(eh, asRow, fosRow)
 
-    box.append(themeWrap, accWrap, fontWrap, editorWrap, folderWrap)
+    const left = document.createElement('div'); left.className = 'appearance-col-left'
+    left.append(themeWrap, accWrap)
+    const right = document.createElement('div'); right.className = 'appearance-col-right'
+    right.append(fontWrap, editorWrap, folderWrap)
+    box.append(left, right)
     this.host.replaceChildren(box)
   }
 }

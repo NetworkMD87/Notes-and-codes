@@ -104,6 +104,12 @@ logic above is meant to avoid. The token system already gives new surfaces the r
 colours; this pass tunes what tokens don't fix — spacing, density, type scale, hierarchy,
 micro-motion.*
 
+- ✅ **Appearance panel: interface font + landscape layout** (shipped v1.10.0) — a separate,
+  opt-in **Interface font** for app chrome (default **System** = no change out of the box; the
+  list includes sans + the mono coding fonts + Custom), distinct from the editor code font
+  (now labeled "Editor font"); the panel re-laid **landscape** (theme list left, accent / font /
+  editor / folder right) with a wrap fallback for narrow windows. *(The broader whole-app visual
+  critique below remains ⬜.)*
 - ⬜ **Whole-app visual critique + targeted upgrade** (**M**) — review the real surfaces
   (tabs, toolbar, status bar, file-history / appearance panels, overlays, empty states) for
   spacing, density, type scale, hierarchy, and micro-motion; apply refinements through the

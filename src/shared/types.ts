@@ -36,6 +36,7 @@ export interface Settings {
   themeId: string
   accent: string | null
   fontFamily: string
+  uiFontFamily: string
   fontLigatures: boolean
   showAllFiles: boolean
   restoreFolderOnLaunch: boolean
@@ -57,6 +58,7 @@ export const DEFAULT_SETTINGS: Settings = {
   themeId: 'dark',
   accent: null,
   fontFamily: 'JetBrains Mono',
+  uiFontFamily: 'System',
   fontLigatures: true,
   showAllFiles: false,
   restoreFolderOnLaunch: true,
