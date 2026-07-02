@@ -489,6 +489,12 @@ test('drag reorders tabs and the new order persists across relaunch', async () =
     const win2 = await app2.firstWindow()
     await expect(win2.locator('#tabbar')).toBeVisible()
     await expect.poll(() => titlesOf(win2)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
+
+    // Regression: the tabBar rewrite must keep close-× and the + add button working.
+    await win2.locator('.tab').last().locator('.tab-close').click()
+    await expect(win2.locator('.tab')).toHaveCount(2)
+    await win2.locator('.tab-add').click()
+    await expect(win2.locator('.tab')).toHaveCount(3)
   } finally {
     await app2.close()
     rmSync(userDataDir, { recursive: true, force: true })
