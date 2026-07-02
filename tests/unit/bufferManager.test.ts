@@ -58,4 +58,36 @@ describe('BufferManager', () => {
     const c = m.create()  // should be Untitled-1, not Untitled-3
     expect(c.title).toBe('Untitled-1')
   })
+
+  it('move reorders a buffer forward (drag first tab to the end)', () => {
+    const a = m.create(); const b = m.create(); const c = m.create() // [a,b,c]
+    m.move(a.id, 2)
+    expect(m.list().map(x => x.id)).toEqual([b.id, c.id, a.id])
+  })
+
+  it('move reorders a buffer backward (drag last tab to the front)', () => {
+    const a = m.create(); const b = m.create(); const c = m.create() // [a,b,c]
+    m.move(c.id, 0)
+    expect(m.list().map(x => x.id)).toEqual([c.id, a.id, b.id])
+  })
+
+  it('move clamps an out-of-range target index instead of dropping the buffer', () => {
+    const a = m.create(); const b = m.create() // [a,b]
+    m.move(a.id, 99)
+    expect(m.list().map(x => x.id)).toEqual([b.id, a.id])
+    expect(m.list()).toHaveLength(2)
+  })
+
+  it('move is a no-op for an unknown id', () => {
+    const a = m.create(); const b = m.create() // [a,b]
+    m.move('nope', 0)
+    expect(m.list().map(x => x.id)).toEqual([a.id, b.id])
+  })
+
+  it('move does not change the active buffer', () => {
+    const a = m.create(); const b = m.create(); const c = m.create()
+    m.setActive(b.id)
+    m.move(a.id, 2)
+    expect(m.activeId).toBe(b.id)
+  })
 })
