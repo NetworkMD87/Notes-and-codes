@@ -12,7 +12,9 @@ export class CommandPalette {
     this.overlay = document.createElement('div'); this.overlay.id = 'palette'; this.overlay.className = 'hidden'
     this.input = document.createElement('input'); this.input.placeholder = 'Type a command…'
     this.listEl = document.createElement('div'); this.listEl.className = 'palette-list'
-    this.overlay.append(this.input, this.listEl)
+    const box = document.createElement('div'); box.className = 'palette-box'
+    box.append(this.input, this.listEl)
+    this.overlay.append(box)
     document.body.appendChild(this.overlay)
     this.input.addEventListener('input', () => this.refresh())
     this.input.addEventListener('keydown', (e) => this.onKey(e))
