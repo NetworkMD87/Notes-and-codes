@@ -501,3 +501,24 @@ test('drag reorders tabs and the new order persists across relaunch', async () =
   }
 })
 
+test('command palette is one stacked box and still runs commands', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await win.keyboard.press('Control+Shift+P')
+    // input is nested inside the palette box (not a loose flex child)
+    await expect(win.locator('#palette .palette-box input')).toBeVisible()
+    // list is a sibling inside the same box
+    await expect(win.locator('#palette .palette-box .palette-list')).toBeVisible()
+    // running a command still works: New Tab -> 2 tabs
+    await win.locator('#palette .palette-box input').fill('New Tab')
+    await win.keyboard.press('Enter')
+    await expect(win.locator('.tab')).toHaveCount(2)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+

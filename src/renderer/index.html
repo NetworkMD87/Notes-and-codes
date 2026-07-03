@@ -52,8 +52,10 @@
       .overlay.hidden{display:none}
       #palette{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;justify-content:center;align-items:flex-start;padding-top:80px;z-index:100}
       #palette.hidden{display:none}
-      #palette input{width:520px;padding:8px;font-size:14px;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--border)}
-      .palette-list{width:520px;background:var(--panel-bg);max-height:300px;overflow:auto;box-shadow:var(--shadow)}
+      .palette-box{width:560px;background:var(--panel-bg);box-shadow:var(--shadow);border-radius:var(--radius);overflow:hidden}
+      #palette input{width:100%;box-sizing:border-box;padding:10px;font-size:14px;background:var(--panel-bg);color:var(--panel-text);border:none;border-bottom:1px solid var(--border);outline:none}
+      #palette input:focus{border-bottom-color:var(--accent)}
+      .palette-list{width:100%;max-height:320px;overflow:auto}
       .palette-row{padding:6px 8px;color:var(--panel-text);cursor:pointer;display:flex;justify-content:space-between;gap:16px}
       .palette-hint{opacity:.55;font-size:12px}
       .palette-row.active{background:var(--accent);color:var(--accent-text)}
