@@ -20,6 +20,9 @@
       .tab{box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px;height:100%;color:var(--tab-inactive-text);border-right:1px solid var(--border);border-top:2px solid transparent;cursor:pointer;white-space:nowrap}
       .tab:hover{background:var(--bar-hover)}
       .tab.active{background:var(--tab-active-bg);color:var(--bartext);border-top:2px solid var(--accent)}
+      .tab.dragging{opacity:.5}
+      .tab.drop-before{box-shadow:inset 2px 0 0 var(--accent)}
+      .tab.drop-after{box-shadow:inset -2px 0 0 var(--accent)}
       .tab-close{opacity:.6}.tab-close:hover{opacity:1}
       .tab-add{background:none;border:none;color:var(--bartext);font-size:16px;cursor:pointer;padding:0 10px}
       .gutter{background:var(--border);cursor:col-resize}

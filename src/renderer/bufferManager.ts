@@ -70,6 +70,14 @@ export class BufferManager {
     }
   }
 
+  move(id: string, toIndex: number): void {
+    const from = this.buffers.findIndex(b => b.id === id)
+    if (from === -1) return
+    const [b] = this.buffers.splice(from, 1)
+    const to = Math.max(0, Math.min(toIndex, this.buffers.length))
+    this.buffers.splice(to, 0, b)
+  }
+
   toSession(): SessionData { return { buffers: this.buffers, activeId: this._activeId } }
 
   restore(data: SessionData): void {

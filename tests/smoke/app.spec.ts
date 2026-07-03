@@ -445,3 +445,59 @@ test('Appearance has a Format on save toggle that persists', async () => {
   }
 })
 
+test('drag reorders tabs and the new order persists across relaunch', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-reorder-'))
+  const titlesOf = (w: Awaited<ReturnType<Awaited<ReturnType<typeof electron.launch>>['firstWindow']>>) =>
+    w.locator('.tab').evaluateAll(els => els.map(e => (e.textContent ?? '').replace('×', '').trim()))
+
+  const app1 = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app1.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+
+    // Start with the one auto tab; add two more → Untitled-1, Untitled-2, Untitled-3.
+    const newTab = async () => {
+      await win.keyboard.press('Control+Shift+P')
+      await win.locator('#palette input').fill('New Tab')
+      await win.keyboard.press('Enter')
+    }
+    await newTab(); await newTab()
+    await expect(win.locator('.tab')).toHaveCount(3)
+    expect(await titlesOf(win)).toEqual(['Untitled-1', 'Untitled-2', 'Untitled-3'])
+
+    // Drag the first tab onto the right edge of the last → it lands at the end.
+    await win.evaluate(() => {
+      const tabs = Array.from(document.querySelectorAll<HTMLElement>('#tabbar .tab'))
+      const src = tabs[0], last = tabs[tabs.length - 1]
+      const dt = new DataTransfer()
+      src.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }))
+      const r = last.getBoundingClientRect()
+      const opts: DragEventInit = { bubbles: true, dataTransfer: dt, clientX: r.right - 2, clientY: r.top + 5 }
+      last.dispatchEvent(new DragEvent('dragover', opts))
+      last.dispatchEvent(new DragEvent('drop', opts))
+      src.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }))
+    })
+
+    await expect.poll(() => titlesOf(win)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
+    await win.waitForTimeout(800) // let the debounced session save flush
+  } finally {
+    await app1.close()
+  }
+
+  const app2 = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win2 = await app2.firstWindow()
+    await expect(win2.locator('#tabbar')).toBeVisible()
+    await expect.poll(() => titlesOf(win2)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
+
+    // Regression: the tabBar rewrite must keep close-× and the + add button working.
+    await win2.locator('.tab').last().locator('.tab-close').click()
+    await expect(win2.locator('.tab')).toHaveCount(2)
+    await win2.locator('.tab-add').click()
+    await expect(win2.locator('.tab')).toHaveCount(3)
+  } finally {
+    await app2.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+

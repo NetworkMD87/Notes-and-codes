@@ -66,7 +66,7 @@ features twice.
 
 *The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited).*
 
-> ▶ **STATUS (2026-07-02) — v1.10.0 shipped (Appearance: interface font + landscape, accent-styled); Phase 3 complete, audit triaged, brand identity in.**
+> ▶ **STATUS (2026-07-03) — v1.11.0 shipped (drag-to-reorder tabs); Phase 3 complete, audit triaged, brand identity in.**
 > All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
 > folder mode, text highlighter).
 > • **Robustness (v1.7.1):** the external `AUDIT.md` bug audit is triaged — all 19 findings
@@ -77,10 +77,15 @@ features twice.
 > window/taskbar button use the `{&}` glyph and swap bright/dark with the Windows taskbar
 > theme; static exe/installer icon is the dark `{N&C}` tile. Brand pack in `assets/branding/`.
 > Manually eyeballed + released (GitHub release v1.8.0, installer attached).
-> **Next up:** **Phase 3.6 drag-to-reorder tabs**, then finish the **Phase 3.5** design-polish
-> pass (whole-app visual critique; sweeps in the Help surface + highlighter-cursor fix). *(v1.9.0
-> shipped in-app Help; v1.10.0 shipped the Appearance-panel polish — separate interface font +
-> landscape + accent styling — the first 3.5 surface. Both eyeballed, merged, tagged.)*
+> **v1.11.0 SHIPPED (2026-07-03) — drag-to-reorder tabs.** Built + whole-branch reviewed on
+> `feat/drag-reorder-tabs` (opus: ready to merge), eyeballed on the installed build (drag feel +
+> accent insertion mark + persist across restart + tray/hotkey checklist — PASS), merged `--no-ff`
+> → `master`, tagged `v1.11.0`.
+> **NEXT SESSION — Phase 3.5 design polish.** Finish the **Phase 3.5** design-polish pass (whole-app visual critique; sweeps in
+> the Help surface + highlighter-cursor fix); drag-to-reorder's own deferred live-shift/FLIP
+> animation follow-up. *(v1.9.0 shipped in-app Help; v1.10.0 shipped the Appearance-panel polish —
+> separate interface font + landscape + accent styling — the first 3.5 surface. Both eyeballed,
+> merged, tagged.)*
 > **Carried known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing
 > (works via palette + Edit menu — details under **Format Document**); ② audit I8 residual —
 > a *clean* quit (no unsaved tabs) bypasses the clipboard/session flush; ③ static exe/installer
@@ -136,9 +141,14 @@ micro-motion.*
 *Small functional niceties, not visual polish, so they sit outside the 3.5 design pass.
 Neither depends on 3.5 — they can land before, during, or after it.*
 
-- ⬜ **Drag-to-reorder tabs** (**M**) — pointer/HTML5-drag reordering in `tabBar.ts` (today
-  tabs render in fixed open order with no drag handlers); persist the new order to the session
-  so it survives restart. Standard editor affordance users expect.
+- ✅ **Drag-to-reorder tabs** (shipped v1.11.0) — HTML5
+  native drag in `tabBar.ts` with an accent insertion mark; `BufferManager.move()` reorders the
+  buffer array; new order persists via the existing session serialization (survives restart).
+  Unit-tested (`move`, 146/146) + smoke-tested (drag + relaunch + close-×/`+` regression);
+  whole-branch reviewed on `feat/drag-reorder-tabs` (opus: ready to merge, no Critical/Important);
+  eyeballed on the installed build (drag feel + insertion mark + persist + tray/hotkey checklist — PASS).
+  Merged `--no-ff` → `master`, tagged `v1.11.0`. *Deferred: live-shift/FLIP animation of neighbouring
+  tabs (Phase 3.5 polish).*
 - ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
   **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
   from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco
