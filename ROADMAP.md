@@ -121,13 +121,28 @@ micro-motion._
   (tabs, toolbar, status bar, file-history / appearance panels, overlays, empty states) for
   spacing, density, type scale, hierarchy, and micro-motion; apply refinements through the
   existing token system. Kicked off by a design-critique session on the running app.
-  **P1 delivered** (`feat/design-polish-p1`, awaiting eyeball): de-loudified status bar,
-  command-palette stacked box + themed focus, and a reusable token-driven **micro-motion
-  layer** (transitions + `overlayIn` overlay entry + `prefers-reduced-motion` kill-switch)
-  that later polish inherits for free. **P2/P3 follow-ups outstanding** — see the P1 spec's
-  Non-goals: overlay dismissal/scrim, toast polish, toolbar consistency, highlighter pen
-  cursor, themed checkboxes, theme-picker swatch previews, empty-state icons, accent picker
-  + auto-contrast.
+  **P1 delivered + merged** (`feat/design-polish-p1` → `master`, eyeball PASS 2026-07-03):
+  de-loudified status bar, command-palette stacked box + themed focus, and a reusable
+  token-driven **micro-motion layer** (transitions + `overlayIn` overlay entry +
+  `prefers-reduced-motion` kill-switch) that later polish inherits for free. **Version
+  intentionally NOT bumped** — the whole 3.5 polish pass ships under one version bump when it's
+  done, not per-slice. **P2/P3 follow-ups outstanding** — see the P1 spec's Non-goals: overlay
+  dismissal/scrim, toast polish, toolbar consistency, highlighter pen cursor, themed checkboxes,
+  theme-picker swatch previews, empty-state icons, accent picker + auto-contrast.
+- ⬜ **User polish notes (from the P1 eyeball, 2026-07-03)** — three directions to fold into the
+  remaining 3.5 sweep:
+  1. **Accent border on all toasts + pop-out menus** — give the notify toast (`.toast`), context
+     menu (`#ctx-menu`), the toolbar highlighter popup (`.tb-hl-pop`), and the picker/overlay boxes
+     a `1px solid var(--accent)` border, matching the Appearance card (`.appearance-box` already has
+     it). Makes floating chrome read as intentional, on-brand surfaces. (Supersedes/absorbs the
+     "Toast polish" item below.)
+  2. **Unify scrollbars** — audit every scroll container and make them all match the styled
+     scrollbar in the **Shortcuts & Commands** (Help) overlay
+     (`.help-body::-webkit-scrollbar*` in `index.html`); most other scroll areas still use the
+     default browser scrollbar.
+  3. **Use accent more boldly (but not over the top)** — "don't be scared of a little colour": add
+     the accent in more places where it adds hierarchy/affordance, kept tasteful. Guides the whole
+     visual-critique pass, pairs with accent-text auto-contrast so it stays legible on all themes.
 - ⬜ Fold in the two deferred **Phase-2 token tweaks**: status-bar `--muted` dimming, and
   accent-text auto-contrast (both listed under Phase 2 follow-ups above).
 - ⬜ **More accent colours + a real picker** (**S–M**) — expand the curated accent presets
