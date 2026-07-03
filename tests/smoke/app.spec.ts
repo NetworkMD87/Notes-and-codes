@@ -541,3 +541,20 @@ test('status bar reads as quiet chrome, not an accent slab', async () => {
   }
 })
 
+test('overlays use the micro-motion entry animation', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await win.keyboard.press('Control+Shift+P')
+    await expect(win.locator('#palette .palette-box')).toBeVisible()
+    const anim = await win.locator('#palette .palette-box')
+      .evaluate((el) => getComputedStyle(el).animationName)
+    expect(anim).toContain('overlayIn')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+

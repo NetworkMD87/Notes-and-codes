@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;" />
     <title>Notes & Codes</title>
     <style>
-      :root{--radius:4px;--gap:8px;--shadow:0 6px 24px rgba(0,0,0,.28)}
+      :root{--radius:4px;--gap:8px;--shadow:0 6px 24px rgba(0,0,0,.28);--motion-fast:120ms;--motion:160ms;--ease:cubic-bezier(.2,.6,.2,1)}
       html,body,#app{height:100%;margin:0;font-family:var(--ui-font,Segoe UI,system-ui,sans-serif)}
       body{background:var(--editorbg);color:var(--bartext)}
       button,select,input,textarea{font-family:inherit}
@@ -178,6 +178,11 @@
       .about-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
       .about-link{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;cursor:pointer;font-size:13px}
       .about-link:hover{background:var(--accent);color:var(--accent-text)}
+      /* --- micro-motion layer (Phase 3.5 P1) --- */
+      .tab,.tb-btn,.tab-add,.tab-close,#theme-toggle,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
+      @keyframes overlayIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
+      .palette-box,.qo-box,.appearance-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast{animation:overlayIn var(--motion) var(--ease)}
+      @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
     </style>
   </head>
   <body>
