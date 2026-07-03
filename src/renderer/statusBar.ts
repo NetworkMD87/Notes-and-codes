@@ -25,7 +25,9 @@ export class StatusBar {
     this.el.appendChild(eol)
 
     this.el.appendChild(span(`Ln ${info.cursor.line}, Col ${info.cursor.col}`))
-    this.el.appendChild(span(info.dirty ? '● unsaved' : '● saved'))
+    const state = span(info.dirty ? '● unsaved' : '● saved')
+    state.className = 'sb-state' + (info.dirty ? ' sb-dirty' : '')
+    this.el.appendChild(state)
   }
 
   private cycleEncoding(current: Encoding): void {

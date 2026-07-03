@@ -522,3 +522,22 @@ test('command palette is one stacked box and still runs commands', async () => {
   }
 })
 
+test('status bar reads as quiet chrome, not an accent slab', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#statusbar')).toBeVisible()
+    // panel-bg and bar resolve to the same color in every theme, so a de-loudified
+    // status bar (panel-bg) matches the header (bar); the old accent slab did not.
+    const [sbBg, headerBg] = await win.evaluate(() => {
+      const bg = (sel) => getComputedStyle(document.querySelector(sel)).backgroundColor
+      return [bg('#statusbar'), bg('#header')]
+    })
+    expect(sbBg).toBe(headerBg)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
