@@ -246,6 +246,8 @@ test('appearance panel changes theme, accent, and font', async () => {
     // pick a distinctive theme (Monokai) → body[data-theme] changes
     await win.locator('.appearance-theme', { hasText: 'Monokai' }).click()
     await expect(win.locator('body')).toHaveAttribute('data-theme', 'monokai')
+    await win.locator('.appearance-theme', { hasText: 'Nord' }).click()
+    await expect(win.locator('body')).toHaveAttribute('data-theme', 'nord')
 
     // accent swatch → --accent custom property changes
     const before = await win.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim())

@@ -101,6 +101,31 @@ export const THEMES: Record<string, ThemeDef> = {
     base: 'dark', bg: '#000000', fg: '#ffffff', bar: '#000000', barText: '#ffffff', dim: '#c0c0c0',
     tab: '#000000', tabActive: '#0d0d0d', border: '#6fc3df', accent: '#00a8ff',
     monacoBase: 'hc-black'
+  }),
+  nord: makeTheme('nord', 'Nord', {
+    base: 'dark', bg: '#2e3440', fg: '#d8dee9', bar: '#3b4252', barText: '#d8dee9', dim: '#616e88',
+    tab: '#3b4252', tabActive: '#2e3440', border: '#434c5e', accent: '#88c0d0',
+    syntax: { comment: '#616e88', string: '#a3be8c', keyword: '#81a1c1', number: '#b48ead', type: '#8fbcbb' }
+  }),
+  dracula: makeTheme('dracula', 'Dracula', {
+    base: 'dark', bg: '#282a36', fg: '#f8f8f2', bar: '#21222c', barText: '#f8f8f2', dim: '#6272a4',
+    tab: '#2a2c3a', tabActive: '#282a36', border: '#44475a', accent: '#bd93f9',
+    syntax: { comment: '#6272a4', string: '#f1fa8c', keyword: '#ff79c6', number: '#bd93f9', type: '#8be9fd' }
+  }),
+  'gruvbox-dark': makeTheme('gruvbox-dark', 'Gruvbox Dark', {
+    base: 'dark', bg: '#282828', fg: '#ebdbb2', bar: '#32302f', barText: '#ebdbb2', dim: '#928374',
+    tab: '#3c3836', tabActive: '#282828', border: '#504945', accent: '#fe8019',
+    syntax: { comment: '#928374', string: '#b8bb26', keyword: '#fb4934', number: '#d3869b', type: '#fabd2f' }
+  }),
+  'tokyo-night': makeTheme('tokyo-night', 'Tokyo Night', {
+    base: 'dark', bg: '#1a1b26', fg: '#c0caf5', bar: '#16161e', barText: '#c0caf5', dim: '#565f89',
+    tab: '#1f2335', tabActive: '#1a1b26', border: '#2f3549', accent: '#7aa2f7',
+    syntax: { comment: '#565f89', string: '#9ece6a', keyword: '#bb9af7', number: '#ff9e64', type: '#2ac3de' }
+  }),
+  'gruvbox-light': makeTheme('gruvbox-light', 'Gruvbox Light', {
+    base: 'light', bg: '#fbf1c7', fg: '#3c3836', bar: '#f2e5bc', barText: '#3c3836', dim: '#928374',
+    tab: '#ebdbb2', tabActive: '#fbf1c7', border: '#d5c4a1', accent: '#af3a03',
+    syntax: { comment: '#928374', string: '#79740e', keyword: '#9d0006', number: '#8f3f71', type: '#b57614' }
   })
 }
 

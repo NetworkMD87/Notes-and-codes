@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { THEMES, CHROME_KEYS, ACCENT_SWATCHES, chromeVars, contrastText, resolveThemeId, migrateThemeId, THEME_LIST } from '../../src/renderer/themes'
 
-const IDS = ['light','dark','dark-dimmed','solarized-dark','one-dark','solarized-light','monokai','high-contrast']
+const IDS = ['light','dark','dark-dimmed','solarized-dark','one-dark','solarized-light','monokai','high-contrast','nord','dracula','gruvbox-dark','tokyo-night','gruvbox-light']
 const hex = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i
 
 describe('themes', () => {
-  it('has the 8 themes', () => { for (const id of IDS) expect(THEMES[id], id).toBeTruthy() })
+  it('registers every theme in IDS', () => { for (const id of IDS) expect(THEMES[id], id).toBeTruthy() })
   it('every theme has all 14 chrome keys', () => {
     expect(CHROME_KEYS).toHaveLength(14)
     for (const id of IDS) for (const k of CHROME_KEYS) expect(THEMES[id].chrome[k], `${id} ${k}`).toBeTruthy()
