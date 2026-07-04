@@ -93,7 +93,7 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > smoke gates the OS hotkey via `NC_HEADLESS` + a regression test. **P3 delivered + merged**
 > (`feat/design-polish-p3`, eyeball PASS): shared `overlayManager` (reliable topmost Esc),
 > scrim depth+blur, accent checkboxes, icon-only theme button, highlighter crosshair, inline-SVG
-> empty states. **P4 built on `feat/design-polish-p4-accent` (eyeball pending):** accent-text
+> empty states. **P4 delivered + merged** (`feat/design-polish-p4-accent`, eyeball PASS): accent-text
 > auto-contrast (`contrastText`) + 18 curated accent presets (custom colour picker
 > tried then dropped per preference; current accent shown as a preview dot + Default reset).
 > **P4 also unifies the palette** — one `ACCENT_PALETTE` (`shared/types.ts`) now drives both the
