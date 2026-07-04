@@ -131,6 +131,12 @@
       .appearance-sw{display:flex;gap:8px;flex-wrap:wrap}
       .swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent}
       .swatch.active{border-color:var(--bartext)}
+      .accent-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+      .accent-head h3{margin:0}
+      .accent-current{width:16px;height:16px;border-radius:50%;border:1px solid var(--border);flex:none}
+      .accent-default-btn{margin-left:auto;font-size:11px;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius);background:none;color:var(--panel-text);cursor:pointer}
+      .accent-default-btn:hover{background:var(--bar-hover)}
+      .accent-default-btn.active{border-color:var(--accent);color:var(--accent)}
       .appearance-row{display:flex;align-items:center;gap:8px}
       .appearance-row + .appearance-row{margin-top:8px}
       .appearance-row label{flex:1}
@@ -188,7 +194,7 @@
       .about-link{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;cursor:pointer;font-size:13px}
       .about-link:hover{background:var(--accent);color:var(--accent-text)}
       /* --- micro-motion layer (Phase 3.5 P1) --- */
-      .tab,.tb-btn,.tab-add,.tab-close,#theme-toggle,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch,.snip-mgr-head button,.snip-mgr-row button{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
+      .tab,.tb-btn,.tab-add,.tab-close,#theme-toggle,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch,.snip-mgr-head button,.snip-mgr-row button,.accent-default-btn{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
       @keyframes overlayIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
       .palette-box,.qo-box,.appearance-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast{animation:overlayIn var(--motion) var(--ease)}
       @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}

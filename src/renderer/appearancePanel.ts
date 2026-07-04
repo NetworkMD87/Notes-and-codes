@@ -57,13 +57,17 @@ export class AppearancePanel {
     themeWrap.append(th, grid)
 
     const accWrap = document.createElement('div')
+    // heading row: label + a live preview of the current accent + reset-to-default
+    const head = document.createElement('div'); head.className = 'accent-head'
     const ah = document.createElement('h3'); ah.textContent = 'Accent'
+    const preview = document.createElement('span'); preview.className = 'accent-current'
+    preview.style.background = 'var(--accent)'; preview.title = 'Current accent'
+    const reset = document.createElement('button'); reset.className = 'accent-default-btn'
+    reset.textContent = 'Default'; reset.title = "Reset to the theme's own accent"
+    if (this.d.currentAccent() === null) reset.classList.add('active')
+    reset.onclick = () => { this.d.setAccent(null); this.render() }
+    head.append(ah, preview, reset)
     const sw = document.createElement('div'); sw.className = 'appearance-sw'
-    const def = document.createElement('div')
-    def.className = 'swatch' + (this.d.currentAccent() === null ? ' active' : '')
-    def.title = 'Theme default'; def.style.background = 'var(--accent)'; def.style.borderStyle = 'dashed'
-    def.onclick = () => { this.d.setAccent(null); this.render() }
-    sw.appendChild(def)
     for (const s of ACCENT_SWATCHES) {
       const dot = document.createElement('div')
       dot.className = 'swatch' + (this.d.currentAccent() === s.value ? ' active' : '')
@@ -71,7 +75,7 @@ export class AppearancePanel {
       dot.onclick = () => { this.d.setAccent(s.value); this.render() }
       sw.appendChild(dot)
     }
-    accWrap.append(ah, sw)
+    accWrap.append(head, sw)
 
     const fontWrap = document.createElement('div')
     const fh = document.createElement('h3'); fh.textContent = 'Font'

@@ -576,8 +576,10 @@ test('accent: light preset auto-contrasts text to dark', async () => {
     await expect(win.locator('#tabbar')).toBeVisible()
     await win.locator('#theme-toggle').click()
     await expect(win.locator('#appearance')).toBeVisible()
-    // 18 curated presets, no custom picker
-    await expect(win.locator('#appearance .appearance-sw .swatch')).toHaveCount(19) // 18 + the "default" dot
+    // 18 curated presets (no default swatch); current shown via preview + Default reset
+    await expect(win.locator('#appearance .appearance-sw .swatch')).toHaveCount(18)
+    await expect(win.locator('#appearance .accent-current')).toHaveCount(1)
+    await expect(win.locator('#appearance .accent-default-btn')).toHaveCount(1)
     // pick the light Yellow preset → accent-text auto-derives dark
     await win.locator('#appearance .appearance-sw .swatch[title="Yellow"]').click()
     const accentText = await win.evaluate(() =>
