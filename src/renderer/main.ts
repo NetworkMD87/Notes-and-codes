@@ -611,7 +611,7 @@ window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
-  if (e.key === 'Escape' && diff.isOpen()) diff.hide()
+  // Escape (incl. closing the diff) is handled centrally by overlayManager.
 })
 
 async function openPath(path: string): Promise<void> {

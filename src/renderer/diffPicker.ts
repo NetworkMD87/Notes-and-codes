@@ -1,10 +1,12 @@
 import type { BufferState } from '../shared/types'
+import { pushOverlay } from './overlayManager'
 
 export class DiffPicker {
   private overlay: HTMLDivElement
   private leftSel: HTMLSelectElement
   private rightSel: HTMLSelectElement
   private onConfirm: ((leftId: string, rightId: string) => void) | null = null
+  private unreg?: () => void
 
   constructor(host: HTMLElement) {
     this.overlay = document.createElement('div')
@@ -25,7 +27,7 @@ export class DiffPicker {
     this.overlay.appendChild(box)
     host.appendChild(this.overlay)
     this.overlay.addEventListener('click', (e) => { if (e.target === this.overlay) this.close() })
-    this.overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.close() })
+    // Escape handled centrally by overlayManager.
   }
 
   open(buffers: BufferState[], onConfirm: (leftId: string, rightId: string) => void): void {
@@ -41,6 +43,7 @@ export class DiffPicker {
     opts(this.rightSel, 1)
     this.overlay.classList.remove('hidden')
     this.leftSel.focus()
+    this.unreg = pushOverlay(() => this.close())
   }
 
   private confirm(): void {
@@ -48,5 +51,5 @@ export class DiffPicker {
     this.close()
     this.onConfirm?.(l, r)
   }
-  private close(): void { this.overlay.classList.add('hidden') }
+  private close(): void { this.unreg?.(); this.unreg = undefined; this.overlay.classList.add('hidden') }
 }

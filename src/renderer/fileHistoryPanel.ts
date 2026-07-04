@@ -1,4 +1,5 @@
 import type { FileVersion } from '../shared/types'
+import { pushOverlay } from './overlayManager'
 
 export interface FileHistoryDeps {
   current: () => { path: string; title: string; content: string; language: string } | null
@@ -16,6 +17,7 @@ function relativeTime(ts: number): string {
 
 export class FileHistoryPanel {
   private host: HTMLElement
+  private unreg?: () => void
   constructor(parent: HTMLElement, private d: FileHistoryDeps) {
     this.host = document.createElement('div')
     this.host.className = 'file-history hidden'; this.host.id = 'file-history'
@@ -58,7 +60,8 @@ export class FileHistoryPanel {
       }
     }
     this.host.replaceChildren(box); this.host.classList.remove('hidden')
+    this.unreg = pushOverlay(() => this.close())
   }
 
-  private close(): void { this.host.classList.add('hidden') }
+  private close(): void { this.unreg?.(); this.unreg = undefined; this.host.classList.add('hidden') }
 }
