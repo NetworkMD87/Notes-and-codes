@@ -1,9 +1,7 @@
 import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-
-const VERSION = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8')).version
 
 async function runCmd(win: Awaited<ReturnType<Awaited<ReturnType<typeof electron.launch>>['firstWindow']>>, label: string) {
   await win.keyboard.press('Control+Shift+P')
@@ -59,8 +57,11 @@ test('Help: About shows the live version and link buttons', async () => {
     await expect(win.locator('.help-overlay')).toBeVisible()
     // wordmark logo renders (replaces the old text name)
     await expect(win.locator('.about-logo svg')).toBeVisible()
-    // version resolves to the package version
-    await expect(win.locator('.about-version')).toHaveText('v' + VERSION, { timeout: 3000 })
+    // version reflects the live app.getVersion() (real app version when packaged,
+    // Electron's version when run unpackaged as smoke does) — assert against the
+    // same source rather than a hardcoded package version, so both modes pass.
+    const reported = await win.evaluate(() => (window as any).api.getAppVersion())
+    await expect(win.locator('.about-version')).toHaveText('v' + reported, { timeout: 3000 })
     await expect(win.locator('.about-link')).toHaveCount(3)
   } finally {
     await app.close()

@@ -25,6 +25,17 @@ async function rebuildMenu(): Promise<void> {
   })
 }
 
+// Non-blocking, load-safe main→renderer toast. NEVER use a modal (dialog.showErrorBox)
+// for startup diagnostics: a modal blocks the process and freezes the whole app — and
+// every smoke test — whenever it fires (e.g. the global hotkey is already held by another
+// instance/app). Queue until the renderer has loaded if it hasn't yet.
+function notifyRenderer(msg: string): void {
+  const wc = mainWindow?.webContents
+  if (!wc) return
+  if (wc.isLoading()) wc.once('did-finish-load', () => wc.send('app:notify', msg))
+  else wc.send('app:notify', msg)
+}
+
 function fileArgFrom(argv: string[]): string | null {
   // Packaged: argv = [exe, ...args]. Unpackaged (dev/electron <script>): argv = [electronExe, entryScript, ...args].
   const args = app.isPackaged ? argv.slice(1) : argv.slice(2)
@@ -123,13 +134,18 @@ if (!gotLock) {
     // Keep the live window/taskbar glyph contrasting when the taskbar theme flips.
     nativeTheme.on('updated', () => mainWindow?.setIcon(glyphImage()))
 
-    const ok = globalShortcut.register(hotkey, toggleWindow)
-    if (!ok) {
-      console.error('global hotkey registration failed:', hotkey)
-      dialog.showErrorBox(
-        'Global hotkey unavailable',
-        `Could not register the summon hotkey "${hotkey}". Another app may already be using it. You can change it in settings.`
-      )
+    // Skip the OS-level global hotkey under automated smoke (NC_HEADLESS) — it's a
+    // singleton, can't be automated, and a machine already holding it would inject a
+    // conflict toast into unrelated tests. Real dev/packaged runs always register it.
+    if (!process.env.NC_HEADLESS) {
+      const ok = globalShortcut.register(hotkey, toggleWindow)
+      if (!ok) {
+        // Non-blocking: another app/instance already holds the hotkey. Degrade
+        // gracefully with a toast instead of a modal — a blocking dialog here froze
+        // startup (and every second-instance smoke test). See notifyRenderer.
+        console.error('global hotkey registration failed:', hotkey)
+        notifyRenderer(`Summon hotkey "${hotkey}" is unavailable — another app may be using it. You can change it in Settings.`)
+      }
     }
 
     app.on('activate', () => {

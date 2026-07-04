@@ -112,6 +112,7 @@ export interface Api {
   quitNow(): void
   onSaveAllAndQuit(cb: () => void): void
   onMenuCommand(cb: (id: string) => void): void
+  onAppNotify(cb: (msg: string) => void): void
   snapshotHistory(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
   listHistory(path: string): Promise<{ ts: number }[]>
   getHistory(path: string, ts: number): Promise<FileVersion | null>
