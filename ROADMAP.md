@@ -94,7 +94,8 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > (`feat/design-polish-p3`, eyeball PASS): shared `overlayManager` (reliable topmost Esc),
 > scrim depth+blur, accent checkboxes, icon-only theme button, highlighter crosshair, inline-SVG
 > empty states. **P4 built on `feat/design-polish-p4-accent` (eyeball pending):** accent-text
-> auto-contrast (`contrastText`), 10 accent presets + a native colour picker. **Remaining 3.5:
+> auto-contrast (`contrastText`) + 18 curated accent presets (custom colour picker
+> tried then dropped per preference). **Remaining 3.5:
 > Slice D** (more bundled themes + fonts) — the last item before the single 3.5 version bump;
 > plus the ongoing bolder-accent direction + drag-to-reorder's deferred FLIP animation.
 > _(v1.9.0 in-app Help; v1.10.0 Appearance-panel polish — the first 3.5 surface. All eyeballed,
@@ -162,9 +163,10 @@ micro-motion._
      the rest of the pass, kept tasteful.
 - ✅ Fold in the two deferred **Phase-2 token tweaks**: status-bar `--muted` dimming (P1) and
   accent-text auto-contrast (P4) — both delivered.
-- ✅ **More accent colours + a real picker** (**S–M**, delivered P4) — `ACCENT_SWATCHES` 6 → 10
-  (adds Cyan/Indigo/Red/Yellow) + a native `<input type=color>` colour picker in the Appearance
-  accent row. Pairs with the accent-text auto-contrast so any custom colour stays legible.
+- ✅ **More accent colours** (**S**, delivered P4) — `ACCENT_SWATCHES` 6 → **18** curated accents
+  spanning the wheel (+ a neutral Slate). A native `<input type=color>` picker was tried but
+  **dropped per user preference** (fiddly / dismissed on click) — curated presets only. Pairs
+  with accent-text auto-contrast so the light presets stay legible.
 - ⬜ **More bundled themes + fonts** (**S**) — additional cohesive themes (near-free: just new
   token sets in `themes.ts`) and a few more font choices. **Watch installer bloat:** bundle
   fonts sparingly — prefer surfacing more system fonts over shipping new font files.
