@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { THEMES, CHROME_KEYS, ACCENT_SWATCHES, chromeVars, resolveThemeId, migrateThemeId, THEME_LIST } from '../../src/renderer/themes'
+import { THEMES, CHROME_KEYS, ACCENT_SWATCHES, chromeVars, contrastText, resolveThemeId, migrateThemeId, THEME_LIST } from '../../src/renderer/themes'
 
 const IDS = ['light','dark','dark-dimmed','solarized-dark','one-dark','solarized-light','monokai','high-contrast']
 const hex = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i
@@ -41,5 +41,27 @@ describe('themes', () => {
     const ids = THEME_LIST.map(t => t.id)
     for (const id of IDS) expect(ids).toContain(id)
     expect(ids).toContain('follow-os')
+  })
+})
+
+describe('contrastText', () => {
+  it('picks white on dark accents, near-black on light', () => {
+    expect(contrastText('#0a84ff')).toBe('#ffffff') // blue
+    expect(contrastText('#eab308')).toBe('#111111') // yellow
+    expect(contrastText('#ffffff')).toBe('#111111')
+    expect(contrastText('#000000')).toBe('#ffffff')
+  })
+  it('supports 3-digit hex', () => {
+    expect(contrastText('#fff')).toBe('#111111')
+    expect(contrastText('#000')).toBe('#ffffff')
+  })
+})
+
+describe('chromeVars accent-text auto-contrast', () => {
+  it('derives dark text for a light custom accent', () => {
+    expect(chromeVars('dark', '#eab308')['--accent-text']).toBe('#111111')
+  })
+  it('keeps white text for a dark custom accent', () => {
+    expect(chromeVars('dark', '#0a84ff')['--accent-text']).toBe('#ffffff')
   })
 })

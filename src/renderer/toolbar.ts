@@ -1,4 +1,4 @@
-import { HIGHLIGHT_COLOURS, type HighlightColour } from '../shared/types'
+import { ACCENT_PALETTE, HIGHLIGHT_COLOURS, type HighlightColour } from '../shared/types'
 
 export interface ToolbarHandlers {
   open: () => void
@@ -25,11 +25,10 @@ const ICONS = {
   highlighter: `<svg ${S}><path d="m9 11-6 6v3h3l6-6"/><path d="m17 7 3-3a1.4 1.4 0 0 0-2-2l-3 3"/><path d="m12 8 4 4"/><path d="M9 11l4 4"/></svg>`,
 }
 
-/** Solid, legible colours for the swatches + the active-colour indicator (the editor highlights themselves are semi-transparent). */
-const HL_HEX: Record<HighlightColour, string> = {
-  yellow: '#e6b800', green: '#2faf50', blue: '#3b82f6', pink: '#ec4899',
-  orange: '#f97316', purple: '#a855f7', red: '#ef4444',
-}
+/** Solid swatch colours = the shared palette hexes (the editor highlights are the semi-transparent .hl-*). */
+const HL_HEX = Object.fromEntries(
+  ACCENT_PALETTE.map(c => [c.name.toLowerCase(), c.value]),
+) as Record<HighlightColour, string>
 
 export class Toolbar {
   private el: HTMLDivElement

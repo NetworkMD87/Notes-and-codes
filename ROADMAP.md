@@ -58,7 +58,7 @@ features twice.
 **Polish follow-ups (deferred, minor):**
 
 - ✅ Status-bar secondary-text dimming via `--muted` (delivered by Phase 3.5 P1 — the status bar is now quiet `--panel-bg` chrome with `--muted` secondary text and a `--border` top rule, no longer an accent slab; a dirty buffer's `● unsaved` is the one accent touch).
-- ⬜ Accent-text auto-contrast (derive from accent luminance instead of fixed white) if light accents are added later.
+- ✅ Accent-text auto-contrast (delivered Phase 3.5 P4) — `contrastText()` (YIQ brightness) derives near-black/white text per accent, so light accents (e.g. the new Yellow preset, or any custom colour) stay legible instead of white-on-light.
 
 ## ✅ Decision — Identity fork (resolved: **Hybrid**)
 
@@ -90,10 +90,19 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > stark-white default inputs). **Bonus robustness fix (P2 branch):** the global-hotkey conflict
 > that popped a **blocking modal** (froze startup + the smoke suite when the app was already in the
 > tray holding `Ctrl+Shift+Space`) now degrades to a **non-blocking toast** (`app:notify` IPC);
-> smoke gates the OS hotkey via `NC_HEADLESS` + a regression test. Remaining 3.5: the rest of the
-> visual critique (P3), bolder-accent rollout, highlighter-cursor fix, more accent presets + a real
-> picker; drag-to-reorder's deferred live-shift/FLIP animation. _(v1.9.0 in-app Help; v1.10.0
-> Appearance-panel polish — the first 3.5 surface. All eyeballed, merged.)_
+> smoke gates the OS hotkey via `NC_HEADLESS` + a regression test. **P3 delivered + merged**
+> (`feat/design-polish-p3`, eyeball PASS): shared `overlayManager` (reliable topmost Esc),
+> scrim depth+blur, accent checkboxes, icon-only theme button, highlighter crosshair, inline-SVG
+> empty states. **P4 delivered + merged** (`feat/design-polish-p4-accent`, eyeball PASS): accent-text
+> auto-contrast (`contrastText`) + 18 curated accent presets (custom colour picker
+> tried then dropped per preference; current accent shown as a preview dot + Default reset).
+> **P4 also unifies the palette** — one `ACCENT_PALETTE` (`shared/types.ts`) now drives both the
+> accent swatches **and** the highlighter (18 highlight colours, 3×6 picker; no migration — the
+> old 7 highlight names are a subset). **Remaining 3.5:
+> Slice D** (more bundled themes + fonts) — the last item before the single 3.5 version bump;
+> plus the ongoing bolder-accent direction + drag-to-reorder's deferred FLIP animation.
+> _(v1.9.0 in-app Help; v1.10.0 Appearance-panel polish — the first 3.5 surface. All eyeballed,
+> merged.)_
 > **Carried known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing
 > (works via palette + Edit menu — details under **Format Document**); ② audit I8 residual —
 > a _clean_ quit (no unsaved tabs) bypasses the clipboard/session flush; ③ static exe/installer
@@ -151,16 +160,16 @@ micro-motion._
   2. ✅ **Unify scrollbars** (delivered P2) — one global, container-agnostic `::-webkit-scrollbar`
      style (transparent 3px border + `background-clip:padding-box`) replaced the Help-only block;
      every native scrollbar now matches, Monaco's own scrollbars untouched.
-  3. ⬜ **Use accent more boldly (but not over the top)** — "don't be scared of a little colour":
-     partially applied via P2's borders; keep adding the accent where it adds hierarchy/affordance,
-     kept tasteful. Guides the rest of the visual-critique pass, pairs with accent-text
-     auto-contrast so it stays legible on all themes.
-- ⬜ Fold in the two deferred **Phase-2 token tweaks**: status-bar `--muted` dimming, and
-  accent-text auto-contrast (both listed under Phase 2 follow-ups above).
-- ⬜ **More accent colours + a real picker** (**S–M**) — expand the curated accent presets
-  (**S**) and replace the swatch-only override with a proper colour picker (hue/sat/value or
-  hex input) (**M**). Pairs with the accent-text auto-contrast tweak above so light accents
-  stay legible.
+  3. 🚧 **Use accent more boldly (but not over the top)** — "don't be scared of a little colour":
+     applied via P2's borders + P3's accent surfaces; now **unblocked** by P4's accent-text
+     auto-contrast (accent is safe on any surface — text stays legible). Ongoing direction for
+     the rest of the pass, kept tasteful.
+- ✅ Fold in the two deferred **Phase-2 token tweaks**: status-bar `--muted` dimming (P1) and
+  accent-text auto-contrast (P4) — both delivered.
+- ✅ **More accent colours** (**S**, delivered P4) — `ACCENT_SWATCHES` 6 → **18** curated accents
+  spanning the wheel (+ a neutral Slate). A native `<input type=color>` picker was tried but
+  **dropped per user preference** (fiddly / dismissed on click) — curated presets only. Pairs
+  with accent-text auto-contrast so the light presets stay legible.
 - ⬜ **More bundled themes + fonts** (**S**) — additional cohesive themes (near-free: just new
   token sets in `themes.ts`) and a few more font choices. **Watch installer bloat:** bundle
   fonts sparingly — prefer surfacing more system fonts over shipping new font files.

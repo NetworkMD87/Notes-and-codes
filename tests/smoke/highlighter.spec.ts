@@ -67,3 +67,17 @@ test('highlights persist across a relaunch', async () => {
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('highlight colour popup shows 18 swatches (3x6)', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-hl18-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await win.locator('.tb-caret').click()
+    await expect(win.locator('.tb-hl-pop')).toBeVisible()
+    await expect(win.locator('.tb-hl-pop .tb-swatch')).toHaveCount(18)
+  } finally {
+    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

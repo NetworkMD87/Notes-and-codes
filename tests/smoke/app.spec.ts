@@ -568,6 +568,28 @@ test('floating chrome carries an accent border', async () => {
   }
 })
 
+test('accent: light preset auto-contrasts text to dark', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-accent-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await win.locator('#theme-toggle').click()
+    await expect(win.locator('#appearance')).toBeVisible()
+    // 18 curated presets (no default swatch); current shown via preview + Default reset
+    await expect(win.locator('#appearance .appearance-sw .swatch')).toHaveCount(18)
+    await expect(win.locator('#appearance .accent-current')).toHaveCount(1)
+    await expect(win.locator('#appearance .accent-default-btn')).toHaveCount(1)
+    // pick the light Yellow preset → accent-text auto-derives dark
+    await win.locator('#appearance .appearance-sw .swatch[title="Yellow"]').click()
+    const accentText = await win.evaluate(() =>
+      getComputedStyle(document.body).getPropertyValue('--accent-text').trim())
+    expect(accentText).toBe('#111111')
+  } finally {
+    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('empty states show an inline-SVG glyph', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-empty-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
