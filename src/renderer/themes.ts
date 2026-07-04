@@ -45,7 +45,7 @@ function makeTheme(id: string, label: string, p: Palette): ThemeDef {
       '--tabbg': p.tab, '--tab-active-bg': p.tabActive, '--tab-inactive-text': p.dim,
       '--editorbg': p.bg, '--panel-bg': p.bar, '--panel-text': p.barText,
       '--border': p.border, '--muted': p.dim, '--accent': p.accent,
-      '--accent-text': p.accentText ?? '#ffffff', '--danger': '#e5484d'
+      '--accent-text': p.accentText ?? contrastText(p.accent), '--danger': '#e5484d'
     },
     monaco: {
       base: p.monacoBase ?? (p.base === 'dark' ? 'vs-dark' : 'vs'),
@@ -110,8 +110,10 @@ export const THEME_LIST: { id: string; label: string }[] = [
 
 export const ACCENT_SWATCHES: { name: string; value: string }[] = [
   { name: 'Blue', value: '#0a84ff' }, { name: 'Teal', value: '#14b8a6' },
-  { name: 'Green', value: '#16a34a' }, { name: 'Purple', value: '#9333ea' },
-  { name: 'Orange', value: '#ea580c' }, { name: 'Pink', value: '#db2777' }
+  { name: 'Green', value: '#16a34a' }, { name: 'Cyan', value: '#06b6d4' },
+  { name: 'Indigo', value: '#4f46e5' }, { name: 'Purple', value: '#9333ea' },
+  { name: 'Pink', value: '#db2777' }, { name: 'Red', value: '#dc2626' },
+  { name: 'Orange', value: '#ea580c' }, { name: 'Yellow', value: '#eab308' },
 ]
 
 export function resolveThemeId(id: string): string {
@@ -122,9 +124,21 @@ export function resolveThemeId(id: string): string {
   return THEMES[id] ? id : 'dark'
 }
 
+// YIQ perceived-brightness → near-black text on light accents, white on dark, so
+// accent-filled surfaces stay legible on any accent (fixes white-on-light). YIQ (not
+// raw WCAG max-contrast) because max-contrast flips the conventional white-on-saturated-
+// blue to dark; YIQ matches how accents are conventionally paired with text.
+export function contrastText(hex: string): string {
+  const h = hex.replace('#', '')
+  const s = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+  const r = parseInt(s.slice(0, 2), 16), g = parseInt(s.slice(2, 4), 16), b = parseInt(s.slice(4, 6), 16)
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000
+  return yiq >= 128 ? '#111111' : '#ffffff'
+}
+
 export function chromeVars(themeId: string, accent?: string | null): ChromeTokens {
   const t = THEMES[resolveThemeId(themeId)]
-  if (accent) return { ...t.chrome, '--accent': accent, '--accent-text': '#ffffff' }
+  if (accent) return { ...t.chrome, '--accent': accent, '--accent-text': contrastText(accent) }
   return t.chrome
 }
 
