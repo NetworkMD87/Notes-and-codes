@@ -71,6 +71,13 @@ export class AppearancePanel {
       dot.onclick = () => { this.d.setAccent(s.value); this.render() }
       sw.appendChild(dot)
     }
+    const picker = document.createElement('input'); picker.type = 'color'
+    const curAccent = this.d.currentAccent()
+    picker.value = curAccent ?? (getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#0a84ff')
+    picker.title = 'Custom accent…'
+    if (!(curAccent === null || ACCENT_SWATCHES.some(s => s.value === curAccent))) picker.classList.add('active')
+    picker.oninput = () => { this.d.setAccent(picker.value); this.render() }
+    sw.appendChild(picker)
     accWrap.append(ah, sw)
 
     const fontWrap = document.createElement('div')
