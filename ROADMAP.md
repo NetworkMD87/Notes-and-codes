@@ -83,11 +83,17 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > `feat/drag-reorder-tabs` (opus: ready to merge), eyeballed on the installed build (drag feel +
 > accent insertion mark + persist across restart + tray/hotkey checklist — PASS), merged `--no-ff`
 > → `master`, tagged `v1.11.0`.
-> **NEXT SESSION — Phase 3.5 design polish.** Finish the **Phase 3.5** design-polish pass (whole-app visual critique; sweeps in
-> the Help surface + highlighter-cursor fix); drag-to-reorder's own deferred live-shift/FLIP
-> animation follow-up. _(v1.9.0 shipped in-app Help; v1.10.0 shipped the Appearance-panel polish —
-> separate interface font + landscape + accent styling — the first 3.5 surface. Both eyeballed,
-> merged, tagged.)_
+> **Phase 3.5 design polish — IN PROGRESS (version held, ships under one bump when done).**
+> **P1 delivered + merged** (status bar, stacked palette, micro-motion layer). **P2 delivered +
+> merged (2026-07-04, `feat/design-polish-p2`, eyeball PASS):** accent borders on all floating
+> chrome + one unified container-agnostic scrollbar; snippet-manager theming (killed the
+> stark-white default inputs). **Bonus robustness fix (P2 branch):** the global-hotkey conflict
+> that popped a **blocking modal** (froze startup + the smoke suite when the app was already in the
+> tray holding `Ctrl+Shift+Space`) now degrades to a **non-blocking toast** (`app:notify` IPC);
+> smoke gates the OS hotkey via `NC_HEADLESS` + a regression test. Remaining 3.5: the rest of the
+> visual critique (P3), bolder-accent rollout, highlighter-cursor fix, more accent presets + a real
+> picker; drag-to-reorder's deferred live-shift/FLIP animation. _(v1.9.0 in-app Help; v1.10.0
+> Appearance-panel polish — the first 3.5 surface. All eyeballed, merged.)_
 > **Carried known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing
 > (works via palette + Edit menu — details under **Format Document**); ② audit I8 residual —
 > a _clean_ quit (no unsaved tabs) bypasses the clipboard/session flush; ③ static exe/installer
@@ -126,23 +132,24 @@ micro-motion._
   token-driven **micro-motion layer** (transitions + `overlayIn` overlay entry +
   `prefers-reduced-motion` kill-switch) that later polish inherits for free. **Version
   intentionally NOT bumped** — the whole 3.5 polish pass ships under one version bump when it's
-  done, not per-slice. **P2/P3 follow-ups outstanding** — see the P1 spec's Non-goals: overlay
-  dismissal/scrim, toast polish, toolbar consistency, highlighter pen cursor, themed checkboxes,
-  theme-picker swatch previews, empty-state icons, accent picker + auto-contrast.
-- ⬜ **User polish notes (from the P1 eyeball, 2026-07-03)** — three directions to fold into the
-  remaining 3.5 sweep:
-  1. **Accent border on all toasts + pop-out menus** — give the notify toast (`.toast`), context
-     menu (`#ctx-menu`), the toolbar highlighter popup (`.tb-hl-pop`), and the picker/overlay boxes
-     a `1px solid var(--accent)` border, matching the Appearance card (`.appearance-box` already has
-     it). Makes floating chrome read as intentional, on-brand surfaces. (Supersedes/absorbs the
-     "Toast polish" item below.)
-  2. **Unify scrollbars** — audit every scroll container and make them all match the styled
-     scrollbar in the **Shortcuts & Commands** (Help) overlay
-     (`.help-body::-webkit-scrollbar*` in `index.html`); most other scroll areas still use the
-     default browser scrollbar.
-  3. **Use accent more boldly (but not over the top)** — "don't be scared of a little colour": add
-     the accent in more places where it adds hierarchy/affordance, kept tasteful. Guides the whole
-     visual-critique pass, pairs with accent-text auto-contrast so it stays legible on all themes.
+  done, not per-slice. **P2 delivered + merged** (`feat/design-polish-p2` → `master`, eyeball PASS
+  2026-07-04): accent borders on all floating chrome + one unified container-agnostic scrollbar
+  (user notes 1+2 below) + snippet-manager theming. **P3 follow-ups outstanding** — see the P1
+  spec's Non-goals: overlay dismissal/scrim, toolbar consistency, highlighter pen cursor, themed
+  checkboxes, theme-picker swatch previews, empty-state icons, accent picker + auto-contrast.
+- **User polish notes (from the P1 eyeball, 2026-07-03)** — three directions:
+  1. ✅ **Accent border on all toasts + pop-out menus** (delivered P2) — the notify toast (`.toast`),
+     context menu (`#ctx-menu`), toolbar highlighter popup (`.tb-hl-pop`), and every picker/overlay
+     box now carry a `1px solid var(--accent)` border, matching the Appearance card. Absorbed the
+     "Toast polish" item. _(P2 also themed the snippet-manager fields/buttons — a stark-white default
+     the eyeball caught.)_
+  2. ✅ **Unify scrollbars** (delivered P2) — one global, container-agnostic `::-webkit-scrollbar`
+     style (transparent 3px border + `background-clip:padding-box`) replaced the Help-only block;
+     every native scrollbar now matches, Monaco's own scrollbars untouched.
+  3. ⬜ **Use accent more boldly (but not over the top)** — "don't be scared of a little colour":
+     partially applied via P2's borders; keep adding the accent where it adds hierarchy/affordance,
+     kept tasteful. Guides the rest of the visual-critique pass, pairs with accent-text
+     auto-contrast so it stays legible on all themes.
 - ⬜ Fold in the two deferred **Phase-2 token tweaks**: status-bar `--muted` dimming, and
   accent-text auto-contrast (both listed under Phase 2 follow-ups above).
 - ⬜ **More accent colours + a real picker** (**S–M**) — expand the curated accent presets
@@ -152,9 +159,8 @@ micro-motion._
 - ⬜ **More bundled themes + fonts** (**S**) — additional cohesive themes (near-free: just new
   token sets in `themes.ts`) and a few more font choices. **Watch installer bloat:** bundle
   fonts sparingly — prefer surfacing more system fonts over shipping new font files.
-- ⬜ **Toast polish** (**S**) — give the theme/notify toast (`notify.ts`) an outline/border,
-  refined shadow + spacing so it reads as intentional chrome, not a bare label. Part of the
-  overlays/micro-motion sweep.
+- ✅ **Toast polish** (**S**, delivered P2) — the notify toast (`.toast`) now carries the
+  `1px solid var(--accent)` border (absorbed into user-note 1 above), reading as intentional chrome.
 - ⬜ **Highlighter cursor polish** (**S**) — paint mode currently shows the browser `cell`
   cursor (`.hl-mode .view-lines{cursor:cell}` in `index.html`); swap it for a pen-tip cursor
   that matches the toolbar highlighter icon (custom `cursor:url(...)` SVG, or at least
