@@ -656,6 +656,9 @@ installDropOpen((p) => { void openPath(p) })
 
 window.api.onOpenFile((path) => { void openPath(path) })
 
+// Non-blocking startup diagnostics from main (e.g. global-hotkey conflict).
+window.api.onAppNotify((msg) => toast(msg))
+
 installMenuCommands({
   new: () => { manager.create(); showActive(); scheduleSessionSave() },
   open: () => void openFromDisk(),

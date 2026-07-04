@@ -32,6 +32,7 @@ const api: Api = {
   quitNow: () => ipcRenderer.send('app:quitNow'),
   onSaveAllAndQuit: (cb) => { ipcRenderer.removeAllListeners('app:saveAllAndQuit'); ipcRenderer.on('app:saveAllAndQuit', () => cb()) },
   onMenuCommand: (cb) => { ipcRenderer.removeAllListeners('menu:command'); ipcRenderer.on('menu:command', (_e, id: string) => cb(id)) },
+  onAppNotify: (cb) => { ipcRenderer.removeAllListeners('app:notify'); ipcRenderer.on('app:notify', (_e, msg: string) => cb(msg)) },
   snapshotHistory: (path, content, eol, encoding) => ipcRenderer.invoke('history:snapshot', path, content, eol, encoding),
   listHistory: (path) => ipcRenderer.invoke('history:list', path),
   getHistory: (path, ts) => ipcRenderer.invoke('history:get', path, ts),
