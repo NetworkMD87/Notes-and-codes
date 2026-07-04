@@ -17,6 +17,28 @@ features twice.
 
 ---
 
+## ▶ NEXT ACTION — eyeball P5, then cut the Phase 3.5 release (v1.12.0)
+
+**Phase 3.5 P1–P5 is code-complete.** P1–P4 are merged to `master`; **P5 (5 new themes + fonts)
+is built on `feat/design-polish-p5-themes-fonts`, awaiting the eyeball.** Do this next, in order:
+
+1. **Eyeball the P5 build** — fully quit the tray instance, run the portable
+   `dist/Notes & Codes 1.11.0.exe`:
+   - Cycle the **5 new themes** (Nord, Dracula, Gruvbox Dark, Tokyo Night, Gruvbox Light) — chrome +
+     editor recolour cohesively, accent stays legible; open a `.js` file to see syntax colours; the
+     13-theme picker grid wraps/scrolls fine.
+   - Editor font → **IBM Plex Mono** (bundled) + **Lucida Console** (system); Interface font →
+     **Calibri**/**Verdana**; both persist across restart.
+2. **On "looks good":** merge `feat/design-polish-p5-themes-fonts` `--no-ff` → `master`.
+3. **Cut the release:** `npm version minor` (1.11.0 → **1.12.0**) → `npm run package`.
+4. **Manual tray + global-hotkey checklist** on the 1.12.0 installer (can't be automated —
+   tray show/hide/quit, `Ctrl+Shift+Space` summon, `Ctrl+Q` quit).
+5. **Tag `v1.12.0`** only after the checklist passes; **roll Phase 3.5 into Shipped** below.
+
+_See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the same._
+
+---
+
 ## ✅ Shipped — v1.0.0
 
 - ✅ Tabs · full/split panes (draggable, per-pane line numbers) · word wrap
