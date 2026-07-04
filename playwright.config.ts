@@ -11,8 +11,12 @@ export default defineConfig({
   testDir: 'tests/smoke',
   timeout: 30000,
   fullyParallel: false,
+  // Monaco's cold render (Electron boot + 6.7MB bundle + open file + paint) legitimately
+  // exceeds the 5s web-default under full-suite load, so content assertions like
+  // toContainText('const x = (') flaked with Received:"". Give them realistic headroom.
+  expect: { timeout: 10000 },
   // The deterministic freeze (blocking hotkey-conflict modal) is fixed at the source;
-  // this only covers the residual, irreducible flake — Monaco occasionally not painting
-  // within an assertion window under full-suite load. A real bug still fails all attempts.
+  // retries only cover the residual, irreducible render-timing jitter. A real bug still
+  // fails all attempts (as the two stale-assertion bugs did before they were fixed).
   retries: 2
 })
