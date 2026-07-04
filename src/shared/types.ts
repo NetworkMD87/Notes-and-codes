@@ -7,7 +7,25 @@ export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface Snippet { id: string; name: string; body: string }
 
-export const HIGHLIGHT_COLOURS = ['yellow', 'green', 'blue', 'pink', 'orange', 'purple', 'red'] as const
+// One canonical 18-colour palette drives the accent swatches AND the highlighter.
+export const ACCENT_PALETTE: { name: string; value: string }[] = [
+  { name: 'Red', value: '#dc2626' }, { name: 'Crimson', value: '#e11d48' },
+  { name: 'Pink', value: '#db2777' }, { name: 'Fuchsia', value: '#c026d3' },
+  { name: 'Purple', value: '#9333ea' }, { name: 'Violet', value: '#7c3aed' },
+  { name: 'Indigo', value: '#4f46e5' }, { name: 'Blue', value: '#0a84ff' },
+  { name: 'Sky', value: '#0ea5e9' }, { name: 'Cyan', value: '#06b6d4' },
+  { name: 'Teal', value: '#14b8a6' }, { name: 'Emerald', value: '#10b981' },
+  { name: 'Green', value: '#16a34a' }, { name: 'Lime', value: '#65a30d' },
+  { name: 'Yellow', value: '#eab308' }, { name: 'Amber', value: '#f59e0b' },
+  { name: 'Orange', value: '#ea580c' }, { name: 'Slate', value: '#64748b' },
+]
+
+// Highlight colour keys = ACCENT_PALETTE names lowercased. Explicit tuple (not derived) so the
+// union type stays literal; kept aligned with ACCENT_PALETTE by tests/unit/palette.test.ts.
+export const HIGHLIGHT_COLOURS = [
+  'red', 'crimson', 'pink', 'fuchsia', 'purple', 'violet', 'indigo', 'blue', 'sky',
+  'cyan', 'teal', 'emerald', 'green', 'lime', 'yellow', 'amber', 'orange', 'slate',
+] as const
 export type HighlightColour = typeof HIGHLIGHT_COLOURS[number]
 export interface Highlight { start: number; end: number; colour: HighlightColour }
 
