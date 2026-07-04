@@ -1,4 +1,6 @@
 import type { Snippet } from '../shared/types'
+import { pushOverlay } from './overlayManager'
+import { emptyState, EMPTY_ICONS } from './emptyState'
 
 export interface SnippetManagerDeps {
   list: () => Snippet[]
@@ -12,6 +14,7 @@ export interface SnippetManagerDeps {
 export class SnippetManager {
   private overlay: HTMLDivElement
   private listEl: HTMLDivElement
+  private unreg?: () => void
 
   constructor(host: HTMLElement, private deps: SnippetManagerDeps) {
     this.overlay = document.createElement('div')
@@ -29,11 +32,11 @@ export class SnippetManager {
     this.overlay.appendChild(box)
     host.appendChild(this.overlay)
     this.overlay.addEventListener('click', (e) => { if (e.target === this.overlay) this.close() })
-    this.overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.close() })
+    // Escape handled centrally by overlayManager.
   }
 
-  open(): void { this.render(); this.overlay.classList.remove('hidden'); this.overlay.setAttribute('tabindex', '-1'); this.overlay.focus() }
-  private close(): void { this.overlay.classList.add('hidden') }
+  open(): void { this.render(); this.overlay.classList.remove('hidden'); this.overlay.setAttribute('tabindex', '-1'); this.overlay.focus(); this.unreg = pushOverlay(() => this.close()) }
+  private close(): void { this.unreg?.(); this.unreg = undefined; this.overlay.classList.add('hidden') }
 
   private render(): void {
     this.listEl.replaceChildren(...this.deps.list().map(s => {
@@ -48,8 +51,7 @@ export class SnippetManager {
       return row
     }))
     if (!this.deps.list().length) {
-      const empty = document.createElement('div'); empty.className = 'snip-mgr-empty'; empty.textContent = 'No snippets. Click "+ Add".'
-      this.listEl.appendChild(empty)
+      this.listEl.appendChild(emptyState('snip-mgr-empty', EMPTY_ICONS.snippet, 'No snippets yet — click "+ Add".'))
     }
   }
 }

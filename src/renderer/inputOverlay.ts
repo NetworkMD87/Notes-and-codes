@@ -1,3 +1,5 @@
+import { pushOverlay } from './overlayManager'
+
 export function promptInput(title: string, initial = ''): Promise<string | null> {
   return new Promise((resolve) => {
     const overlay = document.createElement('div')
@@ -11,15 +13,17 @@ export function promptInput(title: string, initial = ''): Promise<string | null>
     box.append(label, field, ok, cancel)
     overlay.appendChild(box)
     document.body.appendChild(overlay)
-    const done = (val: string | null) => { document.removeEventListener('keydown', onKey, true); overlay.remove(); resolve(val) }
+    let unreg = () => {}
+    const done = (val: string | null) => { unreg(); document.removeEventListener('keydown', onKey, true); overlay.remove(); resolve(val) }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Enter') { e.preventDefault(); done(field.value.trim() || null) }
-      else if (e.key === 'Escape') { e.preventDefault(); done(null) }
+      // Escape handled centrally by overlayManager.
     }
     ok.onclick = () => done(field.value.trim() || null)
     cancel.onclick = () => done(null)
     overlay.addEventListener('click', (e) => { if (e.target === overlay) done(null) })
     document.addEventListener('keydown', onKey, true)
+    unreg = pushOverlay(() => done(null))
     field.focus()
   })
 }
@@ -39,20 +43,23 @@ export function confirmDialog(message: string, confirmLabel = 'Delete'): Promise
     overlay.appendChild(box)
     document.body.appendChild(overlay)
     let settled = false
+    let unreg = () => {}
     const done = (val: boolean) => {
       if (settled) return
       settled = true
+      unreg()
       document.removeEventListener('keydown', onKey, true)
       overlay.remove(); resolve(val)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); done(false) }
-      else if (e.key === 'Enter') { e.preventDefault(); done(true) }
+      if (e.key === 'Enter') { e.preventDefault(); done(true) }
+      // Escape handled centrally by overlayManager (resolves false / cancel).
     }
     ok.onclick = () => done(true)
     cancel.onclick = () => done(false)
     overlay.addEventListener('click', (e) => { if (e.target === overlay) done(false) })
     document.addEventListener('keydown', onKey, true)
+    unreg = pushOverlay(() => done(false))
     ok.focus()
   })
 }

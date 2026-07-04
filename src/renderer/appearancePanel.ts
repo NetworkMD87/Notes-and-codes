@@ -1,4 +1,5 @@
 import { THEME_LIST, ACCENT_SWATCHES } from './themes'
+import { pushOverlay } from './overlayManager'
 
 export interface AppearanceDeps {
   currentThemeId: () => string
@@ -28,6 +29,7 @@ const UI_FONTS = ['System', 'Segoe UI', 'system-ui', ...FONTS]
 
 export class AppearancePanel {
   private host: HTMLElement
+  private unreg?: () => void
   constructor(parent: HTMLElement, private d: AppearanceDeps) {
     this.host = document.createElement('div')
     this.host.className = 'appearance hidden'
@@ -36,8 +38,8 @@ export class AppearancePanel {
     parent.appendChild(this.host)
   }
 
-  open(): void { this.render(); this.host.classList.remove('hidden') }
-  private close(): void { this.host.classList.add('hidden') }
+  open(): void { this.render(); this.host.classList.remove('hidden'); this.unreg = pushOverlay(() => this.close()) }
+  private close(): void { this.unreg?.(); this.unreg = undefined; this.host.classList.add('hidden') }
 
   private render(): void {
     const box = document.createElement('div'); box.className = 'appearance-box'

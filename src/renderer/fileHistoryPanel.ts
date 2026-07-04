@@ -1,4 +1,6 @@
 import type { FileVersion } from '../shared/types'
+import { pushOverlay } from './overlayManager'
+import { emptyState, EMPTY_ICONS } from './emptyState'
 
 export interface FileHistoryDeps {
   current: () => { path: string; title: string; content: string; language: string } | null
@@ -16,6 +18,7 @@ function relativeTime(ts: number): string {
 
 export class FileHistoryPanel {
   private host: HTMLElement
+  private unreg?: () => void
   constructor(parent: HTMLElement, private d: FileHistoryDeps) {
     this.host = document.createElement('div')
     this.host.className = 'file-history hidden'; this.host.id = 'file-history'
@@ -29,15 +32,11 @@ export class FileHistoryPanel {
     const h = document.createElement('h3'); h.textContent = 'File History'; box.appendChild(h)
 
     if (!cur) {
-      const empty = document.createElement('div'); empty.className = 'fh-empty'
-      empty.textContent = 'Save this file first to start its history.'
-      box.appendChild(empty)
+      box.appendChild(emptyState('fh-empty', EMPTY_ICONS.history, 'Save this file first to start its history.'))
     } else {
       const list = await window.api.listHistory(cur.path)
       if (!list.length) {
-        const empty = document.createElement('div'); empty.className = 'fh-empty'
-        empty.textContent = 'No versions yet — save or wait for an auto-snapshot.'
-        box.appendChild(empty)
+        box.appendChild(emptyState('fh-empty', EMPTY_ICONS.history, 'No versions yet — save or wait for an auto-snapshot.'))
       } else {
         const ul = document.createElement('div'); ul.className = 'fh-list'
         for (const { ts } of list) {
@@ -58,7 +57,8 @@ export class FileHistoryPanel {
       }
     }
     this.host.replaceChildren(box); this.host.classList.remove('hidden')
+    this.unreg = pushOverlay(() => this.close())
   }
 
-  private close(): void { this.host.classList.add('hidden') }
+  private close(): void { this.unreg?.(); this.unreg = undefined; this.host.classList.add('hidden') }
 }

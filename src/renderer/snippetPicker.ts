@@ -1,9 +1,11 @@
 import type { Snippet } from '../shared/types'
+import { pushOverlay } from './overlayManager'
 
 export class SnippetPicker {
   private overlay: HTMLDivElement
   private listEl: HTMLDivElement
   private onPick: ((s: Snippet) => void) | null = null
+  private unreg?: () => void
 
   constructor(host: HTMLElement) {
     this.overlay = document.createElement('div')
@@ -13,7 +15,7 @@ export class SnippetPicker {
     this.overlay.appendChild(this.listEl)
     host.appendChild(this.overlay)
     this.overlay.addEventListener('click', (e) => { if (e.target === this.overlay) this.close() })
-    this.overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') this.close() })
+    // Escape handled centrally by overlayManager.
   }
 
   open(items: Snippet[], onPick: (s: Snippet) => void): void {
@@ -30,6 +32,7 @@ export class SnippetPicker {
     this.overlay.classList.remove('hidden')
     this.overlay.setAttribute('tabindex', '-1')
     this.overlay.focus()
+    this.unreg = pushOverlay(() => this.close())
   }
-  private close(): void { this.overlay.classList.add('hidden') }
+  private close(): void { this.unreg?.(); this.unreg = undefined; this.overlay.classList.add('hidden') }
 }

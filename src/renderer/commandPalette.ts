@@ -1,3 +1,5 @@
+import { pushOverlay } from './overlayManager'
+
 export interface Command { id: string; label: string; run: () => void | Promise<void>; hint?: string }
 
 export class CommandPalette {
@@ -7,6 +9,7 @@ export class CommandPalette {
   private listEl: HTMLDivElement
   private filtered: Command[] = []
   private cursor = 0
+  private unreg?: () => void
 
   constructor() {
     this.overlay = document.createElement('div'); this.overlay.id = 'palette'; this.overlay.className = 'hidden'
@@ -25,8 +28,9 @@ export class CommandPalette {
 
   open(): void {
     this.overlay.classList.remove('hidden'); this.input.value = ''; this.refresh(); this.input.focus()
+    this.unreg = pushOverlay(() => this.close())
   }
-  close(): void { this.overlay.classList.add('hidden') }
+  close(): void { this.unreg?.(); this.unreg = undefined; this.overlay.classList.add('hidden') }
 
   private refresh(): void {
     const q = this.input.value.toLowerCase()
@@ -44,7 +48,7 @@ export class CommandPalette {
   }
 
   private onKey(e: KeyboardEvent): void {
-    if (e.key === 'Escape') return this.close()
+    // Escape is handled centrally by overlayManager (capture-phase, topmost-first).
     if (e.key === 'ArrowDown') { if (this.filtered.length === 0) return; this.cursor = Math.min(this.cursor + 1, this.filtered.length - 1); this.paint() }
     if (e.key === 'ArrowUp') { if (this.filtered.length === 0) return; this.cursor = Math.max(this.cursor - 1, 0); this.paint() }
     if (e.key === 'Enter') { const c = this.filtered[this.cursor]; if (c) { this.exec(c) } }

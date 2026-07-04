@@ -59,7 +59,7 @@ const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) =>
   window.api.loadSettings().then(s => window.api.saveSettings({ ...s, themeId, accent }))
 })
 const themeBtn = document.createElement('button')
-themeBtn.id = 'theme-toggle'; themeBtn.textContent = '◐ theme'
+themeBtn.id = 'theme-toggle'; themeBtn.textContent = '◐'; themeBtn.title = 'Theme'
 document.getElementById('header')!.appendChild(themeBtn)
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
@@ -611,7 +611,7 @@ window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
-  if (e.key === 'Escape' && diff.isOpen()) diff.hide()
+  // Escape (incl. closing the diff) is handled centrally by overlayManager.
 })
 
 async function openPath(path: string): Promise<void> {

@@ -1,4 +1,5 @@
 import { rankFiles } from './fuzzy'
+import { pushOverlay } from './overlayManager'
 
 export interface QuickOpenDeps {
   files: () => string[]
@@ -11,6 +12,7 @@ export class QuickOpen {
   private listEl!: HTMLElement
   private results: string[] = []
   private active = 0
+  private unreg?: () => void
   constructor(parent: HTMLElement, private d: QuickOpenDeps) {
     this.host = document.createElement('div')
     this.host.id = 'quick-open'; this.host.className = 'hidden'
@@ -25,6 +27,7 @@ export class QuickOpen {
     box.append(this.input, this.listEl)
     this.host.replaceChildren(box)
     this.host.classList.remove('hidden')
+    this.unreg = pushOverlay(() => this.close())
     this.input.addEventListener('input', () => this.refresh())
     this.input.addEventListener('keydown', (e) => this.onKey(e))
     this.refresh()
@@ -55,7 +58,7 @@ export class QuickOpen {
     if (e.key === 'ArrowDown') { e.preventDefault(); this.active = Math.min(this.active + 1, this.results.length - 1); this.renderList() }
     else if (e.key === 'ArrowUp') { e.preventDefault(); this.active = Math.max(this.active - 1, 0); this.renderList() }
     else if (e.key === 'Enter') { e.preventDefault(); this.choose(this.active) }
-    else if (e.key === 'Escape') { e.preventDefault(); this.close() }
+    // Escape handled centrally by overlayManager.
   }
 
   private choose(i: number): void {
@@ -63,5 +66,5 @@ export class QuickOpen {
     if (path) { this.close(); this.d.openFile(path) }
   }
 
-  private close(): void { this.host.classList.add('hidden') }
+  private close(): void { this.unreg?.(); this.unreg = undefined; this.host.classList.add('hidden') }
 }

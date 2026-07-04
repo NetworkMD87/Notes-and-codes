@@ -1,10 +1,12 @@
 import * as monaco from 'monaco-editor'
+import { pushOverlay } from './overlayManager'
 
 export interface DiffSide { title: string; content: string; language: string }
 
 export class DiffView {
   private editor: monaco.editor.IStandaloneDiffEditor | null = null
   private closeBtn: HTMLButtonElement | null = null
+  private unreg?: () => void
   constructor(private container: HTMLElement) {}
 
   isOpen(): boolean { return this.editor !== null }
@@ -20,6 +22,7 @@ export class DiffView {
       modified: monaco.editor.createModel(right.content, right.language)
     })
     this.addCloseButton()
+    this.unreg = pushOverlay(() => this.hide())
   }
 
   // Floating ✕ so the diff is discoverably exitable (Esc still works); sits
@@ -36,6 +39,7 @@ export class DiffView {
   }
 
   hide(): void {
+    this.unreg?.(); this.unreg = undefined
     if (this.editor) {
       const m = this.editor.getModel()
       m?.original.dispose(); m?.modified.dispose()
