@@ -108,9 +108,11 @@
       .snip-mgr-head span{flex:1;font-weight:600}
       .snip-mgr-list{overflow:auto;padding:8px 12px}
       .snip-mgr-row{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border)}
-      .snip-mgr-name{grid-column:1;padding:4px}
-      .snip-mgr-body{grid-column:1;min-height:54px;font-family:'JetBrains Mono',Consolas,monospace;padding:4px}
+      .snip-mgr-name{grid-column:1;padding:4px;background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius)}
+      .snip-mgr-body{grid-column:1;min-height:54px;font-family:'JetBrains Mono',Consolas,monospace;padding:4px;background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius)}
       .snip-mgr-row button{grid-column:2;grid-row:1 / span 2}
+      .snip-mgr-head button,.snip-mgr-row button{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:3px 10px;cursor:pointer}
+      .snip-mgr-head button:hover,.snip-mgr-row button:hover{background:var(--bar-hover)}
       .snip-mgr-empty{padding:16px;opacity:.7}
       #change-bar{position:absolute;left:0;right:0;top:34px;background:var(--accent);color:var(--accent-text);font-size:13px;display:flex;align-items:center;gap:12px;padding:6px 12px;z-index:90}
       #change-bar.hidden{display:none}
@@ -183,7 +185,7 @@
       .about-link{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;cursor:pointer;font-size:13px}
       .about-link:hover{background:var(--accent);color:var(--accent-text)}
       /* --- micro-motion layer (Phase 3.5 P1) --- */
-      .tab,.tb-btn,.tab-add,.tab-close,#theme-toggle,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
+      .tab,.tb-btn,.tab-add,.tab-close,#theme-toggle,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch,.snip-mgr-head button,.snip-mgr-row button{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
       @keyframes overlayIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
       .palette-box,.qo-box,.appearance-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast{animation:overlayIn var(--motion) var(--ease)}
       @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
