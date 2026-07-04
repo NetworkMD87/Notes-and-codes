@@ -568,6 +568,21 @@ test('floating chrome carries an accent border', async () => {
   }
 })
 
+test('empty states show an inline-SVG glyph', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-empty-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette .palette-box input').fill('Manage Snippets')
+    await win.keyboard.press('Enter')
+    await expect(win.locator('.snip-mgr-empty .empty-glyph svg')).toBeVisible()
+  } finally {
+    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('chrome polish: themed checkbox + icon-only theme button', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-chrome-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })

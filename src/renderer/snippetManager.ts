@@ -1,5 +1,6 @@
 import type { Snippet } from '../shared/types'
 import { pushOverlay } from './overlayManager'
+import { emptyState, EMPTY_ICONS } from './emptyState'
 
 export interface SnippetManagerDeps {
   list: () => Snippet[]
@@ -50,8 +51,7 @@ export class SnippetManager {
       return row
     }))
     if (!this.deps.list().length) {
-      const empty = document.createElement('div'); empty.className = 'snip-mgr-empty'; empty.textContent = 'No snippets. Click "+ Add".'
-      this.listEl.appendChild(empty)
+      this.listEl.appendChild(emptyState('snip-mgr-empty', EMPTY_ICONS.snippet, 'No snippets yet — click "+ Add".'))
     }
   }
 }

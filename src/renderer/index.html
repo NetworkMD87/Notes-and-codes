@@ -115,7 +115,9 @@
       .snip-mgr-row button{grid-column:2;grid-row:1 / span 2}
       .snip-mgr-head button,.snip-mgr-row button{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:3px 10px;cursor:pointer}
       .snip-mgr-head button:hover,.snip-mgr-row button:hover{background:var(--bar-hover)}
-      .snip-mgr-empty{padding:16px;opacity:.7}
+      .fh-empty,.snip-mgr-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 16px;color:var(--muted);text-align:center}
+      .empty-glyph{width:40px;height:40px;opacity:.8}
+      .empty-glyph svg{width:100%;height:100%;display:block;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
       #change-bar{position:absolute;left:0;right:0;top:34px;background:var(--accent);color:var(--accent-text);font-size:13px;display:flex;align-items:center;gap:12px;padding:6px 12px;z-index:90}
       #change-bar.hidden{display:none}
       #change-bar button{background:rgba(255,255,255,.18);border:none;color:var(--accent-text);padding:3px 10px;border-radius:3px;cursor:pointer}
@@ -138,7 +140,6 @@
       .file-history.hidden{display:none}
       .fh-box{width:460px;max-height:80vh;overflow:auto;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
       .fh-box h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;opacity:.7}
-      .fh-empty{opacity:.7;padding:8px 0}
       .fh-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
       .fh-when{flex:1}
       .fh-row button{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:3px 10px;cursor:pointer}
