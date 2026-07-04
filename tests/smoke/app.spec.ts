@@ -261,6 +261,11 @@ test('appearance panel changes theme, accent, and font', async () => {
     await win.waitForTimeout(200)
     const fam = await win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).fontFamily)
     expect(fam.toLowerCase()).toContain('fira')
+    // bundled IBM Plex Mono is selectable too
+    await win.locator('#appearance select').first().selectOption('IBM Plex Mono')
+    await win.waitForTimeout(200)
+    const fam2 = await win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).fontFamily)
+    expect(fam2.toLowerCase()).toContain('plex')
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })

@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@fontsource/fira-code": "^5.2.7",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "dompurify": "^3.4.10",
     "markdown-it": "^14.2.0",
