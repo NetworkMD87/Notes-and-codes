@@ -170,9 +170,12 @@ micro-motion._
   spanning the wheel (+ a neutral Slate). A native `<input type=color>` picker was tried but
   **dropped per user preference** (fiddly / dismissed on click) — curated presets only. Pairs
   with accent-text auto-contrast so the light presets stay legible.
-- ⬜ **More bundled themes + fonts** (**S**) — additional cohesive themes (near-free: just new
-  token sets in `themes.ts`) and a few more font choices. **Watch installer bloat:** bundle
-  fonts sparingly — prefer surfacing more system fonts over shipping new font files.
+- ✅ **More bundled themes + fonts** (**S**, delivered P5) — **5 new themes** (8 → 13): Nord,
+  Dracula, Gruvbox Dark, Tokyo Night + Gruvbox Light (cohesive `makeTheme` palettes, accent
+  auto-contrast). Fonts: bundled **IBM Plex Mono** (lean 400/700) as a 3rd editor font + surfaced
+  system options (Lucida Console; Calibri/Tahoma/Verdana/Arial/Georgia for the interface font).
+  **Phase 3.5 is now COMPLETE (P1–P5)** — pending the held **v1.12.0** version bump + tag (after
+  the manual tray/hotkey checklist), then roll 3.5 into **Shipped**.
 - ✅ **Toast polish** (**S**, delivered P2) — the notify toast (`.toast`) now carries the
   `1px solid var(--accent)` border (absorbed into user-note 1 above), reading as intentional chrome.
 - ✅ **Highlighter cursor polish** (**S**, delivered P3) — paint mode now shows `crosshair`
