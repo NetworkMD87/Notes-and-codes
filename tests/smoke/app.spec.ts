@@ -253,8 +253,9 @@ test('appearance panel changes theme, accent, and font', async () => {
     const after = await win.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim())
     expect(after).not.toBe(before)
 
-    // font family → editor option reflects it
-    await win.locator('#appearance select').selectOption('Fira Code')
+    // font family → editor option reflects it. NB: the panel has two selects since
+    // v1.10.0 (editor font + interface font); the editor font is the first one.
+    await win.locator('#appearance select').first().selectOption('Fira Code')
     await win.waitForTimeout(200)
     const fam = await win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).fontFamily)
     expect(fam.toLowerCase()).toContain('fira')
@@ -531,7 +532,7 @@ test('status bar reads as quiet chrome, not an accent slab', async () => {
     // panel-bg and bar resolve to the same color in every theme, so a de-loudified
     // status bar (panel-bg) matches the header (bar); the old accent slab did not.
     const [sbBg, headerBg] = await win.evaluate(() => {
-      const bg = (sel) => getComputedStyle(document.querySelector(sel)).backgroundColor
+      const bg = (sel: string) => getComputedStyle(document.querySelector(sel)!).backgroundColor
       return [bg('#statusbar'), bg('#header')]
     })
     expect(sbBg).toBe(headerBg)
