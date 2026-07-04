@@ -134,9 +134,14 @@ micro-motion._
   intentionally NOT bumped** — the whole 3.5 polish pass ships under one version bump when it's
   done, not per-slice. **P2 delivered + merged** (`feat/design-polish-p2` → `master`, eyeball PASS
   2026-07-04): accent borders on all floating chrome + one unified container-agnostic scrollbar
-  (user notes 1+2 below) + snippet-manager theming. **P3 follow-ups outstanding** — see the P1
-  spec's Non-goals: overlay dismissal/scrim, toolbar consistency, highlighter pen cursor, themed
-  checkboxes, theme-picker swatch previews, empty-state icons, accent picker + auto-contrast.
+  (user notes 1+2 below) + snippet-manager theming. **P3 delivered + merged**
+  (`feat/design-polish-p3` → `master`, 2026-07-04): shared `overlayManager` (reliable
+  capture-phase Esc closes the **topmost** overlay — appearance + file-history gained Esc-close;
+  12 overlays unified), darker + `blur(3px)` scrim depth, `accent-color` checkboxes, icon-only
+  `◐` theme button, highlighter `crosshair`, and inline-SVG **empty-state glyphs** (File History /
+  Snippets). **Still outstanding (Slice C / D):** theme-picker swatch previews, accent picker +
+  auto-contrast + more presets, more bundled themes/fonts; highlighter **pen-tip SVG** deferred
+  (needs a CSP `img-src data:` decision — crosshair shipped).
 - **User polish notes (from the P1 eyeball, 2026-07-03)** — three directions:
   1. ✅ **Accent border on all toasts + pop-out menus** (delivered P2) — the notify toast (`.toast`),
      context menu (`#ctx-menu`), toolbar highlighter popup (`.tb-hl-pop`), and every picker/overlay
@@ -161,10 +166,10 @@ micro-motion._
   fonts sparingly — prefer surfacing more system fonts over shipping new font files.
 - ✅ **Toast polish** (**S**, delivered P2) — the notify toast (`.toast`) now carries the
   `1px solid var(--accent)` border (absorbed into user-note 1 above), reading as intentional chrome.
-- ⬜ **Highlighter cursor polish** (**S**) — paint mode currently shows the browser `cell`
-  cursor (`.hl-mode .view-lines{cursor:cell}` in `index.html`); swap it for a pen-tip cursor
-  that matches the toolbar highlighter icon (custom `cursor:url(...)` SVG, or at least
-  `crosshair`) so it reads intentionally.
+- ✅ **Highlighter cursor polish** (**S**, delivered P3) — paint mode now shows `crosshair`
+  instead of the browser `cell` cursor. _Deferred: a pen-tip `cursor:url(...)` SVG matching the
+  toolbar icon — a `data:` cursor is blocked by CSP (`img-src` → `default-src 'self'`), so it
+  needs a deliberate `img-src 'self' data:` relaxation or a bundled cursor asset._
 
 ## ⬜ Phase 3.6 — Quality-of-life & UX (independent of 3.5 — can interleave)
 
