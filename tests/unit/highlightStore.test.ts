@@ -37,7 +37,7 @@ describe('HighlightStore', () => {
     await s.save('C:/a.txt', [
       { start: 0, end: 5, colour: 'yellow' },
       { start: 5, end: 5, colour: 'yellow' },       // zero-length → dropped
-      { start: 0, end: 3, colour: 'teal' } as unknown as Highlight, // bad colour → dropped
+      { start: 0, end: 3, colour: 'magenta' } as unknown as Highlight, // bad colour (not in palette) → dropped
     ])
     expect(await s.load('C:/a.txt')).toEqual([{ start: 0, end: 5, colour: 'yellow' }])
   })

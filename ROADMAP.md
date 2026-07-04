@@ -95,7 +95,10 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > scrim depth+blur, accent checkboxes, icon-only theme button, highlighter crosshair, inline-SVG
 > empty states. **P4 built on `feat/design-polish-p4-accent` (eyeball pending):** accent-text
 > auto-contrast (`contrastText`) + 18 curated accent presets (custom colour picker
-> tried then dropped per preference). **Remaining 3.5:
+> tried then dropped per preference; current accent shown as a preview dot + Default reset).
+> **P4 also unifies the palette** — one `ACCENT_PALETTE` (`shared/types.ts`) now drives both the
+> accent swatches **and** the highlighter (18 highlight colours, 3×6 picker; no migration — the
+> old 7 highlight names are a subset). **Remaining 3.5:
 > Slice D** (more bundled themes + fonts) — the last item before the single 3.5 version bump;
 > plus the ongoing bolder-accent direction + drag-to-reorder's deferred FLIP animation.
 > _(v1.9.0 in-app Help; v1.10.0 Appearance-panel polish — the first 3.5 surface. All eyeballed,
