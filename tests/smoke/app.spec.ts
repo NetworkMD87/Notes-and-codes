@@ -541,6 +541,32 @@ test('status bar reads as quiet chrome, not an accent slab', async () => {
   }
 })
 
+test('floating chrome carries an accent border', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await win.keyboard.press('Control+Shift+P')
+    await expect(win.locator('#palette .palette-box')).toBeVisible()
+    // the box border should resolve to the same colour as --accent (Phase 3.5 P2).
+    // resolve --accent to rgb via a probe so both sides are comparable rgb strings.
+    const [border, accent] = await win.evaluate(() => {
+      const box = getComputedStyle(document.querySelector('.palette-box')!).borderTopColor
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--accent)'
+      document.body.appendChild(probe)
+      const accent = getComputedStyle(probe).color
+      probe.remove()
+      return [box, accent]
+    })
+    expect(border).toBe(accent)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('overlays use the micro-motion entry animation', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
