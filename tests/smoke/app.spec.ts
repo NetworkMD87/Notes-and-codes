@@ -568,7 +568,7 @@ test('floating chrome carries an accent border', async () => {
   }
 })
 
-test('accent: colour picker present + light preset auto-contrasts text to dark', async () => {
+test('accent: light preset auto-contrasts text to dark', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-accent-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
@@ -576,7 +576,8 @@ test('accent: colour picker present + light preset auto-contrasts text to dark',
     await expect(win.locator('#tabbar')).toBeVisible()
     await win.locator('#theme-toggle').click()
     await expect(win.locator('#appearance')).toBeVisible()
-    await expect(win.locator('#appearance .appearance-sw input[type=color]')).toHaveCount(1)
+    // 18 curated presets, no custom picker
+    await expect(win.locator('#appearance .appearance-sw .swatch')).toHaveCount(19) // 18 + the "default" dot
     // pick the light Yellow preset → accent-text auto-derives dark
     await win.locator('#appearance .appearance-sw .swatch[title="Yellow"]').click()
     const accentText = await win.evaluate(() =>

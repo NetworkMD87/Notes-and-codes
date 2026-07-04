@@ -108,12 +108,18 @@ export const THEME_LIST: { id: string; label: string }[] = [
   { id: 'follow-os', label: 'Follow OS' }
 ]
 
+// 18 curated accents spanning the wheel (+ a neutral slate). A few light ones
+// (Amber/Yellow/Lime) exercise the accent-text auto-contrast.
 export const ACCENT_SWATCHES: { name: string; value: string }[] = [
-  { name: 'Blue', value: '#0a84ff' }, { name: 'Teal', value: '#14b8a6' },
-  { name: 'Green', value: '#16a34a' }, { name: 'Cyan', value: '#06b6d4' },
-  { name: 'Indigo', value: '#4f46e5' }, { name: 'Purple', value: '#9333ea' },
-  { name: 'Pink', value: '#db2777' }, { name: 'Red', value: '#dc2626' },
-  { name: 'Orange', value: '#ea580c' }, { name: 'Yellow', value: '#eab308' },
+  { name: 'Red', value: '#dc2626' }, { name: 'Crimson', value: '#e11d48' },
+  { name: 'Pink', value: '#db2777' }, { name: 'Fuchsia', value: '#c026d3' },
+  { name: 'Purple', value: '#9333ea' }, { name: 'Violet', value: '#7c3aed' },
+  { name: 'Indigo', value: '#4f46e5' }, { name: 'Blue', value: '#0a84ff' },
+  { name: 'Sky', value: '#0ea5e9' }, { name: 'Cyan', value: '#06b6d4' },
+  { name: 'Teal', value: '#14b8a6' }, { name: 'Emerald', value: '#10b981' },
+  { name: 'Green', value: '#16a34a' }, { name: 'Lime', value: '#65a30d' },
+  { name: 'Yellow', value: '#eab308' }, { name: 'Amber', value: '#f59e0b' },
+  { name: 'Orange', value: '#ea580c' }, { name: 'Slate', value: '#64748b' },
 ]
 
 export function resolveThemeId(id: string): string {
