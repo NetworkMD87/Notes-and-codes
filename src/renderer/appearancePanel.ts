@@ -24,8 +24,8 @@ export interface AppearanceDeps {
   setFormatOnSave: (on: boolean) => void
 }
 
-const FONTS = ['JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Courier New']
-const UI_FONTS = ['System', 'Segoe UI', 'system-ui', ...FONTS]
+const FONTS = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Lucida Console', 'Courier New']
+const UI_FONTS = ['System', 'Segoe UI', 'Calibri', 'Tahoma', 'Verdana', 'Arial', 'Georgia', 'system-ui', ...FONTS]
 
 export class AppearancePanel {
   private host: HTMLElement
