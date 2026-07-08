@@ -17,21 +17,23 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — finish the v1.12.0 cut (manual tray/hotkey checklist → tag)
+## ▶ NEXT ACTION — pick the next slice (v1.12.0 shipped; nothing in flight)
 
-**Phase 3.5 P1–P5 is done and merged to `master` (2026-07-08); P5 eyeball PASSED.** Version bumped
-to **1.12.0** and the installer/portable packaged. Only the release formalities remain:
+**v1.12.0 is fully shipped (2026-07-08).** Phase 3.5 P1–P5 merged to `master`, tagged **`v1.12.0`**,
+pushed, GitHub release live with the installer + portable attached, README updated. The repo is now
+**MIT-licensed** (`LICENSE` + `THIRD_PARTY_NOTICES.md` for the bundled SIL-OFL fonts). Manual
+tray/hotkey checklist PASSED on the 1.12.0 build.
 
-1. **Manual tray + global-hotkey checklist** on the **1.12.0** installer (can't be automated —
-   tray show/hide/quit, `Ctrl+Shift+Space` summon, `Ctrl+Q` quit).
-2. **Tag `v1.12.0`** once the checklist passes (`git tag v1.12.0` → optional GitHub release with the
-   installer attached).
+No release is in flight. Candidate next work (each gets its own design → plan → build pass):
 
-After the tag, Phase 3.5 is fully shipped (already rolled into the sections below). Next candidate
-work: the small deferred items — **on-save overwrite warning** (Phase 1 fast-follow), the dead
-native **`Shift+Alt+F`** Format hotkey, or start into **Phase 3.6 / parked Phase 4**.
+1. **On-save overwrite warning** (**S**) — the last Phase-1 fast-follow: warn before overwriting a
+   file that changed on disk since it was opened (the change-bar mitigates the common case today).
+2. **Dead native `Shift+Alt+F` Format hotkey** — works via palette + Edit menu; the OS accelerator
+   does nothing (one fix attempt failed — see the Format Document known-issue below).
+3. **Phase 3.6 QoL** (mostly shipped) or **parked Phase 4** (code signing, native Win11 Open-with,
+   configurable-hotkey UI, snippet tabstops, launch-on-login).
 
-_See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the same._
+_See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state._
 
 ---
 
