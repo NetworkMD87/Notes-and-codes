@@ -53,3 +53,8 @@ npm run dev        # run in development
 npm run package    # build the installer + portable exe (needs Windows Developer
                    # Mode or an elevated shell for electron-builder's symlink step)
 ```
+
+## License
+MIT — see [LICENSE](LICENSE). Bundled fonts (JetBrains Mono, Fira Code, IBM Plex
+Mono) are licensed under the SIL Open Font License 1.1; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
