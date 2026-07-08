@@ -17,23 +17,19 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — eyeball P5, then cut the Phase 3.5 release (v1.12.0)
+## ▶ NEXT ACTION — finish the v1.12.0 cut (manual tray/hotkey checklist → tag)
 
-**Phase 3.5 P1–P5 is code-complete.** P1–P4 are merged to `master`; **P5 (5 new themes + fonts)
-is built on `feat/design-polish-p5-themes-fonts`, awaiting the eyeball.** Do this next, in order:
+**Phase 3.5 P1–P5 is done and merged to `master` (2026-07-08); P5 eyeball PASSED.** Version bumped
+to **1.12.0** and the installer/portable packaged. Only the release formalities remain:
 
-1. **Eyeball the P5 build** — fully quit the tray instance, run the portable
-   `dist/Notes & Codes 1.11.0.exe`:
-   - Cycle the **5 new themes** (Nord, Dracula, Gruvbox Dark, Tokyo Night, Gruvbox Light) — chrome +
-     editor recolour cohesively, accent stays legible; open a `.js` file to see syntax colours; the
-     13-theme picker grid wraps/scrolls fine.
-   - Editor font → **IBM Plex Mono** (bundled) + **Lucida Console** (system); Interface font →
-     **Calibri**/**Verdana**; both persist across restart.
-2. **On "looks good":** merge `feat/design-polish-p5-themes-fonts` `--no-ff` → `master`.
-3. **Cut the release:** `npm version minor` (1.11.0 → **1.12.0**) → `npm run package`.
-4. **Manual tray + global-hotkey checklist** on the 1.12.0 installer (can't be automated —
+1. **Manual tray + global-hotkey checklist** on the **1.12.0** installer (can't be automated —
    tray show/hide/quit, `Ctrl+Shift+Space` summon, `Ctrl+Q` quit).
-5. **Tag `v1.12.0`** only after the checklist passes; **roll Phase 3.5 into Shipped** below.
+2. **Tag `v1.12.0`** once the checklist passes (`git tag v1.12.0` → optional GitHub release with the
+   installer attached).
+
+After the tag, Phase 3.5 is fully shipped (already rolled into the sections below). Next candidate
+work: the small deferred items — **on-save overwrite warning** (Phase 1 fast-follow), the dead
+native **`Shift+Alt+F`** Format hotkey, or start into **Phase 3.6 / parked Phase 4**.
 
 _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the same._
 
@@ -139,7 +135,7 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 - ✅ **Folder mode: sidebar file-tree + quick-open** (shipped v1.3) — opt-in "Open Folder" → toggleable, resizable left sidebar tree (lazy-loaded) + basic file ops (New File/Folder, Rename, Delete→Recycle Bin) + `Ctrl+P` quick-open; `.git`/`node_modules` hidden by default (Show-all toggle); startup-restore of the last folder. Scratchpad stays the default with no folder open. _Deferred: drag-to-move, cut/copy/paste, multi-root, content search in quick-open, `.gitignore` awareness._
 - ✅ **Text highlighter / pen** (shipped v1.7) — toolbar toggle + **7-colour** swatch dropdown (yellow/green/blue/pink/orange/purple/red) with a **Clear highlights** action in the dropdown; the button underline shows the active colour. With the mode on, drag-select paints a persistent semi-transparent highlight (Monaco decorations), re-stroking the same colour erases, dragging a different colour recolours; also a **Clear Highlights** palette command. Persists **per file on disk** (path-keyed store in `userData`), untitled buffers via the session (migrated on Save-As); highlights ride edits (decoration read-back), clamp on reload, and flush on tab close / quit. Pure interval engine + store are unit-tested; paint / clear / persistence are smoke-tested (incl. relaunch). Code-complete + whole-branch reviewed on `feat/text-highlighter`. _Deferred: external-edit re-anchoring, highlights list panel, carrying highlights into HTML/PDF export, a free custom colour picker, an Edit-menu item, keyboard-only painting. (Multi-part select → copy/paste is already native in Monaco — `Alt+Click` / `Ctrl+D`.)_
 
-## ⬜ Phase 3.5 — Design polish pass (do AFTER Phase 3 surfaces land)
+## ✅ Phase 3.5 — Design polish pass (P1–P5 complete, merged to master; v1.12.0)
 
 _Holistic "does it feel as premium as it can?" pass. Deliberately sequenced **after** the
 Phase 3 structural features (folder tree, quick-open, export view) so every surface is
@@ -154,7 +150,7 @@ micro-motion._
   (now labeled "Editor font"); the panel re-laid **landscape** (theme list left, accent / font /
   editor / folder right) with a wrap fallback for narrow windows. _(The broader whole-app visual
   critique below remains ⬜.)_
-- 🚧 **Whole-app visual critique + targeted upgrade** (**M**) — review the real surfaces
+- ✅ **Whole-app visual critique + targeted upgrade** (**M**) — review the real surfaces
   (tabs, toolbar, status bar, file-history / appearance panels, overlays, empty states) for
   spacing, density, type scale, hierarchy, and micro-motion; apply refinements through the
   existing token system. Kicked off by a design-critique session on the running app.
@@ -182,10 +178,10 @@ micro-motion._
   2. ✅ **Unify scrollbars** (delivered P2) — one global, container-agnostic `::-webkit-scrollbar`
      style (transparent 3px border + `background-clip:padding-box`) replaced the Help-only block;
      every native scrollbar now matches, Monaco's own scrollbars untouched.
-  3. 🚧 **Use accent more boldly (but not over the top)** — "don't be scared of a little colour":
-     applied via P2's borders + P3's accent surfaces; now **unblocked** by P4's accent-text
-     auto-contrast (accent is safe on any surface — text stays legible). Ongoing direction for
-     the rest of the pass, kept tasteful.
+  3. ✅ **Use accent more boldly (but not over the top)** — "don't be scared of a little colour":
+     delivered across P2's borders + P3's accent surfaces + P4's accent-text auto-contrast (accent is
+     safe on any surface — text stays legible) + P5's expanded theme/accent range. Direction applied
+     through the whole pass, kept tasteful.
 - ✅ Fold in the two deferred **Phase-2 token tweaks**: status-bar `--muted` dimming (P1) and
   accent-text auto-contrast (P4) — both delivered.
 - ✅ **More accent colours** (**S**, delivered P4) — `ACCENT_SWATCHES` 6 → **18** curated accents
