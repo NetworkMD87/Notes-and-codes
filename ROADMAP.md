@@ -26,11 +26,17 @@ tray/hotkey checklist PASSED on the 1.12.0 build.
 
 No release is in flight. Candidate next work (each gets its own design → plan → build pass):
 
-1. **On-save overwrite warning** (**S**) — the last Phase-1 fast-follow: warn before overwriting a
+1. 🔜 **Triage the fresh v1.12.0 audit** (**S–M**) — `AUDIT-v1.12.0.md` (2026-07-09, full-codebase
+   pass): 21 new findings — **5 High** (Save-As-cancel silently drops the file association;
+   palette "Close Tab" bypasses the dirty-confirm + leaks Monaco models; a tray-hidden window is
+   never shown when a file is opened from Explorer; one corrupt session entry bricks startup;
+   settings write races), 7 Medium, 9 Low. Same flow as the v1.7.1 `AUDIT.md` triage: verify each
+   ("audit the audit"), fix the High items first — H1–H4 are small isolated diffs.
+2. **On-save overwrite warning** (**S**) — the last Phase-1 fast-follow: warn before overwriting a
    file that changed on disk since it was opened (the change-bar mitigates the common case today).
-2. **Dead native `Shift+Alt+F` Format hotkey** — works via palette + Edit menu; the OS accelerator
+3. **Dead native `Shift+Alt+F` Format hotkey** — works via palette + Edit menu; the OS accelerator
    does nothing (one fix attempt failed — see the Format Document known-issue below).
-3. **Phase 3.6 QoL** (mostly shipped) or **parked Phase 4** (code signing, native Win11 Open-with,
+4. **Phase 3.6 QoL** (mostly shipped) or **parked Phase 4** (code signing, native Win11 Open-with,
    configurable-hotkey UI, snippet tabstops, launch-on-login).
 
 _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state._
