@@ -26,12 +26,15 @@ tray/hotkey checklist PASSED on the 1.12.0 build.
 
 No release is in flight. Candidate next work (each gets its own design → plan → build pass):
 
-1. 🔜 **Triage the fresh v1.12.0 audit** (**S–M**) — `AUDIT-v1.12.0.md` (2026-07-09, full-codebase
-   pass): 21 new findings — **5 High** (Save-As-cancel silently drops the file association;
-   palette "Close Tab" bypasses the dirty-confirm + leaks Monaco models; a tray-hidden window is
-   never shown when a file is opened from Explorer; one corrupt session entry bricks startup;
-   settings write races), 7 Medium, 9 Low. Same flow as the v1.7.1 `AUDIT.md` triage: verify each
-   ("audit the audit"), fix the High items first — H1–H4 are small isolated diffs.
+1. 🔜 **Work the merged audit checklist** (**S–M**) — `AUDIT-CHECKLIST.md` consolidates both
+   audits into one phased work-list (the v1.7 + v1.12 source files were folded in and deleted).
+   The live work is the untriaged **v1.12.0 audit** (2026-07-09, full-codebase pass): 21 new
+   findings — **5 High** (Save-As-cancel silently drops the file association; palette "Close Tab"
+   bypasses the dirty-confirm + leaks Monaco models; a tray-hidden window is never shown when a
+   file is opened from Explorer; one corrupt session entry bricks startup; settings write races),
+   7 Medium, 9 Low, + the v1.7 I8 clean-quit residual (promoted to R1). Ordered into 5 phases
+   (data-loss → startup → store races → editor correctness → hardening). Same flow as the v1.7.1
+   triage: verify each ("audit the audit"), fix Phase 1 (Highs) first — small isolated diffs.
 2. **On-save overwrite warning** (**S**) — the last Phase-1 fast-follow: warn before overwriting a
    file that changed on disk since it was opened (the change-bar mitigates the common case today).
 3. **Dead native `Shift+Alt+F` Format hotkey** — works via palette + Edit menu; the OS accelerator
@@ -100,7 +103,7 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > • **Robustness (v1.7.1):** the external `AUDIT.md` bug audit is triaged — all 19 findings
 > verified, **16 fixed**, 2 defensive, **1 rejected (I5)**. Headline: atomic writes
 > (`atomicWrite` tmp+rename across `fileService` + all 7 stores), surfaced save-failure toasts,
-> dirty-tab-close + quit flush. See `AUDIT.md` ▸ _Triage outcome_.
+> dirty-tab-close + quit flush. See `AUDIT-CHECKLIST.md` ▸ _Appendix A_.
 > • **Identity (v1.8.0):** app logo + **theme-aware small icons** — the tray and live
 > window/taskbar button use the `{&}` glyph and swap bright/dark with the Windows taskbar
 > theme; static exe/installer icon is the dark `{N&C}` tile. Brand pack in `assets/branding/`.
