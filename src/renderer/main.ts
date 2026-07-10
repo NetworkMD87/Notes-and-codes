@@ -306,8 +306,8 @@ window.api.onSaveAllAndQuit(async () => {
   window.api.quitNow()
 })
 
-interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean; format: boolean }
-const MANUAL_SAVE: SaveOpts = { snapshot: true, recent: true, allowDialog: true, format: true }
+interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean; format: boolean; forceDialog: boolean }
+const MANUAL_SAVE: SaveOpts = { snapshot: true, recent: true, allowDialog: true, format: true, forceDialog: false }
 
 async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boolean> {
   const b = manager.get(id); if (!b) return false
@@ -323,7 +323,7 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   const content = pane ? pane.getContent() : b.content
   const oldLang = b.language
   let path = b.filePath
-  if (!path) {
+  if (!path || opts.forceDialog) {
     if (!opts.allowDialog) return false
     path = await window.api.saveAsDialog(); if (!path) return false
   }
@@ -364,7 +364,7 @@ async function saveAll(): Promise<void> {
 
 function autosaveFlush(): void {
   for (const id of eligibleForAutosave(manager.list(), conflicts)) {
-    saveBuffer(id, { snapshot: false, recent: false, allowDialog: false, format: false })
+    saveBuffer(id, { snapshot: false, recent: false, allowDialog: false, format: false, forceDialog: false })
       .then(ok => { if (ok) { autosaveFailed.delete(id); tabBar.render(manager.list(), manager.activeId); refreshStatus() } })
       .catch(() => {
         // Leave the buffer dirty (markSaved was never reached). Toast once per failure streak.
@@ -664,7 +664,7 @@ window.api.onAppNotify((msg) => toast(msg))
 installMenuCommands({
   new: () => { manager.create(); showActive(); scheduleSessionSave() },
   open: () => void openFromDisk(),
-  'save-as': async () => { const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return; const b = manager.get(id)!; b.filePath = null; await saveBuffer(id); tabBar.render(manager.list(), manager.activeId); refreshStatus() },
+  'save-as': async () => { const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return; await saveBuffer(id, { ...MANUAL_SAVE, forceDialog: true }); tabBar.render(manager.list(), manager.activeId); refreshStatus() },
   save: () => void saveActive(),
   'save-all': () => void saveAll(),
   close: () => void closeTab(manager.activeId!),
