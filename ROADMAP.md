@@ -17,24 +17,29 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — pick the next slice (v1.12.0 shipped; nothing in flight)
+## ▶ NEXT ACTION — working the audit checklist (v1.12.0 shipped; Phase 1 in progress)
 
 **v1.12.0 is fully shipped (2026-07-08).** Phase 3.5 P1–P5 merged to `master`, tagged **`v1.12.0`**,
-pushed, GitHub release live with the installer + portable attached, README updated. The repo is now
+pushed, GitHub release live with the installer + portable attached, README updated. The repo is
 **MIT-licensed** (`LICENSE` + `THIRD_PARTY_NOTICES.md` for the bundled SIL-OFL fonts). Manual
 tray/hotkey checklist PASSED on the 1.12.0 build.
 
-No release is in flight. Candidate next work (each gets its own design → plan → build pass):
+**In flight — the merged audit checklist** (`AUDIT-CHECKLIST.md`): both codebase audits consolidated
+into one 5-phase work-list (the v1.7 + v1.12 source files were folded in and deleted). Fixes land on
+`master` incrementally; a **v1.12.1** patch is cut once a batch is done. Flow follows the v1.7.1
+triage — verify each finding ("audit the audit") before fixing.
 
-1. 🔜 **Work the merged audit checklist** (**S–M**) — `AUDIT-CHECKLIST.md` consolidates both
-   audits into one phased work-list (the v1.7 + v1.12 source files were folded in and deleted).
-   The live work is the untriaged **v1.12.0 audit** (2026-07-09, full-codebase pass): 21 new
-   findings — **5 High** (Save-As-cancel silently drops the file association; palette "Close Tab"
-   bypasses the dirty-confirm + leaks Monaco models; a tray-hidden window is never shown when a
-   file is opened from Explorer; one corrupt session entry bricks startup; settings write races),
-   7 Medium, 9 Low, + the v1.7 I8 clean-quit residual (promoted to R1). Ordered into 5 phases
-   (data-loss → startup → store races → editor correctness → hardening). Same flow as the v1.7.1
-   triage: verify each ("audit the audit"), fix Phase 1 (Highs) first — small isolated diffs.
+1. 🚧 **Phase 1 — data-loss & close/quit safety** (5 phases total; started 2026-07-10).
+   - ✅ **H1 — Save-As-cancel drops the file association** — FIXED + merged (`fix/audit-p1-data-loss`
+     → `master`): `saveBuffer` gained a `forceDialog` flag; Save-As no longer nulls `filePath` up
+     front, so a cancelled dialog is a no-op. _Manual installer eyeball still owed._
+   - 🔜 **H2** palette "Close Tab" bypasses the dirty-confirm + leaks Monaco models · **M1** dirty
+     untitled tab closes silently · **R1** clean-quit clipboard/session flush (v1.7 I8 residual).
+   - Then Phase 2 (startup: H4, H3) → 3 (store races: H5, M4–M6) → 4 (editor correctness: M2, M3,
+     M7) → 5 (hardening: L1–L9). Full detail + live progress in `AUDIT-CHECKLIST.md`.
+
+Other candidate work (each gets its own design → plan → build pass):
+
 2. **On-save overwrite warning** (**S**) — the last Phase-1 fast-follow: warn before overwriting a
    file that changed on disk since it was opened (the change-bar mitigates the common case today).
 3. **Dead native `Shift+Alt+F` Format hotkey** — works via palette + Edit menu; the OS accelerator
@@ -97,10 +102,10 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 _The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited)._
 
-> ▶ **STATUS (2026-07-03) — v1.11.0 shipped (drag-to-reorder tabs); Phase 3 complete, audit triaged, brand identity in.**
+> ▶ **STATUS (2026-07-10) — v1.12.0 shipped; Phase 3 + 3.5 complete. Active work: the merged audit checklist (`AUDIT-CHECKLIST.md`, Phase 1 — H1 done).**
 > All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
 > folder mode, text highlighter).
-> • **Robustness (v1.7.1):** the external `AUDIT.md` bug audit is triaged — all 19 findings
+> • **Robustness (v1.7.1):** the external v1.7.0 bug audit is triaged — all 19 findings
 > verified, **16 fixed**, 2 defensive, **1 rejected (I5)**. Headline: atomic writes
 > (`atomicWrite` tmp+rename across `fileService` + all 7 stores), surfaced save-failure toasts,
 > dirty-tab-close + quit flush. See `AUDIT-CHECKLIST.md` ▸ _Appendix A_.
@@ -112,30 +117,17 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > `feat/drag-reorder-tabs` (opus: ready to merge), eyeballed on the installed build (drag feel +
 > accent insertion mark + persist across restart + tray/hotkey checklist — PASS), merged `--no-ff`
 > → `master`, tagged `v1.11.0`.
-> **Phase 3.5 design polish — IN PROGRESS (version held, ships under one bump when done).**
-> **P1 delivered + merged** (status bar, stacked palette, micro-motion layer). **P2 delivered +
-> merged (2026-07-04, `feat/design-polish-p2`, eyeball PASS):** accent borders on all floating
-> chrome + one unified container-agnostic scrollbar; snippet-manager theming (killed the
-> stark-white default inputs). **Bonus robustness fix (P2 branch):** the global-hotkey conflict
-> that popped a **blocking modal** (froze startup + the smoke suite when the app was already in the
-> tray holding `Ctrl+Shift+Space`) now degrades to a **non-blocking toast** (`app:notify` IPC);
-> smoke gates the OS hotkey via `NC_HEADLESS` + a regression test. **P3 delivered + merged**
-> (`feat/design-polish-p3`, eyeball PASS): shared `overlayManager` (reliable topmost Esc),
-> scrim depth+blur, accent checkboxes, icon-only theme button, highlighter crosshair, inline-SVG
-> empty states. **P4 delivered + merged** (`feat/design-polish-p4-accent`, eyeball PASS): accent-text
-> auto-contrast (`contrastText`) + 18 curated accent presets (custom colour picker
-> tried then dropped per preference; current accent shown as a preview dot + Default reset).
-> **P4 also unifies the palette** — one `ACCENT_PALETTE` (`shared/types.ts`) now drives both the
-> accent swatches **and** the highlighter (18 highlight colours, 3×6 picker; no migration — the
-> old 7 highlight names are a subset). **Remaining 3.5:
-> Slice D** (more bundled themes + fonts) — the last item before the single 3.5 version bump;
-> plus the ongoing bolder-accent direction + drag-to-reorder's deferred FLIP animation.
-> _(v1.9.0 in-app Help; v1.10.0 Appearance-panel polish — the first 3.5 surface. All eyeballed,
-> merged.)_
+> **Phase 3.5 design polish (P1–P5) SHIPPED as v1.12.0** — status bar / stacked palette /
+> micro-motion (P1), accent borders + one unified scrollbar (P2), `overlayManager` topmost-Esc +
+> accent surfaces (P3), accent-text auto-contrast + one shared 18-colour `ACCENT_PALETTE` driving
+> both accents and the highlighter (P4), 13 themes + IBM Plex Mono (P5). A P2-branch bonus fix
+> turned the global-hotkey conflict from a **blocking modal** into a **non-blocking toast**
+> (`app:notify` IPC), gated in smoke via `NC_HEADLESS` + a regression test. Full per-slice detail
+> in the **Phase 3.5** section below. _(v1.9.0 in-app Help; v1.10.0 Appearance-panel polish.)_
 > **Carried known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing
-> (works via palette + Edit menu — details under **Format Document**); ② audit I8 residual —
-> a _clean_ quit (no unsaved tabs) bypasses the clipboard/session flush; ③ static exe/installer
-> icon can't theme-swap (uses the contrast-safe dark tile).
+> (works via palette + Edit menu — details under **Format Document**); ② clean-quit clipboard/session
+> flush (v1.7 audit I8 residual — now tracked as **R1** in `AUDIT-CHECKLIST.md` Phase 1); ③ static
+> exe/installer icon can't theme-swap (uses the contrast-safe dark tile).
 
 - ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). _Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation._
 - ✅ **Markdown export** (shipped v1.4) — export the active tab (rendered as Markdown) to a standalone **HTML** file or **PDF** via File ▸ Export or the palette; clean light document style, self-contained (no CDN). _Deferred: relative-image embedding, custom page size/margins, batch export, code syntax highlighting._
@@ -203,8 +195,8 @@ micro-motion._
   Dracula, Gruvbox Dark, Tokyo Night + Gruvbox Light (cohesive `makeTheme` palettes, accent
   auto-contrast). Fonts: bundled **IBM Plex Mono** (lean 400/700) as a 3rd editor font + surfaced
   system options (Lucida Console; Calibri/Tahoma/Verdana/Arial/Georgia for the interface font).
-  **Phase 3.5 is now COMPLETE (P1–P5)** — pending the held **v1.12.0** version bump + tag (after
-  the manual tray/hotkey checklist), then roll 3.5 into **Shipped**.
+  **Phase 3.5 is COMPLETE (P1–P5) and SHIPPED as v1.12.0** — version bumped, packaged, manual
+  tray/hotkey checklist PASSED, tagged `v1.12.0`, pushed, GitHub release live.
 - ✅ **Toast polish** (**S**, delivered P2) — the notify toast (`.toast`) now carries the
   `1px solid var(--accent)` border (absorbed into user-note 1 above), reading as intentional chrome.
 - ✅ **Highlighter cursor polish** (**S**, delivered P3) — paint mode now shows `crosshair`
