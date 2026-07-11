@@ -19,10 +19,10 @@ features twice.
 
 ## ▶ NEXT ACTION — working the audit checklist (v1.12.0 shipped; Phase 1 DONE → Phase 2 next)
 
-**v1.12.1 tagged (2026-07-11).** Patch release — **audit Phase 1 complete** (H1, H2, M1, R1:
-data-loss & close/quit safety; see `CHANGELOG.md`). Version bumped, tag `v1.12.1` cut; the manual
-tray/hotkey + Save-As checklist PASSED on the packaged build. _Remaining: push `master` + tag and
-publish the GitHub release with the installer/portable attached._
+**v1.12.1 shipped (2026-07-11).** Patch release — **audit Phase 1 complete** (H1, H2, M1, R1:
+data-loss & close/quit safety; see `CHANGELOG.md`). Tag `v1.12.1` pushed, GitHub release live with
+the installer + portable attached; the manual tray/hotkey + Save-As checklist PASSED on the packaged
+build. **Next: audit Phase 2** (startup & window reliability — H4, H3).
 
 **v1.12.0 (2026-07-08).** Phase 3.5 P1–P5 merged to `master`, tagged **`v1.12.0`**, pushed, GitHub
 release live with the installer + portable attached, README updated. The repo is **MIT-licensed**
