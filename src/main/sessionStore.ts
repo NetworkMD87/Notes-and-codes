@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import type { SessionData } from '../shared/types'
+import type { SessionData, BufferState } from '../shared/types'
 import { atomicWrite } from './atomicWrite'
 
 const EMPTY: SessionData = { buffers: [], activeId: null }
@@ -23,7 +23,17 @@ export class SessionStore {
       const raw = await fs.readFile(this.file, 'utf8')
       const parsed = JSON.parse(raw)
       if (!parsed || !Array.isArray(parsed.buffers)) return { ...EMPTY }
-      return parsed as SessionData
+      // Corrupt-safe (store contract): keep only well-formed buffers, so one bad entry
+      // (null / non-object / partial write) can't crash bufferManager.restore() at boot.
+      const buffers = (parsed.buffers as unknown[]).filter((b): b is BufferState =>
+        !!b && typeof b === 'object'
+        && typeof (b as BufferState).id === 'string'
+        && typeof (b as BufferState).title === 'string'
+        && typeof (b as BufferState).content === 'string')
+      // activeId must point to a surviving buffer; a dangling one (the active buffer
+      // was the malformed entry we just dropped) is nulled so boot picks the first.
+      const activeId = buffers.some(b => b.id === parsed.activeId) ? parsed.activeId as string : null
+      return { buffers, activeId }
     } catch {
       return { ...EMPTY }
     }
