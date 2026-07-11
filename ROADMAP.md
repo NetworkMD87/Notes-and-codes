@@ -33,8 +33,11 @@ triage — verify each finding ("audit the audit") before fixing.
    - ✅ **H1 — Save-As-cancel drops the file association** — FIXED + merged (`fix/audit-p1-data-loss`
      → `master`): `saveBuffer` gained a `forceDialog` flag; Save-As no longer nulls `filePath` up
      front, so a cancelled dialog is a no-op. _Manual installer eyeball still owed._
-   - 🔜 **H2** palette "Close Tab" bypasses the dirty-confirm + leaks Monaco models · **M1** dirty
-     untitled tab closes silently · **R1** clean-quit clipboard/session flush (v1.7 I8 residual).
+   - ✅ **H2 · M1 — palette + dirty-untitled close safety** — FIXED + merged (`fix/audit-p1-close-safety`
+     → `master`): palette "Close Tab" now routes through `closeTab` (no more dirty-discard / Monaco
+     leak); the dirty-confirm fires on untitled scratch content too. Bonus: fixed a `confirmDialog`
+     Enter-bleed the tests surfaced. Smoke-covered (`close-safety.spec.ts`).
+   - 🔜 **R1** clean-quit clipboard/session flush (v1.7 I8 residual) — last Phase-1 item.
    - Then Phase 2 (startup: H4, H3) → 3 (store races: H5, M4–M6) → 4 (editor correctness: M2, M3,
      M7) → 5 (hardening: L1–L9). Full detail + live progress in `AUDIT-CHECKLIST.md`.
 
@@ -102,7 +105,7 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 _The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited)._
 
-> ▶ **STATUS (2026-07-10) — v1.12.0 shipped; Phase 3 + 3.5 complete. Active work: the merged audit checklist (`AUDIT-CHECKLIST.md`, Phase 1 — H1 done).**
+> ▶ **STATUS (2026-07-11) — v1.12.0 shipped; Phase 3 + 3.5 complete. Active work: the merged audit checklist (`AUDIT-CHECKLIST.md`, Phase 1 — H1, H2, M1 done; R1 left).**
 > All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
 > folder mode, text highlighter).
 > • **Robustness (v1.7.1):** the external v1.7.0 bug audit is triaged — all 19 findings
