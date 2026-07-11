@@ -34,6 +34,10 @@ export function registerIpc(deps: IpcDeps): void {
   const recent = deps.recent
   const history = new FileHistoryStore(deps.baseDir)
   const highlights = new HighlightStore(deps.baseDir)
+  // One-shot startup GC: drop history/highlight entries whose source file is gone, so
+  // these stores can't grow without bound or orphan entries. Fire-and-forget (best-effort).
+  void history.sweep()
+  void highlights.sweep()
   const watcher = new FileWatcher((path) => deps.getWindow()?.webContents.send('file:changed', path))
   const dirWatcher = new DirWatcher(() => deps.getWindow()?.webContents.send('dir:changed'))
   ipcMain.handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))

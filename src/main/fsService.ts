@@ -57,3 +57,8 @@ export async function renamePath(from: string, to: string): Promise<boolean> {
 export async function dirExists(path: string): Promise<boolean> {
   try { return (await fs.stat(path)).isDirectory() } catch { return false }
 }
+
+/** True if anything (file or directory) exists at `path`. Used by store GC sweeps. */
+export async function pathExists(path: string): Promise<boolean> {
+  return fs.access(path).then(() => true, () => false)
+}
