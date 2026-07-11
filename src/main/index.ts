@@ -114,11 +114,11 @@ if (!gotLock) {
 } else {
   app.on('second-instance', (_e, argv) => {
     const f = fileArgFrom(argv)
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.focus()
-      if (f) mainWindow.webContents.send('open-file', f)
-    }
+    // Resting state is hidden-to-tray; restore()/focus() don't show a hidden window.
+    // showWindow() does (and recreates the window if it was closed), so the opened
+    // file is never delivered to an invisible window.
+    showWindow()
+    if (f) mainWindow?.webContents.send('open-file', f)
   })
 
   app.whenReady().then(async () => {

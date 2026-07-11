@@ -707,7 +707,12 @@ installMenuCommands({
   'help-about': () => helpOverlay.openAbout(),
 }, (id) => theme.pick(id))
 
-boot()
+boot().catch(err => {
+  // A bad session or any other startup failure must never leave a dead blank window.
+  console.error('boot failed', err)
+  toast('Could not restore your last session — starting fresh.')
+  try { manager.create(); showActive() } catch (e) { console.error('fallback boot failed', e) }
+})
 
 const HISTORY_INTERVAL_MS = 5 * 60 * 1000
 const historyTimer = setInterval(() => {

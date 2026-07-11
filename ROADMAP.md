@@ -17,12 +17,14 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — working the audit checklist (v1.12.0 shipped; Phase 1 DONE → Phase 2 next)
+## ▶ NEXT ACTION — working the audit checklist (v1.12.1 shipped; Phases 1–2 DONE → Phase 3 next)
 
 **v1.12.1 shipped (2026-07-11).** Patch release — **audit Phase 1 complete** (H1, H2, M1, R1:
 data-loss & close/quit safety; see `CHANGELOG.md`). Tag `v1.12.1` pushed, GitHub release live with
 the installer + portable attached; the manual tray/hotkey + Save-As checklist PASSED on the packaged
-build. **Next: audit Phase 2** (startup & window reliability — H4, H3).
+build. **Audit Phase 2 done (unreleased on `master`):** H4 (malformed-session-bricks-startup) + H3
+(tray-hidden Explorer-open shows nothing) fixed on `fix/audit-p2-startup-window`. **Next: Phase 3**
+(store integrity & write races — H5, M4–M6), then cut v1.12.2 with the Phase-2+3 batch.
 
 **v1.12.0 (2026-07-08).** Phase 3.5 P1–P5 merged to `master`, tagged **`v1.12.0`**, pushed, GitHub
 release live with the installer + portable attached, README updated. The repo is **MIT-licensed**
@@ -45,9 +47,12 @@ triage — verify each finding ("audit the audit") before fixing.
    - ✅ **R1 — clean-quit clipboard/session flush** (v1.7 I8 residual) — FIXED + merged
      (`fix/audit-p1-clean-quit-flush` → `master`): a clean quit now flushes debounced writes via a
      shared `flushPendingWritesBeforeQuit()` + `app:flushAndQuit` signal. Smoke-covered.
-   - **Phase 1 done — H1 owes a manual Save-As eyeball on a real build.** Next up: Phase 2
-     (startup: H4, H3) → 3 (store races: H5, M4–M6) → 4 (editor correctness: M2, M3,
-     M7) → 5 (hardening: L1–L9). Full detail + live progress in `AUDIT-CHECKLIST.md`.
+   - ✅ **Phase 2 — startup & window reliability — COMPLETE** (on `master`, unreleased):
+     **H4** malformed session no longer bricks startup (`SessionStore.load` filters + `boot().catch`
+     fallback), **H3** tray-hidden Explorer-open now shows the window (`showWindow()` in
+     `second-instance`). Unit + smoke covered (`sessionStore.test.ts`, `startup-window.spec.ts`).
+   - Next: Phase 3 (store races: H5, M4–M6) → 4 (editor correctness: M2, M3, M7) → 5 (hardening:
+     L1–L9), then cut **v1.12.2** with the Phase-2+3 batch. Full detail in `AUDIT-CHECKLIST.md`.
 
 Other candidate work (each gets its own design → plan → build pass):
 
