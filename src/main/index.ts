@@ -12,6 +12,8 @@ let pendingFile: string | null = null
 let tray: Tray | null = null
 let isQuitting = false
 let unsavedCount = 0
+// Force the exit if the renderer never replies app:quitNow to a clean-quit flush.
+const FLUSH_QUIT_FALLBACK_MS = 2000
 let recentStore: RecentFilesStore | null = null
 
 async function rebuildMenu(): Promise<void> {
@@ -44,7 +46,15 @@ function fileArgFrom(argv: string[]): string | null {
 }
 
 function requestQuit(): void {
-  if (unsavedCount === 0 || !mainWindow) { isQuitting = true; app.quit(); return }
+  if (!mainWindow) { isQuitting = true; app.quit(); return }
+  if (unsavedCount === 0) {
+    // Clean quit: nothing to save, but the renderer may still hold debounced
+    // clipboard/session writes (≤500ms). Ask it to flush them, then it replies
+    // app:quitNow. A short fallback still guarantees the exit if the renderer wedges.
+    mainWindow.webContents.send('app:flushAndQuit')
+    setTimeout(() => { isQuitting = true; app.quit() }, FLUSH_QUIT_FALLBACK_MS)
+    return
+  }
   const choice = dialog.showMessageBoxSync(mainWindow, {
     type: 'warning', buttons: ['Save', "Don't Save", 'Cancel'], defaultId: 0, cancelId: 2,
     message: `You have unsaved changes in ${unsavedCount} tab${unsavedCount === 1 ? '' : 's'}.`,

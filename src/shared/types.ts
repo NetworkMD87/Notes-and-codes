@@ -129,6 +129,7 @@ export interface Api {
   hideWindow(): void
   quitNow(): void
   onSaveAllAndQuit(cb: () => void): void
+  onFlushAndQuit(cb: () => void): void
   onMenuCommand(cb: (id: string) => void): void
   onAppNotify(cb: (msg: string) => void): void
   snapshotHistory(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
