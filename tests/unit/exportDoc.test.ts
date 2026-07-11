@@ -22,14 +22,24 @@ describe('wrapHtml', () => {
 })
 
 describe('buildExportHtml', () => {
-  it('renders markdown into the document body', () => {
-    const out = buildExportHtml('# Hello', 'doc')
+  it('renders a markdown buffer into the document body', () => {
+    const out = buildExportHtml('# Hello', 'doc', 'markdown')
     expect(out).toContain('<h1>Hello</h1>')
     expect(out).toContain('<!doctype html>')
   })
-  it('sanitizes script tags from the source', () => {
-    const out = buildExportHtml('hi <script>alert(1)</script>', 'doc')
+  it('sanitizes script tags from a markdown source', () => {
+    const out = buildExportHtml('hi <script>alert(1)</script>', 'doc', 'markdown')
     expect(out).not.toContain('<script>alert')
+  })
+  it('exports a non-markdown buffer verbatim in a code block, not as markdown', () => {
+    // A .ts file must not be mangled: `#` comments stay literal (no <h1>), `<` is escaped,
+    // indentation is preserved inside <pre><code>.
+    const src = '# not a heading\nconst x = 1 < 2 // <b>'
+    const out = buildExportHtml(src, 'code.ts', 'typescript')
+    expect(out).toContain('<pre><code>')
+    expect(out).toContain('# not a heading')      // literal, not a heading
+    expect(out).not.toContain('<h1>')
+    expect(out).toContain('1 &lt; 2 // &lt;b&gt;') // escaped
   })
 })
 

@@ -139,6 +139,7 @@ async function closeTab(id: string): Promise<void> {
   showActive(); scheduleSessionSave()
   view.paneA.forgetBuffer(id); view.paneB.forgetBuffer(id)
   highlights.forget(id); hlLoaded.delete(id)
+  if (conflicts.delete(id)) refreshChangeBar() // closed a conflicted tab → drop it, advance the bar
   if (wasLast) window.api.hideWindow()
 }
 
@@ -412,8 +413,9 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) autos
 
 async function openFromDisk(): Promise<void> {
   const path = await window.api.openDialog(); if (!path) return
-  const file = await window.api.readFile(path)
-  manager.open(file); showActive()
+  const r = await window.api.readFile(path)
+  if (!r.ok) { toast(r.reason); return }
+  manager.open(r.file); showActive()
   await window.api.addRecentFile(path)
 }
 
@@ -432,10 +434,12 @@ async function diffClipboard(): Promise<void> {
 async function diffFiles(): Promise<void> {
   const a = await window.api.openDialog(); if (!a) return
   const bPath = await window.api.openDialog(); if (!bPath) return
-  const [fa, fb] = await Promise.all([window.api.readFile(a), window.api.readFile(bPath)])
+  const [ra, rb] = await Promise.all([window.api.readFile(a), window.api.readFile(bPath)])
+  if (!ra.ok) { toast(ra.reason); return }
+  if (!rb.ok) { toast(rb.reason); return }
   diff.show(
-    { title: a.split(/[\\/]/).pop() ?? a, content: fa.content, language: languageFromPath(a) },
-    { title: bPath.split(/[\\/]/).pop() ?? bPath, content: fb.content, language: languageFromPath(bPath) }
+    { title: a.split(/[\\/]/).pop() ?? a, content: ra.file.content, language: languageFromPath(a) },
+    { title: bPath.split(/[\\/]/).pop() ?? bPath, content: rb.file.content, language: languageFromPath(bPath) }
   )
 }
 
@@ -462,7 +466,7 @@ async function exportActive(format: ExportFormat): Promise<void> {
   const title = b?.title ?? 'untitled'
   const sourcePath = b?.filePath ?? null
   const suggested = suggestExportName(sourcePath, title, format)
-  const html = buildExportHtml(content, title)
+  const html = buildExportHtml(content, title, b?.language ?? 'plaintext')
   const r = format === 'html'
     ? await window.api.exportHtml(html, suggested, sourcePath)
     : await window.api.exportPdf(html, suggested, sourcePath)
@@ -632,8 +636,11 @@ window.addEventListener('keydown', (e) => {
 })
 
 async function openPath(path: string): Promise<void> {
-  try { const file = await window.api.readFile(path); manager.open(file); window.api.addRecentFile(path); showActive(); scheduleSessionSave() }
-  catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`) }
+  try {
+    const r = await window.api.readFile(path)
+    if (!r.ok) { toast(r.reason); return }
+    manager.open(r.file); window.api.addRecentFile(path); showActive(); scheduleSessionSave()
+  } catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`) }
 }
 
 function openPaths(): string[] { return manager.list().map(b => b.filePath).filter((p): p is string => !!p) }
@@ -641,20 +648,31 @@ function syncWatch(): void { window.api.watchPaths(openPaths()) }
 
 async function reloadBuffer(id: string): Promise<void> {
   const b = manager.get(id); if (!b || !b.filePath) return
-  const file = await window.api.readFile(b.filePath)
-  b.content = file.content; b.eol = file.eol; b.encoding = file.encoding; b.dirty = false
+  const r = await window.api.readFile(b.filePath)
+  if (!r.ok) { toast(r.reason); return }
+  b.content = r.file.content; b.eol = r.file.eol; b.encoding = r.file.encoding; b.dirty = false
   conflicts.delete(id)
   if (paneFor(view.focusedPane()).currentBufferId() === id) paneFor(view.focusedPane()).refreshBuffer(b)
   refreshStatus(); tabBar.render(manager.list(), manager.activeId)
+  refreshChangeBar() // surface the next queued conflict (or hide the bar)
 }
 const changeBar = document.getElementById('change-bar')!
-function showChangeBar(id: string, name: string): void {
+function refreshChangeBar(): void {
+  // Show one conflict at a time; the rest stay queued in `conflicts` and surface as each
+  // is resolved (Reload/Keep). Before this, a second conflict's bar replaced the first
+  // with no way back to resolve it (audit M7).
+  const queued = [...conflicts].filter(cid => manager.get(cid))
+  const id = queued[0]
+  if (!id) { changeBar.replaceChildren(); changeBar.classList.add('hidden'); return }
+  const b = manager.get(id)!
+  const more = queued.length - 1
   changeBar.replaceChildren()
-  const msg = document.createElement('span'); msg.textContent = `"${name}" changed on disk.`
+  const msg = document.createElement('span')
+  msg.textContent = more > 0 ? `"${b.title}" changed on disk. (${more} more)` : `"${b.title}" changed on disk.`
   const reload = document.createElement('button'); reload.textContent = 'Reload (discard mine)'
-  reload.onclick = () => { void reloadBuffer(id); changeBar.classList.add('hidden') }
+  reload.onclick = () => void reloadBuffer(id) // clears its own conflict + refreshes the bar
   const keep = document.createElement('button'); keep.textContent = 'Keep mine'
-  keep.onclick = () => { conflicts.delete(id); changeBar.classList.add('hidden') }
+  keep.onclick = () => { conflicts.delete(id); refreshChangeBar() }
   changeBar.append(msg, reload, keep); changeBar.classList.remove('hidden')
 }
 window.api.onFileChanged((path) => {
@@ -665,7 +683,7 @@ window.api.onFileChanged((path) => {
   const ts = selfWrites.get(path)
   if (ts !== undefined && now - ts < SELF_WRITE_WINDOW_MS) { selfWrites.delete(path); return }
   const b = manager.list().find(x => x.filePath === path); if (!b) return
-  if (b.dirty) { conflicts.add(b.id); showChangeBar(b.id, b.title) }
+  if (b.dirty) { conflicts.add(b.id); refreshChangeBar() }
   else void reloadBuffer(b.id)
 })
 

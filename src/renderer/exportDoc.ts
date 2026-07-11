@@ -47,8 +47,14 @@ export function wrapHtml(bodyHtml: string, title: string): string {
 </html>`
 }
 
-export function buildExportHtml(src: string, title: string): string {
-  return wrapHtml(renderMarkdown(src), title)
+export function buildExportHtml(src: string, title: string, language: string): string {
+  // Only a markdown buffer goes through the markdown pipeline. Any other language
+  // (code, plain text) is exported verbatim in a code block — otherwise `#` comments
+  // become headings, indentation collapses and `<` gets swallowed.
+  const body = language === 'markdown'
+    ? renderMarkdown(src)
+    : `<pre><code>${escapeHtml(src)}</code></pre>`
+  return wrapHtml(body, title)
 }
 
 export function suggestExportName(filePath: string | null, title: string, format: ExportFormat): string {

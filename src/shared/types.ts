@@ -100,10 +100,14 @@ export interface OpenedFile {
   encoding: Encoding
 }
 
+/** `readFile` result — refused (too large / binary) files carry a user-facing reason
+ *  instead of a file, so the renderer can toast it without opening a garbage buffer. */
+export type ReadResult = { ok: true; file: OpenedFile } | { ok: false; reason: string }
+
 export interface ExportResult { ok: boolean; canceled?: boolean; path?: string }
 
 export interface Api {
-  readFile(path: string): Promise<OpenedFile>
+  readFile(path: string): Promise<ReadResult>
   writeFile(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
   loadSession(): Promise<SessionData>
   saveSession(data: SessionData): Promise<void>
