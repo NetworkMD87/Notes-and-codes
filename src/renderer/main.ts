@@ -126,8 +126,9 @@ function refreshStatus(): void {
 
 async function closeTab(id: string): Promise<void> {
   const b = manager.get(id)
-  if (b && b.dirty && b.filePath) {
-    // Named file with unsaved edits: closing drops them from disk silently. Warn first.
+  if (b && b.dirty && (b.filePath || /\S/.test(b.content))) {
+    // Unsaved edits — a named file (drops from disk) or an untitled scratch buffer
+    // (never hits file history, so it's unrecoverable). Warn before discarding either.
     const ok = await confirmDialog(`"${b.title}" has unsaved changes. Discard and close?`, 'Discard')
     if (!ok) return
   }
@@ -584,7 +585,7 @@ function refreshToolbar(): void {
 const palette = new CommandPalette()
 const helpOverlay = new HelpOverlay()
 registerCommands({
-  palette, manager, view, diff, paneFor, showActive, scheduleSessionSave,
+  palette, manager, view, diff, paneFor, showActive, scheduleSessionSave, closeTab,
   saveActive, saveAll, openFromDisk, startDiff, diffClipboard, diffFiles,
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
   togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,

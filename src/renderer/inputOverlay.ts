@@ -58,8 +58,15 @@ export function confirmDialog(message: string, confirmLabel = 'Delete'): Promise
     ok.onclick = () => done(true)
     cancel.onclick = () => done(false)
     overlay.addEventListener('click', (e) => { if (e.target === overlay) done(false) })
-    document.addEventListener('keydown', onKey, true)
     unreg = pushOverlay(() => done(false))
-    ok.focus()
+    // Arm Enter-to-confirm + focus only AFTER the current keystroke completes.
+    // An Enter that *opened* this dialog (e.g. running the palette's Close Tab)
+    // would otherwise bleed through and instantly activate the confirm button —
+    // silently discarding before the user ever sees the prompt.
+    requestAnimationFrame(() => {
+      if (settled) return
+      document.addEventListener('keydown', onKey, true)
+      ok.focus()
+    })
   })
 }
