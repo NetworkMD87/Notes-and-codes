@@ -58,7 +58,10 @@ export async function dirExists(path: string): Promise<boolean> {
   try { return (await fs.stat(path)).isDirectory() } catch { return false }
 }
 
-/** True if anything (file or directory) exists at `path`. Used by store GC sweeps. */
-export async function pathExists(path: string): Promise<boolean> {
-  return fs.access(path).then(() => true, () => false)
+/** True only when nothing exists at `path` (ENOENT). Any other access error — a locked
+ *  file, a permission denial, a temporarily-offline drive — returns false, so a GC sweep
+ *  never deletes data for a file that might still be there. */
+export async function isMissing(path: string): Promise<boolean> {
+  try { await fs.access(path); return false }
+  catch (e) { return (e as NodeJS.ErrnoException)?.code === 'ENOENT' }
 }

@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { HIGHLIGHT_COLOURS, type Highlight } from '../shared/types'
 import { atomicWrite } from './atomicWrite'
-import { pathExists } from './fsService'
+import { isMissing } from './fsService'
 
 function sanitize(v: unknown): Highlight[] {
   if (!Array.isArray(v)) return []
@@ -56,7 +56,7 @@ export class HighlightStore {
       const all = await this.readAll()
       let changed = false
       for (const p of Object.keys(all)) {
-        if (!(await pathExists(p))) { delete all[p]; changed = true }
+        if (await isMissing(p)) { delete all[p]; changed = true }
       }
       if (changed) {
         await fs.mkdir(this.dir, { recursive: true })

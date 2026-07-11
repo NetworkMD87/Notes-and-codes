@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import type { FileVersion, EolMode, Encoding } from '../shared/types'
 import { atomicWrite } from './atomicWrite'
-import { pathExists } from './fsService'
+import { isMissing } from './fsService'
 
 export class FileHistoryStore {
   private dir: string
@@ -60,7 +60,7 @@ export class FileHistoryStore {
       const blob = join(this.dir, f)
       try {
         const path = JSON.parse(await fs.readFile(blob, 'utf8'))?.path
-        if (typeof path === 'string' && !(await pathExists(path))) await fs.unlink(blob).catch(() => {})
+        if (typeof path === 'string' && await isMissing(path)) await fs.unlink(blob).catch(() => {})
       } catch { /* unreadable/foreign file — leave it alone */ }
     }))
   }
