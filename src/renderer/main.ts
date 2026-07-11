@@ -58,7 +58,7 @@ function previewContent(): string { return paneFor(view.focusedPane()).getConten
 function refreshPreview(): void { mdPreview.update(previewContent()) }
 
 const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) => {
-  window.api.loadSettings().then(s => window.api.saveSettings({ ...s, themeId, accent }))
+  void window.api.updateSettings({ themeId, accent })
 })
 const themeBtn = document.createElement('button')
 themeBtn.id = 'theme-toggle'; themeBtn.textContent = '◐'; themeBtn.title = 'Theme'
@@ -202,7 +202,7 @@ let sessionSaveFailed = false
 let alwaysOnTop = false
 let fontSize = 14
 function applyFontSize(): void { view.paneA.setFontSize(fontSize); view.paneB.setFontSize(fontSize) }
-function persistFontSize(): void { window.api.loadSettings().then(s => window.api.saveSettings({ ...s, fontSize })) }
+function persistFontSize(): void { void window.api.updateSettings({ fontSize }) }
 function zoomBy(delta: number): void { fontSize = Math.min(40, Math.max(6, fontSize + delta)); applyFontSize(); persistFontSize() }
 function zoomReset(): void { fontSize = 14; applyFontSize(); persistFontSize() }
 
@@ -215,7 +215,7 @@ function applyFont(): void {
   view.paneA.setFontFamily(fontStack(fontFamily)); view.paneB.setFontFamily(fontStack(fontFamily))
   view.paneA.setLigatures(fontLigatures); view.paneB.setLigatures(fontLigatures)
 }
-function persistFont(): void { window.api.loadSettings().then(s => window.api.saveSettings({ ...s, fontFamily, fontLigatures })) }
+function persistFont(): void { void window.api.updateSettings({ fontFamily, fontLigatures }) }
 
 function setFontFamilyState(name: string): void { fontFamily = name; applyFont(); persistFont() }
 function setLigaturesState(on: boolean): void { fontLigatures = on; applyFont(); persistFont() }
@@ -223,13 +223,13 @@ function setFontSizeState(px: number): void { fontSize = Math.min(40, Math.max(6
 
 let uiFontFamily = 'System'
 function applyUiFont(): void { document.body.style.setProperty('--ui-font', uiFontStack(uiFontFamily)) }
-function persistUiFont(): void { window.api.loadSettings().then(s => window.api.saveSettings({ ...s, uiFontFamily })) }
+function persistUiFont(): void { void window.api.updateSettings({ uiFontFamily }) }
 function setUiFontFamilyState(name: string): void { uiFontFamily = name; applyUiFont(); persistUiFont() }
 
 async function setAlwaysOnTop(on: boolean): Promise<void> {
   alwaysOnTop = on
   await window.api.setAlwaysOnTop(on)
-  const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, alwaysOnTop: on })
+  await window.api.updateSettings({ alwaysOnTop: on })
   refreshToolbar()
 }
 const toggleAlwaysOnTop = () => setAlwaysOnTop(!alwaysOnTop)
@@ -394,7 +394,7 @@ const autosave = new AutoSaveController({ enabled: () => autoSaveToDisk, delayMs
 
 function setAutoSaveToDisk(on: boolean): void {
   autoSaveToDisk = on
-  void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, autoSaveToDisk: on }))
+  void window.api.updateSettings({ autoSaveToDisk: on })
   if (on) autosave.flushNow(); else autosave.cancel()
 }
 function toggleAutoSaveToDisk(): void {
@@ -403,7 +403,7 @@ function toggleAutoSaveToDisk(): void {
 }
 function toggleFormatOnSave(): void {
   formatOnSave = !formatOnSave
-  void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, formatOnSave }))
+  void window.api.updateSettings({ formatOnSave })
   toast(`Format on save: ${formatOnSave ? 'on' : 'off'}`)
 }
 
@@ -542,15 +542,15 @@ const appearance = new AppearancePanel(document.getElementById('app')!, {
   uiFontFamily: () => uiFontFamily, setUiFontFamily: setUiFontFamilyState,
   fontSize: () => fontSize, setFontSize: setFontSizeState,
   showAllFiles: () => showAllFiles,
-  setShowAllFiles: (on) => { showAllFiles = on; void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, showAllFiles: on })) },
+  setShowAllFiles: (on) => { showAllFiles = on; void window.api.updateSettings({ showAllFiles: on }) },
   restoreFolder: () => restoreFolder,
-  setRestoreFolder: (on) => { restoreFolder = on; void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, restoreFolderOnLaunch: on })) },
+  setRestoreFolder: (on) => { restoreFolder = on; void window.api.updateSettings({ restoreFolderOnLaunch: on }) },
   autoSaveToDisk: () => autoSaveToDisk,
   setAutoSaveToDisk: (on) => setAutoSaveToDisk(on),
   formatOnSave: () => formatOnSave,
   setFormatOnSave: (on) => {
     formatOnSave = on
-    void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, formatOnSave: on }))
+    void window.api.updateSettings({ formatOnSave: on })
   },
 })
 const openAppearance = () => appearance.open()
@@ -695,7 +695,7 @@ installMenuCommands({
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
   'format-doc': () => void paneFor(view.focusedPane()).formatDocument(),
   'format-selection': () => void paneFor(view.focusedPane()).formatSelection(),
-  ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) },
+  ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.updateSettings({ contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) },
   'folder-open': () => void openFolderFromDialog(),
   'folder-close': () => folder.closeFolder(),
   'sidebar-toggle': () => folder.toggleSidebar(),

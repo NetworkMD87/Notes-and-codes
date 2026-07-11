@@ -109,6 +109,9 @@ export interface Api {
   saveSession(data: SessionData): Promise<void>
   loadSettings(): Promise<Settings>
   saveSettings(s: Settings): Promise<void>
+  /** Merge a partial into the stored settings atomically in main (no renderer
+   *  read-modify-write race). Prefer this over loadSettings()+saveSettings(). */
+  updateSettings(partial: Partial<Settings>): Promise<Settings>
   setContextMenu(enabled: boolean): Promise<void> // implemented in Task 14
   onOpenFile(cb: (path: string) => void): void     // implemented in Task 13
   saveAsDialog(): Promise<string | null>

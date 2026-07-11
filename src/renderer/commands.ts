@@ -75,7 +75,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'export-pdf', label: 'Export to PDF…', run: () => d.exportPdf() })
   p.register({ id: 'autosave', label: 'Toggle Auto-Save Session', run: async () => {
     const next = !d.getAutoSave(); d.setAutoSave(next)
-    const s = await window.api.loadSettings(); await window.api.saveSettings({ ...s, autoSaveSession: next })
+    await window.api.updateSettings({ autoSaveSession: next })
   } })
   p.register({ id: 'autosave-disk', label: 'Toggle Auto-Save to Disk', run: () => d.toggleAutoSaveToDisk() })
   p.register({ id: 'mdpreview', label: 'Toggle Markdown Preview', run: () => d.togglePreview() })
@@ -88,7 +88,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'clear-paste-history', label: 'Clear Paste History', run: () => d.clearPasteHistory() })
   p.register({ id: 'ctxmenu', label: 'Toggle "Open with Notes & Codes" right-click menu', run: async () => {
     const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled
-    await window.api.setContextMenu(next); await window.api.saveSettings({ ...s, contextMenuEnabled: next })
+    await window.api.setContextMenu(next); await window.api.updateSettings({ contextMenuEnabled: next })
     toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`)
   } })
   p.register({ id: 'snip-save', label: 'Save Selection as Snippet', run: () => d.saveSelectionAsSnippet() })

@@ -35,4 +35,20 @@ describe('SettingsStore', () => {
     await store.save({ ...DEFAULT_SETTINGS, uiFontFamily: 'Fira Code' })
     expect((await new SettingsStore(dir).load()).uiFontFamily).toBe('Fira Code')
   })
+  it('update merges a partial onto the stored settings', async () => {
+    const store = new SettingsStore(dir)
+    await store.update({ fontSize: 20 })
+    const s = await store.load()
+    expect(s.fontSize).toBe(20)
+    expect(s.themeId).toBe('dark') // untouched default preserved
+  })
+  it('serializes concurrent updates so neither field is clobbered', async () => {
+    // The whole point of settings:update — two overlapping toggles must not read the same
+    // base and last-write-win over each other's field.
+    const store = new SettingsStore(dir)
+    await Promise.all([store.update({ fontSize: 20 }), store.update({ themeId: 'nord' })])
+    const s = await store.load()
+    expect(s.fontSize).toBe(20)
+    expect(s.themeId).toBe('nord')
+  })
 })

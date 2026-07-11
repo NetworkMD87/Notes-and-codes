@@ -47,7 +47,7 @@ export class FolderMode {
     this.showSidebar(s.sidebarWidth)
     this.sidebar.render()
     await window.api.watchDir(root)
-    await window.api.saveSettings({ ...s, lastFolder: root, sidebarVisible: true })
+    await window.api.updateSettings({ lastFolder: root, sidebarVisible: true })
     void this.reindex()
   }
 
@@ -57,7 +57,7 @@ export class FolderMode {
     this.index = []
     void window.api.watchDir(null)
     this.hideSidebar()
-    void window.api.loadSettings().then(s => window.api.saveSettings({ ...s, lastFolder: null, sidebarVisible: false }))
+    void window.api.updateSettings({ lastFolder: null, sidebarVisible: false })
   }
 
   toggleSidebar(): void {
@@ -94,7 +94,7 @@ export class FolderMode {
     if (await window.api.dirExists(s.lastFolder)) {
       await this.openFolder(s.lastFolder)
     } else {
-      await window.api.saveSettings({ ...s, lastFolder: null, sidebarVisible: false })
+      await window.api.updateSettings({ lastFolder: null, sidebarVisible: false })
     }
   }
 
@@ -140,8 +140,7 @@ export class FolderMode {
 
   private async persistWidth(): Promise<void> {
     const width = Math.round(this.d.sidebarEl.getBoundingClientRect().width)
-    const s = await window.api.loadSettings()
-    await window.api.saveSettings({ ...s, sidebarWidth: width })
+    await window.api.updateSettings({ sidebarWidth: width })
   }
 
   private contextMenu(entry: DirEntry | null, x: number, y: number): void {
