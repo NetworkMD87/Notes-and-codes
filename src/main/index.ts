@@ -6,6 +6,7 @@ import { createTray } from './tray'
 import { glyphImage } from './themeIcon'
 import { buildMenu } from './menu'
 import { RecentFilesStore } from './recentFilesStore'
+import { SettingsStore } from './settingsStore'
 
 let mainWindow: BrowserWindow | null = null
 let pendingFile: string | null = null
@@ -15,6 +16,7 @@ let unsavedCount = 0
 // Force the exit if the renderer never replies app:quitNow to a clean-quit flush.
 const FLUSH_QUIT_FALLBACK_MS = 2000
 let recentStore: RecentFilesStore | null = null
+let settingsStore: SettingsStore | null = null
 
 async function rebuildMenu(): Promise<void> {
   if (!recentStore) return
@@ -122,9 +124,15 @@ if (!gotLock) {
   })
 
   app.whenReady().then(async () => {
+    // Construct the shared stores ONCE here and hand them to the IPC layer, so the menu
+    // (Clear Recent, startup hotkey read) and the renderer use the same instances — a
+    // single serialized write chain each, instead of two racing copies.
     recentStore = new RecentFilesStore(app.getPath('userData'))
+    settingsStore = new SettingsStore(app.getPath('userData'))
     registerIpc({
       baseDir: app.getPath('userData'),
+      settings: settingsStore,
+      recent: recentStore,
       getWindow: () => mainWindow,
       setContextMenu: (enabled) => setContextMenu(enabled, app.getPath('exe')),
       onDirtyCount: (n) => { unsavedCount = n },
@@ -139,7 +147,7 @@ if (!gotLock) {
     })
 
     tray = createTray({ onShow: showWindow, onQuit: () => { requestQuit() } })
-    const settings = await new (await import('./settingsStore')).SettingsStore(app.getPath('userData')).load()
+    const settings = await settingsStore.load()
     const hotkey = settings.globalHotkey || 'CommandOrControl+Shift+Space'
     // Keep the live window/taskbar glyph contrasting when the taskbar theme flips.
     nativeTheme.on('updated', () => mainWindow?.setIcon(glyphImage()))

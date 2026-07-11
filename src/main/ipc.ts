@@ -15,6 +15,10 @@ import type { SessionData, Settings, EolMode, Encoding } from '../shared/types'
 
 export interface IpcDeps {
   baseDir: string
+  // Constructed once in index.ts and shared, so the menu (Clear Recent, hotkey read) and
+  // the renderer IPC hit the *same* store instance — one serialized write chain, no races.
+  settings: SettingsStore
+  recent: RecentFilesStore
   getWindow: () => BrowserWindow | null
   setContextMenu: (enabled: boolean) => Promise<void>
   onDirtyCount: (n: number) => void
@@ -24,12 +28,16 @@ export interface IpcDeps {
 
 export function registerIpc(deps: IpcDeps): void {
   const session = new SessionStore(deps.baseDir)
-  const settings = new SettingsStore(deps.baseDir)
+  const settings = deps.settings
   const clip = new ClipboardHistoryStore(deps.baseDir)
   const snippets = new SnippetStore(deps.baseDir)
-  const recent = new RecentFilesStore(deps.baseDir)
+  const recent = deps.recent
   const history = new FileHistoryStore(deps.baseDir)
   const highlights = new HighlightStore(deps.baseDir)
+  // One-shot startup GC: drop history/highlight entries whose source file is gone, so
+  // these stores can't grow without bound or orphan entries. Fire-and-forget (best-effort).
+  void history.sweep()
+  void highlights.sweep()
   const watcher = new FileWatcher((path) => deps.getWindow()?.webContents.send('file:changed', path))
   const dirWatcher = new DirWatcher(() => deps.getWindow()?.webContents.send('dir:changed'))
   ipcMain.handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))
@@ -41,6 +49,7 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle('session:save', (_e, data: SessionData) => session.save(data))
   ipcMain.handle('settings:load', () => settings.load())
   ipcMain.handle('settings:save', (_e, s: Settings) => settings.save(s))
+  ipcMain.handle('settings:update', (_e, partial: Partial<Settings>) => settings.update(partial))
   ipcMain.handle('contextmenu:set', (_e, enabled: boolean) => deps.setContextMenu(enabled))
   ipcMain.handle('dialog:saveAs', async () => {
     const r = await dialog.showSaveDialog({ title: 'Save As' })

@@ -46,4 +46,14 @@ describe('HighlightStore', () => {
     writeFileSync(join(dir, 'highlights.json'), '{bad')
     expect(await s.load('C:/a.txt')).toEqual([])
   })
+  it('sweep drops highlights whose source file no longer exists, keeps live ones', async () => {
+    const real = join(dir, 'real.txt'); writeFileSync(real, 'hi')
+    const gone = join(dir, 'gone.txt') // never created on disk
+    const s = new HighlightStore(dir)
+    await s.save(real, HS)
+    await s.save(gone, HS)
+    await s.sweep()
+    expect(await s.load(real)).toEqual(HS)
+    expect(await s.load(gone)).toEqual([]) // orphan entry removed
+  })
 })

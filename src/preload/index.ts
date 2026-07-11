@@ -8,6 +8,7 @@ const api: Api = {
   saveSession: (data) => ipcRenderer.invoke('session:save', data),
   loadSettings: () => ipcRenderer.invoke('settings:load'),
   saveSettings: (s) => ipcRenderer.invoke('settings:save', s),
+  updateSettings: (partial) => ipcRenderer.invoke('settings:update', partial),
   setContextMenu: (enabled) => ipcRenderer.invoke('contextmenu:set', enabled),
   onOpenFile: (cb) => {
     ipcRenderer.removeAllListeners('open-file')

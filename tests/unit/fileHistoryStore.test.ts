@@ -57,4 +57,14 @@ describe('FileHistoryStore', () => {
     ])
     expect(await s.list('C:/a.txt')).toHaveLength(2)
   })
+  it('sweep deletes history for files that no longer exist, keeps live ones', async () => {
+    const real = join(dir, 'real.txt'); writeFileSync(real, 'hi')
+    const gone = join(dir, 'gone.txt') // never created on disk
+    const s = new FileHistoryStore(dir)
+    await s.snapshot(real, 'v1', 'LF', 'utf8')
+    await s.snapshot(gone, 'v1', 'LF', 'utf8')
+    await s.sweep()
+    expect(await s.list(real)).toHaveLength(1)
+    expect(await s.list(gone)).toHaveLength(0) // orphan blob removed
+  })
 })

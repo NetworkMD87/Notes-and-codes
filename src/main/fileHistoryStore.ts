@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import type { FileVersion, EolMode, Encoding } from '../shared/types'
 import { atomicWrite } from './atomicWrite'
+import { isMissing } from './fsService'
 
 export class FileHistoryStore {
   private dir: string
@@ -47,5 +48,20 @@ export class FileHistoryStore {
 
   async get(path: string, ts: number): Promise<FileVersion | null> {
     return (await this.read(path)).find(v => v.ts === ts) ?? null
+  }
+
+  /** Startup GC: delete history blobs whose source file no longer exists (deleted or
+   *  renamed), so file-history can't grow without bound. The source `path` is stored
+   *  inside each blob, so no reverse index is needed. Best-effort — never throws. */
+  async sweep(): Promise<void> {
+    let entries: string[]
+    try { entries = await fs.readdir(this.dir) } catch { return } // no history dir yet
+    await Promise.all(entries.filter(f => f.endsWith('.json')).map(async f => {
+      const blob = join(this.dir, f)
+      try {
+        const path = JSON.parse(await fs.readFile(blob, 'utf8'))?.path
+        if (typeof path === 'string' && await isMissing(path)) await fs.unlink(blob).catch(() => {})
+      } catch { /* unreadable/foreign file — leave it alone */ }
+    }))
   }
 }

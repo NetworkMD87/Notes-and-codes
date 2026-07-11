@@ -57,3 +57,11 @@ export async function renamePath(from: string, to: string): Promise<boolean> {
 export async function dirExists(path: string): Promise<boolean> {
   try { return (await fs.stat(path)).isDirectory() } catch { return false }
 }
+
+/** True only when nothing exists at `path` (ENOENT). Any other access error — a locked
+ *  file, a permission denial, a temporarily-offline drive — returns false, so a GC sweep
+ *  never deletes data for a file that might still be there. */
+export async function isMissing(path: string): Promise<boolean> {
+  try { await fs.access(path); return false }
+  catch (e) { return (e as NodeJS.ErrnoException)?.code === 'ENOENT' }
+}

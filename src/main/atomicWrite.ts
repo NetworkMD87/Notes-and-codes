@@ -11,7 +11,9 @@ export async function atomicWrite(
   data: string | NodeJS.ArrayBufferView,
   encoding: BufferEncoding = 'utf8'
 ): Promise<void> {
-  const tmp = file + '.tmp'
+  // Unique temp name per write so two concurrent writes to the same target can't share
+  // one `.tmp` (A writes tmp → B overwrites tmp → A renames B's bytes → B renames ENOENT).
+  const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`
   // encoding is ignored by Node when `data` is a Buffer/ArrayBufferView.
   await fs.writeFile(tmp, data, encoding)
   await fs.rename(tmp, file)
