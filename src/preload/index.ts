@@ -31,6 +31,7 @@ const api: Api = {
   hideWindow: () => ipcRenderer.send('window:hide'),
   quitNow: () => ipcRenderer.send('app:quitNow'),
   onSaveAllAndQuit: (cb) => { ipcRenderer.removeAllListeners('app:saveAllAndQuit'); ipcRenderer.on('app:saveAllAndQuit', () => cb()) },
+  onFlushAndQuit: (cb) => { ipcRenderer.removeAllListeners('app:flushAndQuit'); ipcRenderer.on('app:flushAndQuit', () => cb()) },
   onMenuCommand: (cb) => { ipcRenderer.removeAllListeners('menu:command'); ipcRenderer.on('menu:command', (_e, id: string) => cb(id)) },
   onAppNotify: (cb) => { ipcRenderer.removeAllListeners('app:notify'); ipcRenderer.on('app:notify', (_e, msg: string) => cb(msg)) },
   snapshotHistory: (path, content, eol, encoding) => ipcRenderer.invoke('history:snapshot', path, content, eol, encoding),

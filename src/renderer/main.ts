@@ -295,17 +295,31 @@ window.api.onSaveAllAndQuit(async () => {
     return
   }
   tabBar.render(manager.list(), manager.activeId); refreshStatus()
-  await Promise.all([...hlSaveTimers.keys()].map(id => flushHighlightSave(id) ?? Promise.resolve()))
-  // Flush debounced clipboard-history + session writes so the last ~500ms isn't lost on quit.
-  clearTimeout(clipSaveTimer); clearTimeout(saveTimer)
+  await flushPendingWritesBeforeQuit()
+  window.api.quitNow()
+})
+
+// A clean quit (no unsaved tabs) skips the save handshake above, so main asks us to
+// flush the same debounced writes before it exits — otherwise the last ~500ms of
+// clipboard/session state is lost (audit R1 / v1.7 I8 residual).
+window.api.onFlushAndQuit(async () => {
+  await flushPendingWritesBeforeQuit()
+  window.api.quitNow()
+})
+
+// Flush every pending debounced write (highlights + clipboard history + session) so
+// none of the last ~500ms is lost on quit. Shared by the save-then-quit and the
+// clean-quit paths. Never throws — a failed flush must not trap the quit.
+async function flushPendingWritesBeforeQuit(): Promise<void> {
+  clearTimeout(clipSaveTimer); clearTimeout(saveTimer)   // sync — can't throw
   try {
+    await Promise.all([...hlSaveTimers.keys()].map(id => flushHighlightSave(id) ?? Promise.resolve()))
     await window.api.saveClipboardHistory(pasteHistory.entries())
     await window.api.saveSession(manager.toSession())
   } catch (err) {
     console.error('final flush before quit failed', err)
   }
-  window.api.quitNow()
-})
+}
 
 interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean; format: boolean; forceDialog: boolean }
 const MANUAL_SAVE: SaveOpts = { snapshot: true, recent: true, allowDialog: true, format: true, forceDialog: false }
