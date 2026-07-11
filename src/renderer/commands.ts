@@ -12,6 +12,7 @@ export interface CommandDeps {
   paneFor: (which: 'A' | 'B') => import('./editorPane').EditorPane
   showActive: () => void
   scheduleSessionSave: () => void
+  closeTab: (id: string) => Promise<void>
   saveActive: () => Promise<void>
   saveAll: () => Promise<void>
   openFromDisk: () => Promise<void>
@@ -52,7 +53,7 @@ export interface CommandDeps {
 export function registerCommands(d: CommandDeps): void {
   const p = d.palette
   p.register({ id: 'new', label: 'New Tab', run: () => { d.manager.create(); d.showActive(); d.scheduleSessionSave() } })
-  p.register({ id: 'close', label: 'Close Tab', run: () => { d.manager.close(d.manager.activeId!); if (!d.manager.list().length) d.manager.create(); d.showActive(); d.scheduleSessionSave() } })
+  p.register({ id: 'close', label: 'Close Tab', run: () => d.closeTab(d.manager.activeId!) })
   p.register({ id: 'split', label: 'Toggle Split', hint: 'Ctrl+\\', run: () => { d.view.setSplit(!d.view.isSplit()); d.showActive() } })
   p.register({ id: 'lines', label: 'Toggle Line Numbers', run: () => { d.paneFor(d.view.focusedPane()).toggleLineNumbers() } })
   p.register({ id: 'wrap', label: 'Toggle Word Wrap', run: () => { const on = d.paneFor(d.view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) } })
