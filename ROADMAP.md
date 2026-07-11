@@ -17,14 +17,16 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — working the audit checklist (v1.12.1 shipped; Phases 1–2 DONE → Phase 3 next)
+## ▶ NEXT ACTION — working the audit checklist (v1.12.1 shipped; Phases 1–3 DONE, all Highs cleared → Phase 4 next)
 
 **v1.12.1 shipped (2026-07-11).** Patch release — **audit Phase 1 complete** (H1, H2, M1, R1:
 data-loss & close/quit safety; see `CHANGELOG.md`). Tag `v1.12.1` pushed, GitHub release live with
 the installer + portable attached; the manual tray/hotkey + Save-As checklist PASSED on the packaged
-build. **Audit Phase 2 done (unreleased on `master`):** H4 (malformed-session-bricks-startup) + H3
-(tray-hidden Explorer-open shows nothing) fixed on `fix/audit-p2-startup-window`. **Next: Phase 3**
-(store integrity & write races — H5, M4–M6), then cut v1.12.2 with the Phase-2+3 batch.
+build. **Audit Phases 2 + 3 done (unreleased on `master`):** P2 — H4 (malformed-session-bricks-startup)
++ H3 (tray-hidden Explorer-open shows nothing); P3 — H5 (settings write races → serialized
+`settings:update`), M4 (duplicate stores), M5 (atomic exports), M6 (startup GC sweep for
+history/highlight stores). **All 5 High-severity findings are now fixed.** **Next: Phase 4**
+(editor correctness — M2, M3, M7), then cut v1.12.2 with the Phase 2–4 batch.
 
 **v1.12.0 (2026-07-08).** Phase 3.5 P1–P5 merged to `master`, tagged **`v1.12.0`**, pushed, GitHub
 release live with the installer + portable attached, README updated. The repo is **MIT-licensed**
@@ -51,8 +53,12 @@ triage — verify each finding ("audit the audit") before fixing.
      **H4** malformed session no longer bricks startup (`SessionStore.load` filters + `boot().catch`
      fallback), **H3** tray-hidden Explorer-open now shows the window (`showWindow()` in
      `second-instance`). Unit + smoke covered (`sessionStore.test.ts`, `startup-window.spec.ts`).
-   - Next: Phase 3 (store races: H5, M4–M6) → 4 (editor correctness: M2, M3, M7) → 5 (hardening:
-     L1–L9), then cut **v1.12.2** with the Phase-2+3 batch. Full detail in `AUDIT-CHECKLIST.md`.
+   - ✅ **Phase 3 — store integrity & write races — COMPLETE** (on `master`, unreleased):
+     **H5** serialized `settings:update` (chain + partial merge) replaces 17 racy renderer
+     read-modify-writes; **M4** stores constructed once and shared; **M5** atomic HTML/PDF exports;
+     **M6** startup GC sweep (ENOENT-only) for the history + highlight stores. **All Highs cleared.**
+   - Next: Phase 4 (editor correctness: M2, M3, M7) → 5 (hardening: L1–L9), then cut **v1.12.2**
+     with the Phase 2–4 batch. Full detail in `AUDIT-CHECKLIST.md`.
 
 Other candidate work (each gets its own design → plan → build pass):
 
@@ -118,7 +124,7 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 _The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited)._
 
-> ▶ **STATUS (2026-07-11) — v1.12.0 shipped; Phase 3 + 3.5 complete. Active work: the merged audit checklist (`AUDIT-CHECKLIST.md`, Phase 1 COMPLETE — H1, H2, M1, R1 all merged; Phase 2 next).**
+> ▶ **STATUS (2026-07-11) — v1.12.1 shipped; design Phases 3 + 3.5 complete. Active work: the merged audit checklist (`AUDIT-CHECKLIST.md`) — audit Phases 1–3 COMPLETE (all 5 High + 4 Med + R1 fixed; H1/H2/M1/R1 released as v1.12.1, P2+P3 unreleased on `master`); Phase 4 (editor correctness) next.**
 > All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
 > folder mode, text highlighter).
 > • **Robustness (v1.7.1):** the external v1.7.0 bug audit is triaged — all 19 findings
