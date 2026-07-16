@@ -87,6 +87,14 @@ Other candidate work (each gets its own design → plan → build pass):
    does nothing (one fix attempt failed — see the Format Document known-issue below).
 4. **Phase 3.6 QoL** (mostly shipped) or **parked Phase 4** (code signing, native Win11 Open-with,
    configurable-hotkey UI, snippet tabstops, launch-on-login).
+5. **Toolbar regroup** (**S**) — the divider groups aren't logical (highlighter sits with the view
+   toggles; diff sits with paste-from-history). Regroup: file ops | view toggles | tools. See Phase 3.6.
+6. **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16) —
+   the taskbar button uses the app's exe/shortcut **identity icon** (`build/icon.ico`), not
+   `win.setIcon`; icon-cache rebuild ruled out (full rebuild changed nothing; a second isolated
+   instance's plain window button DOES show `{&}`, proving the window-icon code works). Fix in
+   `make-icon.mjs`: compose `icon.ico` with `{&}` glyph artwork at 16/24/32 and the `{N&C}` tile
+   at 48/256. See Phase 3.6.
 
 _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state._
 
@@ -258,6 +266,25 @@ Neither depends on 3.5 — they can land before, during, or after it._
   eyeballed on the installed build (drag feel + insertion mark + persist + tray/hotkey checklist — PASS).
   Merged `--no-ff` → `master`, tagged `v1.11.0`. _Deferred: live-shift/FLIP animation of neighbouring
   tabs (Phase 3.5 polish)._
+- ⬜ **Toolbar regroup** (**S**) — reorder `toolbar.ts` groups so the dividers are logical:
+  `[Open, Save] | [Split, Preview, Pin] | [Highlighter+colour, Diff, Paste-from-history]`
+  (today the highlighter sits with the view toggles and diff with paste). One-file append-order
+  change + a smoke locator check.
+- ⬜ **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16) —
+  the taskbar button icon comes from the app's exe/shortcut **identity icon** (`build/icon.ico`,
+  currently the `{N&C}` tile at all 5 sizes: 16/24/32/48/256), not from `win.setIcon`. Diagnosis:
+  full icon-cache rebuild (15 `iconcache_*.db` deleted, Explorer restarted) changed nothing, while
+  a second isolated instance's plain window button DOES show `{&}` — so the window-icon code works
+  and the identity icon is what the user sees. Fix in `make-icon.mjs`: compose `icon.ico` with
+  `{&}` glyph artwork at **16/24/32** and the `{N&C}` tile at **48/256** (per-size artwork is the
+  Windows-native pattern). Trade-off to note: the identity icon is static — bake the bright
+  (dark-taskbar) glyph; light-taskbar users get lower contrast, same as carried known issue ③.
+  Complementary hardening: `app.setAppUserModelId('com.notesandcodes.app')` at startup + pad the
+  runtime glyph PNGs (32×19) to square 32×32. Re-pin after shipping (pins keep their own copy).
+- ⬜ **Real two-process second-instance smoke test** (**S**) — `startup-window.spec.ts` emits
+  `second-instance` synthetically; add a variant that spawns a genuine second OS process with a
+  file arg against the same `--user-data-dir` (repro script proved this works for dev + packaged
+  builds, 2026-07-16 — H3 fix verified cross-process).
 - ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
   **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
   from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco
