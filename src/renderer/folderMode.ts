@@ -19,6 +19,7 @@ export class FolderMode {
   private sidebar: Sidebar
   private quick: QuickOpen
   private index: string[] = []
+  private indexTruncated = false
   private split: ReturnType<typeof Split> | null = null
   private showAll = false
 
@@ -31,6 +32,7 @@ export class FolderMode {
     })
     this.quick = new QuickOpen(document.getElementById('app')!, {
       files: () => this.index,
+      truncated: () => this.indexTruncated,
       openFile: d.openFile
     })
     window.api.onDirChanged(() => void this.onDiskChange())
@@ -55,6 +57,7 @@ export class FolderMode {
     this.model.setRoot('')
     this.model.root = null
     this.index = []
+    this.indexTruncated = false
     void window.api.watchDir(null)
     this.hideSidebar()
     void window.api.updateSettings({ lastFolder: null, sidebarVisible: false })
@@ -105,7 +108,10 @@ export class FolderMode {
   }
 
   private async reindex(): Promise<void> {
-    if (this.model.root) this.index = await window.api.walkFiles(this.model.root, this.showAll)
+    if (!this.model.root) return
+    const r = await window.api.walkFiles(this.model.root, this.showAll)
+    this.index = r.files
+    this.indexTruncated = r.truncated
   }
 
   private async onDiskChange(): Promise<void> {

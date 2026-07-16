@@ -3,6 +3,7 @@ import { pushOverlay } from './overlayManager'
 
 export interface QuickOpenDeps {
   files: () => string[]
+  truncated: () => boolean
   openFile: (path: string) => void
 }
 
@@ -25,6 +26,11 @@ export class QuickOpen {
     this.input = document.createElement('input'); this.input.placeholder = 'Go to file…'
     this.listEl = document.createElement('div'); this.listEl.className = 'qo-list'
     box.append(this.input, this.listEl)
+    if (this.d.truncated()) {
+      const note = document.createElement('div'); note.className = 'qo-note'
+      note.textContent = 'Index truncated — some files may not appear.'
+      box.append(note)
+    }
     this.host.replaceChildren(box)
     this.host.classList.remove('hidden')
     this.unreg = pushOverlay(() => this.close())

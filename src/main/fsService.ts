@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import type { DirEntry } from '../shared/types'
+import type { DirEntry, WalkResult } from '../shared/types'
 
 const IGNORE = new Set(['.git', 'node_modules'])
 const MAX_INDEX_FILES = 20000
@@ -24,22 +24,22 @@ export async function readDir(path: string, showAll: boolean): Promise<DirEntry[
   }
 }
 
-export async function walkFiles(root: string, showAll: boolean): Promise<string[]> {
+export async function walkFiles(root: string, showAll: boolean, max = MAX_INDEX_FILES): Promise<WalkResult> {
   const out: string[] = []
+  let truncated = false
   async function walk(dir: string): Promise<void> {
-    if (out.length >= MAX_INDEX_FILES) return
     let ents
     try { ents = await fs.readdir(dir, { withFileTypes: true }) } catch { return }
     for (const e of ents) {
-      if (out.length >= MAX_INDEX_FILES) return
-      if (shouldIgnore(e.name, showAll)) continue
+      if (shouldIgnore(e.name, showAll)) continue // ignored entries aren't "truncation"
+      if (out.length >= max) { truncated = true; return } // a real entry we can't index → stop + flag
       const p = join(dir, e.name)
       if (e.isDirectory()) await walk(p)
       else out.push(p)
     }
   }
   await walk(root)
-  return out
+  return { files: out, truncated }
 }
 
 export async function createFile(path: string): Promise<boolean> {

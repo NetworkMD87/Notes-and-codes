@@ -35,15 +35,22 @@ describe('readDir', () => {
 })
 
 describe('walkFiles', () => {
-  it('returns all files recursively, skipping ignored dirs', async () => {
+  it('returns all files recursively, skipping ignored dirs; truncated=false under the cap', async () => {
     mkdirSync(join(dir, 'src')); mkdirSync(join(dir, 'node_modules'))
     writeFileSync(join(dir, 'root.txt'), '')
     writeFileSync(join(dir, 'src', 'a.ts'), '')
     writeFileSync(join(dir, 'node_modules', 'x.js'), '')
-    const files = await walkFiles(dir, false)
-    expect(files).toContain(join(dir, 'root.txt'))
-    expect(files).toContain(join(dir, 'src', 'a.ts'))
-    expect(files).not.toContain(join(dir, 'node_modules', 'x.js'))
+    const r = await walkFiles(dir, false)
+    expect(r.truncated).toBe(false)
+    expect(r.files).toContain(join(dir, 'root.txt'))
+    expect(r.files).toContain(join(dir, 'src', 'a.ts'))
+    expect(r.files).not.toContain(join(dir, 'node_modules', 'x.js'))
+  })
+  it('caps the list and flags truncated=true when the file count exceeds max', async () => {
+    for (const n of ['a', 'b', 'c']) writeFileSync(join(dir, n + '.txt'), '')
+    const r = await walkFiles(dir, false, 2)
+    expect(r.files).toHaveLength(2)
+    expect(r.truncated).toBe(true)
   })
 })
 
