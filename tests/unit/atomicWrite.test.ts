@@ -22,10 +22,11 @@ describe('atomicWrite', () => {
     expect(await fs.readFile(f, 'utf8')).toBe('second')
   })
 
-  it('leaves no .tmp file behind', async () => {
+  it('leaves no .tmp file behind on success', async () => {
     const f = join(dir, 'c.txt')
     await atomicWrite(f, 'data')
-    await expect(fs.access(f + '.tmp')).rejects.toThrow()
+    const leftover = (await fs.readdir(dir)).filter(n => n.includes('.tmp'))
+    expect(leftover).toEqual([])
   })
 
   it('writes binary (Buffer) data', async () => {
@@ -33,5 +34,15 @@ describe('atomicWrite', () => {
     const buf = Buffer.from([0, 1, 2, 255])
     await atomicWrite(f, buf)
     expect(Buffer.compare(await fs.readFile(f), buf)).toBe(0)
+  })
+
+  it('cleans up the temp file when the write cannot be renamed into place', async () => {
+    // Target is a non-empty directory, so rename(tmp, target) fails — the temp must not linger.
+    const target = join(dir, 'target')
+    await fs.mkdir(target)
+    await fs.writeFile(join(target, 'child'), '')
+    await expect(atomicWrite(target, 'data')).rejects.toBeTruthy()
+    const leftover = (await fs.readdir(dir)).filter(n => n.includes('.tmp'))
+    expect(leftover).toEqual([])
   })
 })
