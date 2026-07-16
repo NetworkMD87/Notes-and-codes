@@ -17,7 +17,7 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — working the audit checklist (v1.12.1 shipped; Phases 1–4 DONE, all Highs + Meds cleared → only Phase 5 Lows left)
+## ▶ NEXT ACTION — cut v1.12.2 (AUDIT COMPLETE — all 5 phases done on `master`, unreleased)
 
 **v1.12.1 shipped (2026-07-11).** Patch release — **audit Phase 1 complete** (H1, H2, M1, R1:
 data-loss & close/quit safety; see `CHANGELOG.md`). Tag `v1.12.1` pushed, GitHub release live with
@@ -26,8 +26,10 @@ build. **Audit Phases 2 + 3 + 4 done (unreleased on `master`):** P2 — H4 (malf
 + H3 (tray-hidden Explorer-open shows nothing); P3 — H5 (settings write races → serialized
 `settings:update`), M4 (duplicate stores), M5 (atomic exports), M6 (startup GC sweep for
 history/highlight stores); P4 — M2 (export renders code verbatim, not always Markdown), M3 (file-open
-size + binary guard), M7 (on-disk-conflict queue). **All 5 High + all 7 Med findings are now fixed.**
-**Next: cut v1.12.2 with the Phase 2–4 batch;** Phase 5 (L1–L9) is all-Low hardening, opportunistic.
+size + binary guard), M7 (on-disk-conflict queue); P5 — L1–L9 all-Low hardening (L1 theme-boundary move,
+L2 IPC sender validation, L3 atomicWrite tmp-cleanup [fsync verified-but-rejected], L4 walkFiles
+truncation signal, L5–L9 small guards/clamps). **AUDIT COMPLETE — all 5 High + 7 Med + 9 Low + R1 fixed.**
+**Next: cut v1.12.2 with the Phase 2–5 batch** (owed eyeballs: H1 Save-As-cancel + L4 >20k truncated-note).
 
 **v1.12.0 (2026-07-08).** Phase 3.5 P1–P5 merged to `master`, tagged **`v1.12.0`**, pushed, GitHub
 release live with the installer + portable attached, README updated. The repo is **MIT-licensed**
@@ -65,8 +67,15 @@ triage — verify each finding ("audit the audit") before fixing.
      sniff, `ReadResult` union with a toast on refusal; **M7** on-disk conflicts queue with an
      "(N more)" hint instead of clobbering the single change bar. **All 7 Meds cleared.** Unit +
      smoke covered (`exportDoc.test.ts`, `fileService.test.ts`, `change-conflicts.spec.ts`).
-   - Next: cut **v1.12.2** with the Phase 2–4 batch; Phase 5 (hardening: L1–L9) is all-Low,
-     opportunistic. Full detail in `AUDIT-CHECKLIST.md`.
+   - ✅ **Phase 5 — hardening & cleanups — COMPLETE** (on `master`, unreleased, 2026-07-16; each item
+     its own `--no-ff` merge): **L1** `THEME_LIST` moved to `src/shared/` (main no longer imports a
+     renderer module); **L2** IPC sender validation on every handler (`senderGuard`); **L3** `atomicWrite`
+     tmp-cleanup on failure — **fsync verified-but-rejected** (Windows `FlushFileBuffers` stalled the
+     write path >5s, reproducibly flaking a smoke test; marginal rare-on-NTFS gain); **L4** `walkFiles`
+     returns `{files, truncated}` + Quick Open "index truncated" hint; **L5–L9** small guards/clamps
+     (chain-map GC, refreshStatus null-guard, `fileArgFrom` existsSync, clipboard clamp, escapeHtml `'`).
+     Unit + smoke covered. **AUDIT COMPLETE — every v1.12.0 finding resolved.**
+   - Next: cut **v1.12.2** with the Phase 2–5 batch. Full detail in `AUDIT-CHECKLIST.md`.
 
 Other candidate work (each gets its own design → plan → build pass):
 
@@ -132,7 +141,7 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 _The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited)._
 
-> ▶ **STATUS (2026-07-11) — v1.12.1 shipped; design Phases 3 + 3.5 complete. Active work: the merged audit checklist (`AUDIT-CHECKLIST.md`) — audit Phases 1–4 COMPLETE (all 5 High + 7 Med + R1 fixed; H1/H2/M1/R1 released as v1.12.1, P2–P4 unreleased on `master`); only Phase 5 Lows (L1–L9) remain — cut v1.12.2 with the P2–P4 batch next.**
+> ▶ **STATUS (2026-07-16) — v1.12.1 shipped; design Phases 3 + 3.5 complete. AUDIT COMPLETE: all 5 phases of the merged audit checklist (`AUDIT-CHECKLIST.md`) done — 5 High + 7 Med + 9 Low + R1 fixed (L3's fsync sub-part verified-but-rejected; tmp-cleanup shipped). H1/H2/M1/R1 released as v1.12.1; Phases 2–5 unreleased on `master`. Next: cut v1.12.2 with the P2–P5 batch (owed manual eyeballs: H1 Save-As-cancel + L4 >20k truncated-note + tray/hotkey).**
 > All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
 > folder mode, text highlighter).
 > • **Robustness (v1.7.1):** the external v1.7.0 bug audit is triaged — all 19 findings
