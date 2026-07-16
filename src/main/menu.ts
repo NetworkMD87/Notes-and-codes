@@ -1,6 +1,6 @@
 import { Menu } from 'electron'
 import type { MenuItemConstructorOptions } from 'electron'
-import { THEME_LIST } from '../renderer/themes'
+import { THEME_LIST } from '../shared/themes'
 
 export interface MenuDeps {
   send: (id: string) => void
