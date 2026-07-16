@@ -129,10 +129,10 @@ export const THEMES: Record<string, ThemeDef> = {
   })
 }
 
-export const THEME_LIST: { id: string; label: string }[] = [
-  ...Object.values(THEMES).map(t => ({ id: t.id, label: t.label })),
-  { id: 'follow-os', label: 'Follow OS' }
-]
+// Theme id/label metadata now lives in `shared` (boundary-safe for the main-process menu);
+// re-exported here so renderer consumers can keep importing it from `./themes`. The full
+// `THEMES` defs (with monaco data) stay renderer-only; `sharedThemes.test.ts` guards alignment.
+export { THEME_LIST, type ThemeMeta } from '../shared/themes'
 
 // Accent swatches = the shared 18-colour palette (same source the highlighter uses).
 export const ACCENT_SWATCHES = ACCENT_PALETTE
