@@ -17,29 +17,31 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — cut v1.12.2 (AUDIT COMPLETE — all 5 phases done on `master`, unreleased)
+## ▶ NEXT ACTION — pick the next feature (the v1.12.0 audit is fully shipped as v1.12.2; nothing committed)
 
-**v1.12.1 shipped (2026-07-11).** Patch release — **audit Phase 1 complete** (H1, H2, M1, R1:
-data-loss & close/quit safety; see `CHANGELOG.md`). Tag `v1.12.1` pushed, GitHub release live with
-the installer + portable attached; the manual tray/hotkey + Save-As checklist PASSED on the packaged
-build. **Audit Phases 2 + 3 + 4 done (unreleased on `master`):** P2 — H4 (malformed-session-bricks-startup)
-+ H3 (tray-hidden Explorer-open shows nothing); P3 — H5 (settings write races → serialized
-`settings:update`), M4 (duplicate stores), M5 (atomic exports), M6 (startup GC sweep for
-history/highlight stores); P4 — M2 (export renders code verbatim, not always Markdown), M3 (file-open
-size + binary guard), M7 (on-disk-conflict queue); P5 — L1–L9 all-Low hardening (L1 theme-boundary move,
-L2 IPC sender validation, L3 atomicWrite tmp-cleanup [fsync verified-but-rejected], L4 walkFiles
-truncation signal, L5–L9 small guards/clamps). **AUDIT COMPLETE — all 5 High + 7 Med + 9 Low + R1 fixed.**
-**Next: cut v1.12.2 with the Phase 2–5 batch** (owed eyeballs: H1 Save-As-cancel + L4 >20k truncated-note).
+**v1.12.2 SHIPPED (2026-07-16).** Robustness release — the batched **audit Phases 2–5**, completing
+the v1.12.0 codebase audit: **every finding is resolved (5 High + 7 Med + 9 Low + R1).** Tag `v1.12.2`
+pushed, GitHub release live with installer + portable; the manual tray/hotkey + H1 Save-As + L4
+truncated-note eyeballs PASSED. What landed: P2 — H4 (malformed-session-bricks-startup) + H3
+(tray-hidden Explorer-open); P3 — H5 (settings write races → serialized `settings:update`), M4 (dup
+stores), M5 (atomic exports), M6 (startup GC sweep); P4 — M2 (export code verbatim), M3 (file-open
+size + binary guard), M7 (on-disk-conflict queue); P5 — L1 theme-boundary move, L2 IPC sender
+validation, L3 atomicWrite tmp-cleanup (**fsync verified-but-rejected** — Windows `FlushFileBuffers`
+stalled the write path for seconds), L4 walkFiles truncation signal, L5–L9 small guards/clamps.
+**Candidate next work is listed below** (no single item committed) — see "Other candidate work".
+
+**v1.12.1 (2026-07-11).** Patch — **audit Phase 1** (H1 Save-As-cancel, H2 palette close, M1 dirty-
+untitled, R1 clean-quit flush: data-loss & close/quit safety; see `CHANGELOG.md`).
 
 **v1.12.0 (2026-07-08).** Phase 3.5 P1–P5 merged to `master`, tagged **`v1.12.0`**, pushed, GitHub
 release live with the installer + portable attached, README updated. The repo is **MIT-licensed**
 (`LICENSE` + `THIRD_PARTY_NOTICES.md` for the bundled SIL-OFL fonts). Manual tray/hotkey checklist
 PASSED on the 1.12.0 build.
 
-**In flight — the merged audit checklist** (`AUDIT-CHECKLIST.md`): both codebase audits consolidated
-into one 5-phase work-list (the v1.7 + v1.12 source files were folded in and deleted). Fixes land on
-`master` incrementally; a **v1.12.1** patch is cut once a batch is done. Flow follows the v1.7.1
-triage — verify each finding ("audit the audit") before fixing.
+**The merged audit checklist** (`AUDIT-CHECKLIST.md`) — both codebase audits consolidated into one
+5-phase work-list (the v1.7 + v1.12 source files were folded in and deleted). **All 5 phases are now
+complete and released** (Phase 1 → v1.12.1, Phases 2–5 → v1.12.2); the file is kept as the resolved
+record. The flow followed the v1.7.1 triage — verify each finding ("audit the audit") before fixing.
 
 1. ✅ **Phase 1 — data-loss & close/quit safety — COMPLETE** (5 phases total; 2026-07-10 → 07-11).
    - ✅ **H1 — Save-As-cancel drops the file association** — FIXED + merged (`fix/audit-p1-data-loss`
@@ -52,22 +54,22 @@ triage — verify each finding ("audit the audit") before fixing.
    - ✅ **R1 — clean-quit clipboard/session flush** (v1.7 I8 residual) — FIXED + merged
      (`fix/audit-p1-clean-quit-flush` → `master`): a clean quit now flushes debounced writes via a
      shared `flushPendingWritesBeforeQuit()` + `app:flushAndQuit` signal. Smoke-covered.
-   - ✅ **Phase 2 — startup & window reliability — COMPLETE** (on `master`, unreleased):
+   - ✅ **Phase 2 — startup & window reliability — COMPLETE** (released in v1.12.2):
      **H4** malformed session no longer bricks startup (`SessionStore.load` filters + `boot().catch`
      fallback), **H3** tray-hidden Explorer-open now shows the window (`showWindow()` in
      `second-instance`). Unit + smoke covered (`sessionStore.test.ts`, `startup-window.spec.ts`).
-   - ✅ **Phase 3 — store integrity & write races — COMPLETE** (on `master`, unreleased):
+   - ✅ **Phase 3 — store integrity & write races — COMPLETE** (released in v1.12.2):
      **H5** serialized `settings:update` (chain + partial merge) replaces 17 racy renderer
      read-modify-writes; **M4** stores constructed once and shared; **M5** atomic HTML/PDF exports;
      **M6** startup GC sweep (ENOENT-only) for the history + highlight stores. **All Highs cleared.**
-   - ✅ **Phase 4 — editor correctness & content fidelity — COMPLETE** (on `master`, unreleased;
+   - ✅ **Phase 4 — editor correctness & content fidelity — COMPLETE** (released in v1.12.2;
      `fix/audit-p4-editor-correctness` → `master` `--no-ff`, 2026-07-11): **M2** export renders
      code/plain-text verbatim in `<pre><code>` (only markdown via markdown-it) instead of mangling
      every buffer through the Markdown pipeline; **M3** file-open size guard (50 MB) + binary/NUL
      sniff, `ReadResult` union with a toast on refusal; **M7** on-disk conflicts queue with an
      "(N more)" hint instead of clobbering the single change bar. **All 7 Meds cleared.** Unit +
      smoke covered (`exportDoc.test.ts`, `fileService.test.ts`, `change-conflicts.spec.ts`).
-   - ✅ **Phase 5 — hardening & cleanups — COMPLETE** (on `master`, unreleased, 2026-07-16; each item
+   - ✅ **Phase 5 — hardening & cleanups — COMPLETE** (released in v1.12.2, 2026-07-16; each item
      its own `--no-ff` merge): **L1** `THEME_LIST` moved to `src/shared/` (main no longer imports a
      renderer module); **L2** IPC sender validation on every handler (`senderGuard`); **L3** `atomicWrite`
      tmp-cleanup on failure — **fsync verified-but-rejected** (Windows `FlushFileBuffers` stalled the
@@ -75,7 +77,7 @@ triage — verify each finding ("audit the audit") before fixing.
      returns `{files, truncated}` + Quick Open "index truncated" hint; **L5–L9** small guards/clamps
      (chain-map GC, refreshStatus null-guard, `fileArgFrom` existsSync, clipboard clamp, escapeHtml `'`).
      Unit + smoke covered. **AUDIT COMPLETE — every v1.12.0 finding resolved.**
-   - Next: cut **v1.12.2** with the Phase 2–5 batch. Full detail in `AUDIT-CHECKLIST.md`.
+   - **Released as v1.12.2** (2026-07-16) — the Phase 2–5 batch. Full detail in `AUDIT-CHECKLIST.md`.
 
 Other candidate work (each gets its own design → plan → build pass):
 
@@ -141,7 +143,7 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 _The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited)._
 
-> ▶ **STATUS (2026-07-16) — v1.12.1 shipped; design Phases 3 + 3.5 complete. AUDIT COMPLETE: all 5 phases of the merged audit checklist (`AUDIT-CHECKLIST.md`) done — 5 High + 7 Med + 9 Low + R1 fixed (L3's fsync sub-part verified-but-rejected; tmp-cleanup shipped). H1/H2/M1/R1 released as v1.12.1; Phases 2–5 unreleased on `master`. Next: cut v1.12.2 with the P2–P5 batch (owed manual eyeballs: H1 Save-As-cancel + L4 >20k truncated-note + tray/hotkey).**
+> ▶ **STATUS (2026-07-16) — v1.12.2 shipped; design Phases 3 + 3.5 complete. AUDIT COMPLETE & RELEASED: all 5 phases of the merged audit checklist (`AUDIT-CHECKLIST.md`) done — 5 High + 7 Med + 9 Low + R1 fixed (L3's fsync sub-part verified-but-rejected; tmp-cleanup shipped). Phase 1 → v1.12.1; Phases 2–5 → v1.12.2 (tagged, GitHub release live, all manual eyeballs PASSED). No work committed next — candidate items: on-save overwrite warning (S), dead `Shift+Alt+F` hotkey, parked Phase 4.**
 > All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
 > folder mode, text highlighter).
 > • **Robustness (v1.7.1):** the external v1.7.0 bug audit is triaged — all 19 findings
