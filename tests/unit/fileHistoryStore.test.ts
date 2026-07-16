@@ -57,6 +57,13 @@ describe('FileHistoryStore', () => {
     ])
     expect(await s.list('C:/a.txt')).toHaveLength(2)
   })
+  it('drops the per-path chain entry once its snapshot settles (no unbounded map growth)', async () => {
+    const s = new FileHistoryStore(dir)
+    await s.snapshot('C:/a.txt', 'one', 'LF', 'utf8')
+    await s.snapshot('C:/b.txt', 'one', 'LF', 'utf8')
+    await new Promise(r => setTimeout(r, 0)) // let the settle-cleanup microtasks flush
+    expect((s as unknown as { chains: Map<string, unknown> }).chains.size).toBe(0)
+  })
   it('sweep deletes history for files that no longer exist, keeps live ones', async () => {
     const real = join(dir, 'real.txt'); writeFileSync(real, 'hi')
     const gone = join(dir, 'gone.txt') // never created on disk

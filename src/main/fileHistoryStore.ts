@@ -38,7 +38,12 @@ export class FileHistoryStore {
   async snapshot(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void> {
     const prev = this.chains.get(path) ?? Promise.resolve()
     const next = prev.then(() => this.doSnapshot(path, content, eol, encoding))
-    this.chains.set(path, next.catch(err => console.error('[fileHistoryStore] snapshot failed for', path, err)))
+    const guarded = next.catch(err => console.error('[fileHistoryStore] snapshot failed for', path, err))
+    this.chains.set(path, guarded)
+    // Drop the map entry once this write settles, so `chains` doesn't retain one promise
+    // per distinct path for the process lifetime. Guard on identity: a newer snapshot may
+    // have chained on in the meantime — only the current tail is safe to delete.
+    void guarded.finally(() => { if (this.chains.get(path) === guarded) this.chains.delete(path) })
     return next
   }
 

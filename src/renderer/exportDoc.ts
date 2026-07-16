@@ -2,10 +2,10 @@ import { renderMarkdown } from './markdownRender'
 
 export type ExportFormat = 'html' | 'pdf'
 
-const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
+const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 
 export function escapeHtml(s: string): string {
-  return s.replace(/[&<>"]/g, (c) => ESC[c])
+  return s.replace(/[&<>"']/g, (c) => ESC[c])
 }
 
 // Self-contained light "document" style. No CDN / web fonts so it works offline and in printToPDF.
