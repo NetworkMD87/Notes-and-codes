@@ -4,6 +4,9 @@ export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 export interface FileVersion { ts: number; content: string; eol: EolMode; encoding: Encoding }
 
 export interface DirEntry { name: string; path: string; isDir: boolean }
+/** Quick-open file index. `truncated` is true when the walk hit its file cap, so the UI
+ *  can hint that some files may not appear. */
+export interface WalkResult { files: string[]; truncated: boolean }
 
 export interface Snippet { id: string; name: string; body: string }
 
@@ -146,7 +149,7 @@ export interface Api {
   saveHighlights(path: string, highlights: Highlight[]): Promise<void>
   openFolderDialog(): Promise<string | null>
   readDir(path: string, showAll: boolean): Promise<DirEntry[]>
-  walkFiles(path: string, showAll: boolean): Promise<string[]>
+  walkFiles(path: string, showAll: boolean): Promise<WalkResult>
   createFile(path: string): Promise<boolean>
   createFolder(path: string): Promise<boolean>
   renamePath(from: string, to: string): Promise<boolean>
