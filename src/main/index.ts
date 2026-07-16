@@ -1,5 +1,7 @@
 import { app, BrowserWindow, dialog, globalShortcut, nativeTheme, Tray } from 'electron'
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
+import { pickFileArg } from './fileArg'
 import { registerIpc } from './ipc'
 import { setContextMenu } from './contextMenu'
 import { createTray } from './tray'
@@ -41,10 +43,7 @@ function notifyRenderer(msg: string): void {
 }
 
 function fileArgFrom(argv: string[]): string | null {
-  // Packaged: argv = [exe, ...args]. Unpackaged (dev/electron <script>): argv = [electronExe, entryScript, ...args].
-  const args = app.isPackaged ? argv.slice(1) : argv.slice(2)
-  const candidate = args.reverse().find(a => !a.startsWith('-') && /[\\/.]/.test(a))
-  return candidate ?? null
+  return pickFileArg(argv, app.isPackaged, existsSync)
 }
 
 function requestQuit(): void {

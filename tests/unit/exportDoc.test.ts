@@ -6,6 +6,9 @@ describe('escapeHtml', () => {
   it('escapes html-significant characters', () => {
     expect(escapeHtml('a<b>&"c')).toBe('a&lt;b&gt;&amp;&quot;c')
   })
+  it('escapes single quotes (safe in future attribute contexts)', () => {
+    expect(escapeHtml("O'Reilly")).toBe('O&#39;Reilly')
+  })
 })
 
 describe('wrapHtml', () => {

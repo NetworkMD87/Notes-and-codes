@@ -118,8 +118,9 @@ function reportDirty(): void {
 }
 
 function refreshStatus(): void {
-  const id = paneFor(view.focusedPane()).currentBufferId() ?? manager.activeId!
-  const b = manager.get(id)!
+  const id = paneFor(view.focusedPane()).currentBufferId() ?? manager.activeId
+  const b = id ? manager.get(id) : undefined
+  if (!b) return // close/focus race: no active buffer yet — skip rather than throw the listener down
   statusBar.update({ language: b.language, eol: b.eol, encoding: b.encoding, cursor: paneFor(view.focusedPane()).getCursor(), dirty: b.dirty })
   reportDirty()
 }
