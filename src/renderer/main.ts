@@ -383,16 +383,21 @@ async function saveActive(): Promise<void> {
   tabBar.render(manager.list(), manager.activeId); refreshStatus()
 }
 async function saveAll(): Promise<void> {
-  let saved = 0, failed = 0
+  // `skipped` counts buffers the user consciously declined to write — a cancelled Save-As or
+  // a cancelled overwrite. Without it a declined save reports "Nothing to save.", contradicting
+  // the change bar raised in the same moment.
+  let saved = 0, failed = 0, skipped = 0
   for (const b of manager.list()) {
     if (b.dirty) {
-      try { if (await saveBuffer(b.id)) saved++ }
+      try { if (await saveBuffer(b.id)) saved++; else skipped++ }
       catch (err) { console.error('save failed', b.title, err); failed++ }
     }
   }
   tabBar.render(manager.list(), manager.activeId); refreshStatus()
-  if (failed) toast(`Saved ${saved} file${saved === 1 ? '' : 's'}, ${failed} failed.`)
-  else toast(saved ? `Saved ${saved} file${saved === 1 ? '' : 's'}.` : 'Nothing to save.')
+  const n = (c: number) => `${c} file${c === 1 ? '' : 's'}`
+  if (failed) toast(`Saved ${n(saved)}, ${failed} failed.`)
+  else if (skipped) toast(saved ? `Saved ${n(saved)}, ${skipped} skipped.` : `Skipped ${n(skipped)} — unresolved changes on disk.`)
+  else toast(saved ? `Saved ${n(saved)}.` : 'Nothing to save.')
 }
 
 function autosaveFlush(): void {
