@@ -344,13 +344,29 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
     if (!opts.allowDialog) return false
     path = await window.api.saveAsDialog(); if (!path) return false
   }
-  await window.api.writeFile(path, content, b.eol, b.encoding)
+  // Only guard a write back to the file this buffer already tracks. A Save-As onto a *different*
+  // path has no baseline, and the OS save dialog has already asked its own "replace?" question.
+  const sameFile = path === b.filePath
+  let r = await window.api.writeFile(path, content, b.eol, b.encoding, sameFile ? b.diskMtime : undefined)
+  if (!r.ok) {
+    // The file changed on disk and the watcher never told us: the app was restarted (boot()
+    // restores session content without re-reading disk), the watcher failed, or the change
+    // raced this save. Queue it either way, so Cancel leaves the user on the change bar —
+    // that is where "Reload (discard mine)" lives, and it is the third outcome of this prompt.
+    conflicts.add(id); refreshChangeBar()
+    if (!opts.allowDialog) return false // autosave: never modal. Buffer stays dirty; the bar tells the story.
+    const ok = await confirmDialog(`"${b.title}" changed on disk since you opened it. Overwrite those changes?`, 'Overwrite')
+    if (!ok) return false
+    r = await window.api.writeFile(path, content, b.eol, b.encoding) // unchecked — the user chose to overwrite
+  }
+  if (!r.ok) return false // narrowing only: a write with no expectedMtime cannot refuse
   selfWrites.set(path, Date.now())
   if (opts.snapshot) window.api.snapshotHistory(path, content, b.eol, b.encoding)
-  manager.markSaved(id, path)
+  manager.markSaved(id, path, r.mtimeMs)
   await window.api.saveHighlights(path, highlights.get(id))
   manager.get(id)!.highlights = undefined
   conflicts.delete(id)
+  refreshChangeBar() // a conflict we just resolved by overwriting must not leave its bar behind
   if (opts.recent) window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) pane.refreshBuffer(manager.get(id)!)
   syncWatch()
@@ -652,6 +668,7 @@ async function reloadBuffer(id: string): Promise<void> {
   const r = await window.api.readFile(b.filePath)
   if (!r.ok) { toast(r.reason); return }
   b.content = r.file.content; b.eol = r.file.eol; b.encoding = r.file.encoding; b.dirty = false
+  b.diskMtime = r.file.mtimeMs // reloading rebases the guard on what we just read
   conflicts.delete(id)
   if (paneFor(view.focusedPane()).currentBufferId() === id) paneFor(view.focusedPane()).refreshBuffer(b)
   refreshStatus(); tabBar.render(manager.list(), manager.activeId)
