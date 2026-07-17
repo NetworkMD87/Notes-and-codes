@@ -42,6 +42,10 @@ export interface BufferState {
   encoding: Encoding
   dirty: boolean
   highlights?: Highlight[]
+  /** On-disk mtime when we last read or wrote this file — the baseline for the on-save
+   *  overwrite guard. Undefined for untitled buffers, and for sessions written before the
+   *  guard existed, in which case the first save runs unchecked exactly as it used to. */
+  diskMtime?: number
 }
 
 export type ThemeMode = 'light' | 'dark' | 'follow-os'
