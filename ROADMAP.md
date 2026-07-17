@@ -17,7 +17,16 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — pick the next feature (the v1.12.0 audit is fully shipped as v1.12.2; nothing committed)
+## ▶ NEXT ACTION — pick the next feature (Phase 1 fast-follow code-complete on a branch, not yet merged)
+
+**On-save overwrite warning (Phase 1 fast-follow) — code-complete on `feat/on-save-overwrite-warning`.**
+Save now compares the file's on-disk mtime against the baseline the buffer has carried since it was
+opened (persisted through session, so it survives a restart) and warns before overwriting — covering
+what the change bar can't: the app being restarted, a failed watcher, or a last-second change. Autosave
+never prompts; it skips the write and queues the buffer into the change bar instead. This was the last
+outstanding item in Phase 1, which is now **fully complete**. Not yet released — still owed: whole-
+branch review, an installer eyeball (dialog on a real filesystem), a version bump (candidate: patch →
+v1.12.3), the manual tray/hotkey checklist, then tag + GitHub release.
 
 **v1.12.2 SHIPPED (2026-07-16).** Robustness release — the batched **audit Phases 2–5**, completing
 the v1.12.0 codebase audit: **every finding is resolved (5 High + 7 Med + 9 Low + R1).** Tag `v1.12.2`
@@ -28,7 +37,8 @@ stores), M5 (atomic exports), M6 (startup GC sweep); P4 — M2 (export code verb
 size + binary guard), M7 (on-disk-conflict queue); P5 — L1 theme-boundary move, L2 IPC sender
 validation, L3 atomicWrite tmp-cleanup (**fsync verified-but-rejected** — Windows `FlushFileBuffers`
 stalled the write path for seconds), L4 walkFiles truncation signal, L5–L9 small guards/clamps.
-**Candidate next work is listed below** (no single item committed) — see "Other candidate work".
+**Once this branch ships, the remaining candidates are:** the taskbar icon `{&}` fix, the toolbar
+regroup, the dead `Shift+Alt+F` Format hotkey, and the parked Phase 4 — see "Other candidate work".
 
 **v1.12.1 (2026-07-11).** Patch — **audit Phase 1** (H1 Save-As-cancel, H2 palette close, M1 dirty-
 untitled, R1 clean-quit flush: data-loss & close/quit safety; see `CHANGELOG.md`).
@@ -81,15 +91,13 @@ record. The flow followed the v1.7.1 triage — verify each finding ("audit the 
 
 Other candidate work (each gets its own design → plan → build pass):
 
-2. **On-save overwrite warning** (**S**) — the last Phase-1 fast-follow: warn before overwriting a
-   file that changed on disk since it was opened (the change-bar mitigates the common case today).
-3. **Dead native `Shift+Alt+F` Format hotkey** — works via palette + Edit menu; the OS accelerator
+2. **Dead native `Shift+Alt+F` Format hotkey** — works via palette + Edit menu; the OS accelerator
    does nothing (one fix attempt failed — see the Format Document known-issue below).
-4. **Phase 3.6 QoL** (mostly shipped) or **parked Phase 4** (code signing, native Win11 Open-with,
+3. **Phase 3.6 QoL** (mostly shipped) or **parked Phase 4** (code signing, native Win11 Open-with,
    configurable-hotkey UI, snippet tabstops, launch-on-login).
-5. **Toolbar regroup** (**S**) — the divider groups aren't logical (highlighter sits with the view
+4. **Toolbar regroup** (**S**) — the divider groups aren't logical (highlighter sits with the view
    toggles; diff sits with paste-from-history). Regroup: file ops | view toggles | tools. See Phase 3.6.
-6. **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16) —
+5. **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16) —
    the taskbar button uses the app's exe/shortcut **identity icon** (`build/icon.ico`), not
    `win.setIcon`; icon-cache rebuild ruled out (full rebuild changed nothing; a second isolated
    instance's plain window button DOES show `{&}`, proving the window-icon code works). Fix in
@@ -128,7 +136,11 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 **Fast-follow (deferred from Phase 1):**
 
-- ⬜ **On-save overwrite warning** (**S**) — when a file changed on disk since open, warn before overwriting on Save (spec §7 part 2; the change-bar mitigates the common case today).
+- ✅ **On-save overwrite warning** (**S**) — shipped. Save now compares the file's on-disk mtime
+  against the baseline the buffer has carried since it was opened (persisted through session, so it
+  survives a restart) and warns before overwriting. Covers what the change bar can't: the app being
+  restarted, a failed watcher, or a last-second change. Autosave skips the write and queues the
+  buffer into the change bar instead of prompting. **Phase 1 is now fully complete.**
 
 ## ✅ Phase 2 — Look & Feel (shipped v1.1)
 

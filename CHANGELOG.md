@@ -4,6 +4,19 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [Unreleased]
+
+### Fixed
+
+- **Save now warns before overwriting a file that changed on disk** (Phase 1 fast-follow). The
+  change bar already caught external changes while the app was running, but nothing covered a file
+  that changed while it was *closed*: the session restores your buffer without re-reading disk, so
+  the watcher never had an event to fire and Save silently destroyed the other change. Every save
+  back to a file now checks its on-disk timestamp against what the buffer last saw, and asks before
+  overwriting. The same check covers a watcher that failed (network drives) or a change that landed
+  a moment before the save. Auto-save never prompts — it skips the write and raises the usual
+  change bar, leaving your edits untouched until you decide.
+
 ## [1.12.2] — 2026-07-16
 
 Robustness release: **audit Phases 2–5**, completing the v1.12.0 codebase audit (every
