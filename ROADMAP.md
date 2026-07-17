@@ -17,16 +17,53 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — pick the next feature (Phase 1 fast-follow code-complete on a branch, not yet merged)
+## ▶ NEXT ACTION — 🚧 EYEBALL the on-save overwrite warning, then ship it
 
-**On-save overwrite warning (Phase 1 fast-follow) — code-complete on `feat/on-save-overwrite-warning`.**
+**On-save overwrite warning (Phase 1 fast-follow) — code-complete on `feat/on-save-overwrite-warning`,
+whole-branch reviewed (opus: merge-ready, no Critical/Important). HELD at the eyeball gate.**
 Save now compares the file's on-disk mtime against the baseline the buffer has carried since it was
 opened (persisted through session, so it survives a restart) and warns before overwriting — covering
 what the change bar can't: the app being restarted, a failed watcher, or a last-second change. Autosave
 never prompts; it skips the write and queues the buffer into the change bar instead. This was the last
-outstanding item in Phase 1, which is now **fully complete**. Not yet released — still owed: whole-
-branch review, an installer eyeball (dialog on a real filesystem), a version bump (candidate: patch →
-v1.12.3), the manual tray/hotkey checklist, then tag + GitHub release.
+outstanding item in Phase 1, which completes when this merges.
+
+### ⬜ DO THIS FIRST — manual eyeball checklist (2026-07-17)
+
+Installer is **already built**: `dist\Notes & Codes Setup 1.12.2.exe`.
+⚠️ **It is labelled 1.12.2 but it is NOT the released v1.12.2** — the branch build overwrote that
+artifact in `dist/` (no bump yet). The genuine v1.12.2 installer is on the GitHub release if needed.
+Bumping to v1.12.3 and rebuilding first would make the artifact honest — worth doing before installing.
+
+Prep: a scratch file (e.g. `Desktop\test.txt`) containing `original`, plus Notepad.
+The rule under test: **Save must never silently destroy a change someone else made to your file.**
+
+1. ⬜ **Core — file changed while the app was closed** (the reason the feature exists).
+   Open `test.txt`, don't edit → **fully quit via tray → Quit** → change it to `theirs` in Notepad, save,
+   close → relaunch → type an edit → `Ctrl+S`.
+   **Expect:** themed prompt _"test.txt" changed on disk since you opened it. Overwrite those changes?_
+   **Cancel** → disk still says `theirs`, change bar offers Reload / Keep mine. **Save again → Overwrite**
+   → your text lands, bar clears.
+2. ⬜ **The quit fix — most important; automated tests structurally cannot reach it.**
+   Open `test.txt`, **type an edit** (leave unsaved) → change the file in Notepad, save → click the
+   window **X** (hides to tray) → **tray → Quit** → native box → **Save**.
+   **Expect:** the window **reappears** with an answerable themed prompt.
+   **FAIL = app sits in the tray doing nothing** (a DOM modal rendering in a hidden window). That is a
+   blocker — report before force-killing. Fixed at `src/main/index.ts:74` (`showWindow()` before
+   `app:saveAllAndQuit`); this checklist item is that fix's only coverage.
+3. ⬜ **Default button — a judgment call, not a pass/fail.** The prompt focuses **Overwrite**, and Enter
+   activates it. That matches the app's `confirmDialog` convention, but it is the one use where the
+   default destroys someone else's data. **Decide whether that's right** — easy to change.
+4. ⬜ **Auto-save must never prompt.** Appearance ▸ Editor → Auto-save to disk **on** → open `test.txt`,
+   edit, wait ~2s → change it in Notepad, save → edit again, wait.
+   **Expect:** the **change bar**, and **no dialog ever**; edits kept, disk untouched. The bar won't
+   dismiss until Reload or a manual Save→Overwrite — intentional (the disk still holds their change).
+5. ⬜ **Normal saves stay boring.** Untouched file → `Ctrl+S` saves silently. **Save As** to a *new* name →
+   only Windows' own "replace?", no second prompt from us.
+6. ⬜ **Standard release checklist** — tray show/hide, global hotkey `Ctrl+Shift+Space`, X → tray.
+
+**Then to ship:** bump patch → **v1.12.3** (entry lands under `Fixed`; resolve the `## [Unreleased]`
+heading in `CHANGELOG.md` and the "not yet merged" wording on the Phase-1 bullet below), `npm run package`,
+merge `--no-ff` → `master`, tag `v1.12.3`, GitHub release with installer + portable.
 
 **v1.12.2 SHIPPED (2026-07-16).** Robustness release — the batched **audit Phases 2–5**, completing
 the v1.12.0 codebase audit: **every finding is resolved (5 High + 7 Med + 9 Low + R1).** Tag `v1.12.2`
