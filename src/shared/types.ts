@@ -101,17 +101,27 @@ export interface OpenedFile {
   content: string
   eol: EolMode
   encoding: Encoding
+  /** On-disk mtime at the moment we read it — the baseline for the on-save overwrite guard. */
+  mtimeMs: number
 }
 
 /** `readFile` result — refused (too large / binary) files carry a user-facing reason
  *  instead of a file, so the renderer can toast it without opening a garbage buffer. */
 export type ReadResult = { ok: true; file: OpenedFile } | { ok: false; reason: string }
 
+/** `writeFile` result. `ok:false` means ONLY "refused because the file changed on disk since we
+ *  last read/wrote it" — it is not a general failure channel. Real write failures (disk full,
+ *  permissions) still throw, as they always have, so the existing save-failure toasts keep working.
+ *  On `ok:true`, `mtimeMs` is undefined only if the post-write stat failed; the bytes still landed. */
+export type WriteResult =
+  | { ok: true; mtimeMs: number | undefined }
+  | { ok: false; reason: 'stale' }
+
 export interface ExportResult { ok: boolean; canceled?: boolean; path?: string }
 
 export interface Api {
   readFile(path: string): Promise<ReadResult>
-  writeFile(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
+  writeFile(path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number): Promise<WriteResult>
   loadSession(): Promise<SessionData>
   saveSession(data: SessionData): Promise<void>
   loadSettings(): Promise<Settings>

@@ -1,5 +1,5 @@
-import { promises as fs } from 'node:fs'
-import type { EolMode, ReadResult, Encoding } from '../shared/types'
+import { promises as fs, type Stats } from 'node:fs'
+import type { EolMode, ReadResult, Encoding, WriteResult } from '../shared/types'
 import { detectEncoding, decode, encode } from './encoding'
 import { atomicWrite } from './atomicWrite'
 
@@ -19,11 +19,11 @@ function hasNulByte(buf: Buffer): boolean {
 }
 
 export async function readFileForEditor(path: string, maxBytes = MAX_OPEN_BYTES): Promise<ReadResult> {
-  let size: number
-  try { size = (await fs.stat(path)).size } catch { return { ok: false, reason: 'Could not open the file.' } }
-  if (size > maxBytes) {
+  let st: Stats
+  try { st = await fs.stat(path) } catch { return { ok: false, reason: 'Could not open the file.' } }
+  if (st.size > maxBytes) {
     const mb = (n: number) => Math.max(1, Math.round(n / (1024 * 1024)))
-    return { ok: false, reason: `This file is too large to open (${mb(size)} MB; the limit is ${mb(maxBytes)} MB).` }
+    return { ok: false, reason: `This file is too large to open (${mb(st.size)} MB; the limit is ${mb(maxBytes)} MB).` }
   }
   const buf = await fs.readFile(path)
   const encoding = detectEncoding(buf)
@@ -33,11 +33,25 @@ export async function readFileForEditor(path: string, maxBytes = MAX_OPEN_BYTES)
     return { ok: false, reason: 'This looks like a binary file — Notes & Codes edits text only.' }
   }
   const content = decode(buf, encoding)
-  return { ok: true, file: { filePath: path, content, eol: detectEol(content), encoding } }
+  return { ok: true, file: { filePath: path, content, eol: detectEol(content), encoding, mtimeMs: st.mtimeMs } }
 }
 
-export async function writeFile(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void> {
+/** Writes `content` to `path`. When `expectedMtime` is given and the file's live mtime differs,
+ *  refuses instead — the caller last saw a different file, so writing would silently destroy
+ *  whatever changed it. Omit `expectedMtime` to write unconditionally. */
+export async function writeFile(path: string, content: string, eol: EolMode, encoding: Encoding,
+                                expectedMtime?: number): Promise<WriteResult> {
+  if (expectedMtime !== undefined) {
+    // A vanished file is not a conflict — fall through and recreate it rather than trapping the save.
+    let current: number | undefined
+    try { current = (await fs.stat(path)).mtimeMs } catch { current = undefined }
+    if (current !== undefined && current !== expectedMtime) return { ok: false, reason: 'stale' }
+  }
   const normalized = content.replace(/\r\n/g, '\n')
   const withEol = eol === 'CRLF' ? normalized.replace(/\n/g, '\r\n') : normalized
   await atomicWrite(path, encode(withEol, encoding))
+  // atomicWrite renames a temp file into place, so the live mtime has to be read back. If that
+  // stat fails, the bytes still landed — report the write as the success it was, with no mtime.
+  try { return { ok: true, mtimeMs: (await fs.stat(path)).mtimeMs } }
+  catch { return { ok: true, mtimeMs: undefined } }
 }
