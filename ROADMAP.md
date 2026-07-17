@@ -136,11 +136,12 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 **Fast-follow (deferred from Phase 1):**
 
-- ✅ **On-save overwrite warning** (**S**) — shipped. Save now compares the file's on-disk mtime
-  against the baseline the buffer has carried since it was opened (persisted through session, so it
-  survives a restart) and warns before overwriting. Covers what the change bar can't: the app being
-  restarted, a failed watcher, or a last-second change. Autosave skips the write and queues the
-  buffer into the change bar instead of prompting. **Phase 1 is now fully complete.**
+- ✅ **On-save overwrite warning** (**S**) — **code-complete on `feat/on-save-overwrite-warning`;
+  not yet merged or released.** Save now compares the file's on-disk mtime against the baseline the
+  buffer has carried since it was opened (persisted through session, so it survives a restart) and
+  warns before overwriting. Covers what the change bar can't: the app being restarted, a failed
+  watcher, or a last-second change. Autosave skips the write and queues the buffer into the change
+  bar instead of prompting. **This was Phase 1's last open item — Phase 1 completes when it merges.**
 
 ## ✅ Phase 2 — Look & Feel (shipped v1.1)
 
@@ -163,7 +164,7 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 _The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited)._
 
-> ▶ **STATUS (2026-07-16) — v1.12.2 shipped; design Phases 3 + 3.5 complete. AUDIT COMPLETE & RELEASED: all 5 phases of the merged audit checklist (`AUDIT-CHECKLIST.md`) done — 5 High + 7 Med + 9 Low + R1 fixed (L3's fsync sub-part verified-but-rejected; tmp-cleanup shipped). Phase 1 → v1.12.1; Phases 2–5 → v1.12.2 (tagged, GitHub release live, all manual eyeballs PASSED). No work committed next — candidate items: on-save overwrite warning (S), dead `Shift+Alt+F` hotkey, parked Phase 4.**
+> ▶ **STATUS (2026-07-16) — v1.12.2 shipped; design Phases 3 + 3.5 complete. AUDIT COMPLETE & RELEASED: all 5 phases of the merged audit checklist (`AUDIT-CHECKLIST.md`) done — 5 High + 7 Med + 9 Low + R1 fixed (L3's fsync sub-part verified-but-rejected; tmp-cleanup shipped). Phase 1 → v1.12.1; Phases 2–5 → v1.12.2 (tagged, GitHub release live, all manual eyeballs PASSED). In flight: the on-save overwrite warning is code-complete on `feat/on-save-overwrite-warning` (unmerged) — see ▶ NEXT ACTION at the top for current status. Remaining candidates: taskbar icon `{&}`, toolbar regroup, dead `Shift+Alt+F` hotkey, parked Phase 4.**
 > All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
 > folder mode, text highlighter).
 > • **Robustness (v1.7.1):** the external v1.7.0 bug audit is triaged — all 19 findings
