@@ -4,6 +4,23 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [Unreleased]
+
+_Phase 3.7 polish & discoverability — accumulating; ships as one release when the pass is done._
+
+### Added
+
+- **File History is now on the toolbar.** Previously reachable only via the command palette and
+  Tools menu, File History now has a button on the top toolbar (grouped with Open/Save). The toolbar
+  was also regrouped so the dividers read `file | view | tools`.
+
+### Fixed
+
+- **Opening a diff no longer flips the editors to a light theme.** The diff view reset Monaco's
+  global theme when it opened; on any dark theme whose id isn't literally `dark` (Monokai, Dracula,
+  Nord, One Dark, Tokyo Night, Gruvbox Dark, Dark Dimmed, Solarized Dark, High Contrast) that turned
+  every editor pane white until you switched themes. The diff now inherits the current theme.
+
 ## [1.12.3] — 2026-07-18
 
 ### Fixed
