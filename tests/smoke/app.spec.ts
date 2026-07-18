@@ -738,3 +738,51 @@ test('tabs have rounded top corners and square bottoms', async () => {
   }
 })
 
+test('Revert File discards unsaved edits and reloads from disk', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-revert-'))
+  const filePath = join(userDataDir, 'note.txt')
+  writeFileSync(filePath, 'original disk content')
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#paneA .view-lines')).toContainText('original disk content')
+
+    // Make an unsaved edit → the buffer is dirty.
+    await win.locator('#paneA .monaco-editor').click()
+    await win.keyboard.press('Control+A')
+    await win.keyboard.type('my unsaved edit')
+    await expect(win.locator('#paneA .view-lines')).toContainText('my unsaved edit')
+
+    // Run Revert File via the palette, then confirm the themed dialog by clicking its Revert button.
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Revert File')
+    await win.keyboard.press('Enter')
+    await expect(win.locator('.input-overlay')).toBeVisible() // dialog stayed open (no Enter-bleed)
+    await win.locator('.input-box button', { hasText: 'Revert' }).click()
+
+    // Editor is back to the on-disk content; the edit is gone.
+    await expect(win.locator('#paneA .view-lines')).toContainText('original disk content')
+    await expect(win.locator('#paneA .view-lines')).not.toContainText('my unsaved edit')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Revert File is wired into the File menu', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-revertmenu-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    const labels = await app.evaluate(({ Menu }) => {
+      const file = Menu.getApplicationMenu()!.items.find(i => i.label === 'File')!
+      return file.submenu!.items.map(i => i.label)
+    })
+    expect(labels).toContain('Revert File')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+

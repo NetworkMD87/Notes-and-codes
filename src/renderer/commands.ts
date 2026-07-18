@@ -33,6 +33,7 @@ export interface CommandDeps {
   zoomReset: () => void
   openAppearance: () => void
   openHistory: () => void
+  revert: () => void
   openFolder: () => Promise<void>
   closeFolder: () => void
   toggleSidebar: () => void
@@ -66,6 +67,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'diff-clip', label: 'Diff: current vs clipboard', run: () => d.diffClipboard() })
   p.register({ id: 'diff-files', label: 'Diff: two files on disk', run: () => d.diffFiles() })
   p.register({ id: 'history', label: 'File History', run: () => d.openHistory() })
+  p.register({ id: 'revert', label: 'Revert File', run: () => d.revert() })
   p.register({ id: 'folder-open', label: 'Open Folder…', run: () => d.openFolder() })
   p.register({ id: 'folder-close', label: 'Close Folder', run: () => d.closeFolder() })
   p.register({ id: 'sidebar-toggle', label: 'Toggle Sidebar', run: () => d.toggleSidebar() })
