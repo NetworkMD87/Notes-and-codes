@@ -14,8 +14,13 @@ export class DiffView {
   show(left: DiffSide, right: DiffSide): void {
     this.hide()
     this.container.classList.remove('hidden')
+    // No `theme` here: Monaco's theme is GLOBAL across every editor instance. The panes
+    // already hold the correct resolved theme (ThemeController.apply → monaco.editor.setTheme),
+    // so the diff inherits it. Passing a theme re-set the global theme — and the old
+    // `dataset.theme === 'dark' ? 'vs-dark' : 'vs'` mapped all 9 dark themes whose id isn't
+    // literally 'dark' (Monokai, Dracula, Nord, …) to the light 'vs', turning every pane white.
     this.editor = monaco.editor.createDiffEditor(this.container, {
-      readOnly: true, automaticLayout: true, theme: document.body.dataset.theme === 'dark' ? 'vs-dark' : 'vs'
+      readOnly: true, automaticLayout: true
     })
     this.editor.setModel({
       original: monaco.editor.createModel(left.content, left.language),

@@ -678,3 +678,42 @@ test('toolbar File History button opens the panel and the regroup keeps all butt
   }
 })
 
+test('opening a diff keeps the current theme (does not flip editors to light)', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-diff-theme-'))
+  const filePath = join(userDataDir, 'note.txt')
+  writeFileSync(filePath, 'left content')
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#paneA .view-lines')).toContainText('left content')
+
+    // Switch to Monokai — a dark theme whose id is NOT literally 'dark'.
+    await win.locator('#theme-toggle').click()
+    await expect(win.locator('#appearance')).toBeVisible()
+    await win.locator('.appearance-theme', { hasText: 'Monokai' }).click()
+    await expect(win.locator('body')).toHaveAttribute('data-theme', 'monokai')
+    await win.keyboard.press('Escape') // close the appearance panel
+
+    // Seed the Electron clipboard so 'Diff: current vs clipboard' has a right side.
+    await app.evaluate(({ clipboard }) => clipboard.writeText('right content'))
+
+    // Open the diff via the palette.
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Diff: current vs clipboard')
+    await win.keyboard.press('Enter')
+    await expect(win.locator('#diff')).toBeVisible()
+
+    // Monaco's theme is GLOBAL: creating the diff editor must not reset it. The diff must
+    // render in Monokai's editor background (#272822 = rgb(39,40,34)), NOT the built-in
+    // light 'vs' white. Before the fix this stayed white, dragging the panes light too.
+    await expect.poll(
+      () => win.locator('#diff .monaco-editor-background').first()
+        .evaluate(el => getComputedStyle(el).backgroundColor),
+      { timeout: 5000 }
+    ).toBe('rgb(39, 40, 34)')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
