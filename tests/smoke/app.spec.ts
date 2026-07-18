@@ -717,3 +717,24 @@ test('opening a diff keeps the current theme (does not flip editors to light)', 
   }
 })
 
+test('tabs have rounded top corners and square bottoms', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('.tab')).toHaveCount(1) // the auto-created Untitled-1 tab
+
+    const [topLeft, topRight, bottomLeft] = await win.locator('.tab').first().evaluate((el) => {
+      const s = getComputedStyle(el)
+      return [s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomLeftRadius]
+    })
+    // Top-only rounding: top corners curved, bottom flush with the strip.
+    expect(topLeft).not.toBe('0px')
+    expect(topRight).not.toBe('0px')
+    expect(bottomLeft).toBe('0px')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
