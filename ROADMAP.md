@@ -27,8 +27,7 @@ released. Nothing is in flight.
 
 Pick the next item — each gets its own design → plan → build pass. Full detail is in the sections below:
 
-- **Taskbar icon `{&}` at small sizes** (**S–M**, root-caused) — Phase 3.6.
-- **Toolbar regroup** (**S**) — Phase 3.6.
+- **Phase 3.7 — polish & discoverability** (new, see below) — rounded tab tops, File History on the toolbar + toolbar regroup, a Revert File command, theme-picker swatch previews, highlighter pen-tip cursor, and the taskbar icon `{&}` fix. A cohesive one-branch polish pass; the **recommended next bundle**.
 - **Real two-process second-instance smoke test** (**S**) — Phase 3.6.
 - **Dead native `Shift+Alt+F` Format hotkey** — Format Document known-issue (Phase 3).
 - **Parked Phase 4** — code signing, native Win11 "Open with", configurable-hotkey UI, snippet tabstops, launch-on-login.
@@ -131,9 +130,8 @@ hierarchy, micro-motion._
   layer (`overlayIn` entry + `prefers-reduced-motion` kill-switch that later polish inherits); accent
   borders on all floating chrome; one unified container-agnostic scrollbar; shared `overlayManager`
   (capture-phase Esc closes the topmost overlay); `accent-color` checkboxes; icon-only `◐` theme button;
-  highlighter `crosshair`; inline-SVG empty-state glyphs. _Still outstanding (Slice C/D): theme-picker
-  swatch previews; a highlighter **pen-tip SVG cursor** (deferred — a `data:` cursor is CSP-blocked, so
-  it needs an `img-src 'self' data:` relaxation or a bundled cursor asset; crosshair shipped)._
+  highlighter `crosshair`; inline-SVG empty-state glyphs. _Slice C/D leftovers (theme-picker swatch
+  previews, highlighter pen-tip SVG cursor) are gathered into **Phase 3.7** below._
 - ✅ **User polish notes (P1 eyeball, 2026-07-03)** — all delivered: accent border on every toast +
   pop-out menu (P2, + snippet-manager theming); one unified scrollbar (P2); use accent more boldly but
   tasteful (P2 borders → P3 accent surfaces → P4 accent-text auto-contrast → P5 expanded range).
@@ -161,21 +159,6 @@ Neither depends on 3.5 — they can land before, during, or after it._
   eyeballed on the installed build (drag feel + insertion mark + persist + tray/hotkey checklist — PASS).
   Merged `--no-ff` → `master`, tagged `v1.11.0`. _Deferred: live-shift/FLIP animation of neighbouring
   tabs (Phase 3.5 polish)._
-- ⬜ **Toolbar regroup** (**S**) — reorder `toolbar.ts` groups so the dividers are logical:
-  `[Open, Save] | [Split, Preview, Pin] | [Highlighter+colour, Diff, Paste-from-history]`
-  (today the highlighter sits with the view toggles and diff with paste). One-file append-order
-  change + a smoke locator check.
-- ⬜ **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16) —
-  the taskbar button icon comes from the app's exe/shortcut **identity icon** (`build/icon.ico`,
-  currently the `{N&C}` tile at all 5 sizes: 16/24/32/48/256), not from `win.setIcon`. Diagnosis:
-  full icon-cache rebuild (15 `iconcache_*.db` deleted, Explorer restarted) changed nothing, while
-  a second isolated instance's plain window button DOES show `{&}` — so the window-icon code works
-  and the identity icon is what the user sees. Fix in `make-icon.mjs`: compose `icon.ico` with
-  `{&}` glyph artwork at **16/24/32** and the `{N&C}` tile at **48/256** (per-size artwork is the
-  Windows-native pattern). Trade-off to note: the identity icon is static — bake the bright
-  (dark-taskbar) glyph; light-taskbar users get lower contrast, same as carried known issue ③.
-  Complementary hardening: `app.setAppUserModelId('com.notesandcodes.app')` at startup + pad the
-  runtime glyph PNGs (32×19) to square 32×32. Re-pin after shipping (pins keep their own copy).
 - ⬜ **Real two-process second-instance smoke test** (**S**) — `startup-window.spec.ts` emits
   `second-instance` synthetically; add a variant that spawns a genuine second OS process with a
   file arg against the same `--user-data-dir` (repro script proved this works for dev + packaged
@@ -188,6 +171,48 @@ Neither depends on 3.5 — they can land before, during, or after it._
   reviewed on `feat/in-app-help` (2 bugs found + fixed: stale empty-state on repeat no-match,
   Esc not closing the About view). _Deferred: a dedicated hotkey (F1/Monaco conflict),
   clickable-to-run rows, auto-derived content, a shared shortcut-constants refactor._
+
+## ⬜ Phase 3.7 — Polish & discoverability (round 2)
+
+_A second small polish/QoL cluster: finish the Phase 3.5 Slice C/D leftovers, surface the buried safety
+features so newbies can find them, and tidy the toolbar. Low-risk — mostly one-file CSS / token /
+command-registry changes on systems already in place. Ships as **one branch under one version bump**
+(polish-pass convention — don't bump per item; see [[polish-pass-version-hold]])._
+
+- ⬜ **Rounded tab tops** (**S**) — round the **top** corners of tabs for the classic browser-tab look
+  (top-only is right: tabs anchor to the strip, and the active tab must visually connect to the content
+  below so it doesn't read as detached). Floating chrome (toasts / pop-ups / pickers) is **already**
+  rounded 4px via `--radius` (`index.html`), so this is tabs-only; softening `--radius` globally is a
+  separate taste call, not top-corner rounding on floating boxes.
+- ⬜ **File History on the toolbar + toolbar regroup** (**S**) — File History is powerful but hidden
+  (palette + Tools menu only → newbies never find it). Add a **History** button to the top panel, done
+  **with** the toolbar regroup so the dividers stay logical:
+  `[Open Save] | [Split Preview Pin] | [Highlighter Diff Paste] | [History]` (today the highlighter
+  sits with the view toggles and diff with paste). One `ICONS` + `mk()` entry in `toolbar.ts`, reuse
+  the existing History command, add it to `helpContent.ts`. _(Supersedes the deferred "File History
+  status-bar entry" idea — the toolbar is louder for newbies; pick one surface, not both.)_
+- ⬜ **"Revert File" command — with a confirm** (**S**) — one action to discard unsaved edits and reload
+  the last-saved / on-disk content ("I made a mess, take me back"). **Must confirm first** (it destroys
+  unsaved work): palette + Edit menu, **no raw toolbar button** (a one-click discard is a newbie
+  footgun; `Ctrl+Z` already covers the immediate oops). Complements File History (old saved versions)
+  and the change bar (external conflicts). Add to `helpContent.ts`.
+- ⬜ **Theme-picker swatch previews** (**S**, from Phase 3.5 Slice C) — show each theme's palette as
+  small swatches in the picker so you can preview a theme before applying it.
+- ⬜ **Highlighter pen-tip SVG cursor** (**S**, from Phase 3.5 Slice D) — replace the paint-mode
+  `crosshair` with a pen-tip cursor matching the toolbar icon. Deferred for a reason: a `data:` cursor
+  is CSP-blocked (`img-src` → `default-src 'self'`), so decide first between an `img-src 'self' data:`
+  relaxation or a bundled cursor asset.
+- ⬜ **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16; moved
+  from Phase 3.6 — the heaviest item here) — the taskbar button icon comes from the app's exe/shortcut
+  **identity icon** (`build/icon.ico`, currently the `{N&C}` tile at all 5 sizes: 16/24/32/48/256), not
+  from `win.setIcon`. Diagnosis: full icon-cache rebuild (15 `iconcache_*.db` deleted, Explorer
+  restarted) changed nothing, while a second isolated instance's plain window button DOES show `{&}` —
+  so the window-icon code works and the identity icon is what the user sees. Fix in `make-icon.mjs`:
+  compose `icon.ico` with `{&}` glyph artwork at **16/24/32** and the `{N&C}` tile at **48/256**
+  (per-size artwork is the Windows-native pattern). Trade-off: the identity icon is static — bake the
+  bright (dark-taskbar) glyph; light-taskbar users get lower contrast, same as carried known issue ③.
+  Complementary hardening: `app.setAppUserModelId('com.notesandcodes.app')` at startup + pad the runtime
+  glyph PNGs (32×19) to square 32×32. Re-pin after shipping (pins keep their own copy).
 
 ## 🧊 Phase 4 — Platform & power (parked)
 
