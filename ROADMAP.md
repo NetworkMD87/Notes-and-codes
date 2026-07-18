@@ -17,25 +17,37 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — pick the next candidate
+## ▶ NEXT ACTION — 🚧 Phase 3.7 in progress (4 slices merged locally; bundle release pending)
 
-**Phase 1 is COMPLETE.** The on-save overwrite warning shipped as **v1.12.3** (2026-07-18): Save warns
-before overwriting a file that changed on disk (on-disk mtime vs the buffer's persisted baseline;
-autosave queues the change bar instead of prompting). Eyeballed on the installed build — all checks PASS,
-including the save-on-quit window-reappear that automated tests can't reach — then merged, tagged, and
-released. Nothing is in flight.
+**Phase 3.7 "Polish & discoverability" is underway.** Each slice gets its own `feat/` branch
+(brainstorm → spec → plan → TDD → merge `--no-ff`) with **no per-slice version bump** — the whole pass
+ships as ONE release when every slice is done (polish-pass convention, [[polish-pass-version-hold]]).
 
-Pick the next item — each gets its own design → plan → build pass. Full detail is in the sections below:
+**Merged to `master` (local, UNRELEASED):**
+- ✅ File History button on the toolbar + toolbar regroup
+- ✅ Rounded tab tops (6px)
+- ✅ Revert File command (confirm-when-dirty)
+- ✅ Diff-theme fix (bonus bug) — opening a diff no longer flips the editors to a light theme on any
+  dark theme whose id isn't literally `dark` (Monokai/Dracula/Nord/…)
 
-- **Phase 3.7 — polish & discoverability** (new, see below) — rounded tab tops, File History on the toolbar + toolbar regroup, a Revert File command, theme-picker swatch previews, highlighter pen-tip cursor, and the taskbar icon `{&}` fix. A cohesive one-branch polish pass; the **recommended next bundle**.
-- **Real two-process second-instance smoke test** (**S**) — Phase 3.6.
-- **Dead native `Shift+Alt+F` Format hotkey** — Format Document known-issue (Phase 3).
-- **Parked Phase 4** — code signing, native Win11 "Open with", configurable-hotkey UI, snippet tabstops, launch-on-login.
+**Remaining slices:**
+- ⬜ **Theme-picker swatch previews** — straightforward; **do this next**.
+- ⬜ **Highlighter pen-tip cursor** — needs a CSP `img-src 'self' data:` decision (or a bundled cursor asset) first.
+- ⬜ **Taskbar icon `{&}` at small sizes** — heaviest; `make-icon.mjs` per-size artwork.
 
-Per-release notes are in `CHANGELOG.md`; the audit's per-finding record (5 High + 7 Med + 9 Low + R1,
-all resolved) is in `AUDIT-CHECKLIST.md`.
+**⚠️ RESUME STATE (2026-07-18):** `master` is **local-only, not pushed since the v1.12.3 release** —
+it holds the 4 merged slices above, all captured under `## [Unreleased]` in `CHANGELOG.md`. A **dev**
+eyeball passed for the 3 visual slices; the **installer** eyeball still gates the release.
 
-_Shipped state is also recorded in the [[phase-3.5-p5-awaiting-eyeball-and-release]] memory._
+**To ship Phase 3.7 (once all slices land):** bump **minor → v1.13.0** (feature release), `npm run
+package`, manual **installer eyeball** (tray/hotkey + the new slices), tag `v1.13.0`, GitHub release
+with installer + portable, and resolve `## [Unreleased]` → `## [1.13.0]` in `CHANGELOG.md`.
+
+Other candidates (after 3.7): two-process second-instance smoke test (Phase 3.6), dead `Shift+Alt+F`
+hotkey (Format Document known-issue), parked Phase 4. Audit fully resolved — see `AUDIT-CHECKLIST.md`.
+
+_In-flight / resume detail: [[phase-3.7-in-progress]] memory. v1.12.3 shipped state:
+[[phase-3.5-p5-awaiting-eyeball-and-release]]._
 
 ---
 
@@ -98,11 +110,12 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > ▶ **STATUS (2026-07-18):** all Phase 3 power features shipped (file history, Markdown export,
 > autosave-to-disk, Format Document, folder mode, text highlighter); the Phase 3.5 design-polish pass
 > shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
-> v1.12.2 — see `AUDIT-CHECKLIST.md`). Latest release **v1.12.3**. See ▶ NEXT ACTION at the top for
-> what's next.
+> v1.12.2 — see `AUDIT-CHECKLIST.md`). Latest **release** is **v1.12.3**; **Phase 3.7 polish is in
+> progress on `master` — 4 slices merged, unreleased** (next release will be **v1.13.0**). See ▶ NEXT
+> ACTION at the top for what's next.
 > **Live known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing (works via
 > palette + Edit menu — details under **Format Document** below); ③ the static exe/installer icon can't
-> theme-swap (uses the contrast-safe dark tile — tracked by the taskbar-icon item in Phase 3.6).
+> theme-swap (uses the contrast-safe dark tile — tracked by the taskbar-icon item in Phase 3.7).
 > _(② the clean-quit clipboard/session flush is resolved — audit R1, v1.12.1.)_
 
 - ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). _Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation._
