@@ -652,3 +652,29 @@ test('overlays use the micro-motion entry animation', async () => {
   }
 })
 
+test('toolbar File History button opens the panel and the regroup keeps all buttons', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#toolbar')).toBeVisible()
+
+    // Regroup regression: every pre-existing button must still be present (located by title).
+    for (const title of ['Open file', 'Save', 'Toggle split pane', 'Toggle markdown preview',
+                         'Toggle always on top', 'Start diff', 'Paste from history']) {
+      await expect(win.locator(`.tb-btn[title="${title}"]`)).toHaveCount(1)
+    }
+    // The highlighter (the button that moves groups) survives — its title is dynamic, match partial.
+    await expect(win.locator('.tb-btn[title*="Highlighter"]')).toHaveCount(1)
+
+    // New: a File History button exists and opens the panel (empty state for an unsaved buffer).
+    const histBtn = win.locator('.tb-btn[title="File History"]')
+    await expect(histBtn).toHaveCount(1)
+    await histBtn.click()
+    await expect(win.locator('#file-history')).toBeVisible()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
