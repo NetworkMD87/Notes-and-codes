@@ -17,53 +17,37 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — 🚧 EYEBALL the on-save overwrite warning, then ship it
+## ▶ NEXT ACTION — pick the next candidate (Phase 1 is COMPLETE)
 
-**On-save overwrite warning (Phase 1 fast-follow) — code-complete on `feat/on-save-overwrite-warning`,
-whole-branch reviewed (opus: merge-ready, no Critical/Important). HELD at the eyeball gate.**
-Save now compares the file's on-disk mtime against the baseline the buffer has carried since it was
-opened (persisted through session, so it survives a restart) and warns before overwriting — covering
-what the change bar can't: the app being restarted, a failed watcher, or a last-second change. Autosave
-never prompts; it skips the write and queues the buffer into the change bar instead. This was the last
-outstanding item in Phase 1, which completes when this merges.
+**On-save overwrite warning SHIPPED as v1.12.3 (2026-07-18) — Phase 1 is now fully COMPLETE.**
+Save compares the file's on-disk mtime against the baseline the buffer has carried since it was opened
+(persisted through session, so it survives a restart) and warns before overwriting — covering what the
+change bar can't: the app being restarted, a failed watcher, or a last-second change. Autosave never
+prompts; it skips the write and queues the buffer into the change bar instead. Built on
+`feat/on-save-overwrite-warning`, whole-branch reviewed (opus: merge-ready), eyeballed (all 6 checks
+PASS, below), merged `--no-ff` → `master`, tagged `v1.12.3`.
 
-### ⬜ DO THIS FIRST — manual eyeball checklist (2026-07-17)
+**Remaining candidates** (each its own design → plan → build pass, see "Other candidate work" below):
+the taskbar icon `{&}` fix (root-caused), the toolbar regroup, the dead `Shift+Alt+F` Format hotkey,
+and the parked Phase 4.
 
-Installer is **already built**: `dist\Notes & Codes Setup 1.12.2.exe`.
-⚠️ **It is labelled 1.12.2 but it is NOT the released v1.12.2** — the branch build overwrote that
-artifact in `dist/` (no bump yet). The genuine v1.12.2 installer is on the GitHub release if needed.
-Bumping to v1.12.3 and rebuilding first would make the artifact honest — worth doing before installing.
+### ✅ DONE — manual eyeball checklist PASSED (2026-07-18)
 
-Prep: a scratch file (e.g. `Desktop\test.txt`) containing `original`, plus Notepad.
-The rule under test: **Save must never silently destroy a change someone else made to your file.**
+Ran on the installed branch build. All six checks passed:
 
-1. ⬜ **Core — file changed while the app was closed** (the reason the feature exists).
-   Open `test.txt`, don't edit → **fully quit via tray → Quit** → change it to `theirs` in Notepad, save,
-   close → relaunch → type an edit → `Ctrl+S`.
-   **Expect:** themed prompt _"test.txt" changed on disk since you opened it. Overwrite those changes?_
-   **Cancel** → disk still says `theirs`, change bar offers Reload / Keep mine. **Save again → Overwrite**
-   → your text lands, bar clears.
-2. ⬜ **The quit fix — most important; automated tests structurally cannot reach it.**
-   Open `test.txt`, **type an edit** (leave unsaved) → change the file in Notepad, save → click the
-   window **X** (hides to tray) → **tray → Quit** → native box → **Save**.
-   **Expect:** the window **reappears** with an answerable themed prompt.
-   **FAIL = app sits in the tray doing nothing** (a DOM modal rendering in a hidden window). That is a
-   blocker — report before force-killing. Fixed at `src/main/index.ts:74` (`showWindow()` before
-   `app:saveAllAndQuit`); this checklist item is that fix's only coverage.
-3. ⬜ **Default button — a judgment call, not a pass/fail.** The prompt focuses **Overwrite**, and Enter
-   activates it. That matches the app's `confirmDialog` convention, but it is the one use where the
-   default destroys someone else's data. **Decide whether that's right** — easy to change.
-4. ⬜ **Auto-save must never prompt.** Appearance ▸ Editor → Auto-save to disk **on** → open `test.txt`,
-   edit, wait ~2s → change it in Notepad, save → edit again, wait.
-   **Expect:** the **change bar**, and **no dialog ever**; edits kept, disk untouched. The bar won't
-   dismiss until Reload or a manual Save→Overwrite — intentional (the disk still holds their change).
-5. ⬜ **Normal saves stay boring.** Untouched file → `Ctrl+S` saves silently. **Save As** to a *new* name →
-   only Windows' own "replace?", no second prompt from us.
-6. ⬜ **Standard release checklist** — tray show/hide, global hotkey `Ctrl+Shift+Space`, X → tray.
+1. ✅ **Core — file changed while the app was closed.** Relaunch showed the session buffer (`original`)
+   while disk held `theirs`; `Ctrl+S` raised the overwrite prompt; Cancel kept the disk change + the
+   change bar; Save → Overwrite landed the edit and cleared the bar.
+2. ✅ **The quit fix.** Window **reappeared** with an answerable prompt — no tray hang. Confirms the
+   `showWindow()`-before-`app:saveAllAndQuit` fix in `src/main/index.ts`; this item is its only coverage.
+3. ✅ **Default button.** The **Overwrite** default was reviewed and **kept** (matches the app's
+   `confirmDialog` convention).
+4. ✅ **Auto-save never prompts.** Change bar only, no dialog; edits kept, disk untouched.
+5. ✅ **Normal saves stay boring.** Silent `Ctrl+S`; Save-As showed only Windows' own "replace?".
+6. ✅ **Standard release checklist.** Tray show/hide, global hotkey `Ctrl+Shift+Space`, X → tray — all good.
 
-**Then to ship:** bump patch → **v1.12.3** (entry lands under `Fixed`; resolve the `## [Unreleased]`
-heading in `CHANGELOG.md` and the "not yet merged" wording on the Phase-1 bullet below), `npm run package`,
-merge `--no-ff` → `master`, tag `v1.12.3`, GitHub release with installer + portable.
+**Shipped v1.12.3 (2026-07-18):** `CHANGELOG` `[Unreleased]` → `[1.12.3]`, version bumped, `npm run
+package`, merged `--no-ff` → `master`, tagged `v1.12.3`, GitHub release with installer + portable.
 
 **v1.12.2 SHIPPED (2026-07-16).** Robustness release — the batched **audit Phases 2–5**, completing
 the v1.12.0 codebase audit: **every finding is resolved (5 High + 7 Med + 9 Low + R1).** Tag `v1.12.2`
@@ -173,12 +157,12 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 **Fast-follow (deferred from Phase 1):**
 
-- ✅ **On-save overwrite warning** (**S**) — **code-complete on `feat/on-save-overwrite-warning`;
-  not yet merged or released.** Save now compares the file's on-disk mtime against the baseline the
-  buffer has carried since it was opened (persisted through session, so it survives a restart) and
-  warns before overwriting. Covers what the change bar can't: the app being restarted, a failed
-  watcher, or a last-second change. Autosave skips the write and queues the buffer into the change
-  bar instead of prompting. **This was Phase 1's last open item — Phase 1 completes when it merges.**
+- ✅ **On-save overwrite warning** (**S**) — **shipped v1.12.3 (2026-07-18).** Save compares the
+  file's on-disk mtime against the baseline the buffer has carried since it was opened (persisted
+  through session, so it survives a restart) and warns before overwriting. Covers what the change bar
+  can't: the app being restarted, a failed watcher, or a last-second change. Autosave skips the write
+  and queues the buffer into the change bar instead of prompting. **This was Phase 1's last open
+  item — Phase 1 is now COMPLETE.**
 
 ## ✅ Phase 2 — Look & Feel (shipped v1.1)
 
@@ -201,7 +185,7 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 _The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited)._
 
-> ▶ **STATUS (2026-07-16) — v1.12.2 shipped; design Phases 3 + 3.5 complete. AUDIT COMPLETE & RELEASED: all 5 phases of the merged audit checklist (`AUDIT-CHECKLIST.md`) done — 5 High + 7 Med + 9 Low + R1 fixed (L3's fsync sub-part verified-but-rejected; tmp-cleanup shipped). Phase 1 → v1.12.1; Phases 2–5 → v1.12.2 (tagged, GitHub release live, all manual eyeballs PASSED). In flight: the on-save overwrite warning is code-complete on `feat/on-save-overwrite-warning` (unmerged) — see ▶ NEXT ACTION at the top for current status. Remaining candidates: taskbar icon `{&}`, toolbar regroup, dead `Shift+Alt+F` hotkey, parked Phase 4.**
+> ▶ **STATUS (2026-07-18) — v1.12.3 shipped; design Phases 3 + 3.5 complete. AUDIT COMPLETE & RELEASED: all 5 phases of the merged audit checklist (`AUDIT-CHECKLIST.md`) done — 5 High + 7 Med + 9 Low + R1 fixed (L3's fsync sub-part verified-but-rejected; tmp-cleanup shipped). Phase 1 → v1.12.1; Phases 2–5 → v1.12.2 (tagged, GitHub release live, all manual eyeballs PASSED). Latest: the on-save overwrite warning shipped as v1.12.3 (2026-07-18), completing Phase 1 — see ▶ NEXT ACTION at the top. Remaining candidates: taskbar icon `{&}`, toolbar regroup, dead `Shift+Alt+F` hotkey, parked Phase 4.**
 > All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
 > folder mode, text highlighter).
 > • **Robustness (v1.7.1):** the external v1.7.0 bug audit is triaged — all 19 findings
