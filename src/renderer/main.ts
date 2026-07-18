@@ -372,6 +372,16 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   syncWatch()
   return true
 }
+async function revertActive(): Promise<void> {
+  const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
+  const b = manager.get(id); if (!b) return
+  if (!b.filePath) { toast('Nothing to revert — save the file first.'); return }
+  if (!b.dirty) { toast('No unsaved changes to revert.'); return }
+  const ok = await confirmDialog(`Discard unsaved changes to "${b.title}" and reload the saved version?`, 'Revert')
+  if (!ok) return
+  await reloadBuffer(id)
+  toast('Reverted to the saved version.')
+}
 async function saveActive(): Promise<void> {
   const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
   try {
@@ -628,6 +638,7 @@ const helpOverlay = new HelpOverlay()
 registerCommands({
   palette, manager, view, diff, paneFor, showActive, scheduleSessionSave, closeTab,
   saveActive, saveAll, openFromDisk, startDiff, diffClipboard, diffFiles,
+  revert: () => void revertActive(),
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
   togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
   toggleAlwaysOnTop,
@@ -733,6 +744,7 @@ installMenuCommands({
   appearance: openAppearance, aot: toggleAlwaysOnTop,
   diff: startDiff, 'diff-clip': () => void diffClipboard(), 'diff-files': () => void diffFiles(),
   history: openHistory,
+  revert: () => void revertActive(),
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
   'format-doc': () => void paneFor(view.focusedPane()).formatDocument(),

@@ -30,6 +30,7 @@ export function buildMenu(d: MenuDeps): void {
       cmd('Save', 'save', 'CmdOrCtrl+S'),
       cmd('Save As…', 'save-as', 'CmdOrCtrl+Shift+A'),
       cmd('Save All', 'save-all', 'CmdOrCtrl+Shift+S'),
+      cmd('Revert File', 'revert'),
       cmd('Close Tab', 'close', 'CmdOrCtrl+W'),
       { type: 'separator' },
       { label: 'Export', submenu: [

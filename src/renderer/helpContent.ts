@@ -22,6 +22,7 @@ export const HELP_SECTIONS: HelpCategory[] = [
     { label: 'Save',              keys: 'Ctrl+S' },
     { label: 'Save As…',          keys: 'Ctrl+Shift+A' },
     { label: 'Save All',          keys: 'Ctrl+Shift+S', desc: 'Save every open tab at once.' },
+    { label: 'Revert File',       desc: 'Discard unsaved changes and reload the saved version from disk.' },
     { label: 'Close Tab',         keys: 'Ctrl+W' },
     { label: 'Export to HTML…',   desc: 'Turn the current note (written in Markdown) into a web-page file.' },
     { label: 'Export to PDF…',    desc: 'Turn the current note (written in Markdown) into a PDF document.' },
