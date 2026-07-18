@@ -13,6 +13,8 @@ _Phase 3.7 polish & discoverability — accumulating; ships as one release when 
 - **File History is now on the toolbar.** Previously reachable only via the command palette and
   Tools menu, File History now has a button on the top toolbar (grouped with Open/Save). The toolbar
   was also regrouped so the dividers read `file | view | tools`.
+- **Tabs have rounded top corners** — a 6px top-corner radius for a modern browser-tab look; bottoms
+  stay square so tabs sit flush with the strip.
 
 ### Fixed
 

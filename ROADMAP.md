@@ -179,11 +179,11 @@ features so newbies can find them, and tidy the toolbar. Low-risk — mostly one
 command-registry changes on systems already in place. Ships as **one branch under one version bump**
 (polish-pass convention — don't bump per item; see [[polish-pass-version-hold]])._
 
-- ⬜ **Rounded tab tops** (**S**) — round the **top** corners of tabs for the classic browser-tab look
-  (top-only is right: tabs anchor to the strip, and the active tab must visually connect to the content
-  below so it doesn't read as detached). Floating chrome (toasts / pop-ups / pickers) is **already**
-  rounded 4px via `--radius` (`index.html`), so this is tabs-only; softening `--radius` globally is a
-  separate taste call, not top-corner rounding on floating boxes.
+- ✅ **Rounded tab tops** (**S**) — **merged to `master` 2026-07-18 (no version bump — Phase 3.7 bundle
+  ships together).** Tabs now carry a 6px top-corner radius (bottoms square, flush with the strip) for a
+  modern browser-tab look. CSS-only in `index.html`; the active tab already color-matches the editor
+  (`--tab-active-bg === --editorbg`), so it reads as connected to the content. Smoke-guarded (top-only).
+  Floating chrome was already rounded via `--radius`; softening that globally stays a separate taste call.
 - ✅ **File History on the toolbar + toolbar regroup** (**S**) — **merged to `master` 2026-07-18 (no
   version bump — the Phase 3.7 bundle ships together).** Added a **History** button grouped with
   Open/Save and regrouped the dividers to `[Open Save History] | [Split Preview Pin] |
