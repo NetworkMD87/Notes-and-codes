@@ -3,6 +3,7 @@ import { ACCENT_PALETTE, HIGHLIGHT_COLOURS, type HighlightColour } from '../shar
 export interface ToolbarHandlers {
   open: () => void
   save: () => void
+  openHistory: () => void
   toggleSplit: () => void
   togglePreview: () => void
   togglePin: () => void
@@ -23,6 +24,7 @@ const ICONS = {
   paste: `<svg ${S}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>`,
   pin: `<svg ${S}><path d="M12 17v5"/><path d="M9 10.76V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v5.76l2 3.24H7z"/></svg>`,
   highlighter: `<svg ${S}><path d="m9 11-6 6v3h3l6-6"/><path d="m17 7 3-3a1.4 1.4 0 0 0-2-2l-3 3"/><path d="m12 8 4 4"/><path d="M9 11l4 4"/></svg>`,
+  history: `<svg ${S}><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>`,
 }
 
 /** Solid swatch colours = the shared palette hexes (the editor highlights are the semi-transparent .hl-*). */
@@ -81,12 +83,13 @@ export class Toolbar {
     this.el.append(
       mk('Open file', ICONS.open, h.open),
       mk('Save', ICONS.save, h.save),
+      mk('File History', ICONS.history, h.openHistory),
       sep(),
       this.splitBtn,
       this.previewBtn,
       this.pinBtn,
-      hlWrap,
       sep(),
+      hlWrap,
       mk('Start diff', ICONS.diff, h.startDiff),
       mk('Paste from history', ICONS.paste, h.pasteFromHistory)
     )

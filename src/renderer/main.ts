@@ -548,6 +548,7 @@ function insertSnippet(): void {
 const toolbar = new Toolbar(document.getElementById('header')!, {
   open: openFromDisk,
   save: saveActive,
+  openHistory: () => void fileHistory.open(),
   toggleSplit: () => { view.setSplit(!view.isSplit()); showActive() },
   togglePreview,
   togglePin: toggleAlwaysOnTop,
