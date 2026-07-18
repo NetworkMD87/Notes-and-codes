@@ -191,11 +191,12 @@ command-registry changes on systems already in place. Ships as **one branch unde
   command — no behaviour change, and **no `helpContent.ts` change** (File History was already listed).
   Smoke-covered (`app.spec.ts`); spec + plan in `docs/superpowers/`. _(Superseded the deferred "File
   History status-bar entry" idea — toolbar chosen as the single, louder surface.)_
-- ⬜ **"Revert File" command — with a confirm** (**S**) — one action to discard unsaved edits and reload
-  the last-saved / on-disk content ("I made a mess, take me back"). **Must confirm first** (it destroys
-  unsaved work): palette + Edit menu, **no raw toolbar button** (a one-click discard is a newbie
-  footgun; `Ctrl+Z` already covers the immediate oops). Complements File History (old saved versions)
-  and the change bar (external conflicts). Add to `helpContent.ts`.
+- ✅ **"Revert File" command — with a confirm** (**S**) — **merged to `master` 2026-07-18 (no version
+  bump — Phase 3.7 bundle ships together).** Discards unsaved edits and reloads the current file from
+  disk; confirms first when dirty, no-ops with a toast on untitled/clean buffers. Palette + **File
+  menu** (placed with Save — more conventional than Edit, the inverse of Save). Reuses the existing
+  `reloadBuffer` + themed `confirmDialog`; added to `helpContent.ts`. Smoke-covered (`app.spec.ts`).
+  Complements File History (old saved versions) and the change bar (external conflicts).
 - ⬜ **Theme-picker swatch previews** (**S**, from Phase 3.5 Slice C) — show each theme's palette as
   small swatches in the picker so you can preview a theme before applying it.
 - ⬜ **Highlighter pen-tip SVG cursor** (**S**, from Phase 3.5 Slice D) — replace the paint-mode

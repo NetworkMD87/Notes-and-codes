@@ -15,6 +15,8 @@ _Phase 3.7 polish & discoverability — accumulating; ships as one release when 
   was also regrouped so the dividers read `file | view | tools`.
 - **Tabs have rounded top corners** — a 6px top-corner radius for a modern browser-tab look; bottoms
   stay square so tabs sit flush with the strip.
+- **Revert File command** — discard unsaved changes and reload the current file from disk (confirms
+  first when there are unsaved edits). In the command palette and the File menu.
 
 ### Fixed
 
