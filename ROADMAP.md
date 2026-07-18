@@ -17,115 +17,26 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — pick the next candidate (Phase 1 is COMPLETE)
+## ▶ NEXT ACTION — pick the next candidate
 
-**On-save overwrite warning SHIPPED as v1.12.3 (2026-07-18) — Phase 1 is now fully COMPLETE.**
-Save compares the file's on-disk mtime against the baseline the buffer has carried since it was opened
-(persisted through session, so it survives a restart) and warns before overwriting — covering what the
-change bar can't: the app being restarted, a failed watcher, or a last-second change. Autosave never
-prompts; it skips the write and queues the buffer into the change bar instead. Built on
-`feat/on-save-overwrite-warning`, whole-branch reviewed (opus: merge-ready), eyeballed (all 6 checks
-PASS, below), merged `--no-ff` → `master`, tagged `v1.12.3`.
+**Phase 1 is COMPLETE.** The on-save overwrite warning shipped as **v1.12.3** (2026-07-18): Save warns
+before overwriting a file that changed on disk (on-disk mtime vs the buffer's persisted baseline;
+autosave queues the change bar instead of prompting). Eyeballed on the installed build — all checks PASS,
+including the save-on-quit window-reappear that automated tests can't reach — then merged, tagged, and
+released. Nothing is in flight.
 
-**Remaining candidates** (each its own design → plan → build pass, see "Other candidate work" below):
-the taskbar icon `{&}` fix (root-caused), the toolbar regroup, the dead `Shift+Alt+F` Format hotkey,
-and the parked Phase 4.
+Pick the next item — each gets its own design → plan → build pass. Full detail is in the sections below:
 
-### ✅ DONE — manual eyeball checklist PASSED (2026-07-18)
+- **Taskbar icon `{&}` at small sizes** (**S–M**, root-caused) — Phase 3.6.
+- **Toolbar regroup** (**S**) — Phase 3.6.
+- **Real two-process second-instance smoke test** (**S**) — Phase 3.6.
+- **Dead native `Shift+Alt+F` Format hotkey** — Format Document known-issue (Phase 3).
+- **Parked Phase 4** — code signing, native Win11 "Open with", configurable-hotkey UI, snippet tabstops, launch-on-login.
 
-Ran on the installed branch build. All six checks passed:
+Per-release notes are in `CHANGELOG.md`; the audit's per-finding record (5 High + 7 Med + 9 Low + R1,
+all resolved) is in `AUDIT-CHECKLIST.md`.
 
-1. ✅ **Core — file changed while the app was closed.** Relaunch showed the session buffer (`original`)
-   while disk held `theirs`; `Ctrl+S` raised the overwrite prompt; Cancel kept the disk change + the
-   change bar; Save → Overwrite landed the edit and cleared the bar.
-2. ✅ **The quit fix.** Window **reappeared** with an answerable prompt — no tray hang. Confirms the
-   `showWindow()`-before-`app:saveAllAndQuit` fix in `src/main/index.ts`; this item is its only coverage.
-3. ✅ **Default button.** The **Overwrite** default was reviewed and **kept** (matches the app's
-   `confirmDialog` convention).
-4. ✅ **Auto-save never prompts.** Change bar only, no dialog; edits kept, disk untouched.
-5. ✅ **Normal saves stay boring.** Silent `Ctrl+S`; Save-As showed only Windows' own "replace?".
-6. ✅ **Standard release checklist.** Tray show/hide, global hotkey `Ctrl+Shift+Space`, X → tray — all good.
-
-**Shipped v1.12.3 (2026-07-18):** `CHANGELOG` `[Unreleased]` → `[1.12.3]`, version bumped, `npm run
-package`, merged `--no-ff` → `master`, tagged `v1.12.3`, GitHub release with installer + portable.
-
-**v1.12.2 SHIPPED (2026-07-16).** Robustness release — the batched **audit Phases 2–5**, completing
-the v1.12.0 codebase audit: **every finding is resolved (5 High + 7 Med + 9 Low + R1).** Tag `v1.12.2`
-pushed, GitHub release live with installer + portable; the manual tray/hotkey + H1 Save-As + L4
-truncated-note eyeballs PASSED. What landed: P2 — H4 (malformed-session-bricks-startup) + H3
-(tray-hidden Explorer-open); P3 — H5 (settings write races → serialized `settings:update`), M4 (dup
-stores), M5 (atomic exports), M6 (startup GC sweep); P4 — M2 (export code verbatim), M3 (file-open
-size + binary guard), M7 (on-disk-conflict queue); P5 — L1 theme-boundary move, L2 IPC sender
-validation, L3 atomicWrite tmp-cleanup (**fsync verified-but-rejected** — Windows `FlushFileBuffers`
-stalled the write path for seconds), L4 walkFiles truncation signal, L5–L9 small guards/clamps.
-**Once this branch ships, the remaining candidates are:** the taskbar icon `{&}` fix, the toolbar
-regroup, the dead `Shift+Alt+F` Format hotkey, and the parked Phase 4 — see "Other candidate work".
-
-**v1.12.1 (2026-07-11).** Patch — **audit Phase 1** (H1 Save-As-cancel, H2 palette close, M1 dirty-
-untitled, R1 clean-quit flush: data-loss & close/quit safety; see `CHANGELOG.md`).
-
-**v1.12.0 (2026-07-08).** Phase 3.5 P1–P5 merged to `master`, tagged **`v1.12.0`**, pushed, GitHub
-release live with the installer + portable attached, README updated. The repo is **MIT-licensed**
-(`LICENSE` + `THIRD_PARTY_NOTICES.md` for the bundled SIL-OFL fonts). Manual tray/hotkey checklist
-PASSED on the 1.12.0 build.
-
-**The merged audit checklist** (`AUDIT-CHECKLIST.md`) — both codebase audits consolidated into one
-5-phase work-list (the v1.7 + v1.12 source files were folded in and deleted). **All 5 phases are now
-complete and released** (Phase 1 → v1.12.1, Phases 2–5 → v1.12.2); the file is kept as the resolved
-record. The flow followed the v1.7.1 triage — verify each finding ("audit the audit") before fixing.
-
-1. ✅ **Phase 1 — data-loss & close/quit safety — COMPLETE** (5 phases total; 2026-07-10 → 07-11).
-   - ✅ **H1 — Save-As-cancel drops the file association** — FIXED + merged (`fix/audit-p1-data-loss`
-     → `master`): `saveBuffer` gained a `forceDialog` flag; Save-As no longer nulls `filePath` up
-     front, so a cancelled dialog is a no-op. _Manual installer eyeball still owed._
-   - ✅ **H2 · M1 — palette + dirty-untitled close safety** — FIXED + merged (`fix/audit-p1-close-safety`
-     → `master`): palette "Close Tab" now routes through `closeTab` (no more dirty-discard / Monaco
-     leak); the dirty-confirm fires on untitled scratch content too. Bonus: fixed a `confirmDialog`
-     Enter-bleed the tests surfaced. Smoke-covered (`close-safety.spec.ts`).
-   - ✅ **R1 — clean-quit clipboard/session flush** (v1.7 I8 residual) — FIXED + merged
-     (`fix/audit-p1-clean-quit-flush` → `master`): a clean quit now flushes debounced writes via a
-     shared `flushPendingWritesBeforeQuit()` + `app:flushAndQuit` signal. Smoke-covered.
-   - ✅ **Phase 2 — startup & window reliability — COMPLETE** (released in v1.12.2):
-     **H4** malformed session no longer bricks startup (`SessionStore.load` filters + `boot().catch`
-     fallback), **H3** tray-hidden Explorer-open now shows the window (`showWindow()` in
-     `second-instance`). Unit + smoke covered (`sessionStore.test.ts`, `startup-window.spec.ts`).
-   - ✅ **Phase 3 — store integrity & write races — COMPLETE** (released in v1.12.2):
-     **H5** serialized `settings:update` (chain + partial merge) replaces 17 racy renderer
-     read-modify-writes; **M4** stores constructed once and shared; **M5** atomic HTML/PDF exports;
-     **M6** startup GC sweep (ENOENT-only) for the history + highlight stores. **All Highs cleared.**
-   - ✅ **Phase 4 — editor correctness & content fidelity — COMPLETE** (released in v1.12.2;
-     `fix/audit-p4-editor-correctness` → `master` `--no-ff`, 2026-07-11): **M2** export renders
-     code/plain-text verbatim in `<pre><code>` (only markdown via markdown-it) instead of mangling
-     every buffer through the Markdown pipeline; **M3** file-open size guard (50 MB) + binary/NUL
-     sniff, `ReadResult` union with a toast on refusal; **M7** on-disk conflicts queue with an
-     "(N more)" hint instead of clobbering the single change bar. **All 7 Meds cleared.** Unit +
-     smoke covered (`exportDoc.test.ts`, `fileService.test.ts`, `change-conflicts.spec.ts`).
-   - ✅ **Phase 5 — hardening & cleanups — COMPLETE** (released in v1.12.2, 2026-07-16; each item
-     its own `--no-ff` merge): **L1** `THEME_LIST` moved to `src/shared/` (main no longer imports a
-     renderer module); **L2** IPC sender validation on every handler (`senderGuard`); **L3** `atomicWrite`
-     tmp-cleanup on failure — **fsync verified-but-rejected** (Windows `FlushFileBuffers` stalled the
-     write path >5s, reproducibly flaking a smoke test; marginal rare-on-NTFS gain); **L4** `walkFiles`
-     returns `{files, truncated}` + Quick Open "index truncated" hint; **L5–L9** small guards/clamps
-     (chain-map GC, refreshStatus null-guard, `fileArgFrom` existsSync, clipboard clamp, escapeHtml `'`).
-     Unit + smoke covered. **AUDIT COMPLETE — every v1.12.0 finding resolved.**
-   - **Released as v1.12.2** (2026-07-16) — the Phase 2–5 batch. Full detail in `AUDIT-CHECKLIST.md`.
-
-Other candidate work (each gets its own design → plan → build pass):
-
-2. **Dead native `Shift+Alt+F` Format hotkey** — works via palette + Edit menu; the OS accelerator
-   does nothing (one fix attempt failed — see the Format Document known-issue below).
-3. **Phase 3.6 QoL** (mostly shipped) or **parked Phase 4** (code signing, native Win11 Open-with,
-   configurable-hotkey UI, snippet tabstops, launch-on-login).
-4. **Toolbar regroup** (**S**) — the divider groups aren't logical (highlighter sits with the view
-   toggles; diff sits with paste-from-history). Regroup: file ops | view toggles | tools. See Phase 3.6.
-5. **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16) —
-   the taskbar button uses the app's exe/shortcut **identity icon** (`build/icon.ico`), not
-   `win.setIcon`; icon-cache rebuild ruled out (full rebuild changed nothing; a second isolated
-   instance's plain window button DOES show `{&}`, proving the window-icon code works). Fix in
-   `make-icon.mjs`: compose `icon.ico` with `{&}` glyph artwork at 16/24/32 and the `{N&C}` tile
-   at 48/256. See Phase 3.6.
-
-_See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state._
+_Shipped state is also recorded in the [[phase-3.5-p5-awaiting-eyeball-and-release]] memory._
 
 ---
 
@@ -185,32 +96,15 @@ _See [[phase-3.5-p5-awaiting-eyeball-and-release]] memory for the shipped state.
 
 _The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited)._
 
-> ▶ **STATUS (2026-07-18) — v1.12.3 shipped; design Phases 3 + 3.5 complete. AUDIT COMPLETE & RELEASED: all 5 phases of the merged audit checklist (`AUDIT-CHECKLIST.md`) done — 5 High + 7 Med + 9 Low + R1 fixed (L3's fsync sub-part verified-but-rejected; tmp-cleanup shipped). Phase 1 → v1.12.1; Phases 2–5 → v1.12.2 (tagged, GitHub release live, all manual eyeballs PASSED). Latest: the on-save overwrite warning shipped as v1.12.3 (2026-07-18), completing Phase 1 — see ▶ NEXT ACTION at the top. Remaining candidates: taskbar icon `{&}`, toolbar regroup, dead `Shift+Alt+F` hotkey, parked Phase 4.**
-> All power features shipped (file history, Markdown export, autosave-to-disk, Format Document,
-> folder mode, text highlighter).
-> • **Robustness (v1.7.1):** the external v1.7.0 bug audit is triaged — all 19 findings
-> verified, **16 fixed**, 2 defensive, **1 rejected (I5)**. Headline: atomic writes
-> (`atomicWrite` tmp+rename across `fileService` + all 7 stores), surfaced save-failure toasts,
-> dirty-tab-close + quit flush. See `AUDIT-CHECKLIST.md` ▸ _Appendix A_.
-> • **Identity (v1.8.0):** app logo + **theme-aware small icons** — the tray and live
-> window/taskbar button use the `{&}` glyph and swap bright/dark with the Windows taskbar
-> theme; static exe/installer icon is the dark `{N&C}` tile. Brand pack in `assets/branding/`.
-> Manually eyeballed + released (GitHub release v1.8.0, installer attached).
-> **v1.11.0 SHIPPED (2026-07-03) — drag-to-reorder tabs.** Built + whole-branch reviewed on
-> `feat/drag-reorder-tabs` (opus: ready to merge), eyeballed on the installed build (drag feel +
-> accent insertion mark + persist across restart + tray/hotkey checklist — PASS), merged `--no-ff`
-> → `master`, tagged `v1.11.0`.
-> **Phase 3.5 design polish (P1–P5) SHIPPED as v1.12.0** — status bar / stacked palette /
-> micro-motion (P1), accent borders + one unified scrollbar (P2), `overlayManager` topmost-Esc +
-> accent surfaces (P3), accent-text auto-contrast + one shared 18-colour `ACCENT_PALETTE` driving
-> both accents and the highlighter (P4), 13 themes + IBM Plex Mono (P5). A P2-branch bonus fix
-> turned the global-hotkey conflict from a **blocking modal** into a **non-blocking toast**
-> (`app:notify` IPC), gated in smoke via `NC_HEADLESS` + a regression test. Full per-slice detail
-> in the **Phase 3.5** section below. _(v1.9.0 in-app Help; v1.10.0 Appearance-panel polish.)_
-> **Carried known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing
-> (works via palette + Edit menu — details under **Format Document**); ② clean-quit clipboard/session
-> flush (v1.7 audit I8 residual — now tracked as **R1** in `AUDIT-CHECKLIST.md` Phase 1); ③ static
-> exe/installer icon can't theme-swap (uses the contrast-safe dark tile).
+> ▶ **STATUS (2026-07-18):** all Phase 3 power features shipped (file history, Markdown export,
+> autosave-to-disk, Format Document, folder mode, text highlighter); the Phase 3.5 design-polish pass
+> shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
+> v1.12.2 — see `AUDIT-CHECKLIST.md`). Latest release **v1.12.3**. See ▶ NEXT ACTION at the top for
+> what's next.
+> **Live known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing (works via
+> palette + Edit menu — details under **Format Document** below); ③ the static exe/installer icon can't
+> theme-swap (uses the contrast-safe dark tile — tracked by the taskbar-icon item in Phase 3.6).
+> _(② the clean-quit clipboard/session flush is resolved — audit R1, v1.12.1.)_
 
 - ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). _Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation._
 - ✅ **Markdown export** (shipped v1.4) — export the active tab (rendered as Markdown) to a standalone **HTML** file or **PDF** via File ▸ Export or the palette; clean light document style, self-contained (no CDN). _Deferred: relative-image embedding, custom page size/margins, batch export, code syntax highlighting._
@@ -224,68 +118,35 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 ## ✅ Phase 3.5 — Design polish pass (P1–P5 complete, merged to master; v1.12.0)
 
 _Holistic "does it feel as premium as it can?" pass. Deliberately sequenced **after** the
-Phase 3 structural features (folder tree, quick-open, export view) so every surface is
-polished **once** — re-polishing after each new surface lands is exactly what the sequencing
-logic above is meant to avoid. The token system already gives new surfaces the right
-colours; this pass tunes what tokens don't fix — spacing, density, type scale, hierarchy,
-micro-motion._
+Phase 3 structural features so every surface is polished **once** — the token system already gives new
+surfaces the right colours; this pass tuned what tokens don't fix: spacing, density, type scale,
+hierarchy, micro-motion._
 
-- ✅ **Appearance panel: interface font + landscape layout** (shipped v1.10.0) — a separate,
-  opt-in **Interface font** for app chrome (default **System** = no change out of the box; the
-  list includes sans + the mono coding fonts + Custom), distinct from the editor code font
-  (now labeled "Editor font"); the panel re-laid **landscape** (theme list left, accent / font /
-  editor / folder right) with a wrap fallback for narrow windows. _(The broader whole-app visual
-  critique below remains ⬜.)_
-- ✅ **Whole-app visual critique + targeted upgrade** (**M**) — review the real surfaces
-  (tabs, toolbar, status bar, file-history / appearance panels, overlays, empty states) for
-  spacing, density, type scale, hierarchy, and micro-motion; apply refinements through the
-  existing token system. Kicked off by a design-critique session on the running app.
-  **P1 delivered + merged** (`feat/design-polish-p1` → `master`, eyeball PASS 2026-07-03):
-  de-loudified status bar, command-palette stacked box + themed focus, and a reusable
-  token-driven **micro-motion layer** (transitions + `overlayIn` overlay entry +
-  `prefers-reduced-motion` kill-switch) that later polish inherits for free. **Version
-  intentionally NOT bumped** — the whole 3.5 polish pass ships under one version bump when it's
-  done, not per-slice. **P2 delivered + merged** (`feat/design-polish-p2` → `master`, eyeball PASS
-  2026-07-04): accent borders on all floating chrome + one unified container-agnostic scrollbar
-  (user notes 1+2 below) + snippet-manager theming. **P3 delivered + merged**
-  (`feat/design-polish-p3` → `master`, 2026-07-04): shared `overlayManager` (reliable
-  capture-phase Esc closes the **topmost** overlay — appearance + file-history gained Esc-close;
-  12 overlays unified), darker + `blur(3px)` scrim depth, `accent-color` checkboxes, icon-only
-  `◐` theme button, highlighter `crosshair`, and inline-SVG **empty-state glyphs** (File History /
-  Snippets). **Still outstanding (Slice C / D):** theme-picker swatch previews, accent picker +
-  auto-contrast + more presets, more bundled themes/fonts; highlighter **pen-tip SVG** deferred
-  (needs a CSP `img-src data:` decision — crosshair shipped).
-- **User polish notes (from the P1 eyeball, 2026-07-03)** — three directions:
-  1. ✅ **Accent border on all toasts + pop-out menus** (delivered P2) — the notify toast (`.toast`),
-     context menu (`#ctx-menu`), toolbar highlighter popup (`.tb-hl-pop`), and every picker/overlay
-     box now carry a `1px solid var(--accent)` border, matching the Appearance card. Absorbed the
-     "Toast polish" item. _(P2 also themed the snippet-manager fields/buttons — a stark-white default
-     the eyeball caught.)_
-  2. ✅ **Unify scrollbars** (delivered P2) — one global, container-agnostic `::-webkit-scrollbar`
-     style (transparent 3px border + `background-clip:padding-box`) replaced the Help-only block;
-     every native scrollbar now matches, Monaco's own scrollbars untouched.
-  3. ✅ **Use accent more boldly (but not over the top)** — "don't be scared of a little colour":
-     delivered across P2's borders + P3's accent surfaces + P4's accent-text auto-contrast (accent is
-     safe on any surface — text stays legible) + P5's expanded theme/accent range. Direction applied
-     through the whole pass, kept tasteful.
-- ✅ Fold in the two deferred **Phase-2 token tweaks**: status-bar `--muted` dimming (P1) and
-  accent-text auto-contrast (P4) — both delivered.
-- ✅ **More accent colours** (**S**, delivered P4) — `ACCENT_SWATCHES` 6 → **18** curated accents
-  spanning the wheel (+ a neutral Slate). A native `<input type=color>` picker was tried but
-  **dropped per user preference** (fiddly / dismissed on click) — curated presets only. Pairs
-  with accent-text auto-contrast so the light presets stay legible.
-- ✅ **More bundled themes + fonts** (**S**, delivered P5) — **5 new themes** (8 → 13): Nord,
-  Dracula, Gruvbox Dark, Tokyo Night + Gruvbox Light (cohesive `makeTheme` palettes, accent
-  auto-contrast). Fonts: bundled **IBM Plex Mono** (lean 400/700) as a 3rd editor font + surfaced
-  system options (Lucida Console; Calibri/Tahoma/Verdana/Arial/Georgia for the interface font).
-  **Phase 3.5 is COMPLETE (P1–P5) and SHIPPED as v1.12.0** — version bumped, packaged, manual
-  tray/hotkey checklist PASSED, tagged `v1.12.0`, pushed, GitHub release live.
-- ✅ **Toast polish** (**S**, delivered P2) — the notify toast (`.toast`) now carries the
-  `1px solid var(--accent)` border (absorbed into user-note 1 above), reading as intentional chrome.
-- ✅ **Highlighter cursor polish** (**S**, delivered P3) — paint mode now shows `crosshair`
-  instead of the browser `cell` cursor. _Deferred: a pen-tip `cursor:url(...)` SVG matching the
-  toolbar icon — a `data:` cursor is blocked by CSP (`img-src` → `default-src 'self'`), so it
-  needs a deliberate `img-src 'self' data:` relaxation or a bundled cursor asset._
+- ✅ **Appearance panel: interface font + landscape layout** (v1.10.0) — a separate, opt-in **Interface
+  font** for app chrome (default **System**), distinct from the editor code font; panel re-laid
+  landscape (theme list left; accent / font / editor / folder right) with a narrow-window wrap fallback.
+- ✅ **Whole-app visual critique + targeted upgrade** (**M**, P1–P3) — reviewed the real surfaces (tabs,
+  toolbar, status bar, panels, overlays, empty states) and refined through the token system:
+  de-loudified status bar; stacked command palette + themed focus; a reusable token-driven micro-motion
+  layer (`overlayIn` entry + `prefers-reduced-motion` kill-switch that later polish inherits); accent
+  borders on all floating chrome; one unified container-agnostic scrollbar; shared `overlayManager`
+  (capture-phase Esc closes the topmost overlay); `accent-color` checkboxes; icon-only `◐` theme button;
+  highlighter `crosshair`; inline-SVG empty-state glyphs. _Still outstanding (Slice C/D): theme-picker
+  swatch previews; a highlighter **pen-tip SVG cursor** (deferred — a `data:` cursor is CSP-blocked, so
+  it needs an `img-src 'self' data:` relaxation or a bundled cursor asset; crosshair shipped)._
+- ✅ **User polish notes (P1 eyeball, 2026-07-03)** — all delivered: accent border on every toast +
+  pop-out menu (P2, + snippet-manager theming); one unified scrollbar (P2); use accent more boldly but
+  tasteful (P2 borders → P3 accent surfaces → P4 accent-text auto-contrast → P5 expanded range).
+- ✅ **Phase-2 token tweaks folded in** — status-bar `--muted` dimming (P1) + accent-text auto-contrast
+  (P4, `contrastText()` YIQ).
+- ✅ **More accent colours** (**S**, P4) — `ACCENT_SWATCHES` 6 → **18** curated accents spanning the
+  wheel (+ a neutral Slate). A native `<input type=color>` picker was tried but **dropped per user
+  preference** (fiddly / dismissed on click) — curated presets only.
+- ✅ **More bundled themes + fonts** (**S**, P5) — **5 new themes** (8 → 13): Nord, Dracula, Gruvbox
+  Dark/Light, Tokyo Night; bundled **IBM Plex Mono** (3rd editor font) + surfaced system font options.
+
+**Phase 3.5 is COMPLETE (P1–P5), SHIPPED as v1.12.0** — packaged, manual tray/hotkey checklist PASSED,
+tagged, pushed, GitHub release live.
 
 ## ⬜ Phase 3.6 — Quality-of-life & UX (independent of 3.5 — can interleave)
 
