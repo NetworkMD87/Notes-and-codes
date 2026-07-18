@@ -172,7 +172,7 @@ Neither depends on 3.5 — they can land before, during, or after it._
   Esc not closing the About view). _Deferred: a dedicated hotkey (F1/Monaco conflict),
   clickable-to-run rows, auto-derived content, a shared shortcut-constants refactor._
 
-## ⬜ Phase 3.7 — Polish & discoverability (round 2)
+## 🚧 Phase 3.7 — Polish & discoverability (round 2)
 
 _A second small polish/QoL cluster: finish the Phase 3.5 Slice C/D leftovers, surface the buried safety
 features so newbies can find them, and tidy the toolbar. Low-risk — mostly one-file CSS / token /
@@ -184,13 +184,13 @@ command-registry changes on systems already in place. Ships as **one branch unde
   below so it doesn't read as detached). Floating chrome (toasts / pop-ups / pickers) is **already**
   rounded 4px via `--radius` (`index.html`), so this is tabs-only; softening `--radius` globally is a
   separate taste call, not top-corner rounding on floating boxes.
-- ⬜ **File History on the toolbar + toolbar regroup** (**S**) — File History is powerful but hidden
-  (palette + Tools menu only → newbies never find it). Add a **History** button to the top panel, done
-  **with** the toolbar regroup so the dividers stay logical:
-  `[Open Save] | [Split Preview Pin] | [Highlighter Diff Paste] | [History]` (today the highlighter
-  sits with the view toggles and diff with paste). One `ICONS` + `mk()` entry in `toolbar.ts`, reuse
-  the existing History command, add it to `helpContent.ts`. _(Supersedes the deferred "File History
-  status-bar entry" idea — the toolbar is louder for newbies; pick one surface, not both.)_
+- ✅ **File History on the toolbar + toolbar regroup** (**S**) — **merged to `master` 2026-07-18 (no
+  version bump — the Phase 3.7 bundle ships together).** Added a **History** button grouped with
+  Open/Save and regrouped the dividers to `[Open Save History] | [Split Preview Pin] |
+  [Highlighter▾ Diff Paste]` (highlighter moved into the tools group). Reuses the existing `'history'`
+  command — no behaviour change, and **no `helpContent.ts` change** (File History was already listed).
+  Smoke-covered (`app.spec.ts`); spec + plan in `docs/superpowers/`. _(Superseded the deferred "File
+  History status-bar entry" idea — toolbar chosen as the single, louder surface.)_
 - ⬜ **"Revert File" command — with a confirm** (**S**) — one action to discard unsaved edits and reload
   the last-saved / on-disk content ("I made a mess, take me back"). **Must confirm first** (it destroys
   unsaved work): palette + Edit menu, **no raw toolbar button** (a one-click discard is a newbie
