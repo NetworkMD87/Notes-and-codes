@@ -90,4 +90,27 @@ describe('BufferManager', () => {
     m.move(a.id, 2)
     expect(m.activeId).toBe(b.id)
   })
+
+  it('markSaved records the on-disk mtime for the overwrite guard', () => {
+    const b = m.create()
+    m.update(b.id, 'hello')
+    m.markSaved(b.id, 'C:/x/note.txt', 1234)
+    expect(m.get(b.id)!.diskMtime).toBe(1234)
+  })
+
+  it('open carries the read mtime onto the buffer', () => {
+    const b = m.open({ filePath: 'C:/a.ts', content: 'a', eol: 'LF', encoding: 'utf8', mtimeMs: 999 })
+    expect(b.diskMtime).toBe(999)
+  })
+
+  it('restore leaves diskMtime undefined for a session written before the guard existed', () => {
+    m.restore({
+      buffers: [{
+        id: 'x', title: 'a.txt', filePath: 'C:/a.txt', content: 'a',
+        language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: true
+      }],
+      activeId: 'x'
+    })
+    expect(m.get('x')!.diskMtime).toBeUndefined()
+  })
 })

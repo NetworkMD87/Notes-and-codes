@@ -22,18 +22,19 @@ export class BufferManager {
       language: opts.language ?? 'plaintext',
       eol: opts.eol ?? 'LF',
       encoding: opts.encoding ?? 'utf8',
-      dirty: opts.dirty ?? false
+      dirty: opts.dirty ?? false,
+      diskMtime: opts.diskMtime
     }
     this.buffers.push(b)
     this._activeId = b.id
     return b
   }
 
-  open(file: { filePath: string; content: string; eol: EolMode; encoding: Encoding }): BufferState {
+  open(file: { filePath: string; content: string; eol: EolMode; encoding: Encoding; mtimeMs?: number }): BufferState {
     const existing = this.buffers.find(b => b.filePath === file.filePath)
     if (existing) { this._activeId = existing.id; return existing }
     const title = file.filePath.split(/[\\/]/).pop() ?? file.filePath
-    return this.create({ filePath: file.filePath, content: file.content, eol: file.eol, encoding: file.encoding, title, language: languageFromPath(file.filePath) })
+    return this.create({ filePath: file.filePath, content: file.content, eol: file.eol, encoding: file.encoding, title, language: languageFromPath(file.filePath), diskMtime: file.mtimeMs })
   }
 
   setActive(id: string): void { if (this.get(id)) this._activeId = id }
@@ -45,13 +46,16 @@ export class BufferManager {
     b.dirty = true
   }
 
-  markSaved(id: string, filePath: string): void {
+  markSaved(id: string, filePath: string, diskMtime?: number): void {
     const b = this.get(id)
     if (!b) return
     b.filePath = filePath
     b.title = filePath.split(/[\\/]/).pop() ?? filePath
     b.language = languageFromPath(filePath)
     b.dirty = false
+    // Always assigned, never merged: an undefined mtime (post-write stat failed) must clear the
+    // old baseline, or the next save would compare against a value that no longer describes the file.
+    b.diskMtime = diskMtime
   }
 
   setLanguage(id: string, language: string): void {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { readFileForEditor, writeFile, detectEol } from '../../src/main/fileService'
@@ -53,5 +53,38 @@ describe('fileService', () => {
     const raw = readFileSync(p)
     expect([raw[0], raw[1], raw[2]]).toEqual([0xef, 0xbb, 0xbf]) // BOM
     expect(raw.subarray(3).toString('utf8')).toBe('a\r\nb')
+  })
+  it('reports the on-disk mtime when reading', async () => {
+    const p = join(dir, 'r.txt'); writeFileSync(p, 'x')
+    const r = await readFileForEditor(p)
+    expect(r.ok).toBe(true); if (!r.ok) return
+    expect(r.file.mtimeMs).toBe(statSync(p).mtimeMs)
+  })
+  it('writes when the expected mtime matches, and returns the fresh mtime', async () => {
+    const p = join(dir, 'm.txt'); writeFileSync(p, 'old')
+    const r = await writeFile(p, 'new', 'LF', 'utf8', statSync(p).mtimeMs)
+    expect(r.ok).toBe(true); if (!r.ok) return
+    expect(readFileSync(p, 'utf8')).toBe('new')
+    expect(typeof r.mtimeMs).toBe('number')
+  })
+  it('refuses the write when the file changed on disk, leaving it untouched', async () => {
+    // 12345 is never a real mtime, so this is deterministic — no reliance on clock granularity.
+    const p = join(dir, 's.txt'); writeFileSync(p, 'theirs')
+    const r = await writeFile(p, 'mine', 'LF', 'utf8', 12345)
+    expect(r.ok).toBe(false); if (r.ok) return
+    expect(r.reason).toBe('stale')
+    expect(readFileSync(p, 'utf8')).toBe('theirs')
+  })
+  it('writes unconditionally when no expected mtime is given', async () => {
+    const p = join(dir, 'u.txt'); writeFileSync(p, 'theirs')
+    const r = await writeFile(p, 'mine', 'LF', 'utf8')
+    expect(r.ok).toBe(true)
+    expect(readFileSync(p, 'utf8')).toBe('mine')
+  })
+  it('recreates a file that vanished rather than refusing the save', async () => {
+    const p = join(dir, 'gone.txt') // never created
+    const r = await writeFile(p, 'mine', 'LF', 'utf8', 12345)
+    expect(r.ok).toBe(true)
+    expect(readFileSync(p, 'utf8')).toBe('mine')
   })
 })

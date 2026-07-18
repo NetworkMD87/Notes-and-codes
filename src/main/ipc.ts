@@ -67,8 +67,8 @@ export function registerIpc(deps: IpcDeps): void {
   handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))
 
   handle('file:read', (_e, path: string) => readFileForEditor(path))
-  handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding) =>
-    writeFile(path, content, eol, encoding))
+  handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number) =>
+    writeFile(path, content, eol, encoding, expectedMtime))
   handle('session:load', () => session.load())
   handle('session:save', (_e, data: SessionData) => session.save(data))
   handle('settings:load', () => settings.load())

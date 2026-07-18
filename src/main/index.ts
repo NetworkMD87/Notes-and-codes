@@ -66,6 +66,12 @@ function requestQuit(): void {
   // Save → renderer saves each unsaved buffer (untitled via Save-As) then sends
   // app:quitNow. No force-timer here: a Save-As dialog is user-paced, and if the
   // user cancels it the renderer aborts the quit. "Don't Save" is the guaranteed exit.
+  // The window must be visible before this send: the renderer may raise a themed
+  // confirm (the on-save overwrite guard) or a Save-As dialog, and a DOM modal
+  // rendered inside a hidden window (the app's normal tray-parked state) would hang
+  // the quit with no way to answer it — unlike the old native-only Save-As path,
+  // which stayed visible regardless of window state.
+  showWindow()
   mainWindow.webContents.send('app:saveAllAndQuit')
 }
 

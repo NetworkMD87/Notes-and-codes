@@ -3,7 +3,7 @@ import type { Api } from '../shared/types'
 
 const api: Api = {
   readFile: (path) => ipcRenderer.invoke('file:read', path),
-  writeFile: (path, content, eol, encoding) => ipcRenderer.invoke('file:write', path, content, eol, encoding),
+  writeFile: (path, content, eol, encoding, expectedMtime) => ipcRenderer.invoke('file:write', path, content, eol, encoding, expectedMtime),
   loadSession: () => ipcRenderer.invoke('session:load'),
   saveSession: (data) => ipcRenderer.invoke('session:save', data),
   loadSettings: () => ipcRenderer.invoke('settings:load'),
