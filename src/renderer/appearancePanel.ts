@@ -6,6 +6,8 @@ export interface AppearanceDeps {
   currentAccent: () => string | null
   pickTheme: (id: string) => void
   setAccent: (accent: string | null) => void
+  previewTheme: (id: string) => void
+  endPreview: () => void
   fontFamily: () => string
   setFontFamily: (name: string) => void
   fontLigatures: () => boolean
@@ -30,6 +32,7 @@ const UI_FONTS = ['System', 'Segoe UI', 'Calibri', 'Tahoma', 'Verdana', 'Arial',
 export class AppearancePanel {
   private host: HTMLElement
   private unreg?: () => void
+  private hoverTimer: number | undefined
   constructor(parent: HTMLElement, private d: AppearanceDeps) {
     this.host = document.createElement('div')
     this.host.className = 'appearance hidden'
@@ -39,7 +42,22 @@ export class AppearancePanel {
   }
 
   open(): void { this.render(); this.host.classList.remove('hidden'); this.unreg = pushOverlay(() => this.close()) }
-  private close(): void { this.unreg?.(); this.unreg = undefined; this.host.classList.add('hidden') }
+  private close(): void { this.stopPreview(); this.unreg?.(); this.unreg = undefined; this.host.classList.add('hidden') }
+
+  // Hover-intent delay: sweeping the cursor down 14 rows shouldn't re-theme Monaco 14 times.
+  private schedulePreview(id: string): void {
+    if (this.hoverTimer !== undefined) clearTimeout(this.hoverTimer)
+    this.hoverTimer = window.setTimeout(() => { this.hoverTimer = undefined; this.d.previewTheme(id) }, 120)
+  }
+
+  // Cancel any pending preview and repaint the committed theme. Called from the grid's
+  // mouseleave AND from close() — close() is the net for the paths where no mouseleave
+  // ever fires: Escape (via overlayManager), scrim click, and the pointer leaving the
+  // window while parked on a row.
+  private stopPreview(): void {
+    if (this.hoverTimer !== undefined) { clearTimeout(this.hoverTimer); this.hoverTimer = undefined }
+    this.d.endPreview()
+  }
 
   private render(): void {
     const box = document.createElement('div'); box.className = 'appearance-box'
@@ -59,8 +77,11 @@ export class AppearancePanel {
       }
       row.append(label, dots)
       row.onclick = () => { this.d.pickTheme(t.id); this.render() }
+      row.onmouseenter = () => this.schedulePreview(t.id)
       grid.appendChild(row)
     }
+    // on the GRID, not the row — row-to-row movement must not flash the committed theme
+    grid.onmouseleave = () => this.stopPreview()
     themeWrap.append(th, grid)
 
     const accWrap = document.createElement('div')

@@ -54,6 +54,63 @@ test('Appearance: renders landscape — theme list left, settings right', async 
   }
 })
 
+test('Appearance: hovering a theme row previews it; leaving the list reverts', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-hover-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openAppearance(win)
+    const committed = await win.evaluate(() => document.body.dataset.theme)
+
+    await win.locator('.appearance-theme', { hasText: 'Monokai' }).hover()
+    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe('monokai')
+
+    // the active-row highlight stays on the COMMITTED theme while previewing another
+    await expect(win.locator('.appearance-theme.active')).not.toContainText('Monokai')
+
+    // moving off the theme grid reverts
+    await win.locator('#appearance .accent-head h3').hover()
+    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe(committed)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Appearance: Escape mid-preview reverts; a click commits and survives relaunch', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-commit-'))
+  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    let win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openAppearance(win)
+
+    // preview, then close with Escape while the pointer is still on the row —
+    // no mouseleave fires, so close() is the only thing that can revert it
+    await win.locator('.appearance-theme', { hasText: 'Dracula' }).hover()
+    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe('dracula')
+    await win.keyboard.press('Escape')
+    await expect(win.locator('#appearance')).toBeHidden()
+    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe('dark')
+
+    // a click DOES commit, and the preview never wrote anything
+    await openAppearance(win)
+    await win.locator('.appearance-theme', { hasText: 'Nord' }).click()
+    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe('nord')
+    await win.keyboard.press('Escape')
+    await app.close()
+
+    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 5000 }).toBe('nord')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('Appearance: every theme row shows four palette swatches', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-sw-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
