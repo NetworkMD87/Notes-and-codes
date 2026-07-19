@@ -56,9 +56,9 @@ test('Appearance: renders landscape — theme list left, settings right', async 
 
 test('Appearance: hovering a theme row previews it; leaving the list reverts', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-hover-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
-    const win = await app.firstWindow()
+    let win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openAppearance(win)
     const committed = await win.evaluate(() => document.body.dataset.theme)
@@ -72,6 +72,18 @@ test('Appearance: hovering a theme row previews it; leaving the list reverts', a
     // moving off the theme grid reverts
     await win.locator('#appearance .accent-head h3').hover()
     await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe(committed)
+
+    // this session previewed Monokai and committed nothing — relaunch against the same
+    // profile and confirm the committed theme is still what it was. A leaked preview
+    // write would show up as 'monokai' here, since nothing in this session overwrites it
+    // (unlike the Escape/commit test below, whose later Nord commit would mask a leak).
+    await win.keyboard.press('Escape')
+    await app.close()
+
+    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 5000 }).toBe(committed)
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
@@ -85,6 +97,7 @@ test('Appearance: Escape mid-preview reverts; a click commits and survives relau
     let win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openAppearance(win)
+    const committed = await win.evaluate(() => document.body.dataset.theme)
 
     // preview, then close with Escape while the pointer is still on the row —
     // no mouseleave fires, so close() is the only thing that can revert it
@@ -92,7 +105,7 @@ test('Appearance: Escape mid-preview reverts; a click commits and survives relau
     await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe('dracula')
     await win.keyboard.press('Escape')
     await expect(win.locator('#appearance')).toBeHidden()
-    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe('dark')
+    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe(committed)
 
     // a click DOES commit, and the preview never wrote anything
     await openAppearance(win)

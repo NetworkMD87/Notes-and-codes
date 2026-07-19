@@ -25,11 +25,11 @@ export class ThemeController {
     const resolved = resolveThemeId(themeId)
     const key = resolved + '|' + (accent ?? '')
     if (key === this.painted) return
-    this.painted = key
     const vars = chromeVars(themeId, accent)
     document.body.dataset.theme = resolved
     for (const [k, v] of Object.entries(vars)) document.body.style.setProperty(k, v)
     for (const p of this.panes) p.setTheme(resolved)
+    this.painted = key
   }
 
   apply(themeId: string, accent: string | null = null): void {

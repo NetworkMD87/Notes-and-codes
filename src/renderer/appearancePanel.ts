@@ -51,9 +51,12 @@ export class AppearancePanel {
   }
 
   // Cancel any pending preview and repaint the committed theme. Called from the grid's
-  // mouseleave AND from close() — close() is the net for the paths where no mouseleave
-  // ever fires: Escape (via overlayManager), scrim click, and the pointer leaving the
-  // window while parked on a row.
+  // mouseleave AND from close(). mouseleave does end up firing on most close paths too
+  // (Chromium recomputes :hover when close() applies display:none, and again when the
+  // pointer leaves the window) — but relying on that would make the revert depend on
+  // Chromium's hover-recomputation timing relative to the hide. Calling stopPreview()
+  // directly from close() makes the revert deterministic and ordered before the hide,
+  // regardless of what mouseleave does or when.
   private stopPreview(): void {
     if (this.hoverTimer !== undefined) { clearTimeout(this.hoverTimer); this.hoverTimer = undefined }
     this.d.endPreview()
