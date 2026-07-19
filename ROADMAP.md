@@ -17,13 +17,13 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — 🚧 Phase 3.7 in progress (5 slices merged locally; bundle release pending)
+## ▶ NEXT ACTION — 🚧 Phase 3.7 in progress (5 slices merged + pushed; bundle release pending)
 
 **Phase 3.7 "Polish & discoverability" is underway.** Each slice gets its own `feat/` branch
 (brainstorm → spec → plan → TDD → merge `--no-ff`) with **no per-slice version bump** — the whole pass
 ships as ONE release when every slice is done (polish-pass convention, [[polish-pass-version-hold]]).
 
-**Merged to `master` (local, UNRELEASED):**
+**Merged to `master` (pushed, UNRELEASED):**
 - ✅ File History button on the toolbar + toolbar regroup
 - ✅ Rounded tab tops (6px)
 - ✅ Revert File command (confirm-when-dirty)
@@ -36,9 +36,11 @@ ships as ONE release when every slice is done (polish-pass convention, [[polish-
   asset) first; **do this next**.
 - ⬜ **Taskbar icon `{&}` at small sizes** — heaviest; `make-icon.mjs` per-size artwork.
 
-**⚠️ RESUME STATE (2026-07-18):** `master` is **local-only, not pushed since the v1.12.3 release** —
-it holds the 5 merged slices above, all captured under `## [Unreleased]` in `CHANGELOG.md`. A **dev**
-eyeball passed for the 3 visual slices; the **installer** eyeball still gates the release.
+**⚠️ RESUME STATE (2026-07-19):** `master` is **pushed and in sync with `origin`**, holding the 5 merged
+slices above — all captured under `## [Unreleased]` in `CHANGELOG.md`, with **no version bump and no
+tag** (still v1.12.3). Eyeballs so far: a **dev** eyeball passed for the first 3 visual slices
+(2026-07-18) and an **installer** eyeball passed for the swatch/hover slice (2026-07-19). A final
+installer eyeball still gates the v1.13.0 release once the last two slices land.
 
 **To ship Phase 3.7 (once all slices land):** bump **minor → v1.13.0** (feature release), `npm run
 package`, manual **installer eyeball** (tray/hotkey + the new slices), tag `v1.13.0`, GitHub release
