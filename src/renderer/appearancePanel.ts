@@ -1,4 +1,4 @@
-import { THEME_LIST, ACCENT_SWATCHES } from './themes'
+import { THEME_LIST, ACCENT_SWATCHES, swatchColours } from './themes'
 import { pushOverlay } from './overlayManager'
 
 export interface AppearanceDeps {
@@ -50,7 +50,14 @@ export class AppearancePanel {
     for (const t of THEME_LIST) {
       const row = document.createElement('div')
       row.className = 'appearance-theme' + (t.id === this.d.currentThemeId() ? ' active' : '')
-      row.textContent = t.label
+      const label = document.createElement('span'); label.className = 'theme-label'; label.textContent = t.label
+      // Decorative — the row's label already names the theme for a screen reader.
+      const dots = document.createElement('div'); dots.className = 'theme-dots'; dots.setAttribute('aria-hidden', 'true')
+      for (const c of swatchColours(t.id)) {
+        const dot = document.createElement('span'); dot.className = 'theme-dot'; dot.style.background = c
+        dots.appendChild(dot)
+      }
+      row.append(label, dots)
       row.onclick = () => { this.d.pickTheme(t.id); this.render() }
       grid.appendChild(row)
     }
