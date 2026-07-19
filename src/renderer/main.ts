@@ -574,6 +574,7 @@ document.getElementById('header')!.appendChild(themeBtn)
 const appearance = new AppearancePanel(document.getElementById('app')!, {
   currentThemeId: () => theme.currentId(), currentAccent: () => theme.currentAccent(),
   pickTheme: (id) => theme.pick(id), setAccent: (a) => theme.setAccent(a),
+  previewTheme: (id) => theme.preview(id), endPreview: () => theme.endPreview(),
   fontFamily: () => fontFamily, setFontFamily: setFontFamilyState,
   fontLigatures: () => fontLigatures, setLigatures: setLigaturesState,
   uiFontFamily: () => uiFontFamily, setUiFontFamily: setUiFontFamilyState,

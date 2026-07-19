@@ -145,6 +145,19 @@ export function resolveThemeId(id: string): string {
   return THEMES[id] ? id : 'dark'
 }
 
+// The four representative chrome colours shown as dots on each row of the Appearance
+// panel's theme list, in a fixed order: editor background, chrome bar, chrome text, accent.
+// Routed through resolveThemeId so 'follow-os' previews whatever it currently resolves to
+// (and an unknown id falls back to dark instead of throwing). The accent is each THEME's
+// OWN accent, never the user's accent override — with the override applied, all 14 rows'
+// accent dots would be identical and tell the user nothing.
+export const SWATCH_KEYS: ChromeKey[] = ['--editorbg', '--bar', '--bartext', '--accent']
+
+export function swatchColours(themeId: string): string[] {
+  const c = THEMES[resolveThemeId(themeId)].chrome
+  return SWATCH_KEYS.map(k => c[k])
+}
+
 // YIQ perceived-brightness → near-black text on light accents, white on dark, so
 // accent-filled surfaces stay legible on any accent (fixes white-on-light). YIQ (not
 // raw WCAG max-contrast) because max-contrast flips the conventional white-on-saturated-

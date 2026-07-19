@@ -17,6 +17,10 @@ _Phase 3.7 polish & discoverability — accumulating; ships as one release when 
   stay square so tabs sit flush with the strip.
 - **Revert File command** — discard unsaved changes and reload the current file from disk (confirms
   first when there are unsaved edits). In the command palette and the File menu.
+- **Theme swatches + hover preview.** Every row in the Appearance panel's theme list now shows four
+  colour dots from that theme's own palette (editor background, chrome bar, chrome text, accent), and
+  hovering a row previews the theme across the whole app — moving off the list, or closing the panel,
+  reverts it. Nothing is saved until you click.
 
 ### Fixed
 

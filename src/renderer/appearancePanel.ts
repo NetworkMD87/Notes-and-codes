@@ -1,4 +1,4 @@
-import { THEME_LIST, ACCENT_SWATCHES } from './themes'
+import { THEME_LIST, ACCENT_SWATCHES, swatchColours } from './themes'
 import { pushOverlay } from './overlayManager'
 
 export interface AppearanceDeps {
@@ -6,6 +6,8 @@ export interface AppearanceDeps {
   currentAccent: () => string | null
   pickTheme: (id: string) => void
   setAccent: (accent: string | null) => void
+  previewTheme: (id: string) => void
+  endPreview: () => void
   fontFamily: () => string
   setFontFamily: (name: string) => void
   fontLigatures: () => boolean
@@ -30,6 +32,7 @@ const UI_FONTS = ['System', 'Segoe UI', 'Calibri', 'Tahoma', 'Verdana', 'Arial',
 export class AppearancePanel {
   private host: HTMLElement
   private unreg?: () => void
+  private hoverTimer: number | undefined
   constructor(parent: HTMLElement, private d: AppearanceDeps) {
     this.host = document.createElement('div')
     this.host.className = 'appearance hidden'
@@ -39,7 +42,25 @@ export class AppearancePanel {
   }
 
   open(): void { this.render(); this.host.classList.remove('hidden'); this.unreg = pushOverlay(() => this.close()) }
-  private close(): void { this.unreg?.(); this.unreg = undefined; this.host.classList.add('hidden') }
+  private close(): void { this.stopPreview(); this.unreg?.(); this.unreg = undefined; this.host.classList.add('hidden') }
+
+  // Hover-intent delay: sweeping the cursor down 14 rows shouldn't re-theme Monaco 14 times.
+  private schedulePreview(id: string): void {
+    if (this.hoverTimer !== undefined) clearTimeout(this.hoverTimer)
+    this.hoverTimer = window.setTimeout(() => { this.hoverTimer = undefined; this.d.previewTheme(id) }, 120)
+  }
+
+  // Cancel any pending preview and repaint the committed theme. Called from the grid's
+  // mouseleave AND from close(). mouseleave does end up firing on most close paths too
+  // (Chromium recomputes :hover when close() applies display:none, and again when the
+  // pointer leaves the window) — but relying on that would make the revert depend on
+  // Chromium's hover-recomputation timing relative to the hide. Calling stopPreview()
+  // directly from close() makes the revert deterministic and ordered before the hide,
+  // regardless of what mouseleave does or when.
+  private stopPreview(): void {
+    if (this.hoverTimer !== undefined) { clearTimeout(this.hoverTimer); this.hoverTimer = undefined }
+    this.d.endPreview()
+  }
 
   private render(): void {
     const box = document.createElement('div'); box.className = 'appearance-box'
@@ -50,10 +71,20 @@ export class AppearancePanel {
     for (const t of THEME_LIST) {
       const row = document.createElement('div')
       row.className = 'appearance-theme' + (t.id === this.d.currentThemeId() ? ' active' : '')
-      row.textContent = t.label
+      const label = document.createElement('span'); label.className = 'theme-label'; label.textContent = t.label
+      // Decorative — the row's label already names the theme for a screen reader.
+      const dots = document.createElement('div'); dots.className = 'theme-dots'; dots.setAttribute('aria-hidden', 'true')
+      for (const c of swatchColours(t.id)) {
+        const dot = document.createElement('span'); dot.className = 'theme-dot'; dot.style.background = c
+        dots.appendChild(dot)
+      }
+      row.append(label, dots)
       row.onclick = () => { this.d.pickTheme(t.id); this.render() }
+      row.onmouseenter = () => this.schedulePreview(t.id)
       grid.appendChild(row)
     }
+    // on the GRID, not the row — row-to-row movement must not flash the committed theme
+    grid.onmouseleave = () => this.stopPreview()
     themeWrap.append(th, grid)
 
     const accWrap = document.createElement('div')
