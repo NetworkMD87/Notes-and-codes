@@ -112,7 +112,7 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > autosave-to-disk, Format Document, folder mode, text highlighter); the Phase 3.5 design-polish pass
 > shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
 > v1.12.2 — see `AUDIT-CHECKLIST.md`). Latest **release** is **v1.12.3**; **Phase 3.7 polish is in
-> progress on `master` — 4 slices merged, unreleased** (next release will be **v1.13.0**). See ▶ NEXT
+> progress on `master` — 5 slices merged, unreleased** (next release will be **v1.13.0**). See ▶ NEXT
 > ACTION at the top for what's next.
 > **Live known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing (works via
 > palette + Edit menu — details under **Format Document** below); ③ the static exe/installer icon can't
