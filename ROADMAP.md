@@ -17,7 +17,7 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — 🚧 Phase 3.7 in progress (4 slices merged locally; bundle release pending)
+## ▶ NEXT ACTION — 🚧 Phase 3.7 in progress (5 slices merged locally; bundle release pending)
 
 **Phase 3.7 "Polish & discoverability" is underway.** Each slice gets its own `feat/` branch
 (brainstorm → spec → plan → TDD → merge `--no-ff`) with **no per-slice version bump** — the whole pass
@@ -29,14 +29,15 @@ ships as ONE release when every slice is done (polish-pass convention, [[polish-
 - ✅ Revert File command (confirm-when-dirty)
 - ✅ Diff-theme fix (bonus bug) — opening a diff no longer flips the editors to a light theme on any
   dark theme whose id isn't literally `dark` (Monokai/Dracula/Nord/…)
+- ✅ Theme-picker swatch previews + hover live-preview
 
 **Remaining slices:**
-- ⬜ **Theme-picker swatch previews** — straightforward; **do this next**.
-- ⬜ **Highlighter pen-tip cursor** — needs a CSP `img-src 'self' data:` decision (or a bundled cursor asset) first.
+- ⬜ **Highlighter pen-tip cursor** — needs a CSP `img-src 'self' data:` decision (or a bundled cursor
+  asset) first; **do this next**.
 - ⬜ **Taskbar icon `{&}` at small sizes** — heaviest; `make-icon.mjs` per-size artwork.
 
 **⚠️ RESUME STATE (2026-07-18):** `master` is **local-only, not pushed since the v1.12.3 release** —
-it holds the 4 merged slices above, all captured under `## [Unreleased]` in `CHANGELOG.md`. A **dev**
+it holds the 5 merged slices above, all captured under `## [Unreleased]` in `CHANGELOG.md`. A **dev**
 eyeball passed for the 3 visual slices; the **installer** eyeball still gates the release.
 
 **To ship Phase 3.7 (once all slices land):** bump **minor → v1.13.0** (feature release), `npm run
@@ -210,8 +211,13 @@ command-registry changes on systems already in place. Ships as **one branch unde
   menu** (placed with Save — more conventional than Edit, the inverse of Save). Reuses the existing
   `reloadBuffer` + themed `confirmDialog`; added to `helpContent.ts`. Smoke-covered (`app.spec.ts`).
   Complements File History (old saved versions) and the change bar (external conflicts).
-- ⬜ **Theme-picker swatch previews** (**S**, from Phase 3.5 Slice C) — show each theme's palette as
-  small swatches in the picker so you can preview a theme before applying it.
+- ✅ **Theme-picker swatch previews** (**S**, from Phase 3.5 Slice C) — **merged to `master`
+  2026-07-19 (no version bump — Phase 3.7 bundle ships together).** Each theme row shows four dots
+  from its own chrome tokens (editor bg / bar / bar text / accent), `follow-os` resolving to whatever
+  it currently is. Hovering a row live-previews the theme app-wide (`ThemeController.preview` paints
+  without committing, so it can't reach `onPersist`); the grid's `mouseleave` and the panel's
+  `close()` both revert. Unit-tested (`swatchColours`) + smoke-tested (dots, hover, Escape-mid-preview,
+  click-persists-across-relaunch).
 - ⬜ **Highlighter pen-tip SVG cursor** (**S**, from Phase 3.5 Slice D) — replace the paint-mode
   `crosshair` with a pen-tip cursor matching the toolbar icon. Deferred for a reason: a `data:` cursor
   is CSP-blocked (`img-src` → `default-src 'self'`), so decide first between an `img-src 'self' data:`
