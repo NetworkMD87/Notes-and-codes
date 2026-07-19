@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { THEMES, CHROME_KEYS, ACCENT_SWATCHES, chromeVars, contrastText, resolveThemeId, migrateThemeId, THEME_LIST } from '../../src/renderer/themes'
+import { THEMES, CHROME_KEYS, ACCENT_SWATCHES, chromeVars, contrastText, resolveThemeId, migrateThemeId, THEME_LIST, swatchColours } from '../../src/renderer/themes'
 
 const IDS = ['light','dark','dark-dimmed','solarized-dark','one-dark','solarized-light','monokai','high-contrast','nord','dracula','gruvbox-dark','tokyo-night','gruvbox-light']
 const hex = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i
@@ -63,5 +63,31 @@ describe('chromeVars accent-text auto-contrast', () => {
   })
   it('keeps white text for a dark custom accent', () => {
     expect(chromeVars('dark', '#0a84ff')['--accent-text']).toBe('#ffffff')
+  })
+})
+
+describe('swatchColours', () => {
+  it('returns editorbg, bar, bartext, accent — in that order — for every theme', () => {
+    for (const id of IDS) {
+      expect(swatchColours(id), id).toEqual([
+        THEMES[id].chrome['--editorbg'],
+        THEMES[id].chrome['--bar'],
+        THEMES[id].chrome['--bartext'],
+        THEMES[id].chrome['--accent']
+      ])
+    }
+  })
+  it('gives every THEME_LIST entry — including follow-os — four valid hex colours', () => {
+    for (const t of THEME_LIST) {
+      const c = swatchColours(t.id)
+      expect(c, t.id).toHaveLength(4)
+      for (const v of c) expect(v, `${t.id} ${v}`).toMatch(hex)
+    }
+  })
+  it('resolves follow-os to a real theme palette', () => {
+    expect(swatchColours('follow-os')).toEqual(swatchColours(resolveThemeId('follow-os')))
+  })
+  it('falls back to dark for an unknown id rather than throwing', () => {
+    expect(swatchColours('nope')).toEqual(swatchColours('dark'))
   })
 })
