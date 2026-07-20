@@ -17,13 +17,13 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — 🚧 Phase 3.7 in progress (7 slices merged + pushed; bundle release pending)
+## ▶ NEXT ACTION — ✅ Phase 3.7 complete (all 7 slices merged; **v1.13.0**)
 
-**Phase 3.7 "Polish & discoverability" is underway.** Each slice gets its own `feat/` branch
+**Phase 3.7 "Polish & discoverability" is done.** Every slice took its own `feat/` branch
 (brainstorm → spec → plan → TDD → merge `--no-ff`) with **no per-slice version bump** — the whole pass
-ships as ONE release when every slice is done (polish-pass convention, [[polish-pass-version-hold]]).
+shipped as ONE release (polish-pass convention, [[polish-pass-version-hold]]).
 
-**Merged to `master` (pushed, UNRELEASED):**
+**Shipped in v1.13.0:**
 - ✅ File History button on the toolbar + toolbar regroup
 - ✅ Rounded tab tops (6px)
 - ✅ Revert File command (confirm-when-dirty)
@@ -31,27 +31,20 @@ ships as ONE release when every slice is done (polish-pass convention, [[polish-
   dark theme whose id isn't literally `dark` (Monokai/Dracula/Nord/…)
 - ✅ Theme-picker swatch previews + hover live-preview
 - ✅ Highlighter pen-tip cursor (+ the toolbar button redrawn to match it)
-- ✅ Taskbar icon `{&}` at small sizes (+ stable AppUserModelID)
+- ✅ Taskbar icon `{&}` at small sizes (+ stable AppUserModelID, + the Explorer context-menu entry's
+  own icon — a pre-existing gap spotted during the eyeball and fixed in the same slice)
 
-**Remaining slices:** none — every Phase 3.7 slice has landed; the bundle is ready for the
-v1.13.0 release steps below.
+**⚠️ RESUME STATE (2026-07-20):** `master` holds all 7 slices, `package.json` is **v1.13.0**, and
+`CHANGELOG.md` resolves them under `## [1.13.0] — 2026-07-20`. Installer eyeballs passed for the
+swatch/hover slice (2026-07-19), the pen cursor (2026-07-20, two rounds — the first artwork was
+rejected) and the taskbar icon (2026-07-20, plus a second round for the context-menu icon).
+**Remaining release steps: tag `v1.13.0` and cut the GitHub release** with the installer + portable
+from `dist/` — both still outstanding.
 
-**⚠️ RESUME STATE (2026-07-20):** `master` is **pushed and in sync with `origin`**, holding the 6
-merged slices above — all captured under `## [Unreleased]` in `CHANGELOG.md`, with **no version
-bump and no tag** (still v1.12.3). Eyeballs so far: a **dev** eyeball passed for the first 3 visual
-slices (2026-07-18) and **installer** eyeballs passed for the swatch/hover slice (2026-07-19) and
-the pen cursor (2026-07-20, over two rounds — the first artwork was rejected). A final installer
-eyeball still gates the v1.13.0 release once the last slice lands.
+**Next candidates:** two-process second-instance smoke test (Phase 3.6), dead `Shift+Alt+F` hotkey
+(Format Document known-issue), parked Phase 4. Audit fully resolved — see `AUDIT-CHECKLIST.md`.
 
-**To ship Phase 3.7 (once all slices land):** bump **minor → v1.13.0** (feature release), `npm run
-package`, manual **installer eyeball** (tray/hotkey + the new slices), tag `v1.13.0`, GitHub release
-with installer + portable, and resolve `## [Unreleased]` → `## [1.13.0]` in `CHANGELOG.md`.
-
-Other candidates (after 3.7): two-process second-instance smoke test (Phase 3.6), dead `Shift+Alt+F`
-hotkey (Format Document known-issue), parked Phase 4. Audit fully resolved — see `AUDIT-CHECKLIST.md`.
-
-_In-flight / resume detail: [[phase-3.7-in-progress]] memory. v1.12.3 shipped state:
-[[phase-3.5-p5-awaiting-eyeball-and-release]]._
+_v1.12.3 shipped state: [[phase-3.5-p5-awaiting-eyeball-and-release]]._
 
 ---
 
@@ -114,13 +107,14 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > ▶ **STATUS (2026-07-20):** all Phase 3 power features shipped (file history, Markdown export,
 > autosave-to-disk, Format Document, folder mode, text highlighter); the Phase 3.5 design-polish pass
 > shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
-> v1.12.2 — see `AUDIT-CHECKLIST.md`). Latest **release** is **v1.12.3**; **Phase 3.7 polish is in
-> progress on `master` — 7 slices merged, unreleased** (next release will be **v1.13.0**). See ▶ NEXT
-> ACTION at the top for what's next.
+> v1.12.2 — see `AUDIT-CHECKLIST.md`). **Phase 3.7 polish is complete — all 7 slices merged and
+> released as v1.13.0** (tag + GitHub release still outstanding). See ▶ NEXT ACTION at the top.
 > **Live known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing (works via
-> palette + Edit menu — details under **Format Document** below); ③ the static exe/installer icon can't
-> theme-swap (uses the contrast-safe dark tile — tracked by the taskbar-icon item in Phase 3.7).
-> _(② the clean-quit clipboard/session flush is resolved — audit R1, v1.12.1.)_
+> palette + Edit menu — details under **Format Document** below).
+> _(② the clean-quit clipboard/session flush is resolved — audit R1, v1.12.1. ③ the static
+> exe/installer icon not theme-swapping is resolved by design as of v1.13.0 — it carries the `{&}`
+> glyph on the contrast-safe dark `#1B1D21` tile at 16/24/32, legible on light and dark taskbars
+> alike, so there is no swap to want.)_
 
 - ✅ **Local file history / timeline** (shipped v1.2) — per saved file: snapshots on save + every 5 min (deduped, 50/file), browse/**diff/restore** in a File History panel (palette + Tools menu). _Deferred: prune orphaned history for deleted/renamed files; a status-bar entry; restore confirmation._
 - ✅ **Markdown export** (shipped v1.4) — export the active tab (rendered as Markdown) to a standalone **HTML** file or **PDF** via File ▸ Export or the palette; clean light document style, self-contained (no CDN). _Deferred: relative-image embedding, custom page size/margins, batch export, code syntax highlighting._
@@ -189,11 +183,11 @@ Neither depends on 3.5 — they can land before, during, or after it._
   Esc not closing the About view). _Deferred: a dedicated hotkey (F1/Monaco conflict),
   clickable-to-run rows, auto-derived content, a shared shortcut-constants refactor._
 
-## 🚧 Phase 3.7 — Polish & discoverability (round 2)
+## ✅ Phase 3.7 — Polish & discoverability (round 2) (shipped v1.13.0)
 
 _A second small polish/QoL cluster: finish the Phase 3.5 Slice C/D leftovers, surface the buried safety
 features so newbies can find them, and tidy the toolbar. Low-risk — mostly one-file CSS / token /
-command-registry changes on systems already in place. Ships as **one branch under one version bump**
+command-registry changes on systems already in place. Shipped as **one release under one version bump**
 (polish-pass convention — don't bump per item; see [[polish-pass-version-hold]])._
 
 - ✅ **Rounded tab tops** (**S**) — **merged to `master` 2026-07-18 (no version bump — Phase 3.7 bundle
@@ -244,8 +238,13 @@ command-registry changes on systems already in place. Ships as **one branch unde
   tile as the larger sizes rather than baking a taskbar-specific glyph, so it stays legible on
   light and dark taskbars alike — no theme-swap trade-off to carry. Complementary hardening: `app.setAppUserModelId('com.notesandcodes.app')` at startup + the runtime
   glyph PNGs (32×19) padded to square 32×32. The now-unused `png-to-ico` devDependency (replaced by
-  the pure `scripts/icoWriter.mjs` writer, landed with this slice) was removed. Re-pin after shipping
-  (pins keep their own copy).
+  the pure `scripts/icoWriter.mjs` writer, landed with this slice) was removed — it wrote
+  **uncompressed BMP** frames (288 KB against the 18 KB PNG payloads produce). Re-pin after shipping
+  (pins keep their own copy). _Also folded in after the installer eyeball: Explorer's right-click
+  **"Open with Notes & Codes"** entry had always rendered with a blank icon slot — the registry key
+  carried only its label and command, never an `Icon` value. Now written, and **re-applied on every
+  packaged startup** (gated on `app.isPackaged`) so existing users get it without re-toggling the
+  setting; the re-apply also self-heals a stale exe path after a reinstall elsewhere._
 
 ## 🧊 Phase 4 — Platform & power (parked)
 

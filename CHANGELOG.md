@@ -4,9 +4,9 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
-## [Unreleased]
+## [1.13.0] — 2026-07-20
 
-_Phase 3.7 polish & discoverability — accumulating; ships as one release when the pass is done._
+_Phase 3.7 polish & discoverability — the whole pass, shipped as one release._
 
 ### Added
 
