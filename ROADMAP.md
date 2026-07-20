@@ -172,11 +172,12 @@ Neither depends on 3.5 — they can land before, during, or after it._
 - ✅ **Real two-process second-instance smoke test** (**S**) — shipped 2026-07-20. The synthetic
   `app.emit('second-instance', ...)` in `startup-window.spec.ts` is **replaced** (not supplemented —
   the real test is a strict superset) by one that `spawn`s a genuine second Electron process with a
-  file arg against the same `--user-data-dir`. Asserts the second process exits 0 (lost the lock),
-  the hidden window becomes visible, and the forwarded file lands in a second tab with its content —
-  so the real single-instance lock, argv forwarding, `pickFileArg` and the `open-file` IPC are all
-  covered. Falsified by hand (dropping the handler's `send('open-file')` turns it red on the
-  tab count) per the `tests/CLAUDE.md` convention.
+  file arg against the same `--user-data-dir`. Asserts the second process exits cleanly rather than
+  opening a rival window, the hidden window becomes visible, and the forwarded file lands in a
+  second tab with its content — so the real single-instance lock, argv forwarding, `pickFileArg`
+  and the `open-file` IPC are all covered. Falsified by hand (dropping the handler's
+  `send('open-file')` turns it red on the tab count) — the same falsification convention as the
+  pen-cursor CSP guard.
 - ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
   **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
   from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco

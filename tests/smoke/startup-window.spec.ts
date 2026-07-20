@@ -63,15 +63,20 @@ test('a real second process forwards its file arg and shows the hidden window', 
     // env: process.env carries NC_HEADLESS from playwright.config.ts, so B skips the global hotkey.
     second = spawn(electronPath as unknown as string,
       ['out/main/index.js', `--user-data-dir=${userDataDir}`, notePath],
-      { env: process.env, stdio: 'ignore' })
+      { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] })
+    // Without this, a non-zero exit or a 30s hang reports a bare number and nothing else.
+    // hotkey-conflict.spec.ts does the same for its second instance.
+    let secondOut = ''
+    second.stdout?.on('data', (d) => { secondOut += d.toString() })
+    second.stderr?.on('data', (d) => { secondOut += d.toString() })
 
     // B must lose the lock and quit cleanly rather than opening a rival window.
     const exitCode = await new Promise<number | null>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('second instance did not exit within 30s')), 30000)
+      const timer = setTimeout(() => reject(new Error(`second instance did not exit within 30s. Output:\n${secondOut}`)), 30000)
       second!.on('exit', (code) => { clearTimeout(timer); resolve(code) })
       second!.on('error', (err) => { clearTimeout(timer); reject(err) })
     })
-    expect(exitCode).toBe(0)
+    expect(exitCode, `second instance output:\n${secondOut}`).toBe(0)
 
     // A's second-instance handler must call showWindow() — not just restore()/focus().
     await expect.poll(
