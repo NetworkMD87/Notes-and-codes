@@ -38,6 +38,8 @@ test('a real second process forwards its file arg and shows the hidden window', 
   // production code (showWindow()). This spawns a genuine second OS process against the SAME
   // --user-data-dir, so Electron's real single-instance lock, the real forwarded argv,
   // pickFileArg, and the open-file IPC all have to work for it to pass.
+  // Falsified: stubbing out the handler's `send('open-file', f)` in src/main/index.ts turns this
+  // red on the tab-count assertion (2 -> 1, all retries) while the visibility poll still passes.
   test.setTimeout(90000)
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-2proc-'))
   const notePath = join(userDataDir, 'note.txt')
@@ -85,6 +87,9 @@ test('a real second process forwards its file arg and shows the hidden window', 
     await expect(win.locator('#paneA .view-lines')).toContainText(payload)
   } finally {
     if (second && second.exitCode === null && !second.killed) second.kill()
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
+    // maxRetries: the kill() above is fire-and-forget, and on Windows a just-killed process can
+    // still hold handles under its own profile dir — without this, rmSync can throw EBUSY and
+    // mask the real assertion failure.
+    await app.close(); rmSync(userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
   }
 })
