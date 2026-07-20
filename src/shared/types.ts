@@ -30,6 +30,12 @@ export const HIGHLIGHT_COLOURS = [
   'cyan', 'teal', 'emerald', 'green', 'lime', 'yellow', 'amber', 'orange', 'slate',
 ] as const
 export type HighlightColour = typeof HIGHLIGHT_COLOURS[number]
+
+/** Solid highlight hexes, keyed by lowercased palette name. Single source: ACCENT_PALETTE. */
+export const HL_HEX = Object.fromEntries(
+  ACCENT_PALETTE.map(c => [c.name.toLowerCase(), c.value]),
+) as Record<HighlightColour, string>
+
 export interface Highlight { start: number; end: number; colour: HighlightColour }
 
 export interface BufferState {
