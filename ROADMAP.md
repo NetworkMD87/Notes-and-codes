@@ -38,8 +38,9 @@ shipped as ONE release.
 `CHANGELOG.md` resolves them under `## [1.13.0] — 2026-07-20`. Installer eyeballs passed for the
 swatch/hover slice (2026-07-19), the pen cursor (2026-07-20, two rounds — the first artwork was
 rejected) and the taskbar icon (2026-07-20, plus a second round for the context-menu icon).
-**Release state:** `v1.13.0` is tagged locally. Confirm the GitHub release carries the installer +
-portable from `dist/` before considering the release closed.
+**Release state: CLOSED.** `v1.13.0` is tagged and the GitHub release is published (2026-07-20)
+carrying both assets — `Notes.Codes.Setup.1.13.0.exe` (installer) and `Notes.Codes.1.13.0.exe`
+(portable). Nothing outstanding.
 
 **Next candidates:** dead `Shift+Alt+F` hotkey (Format Document known-issue), parked Phase 4.
 Phase 3.6 closed 2026-07-20 (real two-process second-instance smoke test). The v1.12.0 codebase
