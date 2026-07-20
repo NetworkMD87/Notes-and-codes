@@ -41,6 +41,10 @@ _Phase 3.7 polish & discoverability — accumulating; ships as one release when 
 - **Pinned taskbar entries no longer keep a stale icon.** The app now declares a stable
   AppUserModelID matching its installed shortcut, so Windows stops treating the pinned entry and
   the running window as two separate applications.
+- **Explorer's right-click "Open with Notes & Codes" now shows the app icon.** The registered shell
+  verb had no `Icon` registry value, so Windows drew a blank space in the context menu instead of the
+  icon. The registration now writes one, and an already-enabled install picks it up automatically the
+  next time the app starts.
 
 ## [1.12.3] — 2026-07-18
 

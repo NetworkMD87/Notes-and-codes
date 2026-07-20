@@ -159,6 +159,17 @@ if (!gotLock) {
 
     tray = createTray({ onShow: showWindow, onQuit: () => { requestQuit() } })
     const settings = await settingsStore.load()
+    // Re-apply the context-menu registration on every packaged startup, not just when the
+    // user toggles it — the registry write is idempotent (reg add /f overwrites) and
+    // self-healing (it also repairs a stale exe path after a reinstall elsewhere), so this
+    // is how an existing user who already enabled the feature picks up new registry values
+    // (e.g. the Icon value) without re-toggling the setting. MUST stay gated on
+    // app.isPackaged: in dev, app.getPath('exe') is Electron's own binary, and an ungated
+    // re-apply would silently rewrite the user's real installed registry entry to point at
+    // electron.exe.
+    if (app.isPackaged && settings.contextMenuEnabled) {
+      void setContextMenu(true, app.getPath('exe'))
+    }
     const hotkey = settings.globalHotkey || 'CommandOrControl+Shift+Space'
     // Keep the live window/taskbar glyph contrasting when the taskbar theme flips.
     nativeTheme.on('updated', () => mainWindow?.setIcon(glyphImage()))

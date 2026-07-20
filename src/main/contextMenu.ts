@@ -7,6 +7,7 @@ export interface ContextMenuPlan {
   commandKeyPath: string
   label: string
   command: string
+  icon: string
 }
 
 export function buildContextMenuPlan(exePath: string): ContextMenuPlan {
@@ -15,7 +16,8 @@ export function buildContextMenuPlan(exePath: string): ContextMenuPlan {
     keyPath,
     commandKeyPath: `${keyPath}\\command`,
     label: 'Open with Notes & Codes',
-    command: `"${exePath}" "%1"`
+    command: `"${exePath}" "%1"`,
+    icon: `"${exePath}",0`
   }
 }
 
@@ -24,6 +26,7 @@ export async function setContextMenu(enabled: boolean, exePath: string): Promise
   try {
     if (enabled) {
       await run('reg', ['add', plan.keyPath, '/ve', '/d', plan.label, '/f'])
+      await run('reg', ['add', plan.keyPath, '/v', 'Icon', '/d', plan.icon, '/f'])
       await run('reg', ['add', plan.commandKeyPath, '/ve', '/d', plan.command, '/f'])
     } else {
       await run('reg', ['delete', plan.keyPath, '/f']).catch(() => {})
