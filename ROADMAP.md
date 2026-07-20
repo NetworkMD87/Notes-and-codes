@@ -38,11 +38,12 @@ shipped as ONE release.
 `CHANGELOG.md` resolves them under `## [1.13.0] — 2026-07-20`. Installer eyeballs passed for the
 swatch/hover slice (2026-07-19), the pen cursor (2026-07-20, two rounds — the first artwork was
 rejected) and the taskbar icon (2026-07-20, plus a second round for the context-menu icon).
-**Remaining release steps: tag `v1.13.0` and cut the GitHub release** with the installer + portable
-from `dist/` — both still outstanding.
+**Release state:** `v1.13.0` is tagged locally. Confirm the GitHub release carries the installer +
+portable from `dist/` before considering the release closed.
 
-**Next candidates:** two-process second-instance smoke test (Phase 3.6), dead `Shift+Alt+F` hotkey
-(Format Document known-issue), parked Phase 4. The v1.12.0 codebase audit is fully resolved.
+**Next candidates:** dead `Shift+Alt+F` hotkey (Format Document known-issue), parked Phase 4.
+Phase 3.6 closed 2026-07-20 (real two-process second-instance smoke test). The v1.12.0 codebase
+audit is fully resolved.
 
 ---
 
@@ -155,7 +156,7 @@ hierarchy, micro-motion._
 **Phase 3.5 is COMPLETE (P1–P5), SHIPPED as v1.12.0** — packaged, manual tray/hotkey checklist PASSED,
 tagged, pushed, GitHub release live.
 
-## ⬜ Phase 3.6 — Quality-of-life & UX (independent of 3.5 — can interleave)
+## ✅ Phase 3.6 — Quality-of-life & UX (complete)
 
 _Small functional niceties, not visual polish, so they sit outside the 3.5 design pass.
 Neither depends on 3.5 — they can land before, during, or after it._
@@ -168,10 +169,14 @@ Neither depends on 3.5 — they can land before, during, or after it._
   eyeballed on the installed build (drag feel + insertion mark + persist + tray/hotkey checklist — PASS).
   Merged `--no-ff` → `master`, tagged `v1.11.0`. _Deferred: live-shift/FLIP animation of neighbouring
   tabs (Phase 3.5 polish)._
-- ⬜ **Real two-process second-instance smoke test** (**S**) — `startup-window.spec.ts` emits
-  `second-instance` synthetically; add a variant that spawns a genuine second OS process with a
-  file arg against the same `--user-data-dir` (repro script proved this works for dev + packaged
-  builds, 2026-07-16 — H3 fix verified cross-process).
+- ✅ **Real two-process second-instance smoke test** (**S**) — shipped 2026-07-20. The synthetic
+  `app.emit('second-instance', ...)` in `startup-window.spec.ts` is **replaced** (not supplemented —
+  the real test is a strict superset) by one that `spawn`s a genuine second Electron process with a
+  file arg against the same `--user-data-dir`. Asserts the second process exits 0 (lost the lock),
+  the hidden window becomes visible, and the forwarded file lands in a second tab with its content —
+  so the real single-instance lock, argv forwarding, `pickFileArg` and the `open-file` IPC are all
+  covered. Falsified by hand (dropping the handler's `send('open-file')` turns it red on the
+  tab count) per the `tests/CLAUDE.md` convention.
 - ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
   **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
   from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco
