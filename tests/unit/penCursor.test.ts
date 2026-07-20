@@ -15,10 +15,20 @@ describe('penCursor', () => {
     expect(v.slice(v.indexOf(',') + 1)).not.toContain('#')
   })
 
-  it('embeds the colour own hex, so different colours differ', () => {
+  it("embeds the colour's own hex, so different colours differ", () => {
     expect(penCursor('yellow')).toContain(encodeURIComponent(HL_HEX.yellow))
     expect(penCursor('blue')).toContain(encodeURIComponent(HL_HEX.blue))
     expect(penCursor('yellow')).not.toBe(penCursor('blue'))
+  })
+
+  it('layers the artwork halo -> filled head -> outline', () => {
+    const v = penCursor('yellow')
+    const hex = encodeURIComponent(HL_HEX.yellow)
+    expect(v.indexOf('%23ffffff')).toBeGreaterThanOrEqual(0)
+    expect(v.indexOf(hex)).toBeGreaterThanOrEqual(0)
+    expect(v.indexOf('%231f2937')).toBeGreaterThanOrEqual(0)
+    expect(v.indexOf('%23ffffff')).toBeLessThan(v.indexOf(hex))
+    expect(v.indexOf(hex)).toBeLessThan(v.indexOf('%231f2937'))
   })
 
   it('produces a value for every highlight colour', () => {
