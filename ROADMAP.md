@@ -35,7 +35,7 @@ ships as ONE release when every slice is done (polish-pass convention, [[polish-
 **Remaining slices:**
 - ⬜ **Taskbar icon `{&}` at small sizes** — heaviest; `make-icon.mjs` per-size artwork; **do this next**.
 
-**⚠️ RESUME STATE (2026-07-20):** `master` is **pushed and in sync with `origin`**, holding the 6 merged
+**⚠️ RESUME STATE (2026-07-19):** `master` is **pushed and in sync with `origin`**, holding the 5 merged
 slices above — all captured under `## [Unreleased]` in `CHANGELOG.md`, with **no version bump and no
 tag** (still v1.12.3). Eyeballs so far: a **dev** eyeball passed for the first 3 visual slices
 (2026-07-18) and an **installer** eyeball passed for the swatch/hover slice (2026-07-19). A final
@@ -113,7 +113,7 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > autosave-to-disk, Format Document, folder mode, text highlighter); the Phase 3.5 design-polish pass
 > shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
 > v1.12.2 — see `AUDIT-CHECKLIST.md`). Latest **release** is **v1.12.3**; **Phase 3.7 polish is in
-> progress on `master` — 5 slices merged, unreleased** (next release will be **v1.13.0**). See ▶ NEXT
+> progress on `master` — 6 slices merged, unreleased** (next release will be **v1.13.0**). See ▶ NEXT
 > ACTION at the top for what's next.
 > **Live known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing (works via
 > palette + Edit menu — details under **Format Document** below); ③ the static exe/installer icon can't
