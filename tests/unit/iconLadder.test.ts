@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-// @ts-expect-error - untyped build script module (scripts/ is outside tsconfig's "src" include)
+// scripts/ is a build script outside tsconfig's "src" include, so this import is untyped.
 import { TILE_BG, TILE_RADIUS, ICON_LADDER, tileSvg } from '../../scripts/iconLadder.mjs'
 
 describe('ICON_LADDER', () => {
