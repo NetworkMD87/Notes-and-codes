@@ -22,7 +22,8 @@ _Phase 3.7 polish & discoverability — accumulating; ships as one release when 
   hovering a row previews the theme across the whole app — moving off the list, or closing the panel,
   reverts it. Nothing is saved until you click.
 - **Highlighter pen cursor** — in highlight mode the editor cursor is a marker pen whose tip shows the
-  active highlight colour, replacing the generic crosshair.
+  active highlight colour, replacing the generic crosshair. The toolbar's highlighter button was
+  redrawn to match the same marker shape.
 
 ### Fixed
 

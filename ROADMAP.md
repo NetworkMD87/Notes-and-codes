@@ -30,7 +30,7 @@ ships as ONE release when every slice is done (polish-pass convention, [[polish-
 - ✅ Diff-theme fix (bonus bug) — opening a diff no longer flips the editors to a light theme on any
   dark theme whose id isn't literally `dark` (Monokai/Dracula/Nord/…)
 - ✅ Theme-picker swatch previews + hover live-preview
-- ✅ Highlighter pen-tip cursor
+- ✅ Highlighter pen-tip cursor (+ the toolbar button redrawn to match it)
 
 **Remaining slices:**
 - ⬜ **Taskbar icon `{&}` at small sizes** — heaviest; `make-icon.mjs` per-size artwork; **do this next**.
@@ -110,7 +110,7 @@ _In-flight / resume detail: [[phase-3.7-in-progress]] memory. v1.12.3 shipped st
 
 _The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited)._
 
-> ▶ **STATUS (2026-07-18):** all Phase 3 power features shipped (file history, Markdown export,
+> ▶ **STATUS (2026-07-20):** all Phase 3 power features shipped (file history, Markdown export,
 > autosave-to-disk, Format Document, folder mode, text highlighter); the Phase 3.5 design-polish pass
 > shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
 > v1.12.2 — see `AUDIT-CHECKLIST.md`). Latest **release** is **v1.12.3**; **Phase 3.7 polish is in
@@ -128,7 +128,7 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
   - ⬜ **Known issue (deferred): native `Shift+Alt+F` hotkey does nothing in the editor.** Command works via palette + Edit menu, so it's a polish gap, not a blocker. One fix attempt (remove Monaco's no-op built-in `editor.action.formatDocument` binding via `addKeybindingRules`) did not work and was reverted — hypothesis insufficient. Revisit: confirm the `editorPane.ts` `addCommand` handler fires at all; check whether Electron suppresses `Alt`-combo menu accelerators on Windows while the Monaco webview is focused; or register a real Monaco formatting provider. (OS keypress can't be smoke-tested, same as Ctrl+S.)
     _Deferred: configurable options UI, more languages, `.prettierrc` discovery._
 - ✅ **Folder mode: sidebar file-tree + quick-open** (shipped v1.3) — opt-in "Open Folder" → toggleable, resizable left sidebar tree (lazy-loaded) + basic file ops (New File/Folder, Rename, Delete→Recycle Bin) + `Ctrl+P` quick-open; `.git`/`node_modules` hidden by default (Show-all toggle); startup-restore of the last folder. Scratchpad stays the default with no folder open. _Deferred: drag-to-move, cut/copy/paste, multi-root, content search in quick-open, `.gitignore` awareness._
-- ✅ **Text highlighter / pen** (shipped v1.7) — toolbar toggle + **7-colour** swatch dropdown (yellow/green/blue/pink/orange/purple/red) with a **Clear highlights** action in the dropdown; the button underline shows the active colour. With the mode on, drag-select paints a persistent semi-transparent highlight (Monaco decorations), re-stroking the same colour erases, dragging a different colour recolours; also a **Clear Highlights** palette command. Persists **per file on disk** (path-keyed store in `userData`), untitled buffers via the session (migrated on Save-As); highlights ride edits (decoration read-back), clamp on reload, and flush on tab close / quit. Pure interval engine + store are unit-tested; paint / clear / persistence are smoke-tested (incl. relaunch). Code-complete + whole-branch reviewed on `feat/text-highlighter`. _Deferred: external-edit re-anchoring, highlights list panel, carrying highlights into HTML/PDF export, a free custom colour picker, an Edit-menu item, keyboard-only painting. (Multi-part select → copy/paste is already native in Monaco — `Alt+Click` / `Ctrl+D`.)_
+- ✅ **Text highlighter / pen** (shipped v1.7; **swatches 7 → 18** with the shared palette in v1.12.0, **chisel-marker cursor + matching button icon** in Phase 3.7) — toolbar toggle + swatch dropdown over the full `ACCENT_PALETTE` with a **Clear highlights** action; the button underline shows the active colour, and in paint mode the mouse cursor is a marker whose tip carries it. With the mode on, drag-select paints a persistent semi-transparent highlight (Monaco decorations), re-stroking the same colour erases, dragging a different colour recolours; also a **Clear Highlights** palette command. Persists **per file on disk** (path-keyed store in `userData`), untitled buffers via the session (migrated on Save-As); highlights ride edits (decoration read-back), clamp on reload, and flush on tab close / quit. Pure interval engine + store are unit-tested; paint / clear / persistence are smoke-tested (incl. relaunch). Code-complete + whole-branch reviewed on `feat/text-highlighter`. _Deferred: external-edit re-anchoring, highlights list panel, carrying highlights into HTML/PDF export, a free custom colour picker, an Edit-menu item, keyboard-only painting. (Multi-part select → copy/paste is already native in Monaco — `Alt+Click` / `Ctrl+D`.)_
 
 ## ✅ Phase 3.5 — Design polish pass (P1–P5 complete, merged to master; v1.12.0)
 
@@ -225,7 +225,12 @@ command-registry changes on systems already in place. Ships as **one branch unde
   chisel marker with its tip filled in the active highlight colour (`penCursor()`,
   `src/renderer/penCursor.ts`), set as `--hl-cursor` on `body` so both split panes share one write.
   The deferred CSP question resolved to `img-src 'self' data:` — the concession `font-src` already
-  had. Unit-tested (encoding + all 18 colours) and smoke-tested (wiring + a CSP-violation guard).
+  had. Unit-tested (encoding + all 18 colours) and smoke-tested (wiring + a CSP-violation guard,
+  falsified by hand). **The toolbar's highlighter icon was redrawn to the same chisel silhouette**
+  (stroke-only at its 24 viewBox) so the button and the pointer read as one tool. _The first
+  artwork — the old icon's four thin outline strokes at 24×24 — was **rejected at the installer
+  eyeball**: legible, but unrecognisable as a pen. A 16px toolbar glyph doesn't survive being reused
+  as a cursor._
 - ⬜ **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16; moved
   from Phase 3.6 — the heaviest item here) — the taskbar button icon comes from the app's exe/shortcut
   **identity icon** (`build/icon.ico`, currently the `{N&C}` tile at all 5 sizes: 16/24/32/48/256), not
