@@ -115,6 +115,12 @@ function createWindow(): BrowserWindow {
   return win
 }
 
+// Must match `appId` in electron-builder.yml, which stamps the same AppUserModelID onto
+// the installed shortcut. If the running process declares a different one, Windows treats
+// shortcut and window as separate apps — that's how a pinned entry ends up showing the
+// wrong icon. Set before any window exists.
+app.setAppUserModelId('com.notesandcodes.app')
+
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
