@@ -240,9 +240,9 @@ command-registry changes on systems already in place. Ships as **one branch unde
   restarted) changed nothing, while a second isolated instance's plain window button DOES show `{&}` —
   so the window-icon code works and the identity icon is what the user sees. Fixed in `make-icon.mjs`:
   `icon.ico` now composes `{&}` glyph artwork at **16/24/32** and the `{N&C}` tile at **48/256**
-  (per-size artwork is the Windows-native pattern). Trade-off: the identity icon is static — bakes the
-  bright (dark-taskbar) glyph; light-taskbar users get lower contrast, same as carried known issue ③.
-  Complementary hardening: `app.setAppUserModelId('com.notesandcodes.app')` at startup + the runtime
+  (per-size artwork is the Windows-native pattern). The `{&}` sits on the same dark `#1B1D21`
+  tile as the larger sizes rather than baking a taskbar-specific glyph, so it stays legible on
+  light and dark taskbars alike — no theme-swap trade-off to carry. Complementary hardening: `app.setAppUserModelId('com.notesandcodes.app')` at startup + the runtime
   glyph PNGs (32×19) padded to square 32×32. The now-unused `png-to-ico` devDependency (replaced by
   the pure `scripts/icoWriter.mjs` writer, landed with this slice) was removed. Re-pin after shipping
   (pins keep their own copy).

@@ -2,17 +2,19 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { TRAY_PNG_DARK_BG_BASE64, TRAY_PNG_LIGHT_BG_BASE64 } from '../../src/main/trayImage'
 
-/** Frame table of an .ico: [{size, bytes, isPng}]. 0 in the size byte means 256. */
+/** Frame table of an .ico: [{size, bytes, isPng, payload}]. 0 in the size byte means 256. */
 function parseIco(buf: Buffer) {
   const n = buf.readUInt16LE(4)
   return Array.from({ length: n }, (_, i) => {
     const o = 6 + i * 16
     const w = buf.readUInt8(o)
+    const bytes = buf.readUInt32LE(o + 8)
     const off = buf.readUInt32LE(o + 12)
     return {
       size: w === 0 ? 256 : w,
-      bytes: buf.readUInt32LE(o + 8),
-      isPng: buf.subarray(off, off + 4).toString('hex') === '89504e47'
+      bytes,
+      isPng: buf.subarray(off, off + 4).toString('hex') === '89504e47',
+      payload: buf.subarray(off, off + bytes)
     }
   })
 }
@@ -38,6 +40,16 @@ describe('build/icon.ico', () => {
   it('declares every frame inside the file', () => {
     for (const f of parseIco(ico)) expect(f.bytes).toBeGreaterThan(0)
     expect(ico.length).toBeGreaterThan(6 + 5 * 16)
+  })
+
+  it('directory size matches each payload PNG\'s real IHDR dimensions', () => {
+    for (const f of parseIco(ico)) expect(pngSize(f.payload)).toEqual({ width: f.size, height: f.size })
+  })
+
+  it('composes fresh {&} artwork at 16px, not the passthrough {N&C} tile', () => {
+    const tile16 = readFileSync('assets/branding/notes-and-codes-logo/app-icon-dark/nc-icon-16.png')
+    const frame16 = parseIco(ico).find((f) => f.size === 16)!
+    expect(Buffer.compare(frame16.payload, tile16)).not.toBe(0)
   })
 })
 

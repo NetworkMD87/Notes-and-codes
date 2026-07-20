@@ -15,6 +15,13 @@ const glyphSvg = readFileSync(`${B}/svg/nc-glyph-dark.svg`, 'utf8')
 
 // The ampersand alone is the middle <path> of that same glyph SVG, re-framed to its own
 // viewBox — derived from the one source file so there's no second copy to keep in sync.
+// Two assumptions about nc-glyph-dark.svg's shape, both baked into the regex/viewBox below:
+//   1. `transform` must be the FIRST attribute on that <path> — the regex anchors on
+//      `<path transform="translate(600,0)"`. If the source SVG ever reorders attributes,
+//      the match fails loudly (thrown error below), so this one is safe.
+//   2. The hardcoded `viewBox="600 -920 640 1121"` assumes the glyph's 600-unit advance.
+//      If that advance ever changes, this does NOT throw — it silently reframes the
+//      ampersand artwork wrongly. This is the more dangerous of the two assumptions.
 const ampPath = glyphSvg.match(/<path transform="translate\(600,0\)"[\s\S]*?\/>/)
 if (!ampPath) throw new Error('nc-glyph-dark.svg: could not find the ampersand path at translate(600,0)')
 const ampSvg =
