@@ -17,7 +17,7 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — 🚧 Phase 3.7 in progress (6 slices merged + pushed; bundle release pending)
+## ▶ NEXT ACTION — 🚧 Phase 3.7 in progress (7 slices merged + pushed; bundle release pending)
 
 **Phase 3.7 "Polish & discoverability" is underway.** Each slice gets its own `feat/` branch
 (brainstorm → spec → plan → TDD → merge `--no-ff`) with **no per-slice version bump** — the whole pass
@@ -31,9 +31,10 @@ ships as ONE release when every slice is done (polish-pass convention, [[polish-
   dark theme whose id isn't literally `dark` (Monokai/Dracula/Nord/…)
 - ✅ Theme-picker swatch previews + hover live-preview
 - ✅ Highlighter pen-tip cursor (+ the toolbar button redrawn to match it)
+- ✅ Taskbar icon `{&}` at small sizes (+ stable AppUserModelID)
 
-**Remaining slices:**
-- ⬜ **Taskbar icon `{&}` at small sizes** — heaviest; `make-icon.mjs` per-size artwork; **do this next**.
+**Remaining slices:** none — every Phase 3.7 slice has landed; the bundle is ready for the
+v1.13.0 release steps below.
 
 **⚠️ RESUME STATE (2026-07-20):** `master` is **pushed and in sync with `origin`**, holding the 6
 merged slices above — all captured under `## [Unreleased]` in `CHANGELOG.md`, with **no version
@@ -114,7 +115,7 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > autosave-to-disk, Format Document, folder mode, text highlighter); the Phase 3.5 design-polish pass
 > shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
 > v1.12.2 — see `AUDIT-CHECKLIST.md`). Latest **release** is **v1.12.3**; **Phase 3.7 polish is in
-> progress on `master` — 6 slices merged, unreleased** (next release will be **v1.13.0**). See ▶ NEXT
+> progress on `master` — 7 slices merged, unreleased** (next release will be **v1.13.0**). See ▶ NEXT
 > ACTION at the top for what's next.
 > **Live known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing (works via
 > palette + Edit menu — details under **Format Document** below); ③ the static exe/installer icon can't
@@ -231,17 +232,20 @@ command-registry changes on systems already in place. Ships as **one branch unde
   artwork — the old icon's four thin outline strokes at 24×24 — was **rejected at the installer
   eyeball**: legible, but unrecognisable as a pen. A 16px toolbar glyph doesn't survive being reused
   as a cursor._
-- ⬜ **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16; moved
-  from Phase 3.6 — the heaviest item here) — the taskbar button icon comes from the app's exe/shortcut
-  **identity icon** (`build/icon.ico`, currently the `{N&C}` tile at all 5 sizes: 16/24/32/48/256), not
+- ✅ **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16; moved
+  from Phase 3.6 — the heaviest item here) — **merged to `master` 2026-07-20 (no version bump — Phase
+  3.7 bundle ships together).** The taskbar button icon comes from the app's exe/shortcut
+  **identity icon** (`build/icon.ico`, previously the `{N&C}` tile at all 5 sizes: 16/24/32/48/256), not
   from `win.setIcon`. Diagnosis: full icon-cache rebuild (15 `iconcache_*.db` deleted, Explorer
   restarted) changed nothing, while a second isolated instance's plain window button DOES show `{&}` —
-  so the window-icon code works and the identity icon is what the user sees. Fix in `make-icon.mjs`:
-  compose `icon.ico` with `{&}` glyph artwork at **16/24/32** and the `{N&C}` tile at **48/256**
-  (per-size artwork is the Windows-native pattern). Trade-off: the identity icon is static — bake the
-  bright (dark-taskbar) glyph; light-taskbar users get lower contrast, same as carried known issue ③.
-  Complementary hardening: `app.setAppUserModelId('com.notesandcodes.app')` at startup + pad the runtime
-  glyph PNGs (32×19) to square 32×32. Re-pin after shipping (pins keep their own copy).
+  so the window-icon code works and the identity icon is what the user sees. Fixed in `make-icon.mjs`:
+  `icon.ico` now composes `{&}` glyph artwork at **16/24/32** and the `{N&C}` tile at **48/256**
+  (per-size artwork is the Windows-native pattern). The `{&}` sits on the same dark `#1B1D21`
+  tile as the larger sizes rather than baking a taskbar-specific glyph, so it stays legible on
+  light and dark taskbars alike — no theme-swap trade-off to carry. Complementary hardening: `app.setAppUserModelId('com.notesandcodes.app')` at startup + the runtime
+  glyph PNGs (32×19) padded to square 32×32. The now-unused `png-to-ico` devDependency (replaced by
+  the pure `scripts/icoWriter.mjs` writer, landed with this slice) was removed. Re-pin after shipping
+  (pins keep their own copy).
 
 ## 🧊 Phase 4 — Platform & power (parked)
 
