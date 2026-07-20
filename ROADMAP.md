@@ -35,11 +35,12 @@ ships as ONE release when every slice is done (polish-pass convention, [[polish-
 **Remaining slices:**
 - ⬜ **Taskbar icon `{&}` at small sizes** — heaviest; `make-icon.mjs` per-size artwork; **do this next**.
 
-**⚠️ RESUME STATE (2026-07-19):** `master` is **pushed and in sync with `origin`**, holding the 5 merged
-slices above — all captured under `## [Unreleased]` in `CHANGELOG.md`, with **no version bump and no
-tag** (still v1.12.3). Eyeballs so far: a **dev** eyeball passed for the first 3 visual slices
-(2026-07-18) and an **installer** eyeball passed for the swatch/hover slice (2026-07-19). A final
-installer eyeball still gates the v1.13.0 release once the last two slices land.
+**⚠️ RESUME STATE (2026-07-20):** `master` holds the 6 merged slices above and is **ahead of
+`origin` — NOT pushed** — all captured under `## [Unreleased]` in `CHANGELOG.md`, with **no version
+bump and no tag** (still v1.12.3). Eyeballs so far: a **dev** eyeball passed for the first 3 visual
+slices (2026-07-18) and **installer** eyeballs passed for the swatch/hover slice (2026-07-19) and
+the pen cursor (2026-07-20, over two rounds — the first artwork was rejected). A final installer
+eyeball still gates the v1.13.0 release once the last slice lands.
 
 **To ship Phase 3.7 (once all slices land):** bump **minor → v1.13.0** (feature release), `npm run
 package`, manual **installer eyeball** (tray/hotkey + the new slices), tag `v1.13.0`, GitHub release
