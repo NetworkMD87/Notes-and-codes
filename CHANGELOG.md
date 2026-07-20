@@ -25,12 +25,22 @@ _Phase 3.7 polish & discoverability — accumulating; ships as one release when 
   active highlight colour, replacing the generic crosshair. The toolbar's highlighter button was
   redrawn to match the same marker shape.
 
+### Changed
+
+- **Small icons now show the `{&}` glyph.** The taskbar button, Alt+Tab, Explorer and the desktop
+  shortcut previously showed the full `{N&C}` mark at 16–32px, where it mushed into an unreadable
+  blob. Those sizes now carry `{&}` on the same dark tile (16px drops the braces, which cannot
+  resolve at that size). The 48px and 256px icons are unchanged.
+
 ### Fixed
 
 - **Opening a diff no longer flips the editors to a light theme.** The diff view reset Monaco's
   global theme when it opened; on any dark theme whose id isn't literally `dark` (Monokai, Dracula,
   Nord, One Dark, Tokyo Night, Gruvbox Dark, Dark Dimmed, Solarized Dark, High Contrast) that turned
   every editor pane white until you switched themes. The diff now inherits the current theme.
+- **Pinned taskbar entries no longer keep a stale icon.** The app now declares a stable
+  AppUserModelID matching its installed shortcut, so Windows stops treating the pinned entry and
+  the running window as two separate applications.
 
 ## [1.12.3] — 2026-07-18
 
