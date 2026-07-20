@@ -5,3 +5,9 @@ test-results/
 playwright-report/
 .superpowers/
 .codegraph/
+
+# Internal working docs — kept locally, not published
+CLAUDE.md
+AUDIT-CHECKLIST.md
+docs/superpowers/
+.claude/

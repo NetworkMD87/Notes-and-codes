@@ -11,7 +11,7 @@ import { promises as fs } from 'node:fs'
  * Windows `FlushFileBuffers` has highly variable latency and occasionally stalled the write
  * path by seconds (reproducibly flaked the settings-persist smoke test); the durability gain
  * is marginal — the crash-between-write-and-rename window is rare on NTFS — and not worth the
- * user-facing latency regression for a local scratchpad. See AUDIT-CHECKLIST.md ▸ L3.
+ * user-facing latency regression for a local scratchpad.
  */
 export async function atomicWrite(
   file: string,

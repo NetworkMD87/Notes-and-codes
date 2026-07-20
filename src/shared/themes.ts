@@ -2,7 +2,8 @@
 // MAIN process (`src/main/menu.ts`, which builds the Theme submenu) can consume it without
 // importing a renderer module — that import worked only because `renderer/themes.ts`'s
 // monaco import is type-only today, and would break the main build the moment it grows a
-// real monaco/DOM import (the process-boundary rule, CLAUDE.md).
+// real monaco/DOM import. The process boundary runs both ways: `src/main` must not import
+// from `src/renderer`, and cross-process constants belong here in `src/shared`.
 //
 // This list is the source of truth for the id/label pairs shown in the menu + Appearance
 // panel. The renderer's full `ThemeDef`s (with monaco theme data) stay in

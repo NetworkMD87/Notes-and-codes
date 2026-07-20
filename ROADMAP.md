@@ -21,7 +21,7 @@ features twice.
 
 **Phase 3.7 "Polish & discoverability" is done.** Every slice took its own `feat/` branch
 (brainstorm → spec → plan → TDD → merge `--no-ff`) with **no per-slice version bump** — the whole pass
-shipped as ONE release (polish-pass convention, [[polish-pass-version-hold]]).
+shipped as ONE release.
 
 **Shipped in v1.13.0:**
 - ✅ File History button on the toolbar + toolbar regroup
@@ -42,9 +42,7 @@ rejected) and the taskbar icon (2026-07-20, plus a second round for the context-
 from `dist/` — both still outstanding.
 
 **Next candidates:** two-process second-instance smoke test (Phase 3.6), dead `Shift+Alt+F` hotkey
-(Format Document known-issue), parked Phase 4. Audit fully resolved — see `AUDIT-CHECKLIST.md`.
-
-_v1.12.3 shipped state: [[phase-3.5-p5-awaiting-eyeball-and-release]]._
+(Format Document known-issue), parked Phase 4. The v1.12.0 codebase audit is fully resolved.
 
 ---
 
@@ -107,7 +105,7 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > ▶ **STATUS (2026-07-20):** all Phase 3 power features shipped (file history, Markdown export,
 > autosave-to-disk, Format Document, folder mode, text highlighter); the Phase 3.5 design-polish pass
 > shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
-> v1.12.2 — see `AUDIT-CHECKLIST.md`). **Phase 3.7 polish is complete — all 7 slices merged and
+> v1.12.2). **Phase 3.7 polish is complete — all 7 slices merged and
 > released as v1.13.0** (tag + GitHub release still outstanding). See ▶ NEXT ACTION at the top.
 > **Live known issues (deferred):** ① native `Shift+Alt+F` Format hotkey does nothing (works via
 > palette + Edit menu — details under **Format Document** below).
@@ -188,7 +186,7 @@ Neither depends on 3.5 — they can land before, during, or after it._
 _A second small polish/QoL cluster: finish the Phase 3.5 Slice C/D leftovers, surface the buried safety
 features so newbies can find them, and tidy the toolbar. Low-risk — mostly one-file CSS / token /
 command-registry changes on systems already in place. Shipped as **one release under one version bump**
-(polish-pass convention — don't bump per item; see [[polish-pass-version-hold]])._
+(polish-pass convention — don't bump per item)._
 
 - ✅ **Rounded tab tops** (**S**) — **merged to `master` 2026-07-18 (no version bump — Phase 3.7 bundle
   ships together).** Tabs now carry a 6px top-corner radius (bottoms square, flush with the strip) for a
@@ -200,7 +198,7 @@ command-registry changes on systems already in place. Shipped as **one release u
   Open/Save and regrouped the dividers to `[Open Save History] | [Split Preview Pin] |
   [Highlighter▾ Diff Paste]` (highlighter moved into the tools group). Reuses the existing `'history'`
   command — no behaviour change, and **no `helpContent.ts` change** (File History was already listed).
-  Smoke-covered (`app.spec.ts`); spec + plan in `docs/superpowers/`. _(Superseded the deferred "File
+  Smoke-covered (`app.spec.ts`). _(Superseded the deferred "File
   History status-bar entry" idea — toolbar chosen as the single, louder surface.)_
 - ✅ **"Revert File" command — with a confirm** (**S**) — **merged to `master` 2026-07-18 (no version
   bump — Phase 3.7 bundle ships together).** Discards unsaved edits and reloads the current file from
