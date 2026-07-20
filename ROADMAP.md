@@ -221,7 +221,7 @@ command-registry changes on systems already in place. Ships as **one branch unde
   click-persists-across-relaunch).
 - ✅ **Highlighter pen-tip SVG cursor** (**S**, from Phase 3.5 Slice D) — **merged to `master`
   2026-07-20 (no version bump — Phase 3.7 bundle ships together).** The paint-mode cursor is a
-  marker matching the toolbar icon with its tip filled in the active highlight colour (`penCursor()`,
+  chisel marker with its tip filled in the active highlight colour (`penCursor()`,
   `src/renderer/penCursor.ts`), set as `--hl-cursor` on `body` so both split panes share one write.
   The deferred CSP question resolved to `img-src 'self' data:` — the concession `font-src` already
   had. Unit-tested (encoding + all 18 colours) and smoke-tested (wiring + a CSP-violation guard).

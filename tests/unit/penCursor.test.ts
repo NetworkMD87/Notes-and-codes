@@ -6,7 +6,7 @@ describe('penCursor', () => {
   it('returns a data-URI cursor with the tip hotspot and a crosshair fallback', () => {
     const v = penCursor('yellow')
     expect(v.startsWith('url("data:image/svg+xml,')).toBe(true)
-    expect(v.endsWith('") 3 20, crosshair')).toBe(true)
+    expect(v.endsWith('") 5 27, crosshair')).toBe(true)
   })
 
   it('percent-encodes the SVG so the hex # cannot truncate the URI', () => {
@@ -37,9 +37,9 @@ describe('penCursor', () => {
     }
   })
 
-  it('declares the SVG namespace and a fixed 24x24 size', () => {
+  it('declares the SVG namespace and a fixed 32x32 size', () => {
     const svg = decodeURIComponent(penCursor('red'))
     expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"')
-    expect(svg).toContain('width="24" height="24"')
+    expect(svg).toContain('width="32" height="32"')
   })
 })
