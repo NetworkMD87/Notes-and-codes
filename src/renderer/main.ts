@@ -28,6 +28,7 @@ import { SnippetPicker } from './snippetPicker'
 import { SnippetManager } from './snippetManager'
 import { promptInput, confirmDialog } from './inputOverlay'
 import { AppearancePanel } from './appearancePanel'
+import { penCursor } from './penCursor'
 import { FileHistoryPanel } from './fileHistoryPanel'
 import { FolderMode } from './folderMode'
 import { buildExportHtml, suggestExportName, type ExportFormat } from './exportDoc'
@@ -512,16 +513,24 @@ const exportPdf = () => void exportActive('pdf')
 const pasteFromHistory = () => phPicker.open(pasteHistory.entries(), (text) => { paneFor(view.focusedPane()).insertAtCursor(text) })
 const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); toast('Paste history cleared.') }
 
+/** Single place mode/colour changes sync highlighter chrome: toolbar indicator + the pen cursor.
+ *  (The pen cursor is also seeded once at startup, below, outside this function.) */
+function syncHighlightChrome(on: boolean, c: HighlightColour): void {
+  toolbar.syncHighlighter(on, c)
+  // Set on <body> so both split panes pick it up from one write. Written even when the mode is
+  // off — harmless, because `.hl-mode` is what gates whether the cursor applies.
+  document.body.style.setProperty('--hl-cursor', penCursor(c))
+}
 function toggleHighlighter(): void {
   const on = highlights.toggleMode()
   view.paneA.setHighlighterMode(on); view.paneB.setHighlighterMode(on)
-  toolbar.syncHighlighter(on, highlights.colour())
+  syncHighlightChrome(on, highlights.colour())
   toast(`Highlighter: ${on ? 'on' : 'off'}`)
 }
 function setHighlightColour(c: HighlightColour): void {
   highlights.setColour(c)
   if (!highlights.isOn()) { toggleHighlighter(); return }
-  toolbar.syncHighlighter(true, c)
+  syncHighlightChrome(true, c)
 }
 function clearHighlights(): void {
   const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
@@ -568,6 +577,10 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
   pickHighlightColour: setHighlightColour,
   clearHighlights,
 })
+// Seed the pen cursor for the manager's default colour. `toggleHighlighter` applies the
+// `.hl-mode` class before it calls `syncHighlightChrome`, so without this seed there would be a
+// brief window where the class is on and `--hl-cursor` is still unset.
+document.body.style.setProperty('--hl-cursor', penCursor(highlights.colour()))
 // keep the theme toggle as the right-most element in the header
 document.getElementById('header')!.appendChild(themeBtn)
 

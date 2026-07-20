@@ -1,4 +1,4 @@
-import { ACCENT_PALETTE, HIGHLIGHT_COLOURS, type HighlightColour } from '../shared/types'
+import { HIGHLIGHT_COLOURS, HL_HEX, type HighlightColour } from '../shared/types'
 
 export interface ToolbarHandlers {
   open: () => void
@@ -23,14 +23,11 @@ const ICONS = {
   diff: `<svg ${S}><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 9v6a3 3 0 0 0 3 3h6"/><path d="M18 15V9a3 3 0 0 0-3-3H9"/></svg>`,
   paste: `<svg ${S}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>`,
   pin: `<svg ${S}><path d="M12 17v5"/><path d="M9 10.76V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v5.76l2 3.24H7z"/></svg>`,
-  highlighter: `<svg ${S}><path d="m9 11-6 6v3h3l6-6"/><path d="m17 7 3-3a1.4 1.4 0 0 0-2-2l-3 3"/><path d="m12 8 4 4"/><path d="M9 11l4 4"/></svg>`,
+  // Chisel marker — the pen cursor's silhouette (penCursor.ts) scaled to this 24 viewBox and drawn
+  // stroke-only, so the button matches the pointer without leaving the row's icon language.
+  highlighter: `<svg ${S}><path d="M9.5 12.5 17 5l3 3-7.5 7.5z"/><path d="M9.5 12.5 12.5 15.5 3.5 20.5z"/></svg>`,
   history: `<svg ${S}><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>`,
 }
-
-/** Solid swatch colours = the shared palette hexes (the editor highlights are the semi-transparent .hl-*). */
-const HL_HEX = Object.fromEntries(
-  ACCENT_PALETTE.map(c => [c.name.toLowerCase(), c.value]),
-) as Record<HighlightColour, string>
 
 export class Toolbar {
   private el: HTMLDivElement

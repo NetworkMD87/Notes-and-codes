@@ -81,3 +81,45 @@ test('highlight colour popup shows 18 swatches (3x6)', async () => {
     await app.close(); rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('highlight mode uses the pen cursor and updates with the colour', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-hlcur-'))
+  const filePath = join(userDataDir, 'note.txt')
+  writeFileSync(filePath, TEXT)
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#paneA .view-lines')).toContainText('hello')
+    await runCmd(win, 'Toggle Highlighter')
+
+    const cursorOf = () => win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).cursor)
+    const yellow = await cursorOf()
+    expect(yellow).toContain('data:image/svg+xml')
+
+    // pick Blue from the toolbar popup (swatch order = HIGHLIGHT_COLOURS)
+    await win.locator('.tb-caret').click()
+    await win.locator('.tb-hl-pop .tb-swatch').nth(7).click()
+    await expect.poll(cursorOf).not.toBe(yellow)
+  } finally {
+    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('the pen cursor image is not blocked by the CSP', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-hlcsp-'))
+  const filePath = join(userDataDir, 'note.txt')
+  writeFileSync(filePath, TEXT)
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    const violations: string[] = []
+    win.on('console', (m) => { if (/Content.Security.Policy/i.test(m.text())) violations.push(m.text()) })
+    await expect(win.locator('#paneA .view-lines')).toContainText('hello')
+    await runCmd(win, 'Toggle Highlighter')
+    await dragPaint(win)
+    await expect(win.locator('#paneA .hl-yellow').first()).toBeVisible()
+    expect(violations).toEqual([])
+  } finally {
+    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

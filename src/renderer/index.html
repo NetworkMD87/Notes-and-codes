@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:;" />
     <title>Notes & Codes</title>
     <style>
       :root{--radius:4px;--gap:8px;--shadow:0 6px 24px rgba(0,0,0,.28);--motion-fast:120ms;--motion:160ms;--ease:cubic-bezier(.2,.6,.2,1)}
@@ -47,7 +47,7 @@
       .hl-green{background:#16a34a59}.hl-lime{background:#65a30d59}
       .hl-yellow{background:#eab30859}.hl-amber{background:#f59e0b59}
       .hl-orange{background:#ea580c59}.hl-slate{background:#64748b59}
-      .hl-mode .view-lines{cursor:crosshair}
+      .hl-mode .view-lines{cursor:var(--hl-cursor,crosshair)}
       .tb-hl-wrap{position:relative;display:flex;align-items:center}
       .tb-caret{padding:4px 2px;font-size:10px}
       .tb-hl-pop{position:absolute;top:100%;right:0;display:grid;grid-template-columns:repeat(6,18px);gap:6px;padding:6px;margin-top:4px;background:var(--bar);border:1px solid var(--accent);border-radius:var(--radius);box-shadow:0 4px 14px rgba(0,0,0,.3);z-index:100}
