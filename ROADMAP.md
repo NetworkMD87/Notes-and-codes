@@ -17,7 +17,7 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — 🚧 Phase 3.7 in progress (5 slices merged + pushed; bundle release pending)
+## ▶ NEXT ACTION — 🚧 Phase 3.7 in progress (6 slices merged + pushed; bundle release pending)
 
 **Phase 3.7 "Polish & discoverability" is underway.** Each slice gets its own `feat/` branch
 (brainstorm → spec → plan → TDD → merge `--no-ff`) with **no per-slice version bump** — the whole pass
@@ -30,13 +30,12 @@ ships as ONE release when every slice is done (polish-pass convention, [[polish-
 - ✅ Diff-theme fix (bonus bug) — opening a diff no longer flips the editors to a light theme on any
   dark theme whose id isn't literally `dark` (Monokai/Dracula/Nord/…)
 - ✅ Theme-picker swatch previews + hover live-preview
+- ✅ Highlighter pen-tip cursor
 
 **Remaining slices:**
-- ⬜ **Highlighter pen-tip cursor** — needs a CSP `img-src 'self' data:` decision (or a bundled cursor
-  asset) first; **do this next**.
-- ⬜ **Taskbar icon `{&}` at small sizes** — heaviest; `make-icon.mjs` per-size artwork.
+- ⬜ **Taskbar icon `{&}` at small sizes** — heaviest; `make-icon.mjs` per-size artwork; **do this next**.
 
-**⚠️ RESUME STATE (2026-07-19):** `master` is **pushed and in sync with `origin`**, holding the 5 merged
+**⚠️ RESUME STATE (2026-07-20):** `master` is **pushed and in sync with `origin`**, holding the 6 merged
 slices above — all captured under `## [Unreleased]` in `CHANGELOG.md`, with **no version bump and no
 tag** (still v1.12.3). Eyeballs so far: a **dev** eyeball passed for the first 3 visual slices
 (2026-07-18) and an **installer** eyeball passed for the swatch/hover slice (2026-07-19). A final
@@ -220,10 +219,12 @@ command-registry changes on systems already in place. Ships as **one branch unde
   without committing, so it can't reach `onPersist`); the grid's `mouseleave` and the panel's
   `close()` both revert. Unit-tested (`swatchColours`) + smoke-tested (dots, hover, Escape-mid-preview,
   click-persists-across-relaunch).
-- ⬜ **Highlighter pen-tip SVG cursor** (**S**, from Phase 3.5 Slice D) — replace the paint-mode
-  `crosshair` with a pen-tip cursor matching the toolbar icon. Deferred for a reason: a `data:` cursor
-  is CSP-blocked (`img-src` → `default-src 'self'`), so decide first between an `img-src 'self' data:`
-  relaxation or a bundled cursor asset.
+- ✅ **Highlighter pen-tip SVG cursor** (**S**, from Phase 3.5 Slice D) — **merged to `master`
+  2026-07-20 (no version bump — Phase 3.7 bundle ships together).** The paint-mode cursor is a
+  marker matching the toolbar icon with its tip filled in the active highlight colour (`penCursor()`,
+  `src/renderer/penCursor.ts`), set as `--hl-cursor` on `body` so both split panes share one write.
+  The deferred CSP question resolved to `img-src 'self' data:` — the concession `font-src` already
+  had. Unit-tested (encoding + all 18 colours) and smoke-tested (wiring + a CSP-violation guard).
 - ⬜ **Taskbar icon: `{&}` at small sizes inside `icon.ico`** (**S–M**, root-caused 2026-07-16; moved
   from Phase 3.6 — the heaviest item here) — the taskbar button icon comes from the app's exe/shortcut
   **identity icon** (`build/icon.ico`, currently the `{N&C}` tile at all 5 sizes: 16/24/32/48/256), not

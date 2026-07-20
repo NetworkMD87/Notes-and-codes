@@ -21,6 +21,8 @@ _Phase 3.7 polish & discoverability — accumulating; ships as one release when 
   colour dots from that theme's own palette (editor background, chrome bar, chrome text, accent), and
   hovering a row previews the theme across the whole app — moving off the list, or closing the panel,
   reverts it. Nothing is saved until you click.
+- Highlighter pen cursor — in highlight mode the editor cursor is a marker pen whose tip shows the
+  active highlight colour, replacing the generic crosshair.
 
 ### Fixed
 
