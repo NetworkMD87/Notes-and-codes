@@ -12,7 +12,9 @@ split panes, live diffs, markdown preview, paste history, snippets, and a global
 summon hotkey — all in a lightweight tray app.
 
 ## Install
-1. Download **Notes & Codes Setup x.y.z.exe** from the releases.
+1. Download **Notes.Codes.Setup.x.y.z.exe** from the [latest release](../../releases/latest)
+   (GitHub strips the spaces and `&` from the filename). The **Notes.Codes.x.y.z.exe** asset is
+   the no-install portable build.
 2. Run it. The build is unsigned, so Windows SmartScreen shows
    "Windows protected your PC" → click **More info → Run anyway**.
 3. It installs per-user (no admin) and adds an "Open with Notes & Codes" entry to
