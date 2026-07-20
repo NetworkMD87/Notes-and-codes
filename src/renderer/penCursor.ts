@@ -1,9 +1,11 @@
 import { HL_HEX, type HighlightColour } from '../shared/types'
 
 // Chisel-marker artwork on a 32x32 canvas — the largest cursor size Windows renders without
-// scaling. Deliberately NOT the toolbar's ICONS.highlighter outline: four thin strokes plus a
-// halo fuse into a smudge at cursor size (rejected at the 2026-07-20 installer eyeball), so the
-// pen is two solid shapes instead — a dark barrel and a colour-filled chisel tip.
+// scaling. The original artwork copied the toolbar icon's four thin outline strokes; plus a halo
+// they fused into a smudge at cursor size (rejected at the 2026-07-20 installer eyeball), so the
+// pen became two solid shapes — a dark barrel and a colour-filled chisel tip. ICONS.highlighter
+// (toolbar.ts) was then redrawn to this same silhouette, stroke-only at its own 24 viewBox: the
+// two are the same shape in different media, and a change to one wants a look at the other.
 const BARREL = 'M12.7 16.7 L22.7 6.7 L26.7 10.7 L16.7 20.7 Z'
 const TIP = 'M12.7 16.7 L16.7 20.7 L4.7 27.3 Z'
 const SHAPES = `<path d="${BARREL}"/><path d="${TIP}"/>`
