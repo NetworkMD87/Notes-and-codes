@@ -111,6 +111,17 @@ export function accelFromEvent(e: KeyLike): AccelResult {
     return { ok: false, reason: `${friendlyLabel(e.code)} can't be used as a shortcut.` }
   }
 
+  // Alt+F4 (and ONLY that exact chord — no extra Ctrl/Shift/Super) is Windows' own "close the
+  // active window" combo, honoured system-wide by every app, not just this one. Recording it
+  // as the global summon hotkey would silently steal window-closing away entirely until the
+  // user notices and re-records something else — bad enough to guard specifically, even
+  // though bare F4 (or F4 with a different modifier mix, e.g. Ctrl+Alt+F4) is unreserved and
+  // fine. BLOCKED above only ever matches by bare code, not by modifier combination, so it
+  // can't express "block this one specific chord" the way this needs.
+  if (e.code === 'F4' && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+    return { ok: false, reason: "Alt+F4 can't be used as a shortcut — it closes windows system-wide." }
+  }
+
   const name = keyNameFrom(e.code)
   if (!name) {
     // Modifier-only keydowns land here while the user is still assembling the combo — not an

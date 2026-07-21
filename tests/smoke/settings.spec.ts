@@ -535,3 +535,54 @@ test('Settings: Clear removes the hotkey entirely and it stays cleared', async (
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('Settings: re-entrant open() does not leak an overlayManager registration (Escape keeps working afterwards)', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-reentrant-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+
+    // Put the editor into multi-cursor state first, and never click it again afterwards —
+    // clicking would collapse the selection itself and destroy the very signal this test
+    // reads. Ctrl+, (the panel's OTHER open door, alongside the gear button / palette
+    // "Settings…" / File ▸ Preferences… / the Appearance… deep-link named in the finding)
+    // is bound on `window` and never touches focus, so it can be pressed repeatedly without
+    // disturbing the editor's own focus or selection.
+    const editor = win.locator('#paneA .monaco-editor')
+    await editor.click()
+    await win.keyboard.type('foo foo foo')
+    // First Ctrl+D only selects the word under the cursor (still one cursor); the second and
+    // third each add one more match as a new selection.
+    await win.keyboard.press('Control+D')
+    await win.keyboard.press('Control+D')
+    await win.keyboard.press('Control+D')
+    await expect(win.locator('#paneA .cursor')).toHaveCount(3)
+
+    // Re-entrant open(): Ctrl+, twice without ever closing in between.
+    await win.keyboard.press('Control+Comma')
+    await expect(win.locator('#settings')).toBeVisible()
+    await win.keyboard.press('Control+Comma')
+    await expect(win.locator('#settings')).toBeVisible()
+
+    // One Escape closes the panel, same as ever.
+    await win.keyboard.press('Escape')
+    await expect(win.locator('#settings')).toBeHidden()
+
+    // The real signal. Without the fix, the first open() pushed a close callback that the
+    // second open() never unregistered — only the LATEST one gets popped when the panel
+    // closes, so a dead entry is left on overlayManager's stack forever. overlayManager's
+    // capture-phase listener can't distinguish a live overlay from a dead one: this next
+    // Escape (no overlay visible anywhere) would be consumed by that stale entry —
+    // preventDefault + stopPropagation — before it ever reaches Monaco's own Escape-cancels-
+    // multi-selection handling, so the three cursors would still be three. With the fix, the
+    // stack is fully empty once the panel is closed, so this Escape reaches Monaco and
+    // collapses the selection down to its one primary cursor, same as it would with no
+    // overlay ever having been opened.
+    await win.keyboard.press('Escape')
+    await expect(win.locator('#paneA .cursor')).toHaveCount(1)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

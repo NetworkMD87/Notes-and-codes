@@ -234,7 +234,7 @@ test('zoom changes font size and the app menu exists', async () => {
   }
 })
 
-test('appearance panel changes theme, accent, and font', async () => {
+test('settings panel changes theme, accent, and font', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
@@ -435,7 +435,7 @@ test('autosave-to-disk writes a named file on blur without a conflict bar', asyn
   }
 })
 
-test('Appearance has a Format on save toggle that persists', async () => {
+test('Settings has a Format on save toggle that persists', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fosui-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {

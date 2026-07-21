@@ -26,7 +26,7 @@ export const HELP_SECTIONS: HelpCategory[] = [
     { label: 'Close Tab',         keys: 'Ctrl+W' },
     { label: 'Export to HTML…',   desc: 'Turn the current note (written in Markdown) into a web-page file.' },
     { label: 'Export to PDF…',    desc: 'Turn the current note (written in Markdown) into a PDF document.' },
-    { label: 'Preferences…',      keys: 'Ctrl+,', desc: 'Open Settings — theme, fonts, editor, folder, and startup options. Same panel as View ▸ Settings….' },
+    { label: 'Preferences…',      keys: 'Ctrl+,', desc: 'Open Settings — theme, fonts, editor, folder, startup, and integration options. Same panel as View ▸ Appearance….' },
     { label: 'Exit',              keys: 'Ctrl+Q' },
   ] },
   { title: 'Edit', entries: [

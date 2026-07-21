@@ -65,6 +65,21 @@ describe('accelFromEvent', () => {
       expect(r).toEqual({ ok: false, reason: 'Press a key to finish the shortcut.' })
     },
   )
+
+  it('rejects Alt+F4 — it closes the active window system-wide, in every app', () => {
+    const r = accelFromEvent(ev({ key: 'F4', code: 'F4', altKey: true }))
+    expect(r).toEqual({ ok: false, reason: "Alt+F4 can't be used as a shortcut — it closes windows system-wide." })
+  })
+
+  it('still allows plain F4 (no Alt) — only the Alt+F4 chord is special-cased', () => {
+    const r = accelFromEvent(ev({ key: 'F4', code: 'F4', ctrlKey: true }))
+    expect(r).toEqual({ ok: true, accel: 'CommandOrControl+F4' })
+  })
+
+  it('still allows Alt+F4 plus an extra modifier — only the bare chord is reserved', () => {
+    const r = accelFromEvent(ev({ key: 'F4', code: 'F4', altKey: true, ctrlKey: true }))
+    expect(r).toEqual({ ok: true, accel: 'CommandOrControl+Alt+F4' })
+  })
 })
 
 describe('keyNameFrom — every mapped punctuation/navigation branch (via accelFromEvent)', () => {

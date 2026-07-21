@@ -72,6 +72,13 @@ export class SettingsPanel {
     // panel is already open) would otherwise switch `active` out from under an in-flight
     // recording the same way the nav-row switch does — tear it down first so that can't happen.
     this.stopRecording()
+    // Same re-entrancy also applies to the overlayManager registration: pushOverlay() stacks a
+    // new close callback on every call, and close() only ever pops the latest. Without
+    // unregistering the existing one first, each re-entrant open() while already open leaks a
+    // stale entry that outlives this panel — the NEXT Escape press then consumes that dead
+    // callback (preventDefault + stopPropagation) instead of reaching whatever should actually
+    // handle it (Monaco's find widget, multi-cursor, etc.), one leaked press per re-entrant open.
+    this.unreg?.()
     this.active = category
     this.render()
     this.host.classList.remove('hidden')

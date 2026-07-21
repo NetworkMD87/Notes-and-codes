@@ -194,7 +194,7 @@ function createWindow(hidden = false): BrowserWindow {
   // DOM `blur`/`visibilitychange` do NOT reliably fire under Playwright/CDP automation (the
   // page stays reporting focused/visible even once BrowserWindow.isVisible() is false), so
   // this main-process event is what both production and the smoke test can depend on.
-  win.on('blur', () => win.webContents.send('window:blur'))
+  win.on('blur', () => { if (!win.webContents.isDestroyed()) win.webContents.send('window:blur') })
   return win
 }
 
@@ -248,8 +248,22 @@ if (!gotLock) {
     // The OS is the truth; reconcile so the Settings checkbox can't lie. Packaged only —
     // in dev the login item is never written, so getLoginItemSettings would always
     // report false and would clobber a setting the user just ticked.
+    //
+    // MUST read executableWillLaunchAtLogin, NOT openAtLogin. setLoginItem() above writes
+    // with `args: ['--hidden']`, and per electron.d.ts: "If you provided `path` and `args`
+    // options to `app.setLoginItemSettings`, then you need to pass the same arguments here
+    // for `openAtLogin` to be set correctly" — openAtLogin is a raw command-line string
+    // comparison and getLoginItemSettings() here is called with no options (args defaults to
+    // []), so it would compare against the wrong command line and always read back false on a
+    // packaged run, even though the run key is really there. That would make this reconcile
+    // silently flip settings.openAtLogin to false on every single boot.
+    // executableWillLaunchAtLogin (Windows-only) is documented to "ignore the `args` option"
+    // and reports true "if the given executable would be launched at login with **any**
+    // arguments" and "its run key is not deactivated" — which is also exactly the Task
+    // Manager ▸ Startup deactivation case this reconcile exists to catch. Don't "simplify"
+    // this back to `.openAtLogin` — it looks equivalent and is not.
     if (app.isPackaged) {
-      const real = app.getLoginItemSettings().openAtLogin
+      const real = app.getLoginItemSettings().executableWillLaunchAtLogin
       if (real !== settings.openAtLogin) {
         settings.openAtLogin = real
         await settingsStore.update({ openAtLogin: real })
