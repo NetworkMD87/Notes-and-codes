@@ -165,13 +165,13 @@ if (!gotLock) {
       onRecentChanged: () => { void rebuildMenu() }
     })
     pendingFile = fileArgFrom(process.argv)
-    mainWindow = createWindow()
-    void rebuildMenu()
-    mainWindow.webContents.on('did-finish-load', () => {
-      if (pendingFile) mainWindow!.webContents.send('open-file', pendingFile)
-    })
 
-    tray = createTray({ onShow: showWindow, onQuit: () => { requestQuit() } })
+    // Load settings AND run the login-item drift reconcile before the window (and thus the
+    // renderer's boot()->loadSettings() IPC round trip) exists. SettingsStore.load() is a raw
+    // fs.readFile that does NOT join the chain serialization save()/update() use — so a
+    // renderer read racing an in-flight reconcile write could still observe the stale
+    // pre-reconcile value. Awaiting both here, before createWindow(), removes that race
+    // entirely rather than relying on timing.
     const settings = await settingsStore.load()
     // Windows Task Manager ▸ Startup lets the user disable our entry behind our back.
     // The OS is the truth; reconcile so the Settings checkbox can't lie. Packaged only —
@@ -179,8 +179,19 @@ if (!gotLock) {
     // report false and would clobber a setting the user just ticked.
     if (app.isPackaged) {
       const real = app.getLoginItemSettings().openAtLogin
-      if (real !== settings.openAtLogin) void settingsStore.update({ openAtLogin: real })
+      if (real !== settings.openAtLogin) {
+        settings.openAtLogin = real
+        await settingsStore.update({ openAtLogin: real })
+      }
     }
+
+    mainWindow = createWindow()
+    void rebuildMenu()
+    mainWindow.webContents.on('did-finish-load', () => {
+      if (pendingFile) mainWindow!.webContents.send('open-file', pendingFile)
+    })
+
+    tray = createTray({ onShow: showWindow, onQuit: () => { requestQuit() } })
     // Re-apply the context-menu registration on every packaged startup, not just when the
     // user toggles it — the registry write is idempotent (reg add /f overwrites) and
     // self-healing (it also repairs a stale exe path after a reinstall elsewhere), so this
