@@ -28,6 +28,7 @@ import { SnippetPicker } from './snippetPicker'
 import { SnippetManager } from './snippetManager'
 import { promptInput, confirmDialog } from './inputOverlay'
 import { AppearancePanel } from './appearancePanel'
+import { SettingsPanel, type SettingsCategory, type SettingsDeps } from './settingsPanel'
 import { penCursor } from './penCursor'
 import { FileHistoryPanel } from './fileHistoryPanel'
 import { FolderMode } from './folderMode'
@@ -584,7 +585,7 @@ document.body.style.setProperty('--hl-cursor', penCursor(highlights.colour()))
 // keep the theme toggle as the right-most element in the header
 document.getElementById('header')!.appendChild(themeBtn)
 
-const appearance = new AppearancePanel(document.getElementById('app')!, {
+const settingsDeps: SettingsDeps = {
   currentThemeId: () => theme.currentId(), currentAccent: () => theme.currentAccent(),
   pickTheme: (id) => theme.pick(id), setAccent: (a) => theme.setAccent(a),
   previewTheme: (id) => theme.preview(id), endPreview: () => theme.endPreview(),
@@ -603,9 +604,13 @@ const appearance = new AppearancePanel(document.getElementById('app')!, {
     formatOnSave = on
     void window.api.updateSettings({ formatOnSave: on })
   },
-})
+}
+const appearance = new AppearancePanel(document.getElementById('app')!, settingsDeps)
 const openAppearance = () => appearance.open()
 themeBtn.onclick = openAppearance
+
+const settings = new SettingsPanel(document.getElementById('app')!, settingsDeps)
+const openSettings = (category: SettingsCategory = 'appearance') => settings.open(category)
 
 const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
   current: () => {
@@ -658,6 +663,7 @@ registerCommands({
   toggleAlwaysOnTop,
   zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset,
   openAppearance,
+  openSettings,
   openHistory,
   openFolder: openFolderFromDialog,
   closeFolder: () => folder.closeFolder(),

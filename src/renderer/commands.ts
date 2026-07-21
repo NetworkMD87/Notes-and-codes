@@ -2,6 +2,7 @@ import type { CommandPalette } from './commandPalette'
 import type { BufferManager } from './bufferManager'
 import type { SplitView } from './splitView'
 import type { DiffView } from './diffView'
+import type { SettingsCategory } from './settingsPanel'
 import { toast } from './notify'
 
 export interface CommandDeps {
@@ -32,6 +33,7 @@ export interface CommandDeps {
   zoomOut: () => void
   zoomReset: () => void
   openAppearance: () => void
+  openSettings: (category?: SettingsCategory) => void
   openHistory: () => void
   revert: () => void
   openFolder: () => Promise<void>
@@ -59,6 +61,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'lines', label: 'Toggle Line Numbers', run: () => { d.paneFor(d.view.focusedPane()).toggleLineNumbers() } })
   p.register({ id: 'wrap', label: 'Toggle Word Wrap', run: () => { const on = d.paneFor(d.view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) } })
   p.register({ id: 'appearance', label: 'Appearance…', run: () => d.openAppearance() })
+  p.register({ id: 'settings', label: 'Settings…', run: () => d.openSettings() })
   p.register({ id: 'save', label: 'Save', hint: 'Ctrl+S', run: () => d.saveActive() })
   p.register({ id: 'save-all', label: 'Save All', hint: 'Ctrl+Shift+S', run: () => d.saveAll() })
   p.register({ id: 'open', label: 'Open File', hint: 'Ctrl+O', run: () => d.openFromDisk() })
