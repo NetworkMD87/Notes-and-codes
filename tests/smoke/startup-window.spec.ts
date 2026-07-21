@@ -98,3 +98,29 @@ test('a real second process forwards its file arg and shows the hidden window', 
     await app.close(); rmSync(userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
   }
 })
+
+test('--hidden starts the window parked in the tray, and it can still be shown', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-hidden-'))
+  const app = await electron.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, '--hidden'],
+  })
+  try {
+    const win = await app.firstWindow()
+    // The window exists and the renderer loads (that's what makes the summon instant) —
+    // it is simply not shown. Poll: BrowserWindow visibility settles after the load.
+    await expect
+      .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible()), { timeout: 5000 })
+      .toBe(false)
+
+    // The app is alive behind the hidden window, and showing it works — this is the
+    // path the tray click and the summon hotkey both take (showWindow()).
+    await expect(win.locator('#tabbar')).toBeAttached()
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.show())
+    await expect
+      .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible()), { timeout: 5000 })
+      .toBe(true)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
