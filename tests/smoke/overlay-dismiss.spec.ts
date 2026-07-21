@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from '@playwright/test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { openSettings } from './settingsHelper'
 
 async function launch() {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-esc-'))
@@ -14,11 +15,10 @@ test('Escape closes overlays that previously had no Esc handler', async () => {
   try {
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
-    // Appearance panel (opened via the theme button) — gained Esc-close this slice
-    await win.locator('#theme-toggle').click()
-    await expect(win.locator('#appearance')).toBeVisible()
+    // Settings panel — gained Esc-close this slice (ported from the old Appearance panel)
+    await openSettings(win)
     await win.keyboard.press('Escape')
-    await expect(win.locator('#appearance')).toBeHidden()
+    await expect(win.locator('#settings')).toBeHidden()
   } finally {
     await app.close(); rmSync(userDataDir, { recursive: true, force: true })
   }
@@ -42,15 +42,15 @@ test('Escape closes only the topmost of two stacked overlays', async () => {
   const { app, userDataDir } = await launch()
   try {
     const win = await app.firstWindow()
-    await win.locator('#theme-toggle').click()
-    await expect(win.locator('#appearance')).toBeVisible()
-    await win.keyboard.press('Control+Shift+P')          // palette on top of appearance
+    await expect(win.locator('#tabbar')).toBeVisible()   // renderer ready (keydown listener attached)
+    await openSettings(win)
+    await win.keyboard.press('Control+Shift+P')          // palette on top of settings
     await expect(win.locator('#palette .palette-box')).toBeVisible()
     await win.keyboard.press('Escape')                   // closes palette only
     await expect(win.locator('#palette')).toBeHidden()
-    await expect(win.locator('#appearance')).toBeVisible()
-    await win.keyboard.press('Escape')                   // then appearance
-    await expect(win.locator('#appearance')).toBeHidden()
+    await expect(win.locator('#settings')).toBeVisible()
+    await win.keyboard.press('Escape')                   // then settings
+    await expect(win.locator('#settings')).toBeHidden()
   } finally {
     await app.close(); rmSync(userDataDir, { recursive: true, force: true })
   }

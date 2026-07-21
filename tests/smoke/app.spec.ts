@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from '@playwright/test'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { openSettings } from './settingsHelper'
 
 test('launches, creates tabs, splits, toggles theme', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
@@ -26,10 +27,9 @@ test('launches, creates tabs, splits, toggles theme', async () => {
     await win.keyboard.press('Enter')
     await expect(win.locator('#paneB')).toBeVisible()
 
-    // Theme button opens the Appearance panel; clicking a theme row applies it
-    await win.click('#theme-toggle')
-    await expect(win.locator('#appearance')).toBeVisible()
-    await win.locator('#appearance .appearance-theme').getByText('Light', { exact: true }).click()
+    // Settings panel opens on the Appearance category by default; clicking a theme row applies it
+    await openSettings(win)
+    await win.locator('#settings .appearance-theme').getByText('Light', { exact: true }).click()
     const theme = await win.evaluate(() => document.body.dataset.theme)
     expect(theme).toBe('light')
   } finally {
@@ -240,8 +240,7 @@ test('appearance panel changes theme, accent, and font', async () => {
   try {
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
-    await win.locator('#theme-toggle').click()
-    await expect(win.locator('#appearance')).toBeVisible()
+    await openSettings(win)
 
     // pick a distinctive theme (Monokai) → body[data-theme] changes
     await win.locator('.appearance-theme', { hasText: 'Monokai' }).click()
@@ -255,14 +254,17 @@ test('appearance panel changes theme, accent, and font', async () => {
     const after = await win.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim())
     expect(after).not.toBe(before)
 
-    // font family → editor option reflects it. NB: the panel has two selects since
-    // v1.10.0 (editor font + interface font); the editor font is the first one.
-    await win.locator('#appearance select').first().selectOption('Fira Code')
+    // font family → editor option reflects it. Font is its own category now (not a shared
+    // container), and it has two selects (editor font + interface font) — target the
+    // Editor font row explicitly rather than relying on DOM order.
+    await win.locator('.settings-cat', { hasText: 'Font' }).click()
+    const editorFontRow = win.locator('.appearance-row', { hasText: 'Editor font' })
+    await editorFontRow.locator('select').selectOption('Fira Code')
     await win.waitForTimeout(200)
     const fam = await win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).fontFamily)
     expect(fam.toLowerCase()).toContain('fira')
     // bundled IBM Plex Mono is selectable too
-    await win.locator('#appearance select').first().selectOption('IBM Plex Mono')
+    await editorFontRow.locator('select').selectOption('IBM Plex Mono')
     await win.waitForTimeout(200)
     const fam2 = await win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).fontFamily)
     expect(fam2.toLowerCase()).toContain('plex')
@@ -438,8 +440,8 @@ test('Appearance has a Format on save toggle that persists', async () => {
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
     const win = await app.firstWindow()
-    await win.locator('#theme-toggle').click()
-    await expect(win.locator('#appearance')).toBeVisible()
+    await expect(win.locator('#tabbar')).toBeVisible()   // renderer ready (keydown listener attached)
+    await openSettings(win, 'Editor')
     const row = win.locator('.appearance-row', { hasText: 'Format on save' })
     await expect(row).toBeVisible()
     await row.locator('input[type=checkbox]').check()
@@ -581,14 +583,13 @@ test('accent: light preset auto-contrasts text to dark', async () => {
   try {
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
-    await win.locator('#theme-toggle').click()
-    await expect(win.locator('#appearance')).toBeVisible()
+    await openSettings(win)
     // 18 curated presets (no default swatch); current shown via preview + Default reset
-    await expect(win.locator('#appearance .appearance-sw .swatch')).toHaveCount(18)
-    await expect(win.locator('#appearance .accent-current')).toHaveCount(1)
-    await expect(win.locator('#appearance .accent-default-btn')).toHaveCount(1)
+    await expect(win.locator('#settings .appearance-sw .swatch')).toHaveCount(18)
+    await expect(win.locator('#settings .accent-current')).toHaveCount(1)
+    await expect(win.locator('#settings .accent-default-btn')).toHaveCount(1)
     // pick the light Yellow preset → accent-text auto-derives dark
-    await win.locator('#appearance .appearance-sw .swatch[title="Yellow"]').click()
+    await win.locator('#settings .appearance-sw .swatch[title="Yellow"]').click()
     const accentText = await win.evaluate(() =>
       getComputedStyle(document.body).getPropertyValue('--accent-text').trim())
     expect(accentText).toBe('#111111')
@@ -620,11 +621,11 @@ test('chrome polish: themed checkbox + icon-only theme button', async () => {
     await expect(win.locator('#tabbar')).toBeVisible()
     // theme button is icon-only
     await expect(win.locator('#theme-toggle')).toHaveText('◐')
-    // a checkbox resolves accent-color to --accent
-    await win.locator('#theme-toggle').click()
-    await expect(win.locator('#appearance')).toBeVisible()
+    // a checkbox resolves accent-color to --accent. Appearance has no checkbox at all, so
+    // open on Editor (it has two) — any checkbox works, this only probes accent-color.
+    await openSettings(win, 'Editor')
     const [accentColor, accent] = await win.evaluate(() => {
-      const cb = document.querySelector('#appearance input[type=checkbox]')!
+      const cb = document.querySelector('#settings input[type=checkbox]')!
       const probe = document.createElement('span'); probe.style.color = 'var(--accent)'
       document.body.appendChild(probe); const accent = getComputedStyle(probe).color; probe.remove()
       return [getComputedStyle(cb).accentColor, accent]
@@ -688,11 +689,10 @@ test('opening a diff keeps the current theme (does not flip editors to light)', 
     await expect(win.locator('#paneA .view-lines')).toContainText('left content')
 
     // Switch to Monokai — a dark theme whose id is NOT literally 'dark'.
-    await win.locator('#theme-toggle').click()
-    await expect(win.locator('#appearance')).toBeVisible()
+    await openSettings(win)
     await win.locator('.appearance-theme', { hasText: 'Monokai' }).click()
     await expect(win.locator('body')).toHaveAttribute('data-theme', 'monokai')
-    await win.keyboard.press('Escape') // close the appearance panel
+    await win.keyboard.press('Escape') // close the settings panel
 
     // Seed the Electron clipboard so 'Diff: current vs clipboard' has a right side.
     await app.evaluate(({ clipboard }) => clipboard.writeText('right content'))
