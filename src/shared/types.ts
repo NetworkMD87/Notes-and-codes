@@ -131,6 +131,10 @@ export type WriteResult =
 
 export interface ExportResult { ok: boolean; canceled?: boolean; path?: string }
 
+/** `setGlobalHotkey` result. `active` is what is actually bound after the call — the new
+ *  accelerator on success, the restored previous one on failure, or '' if nothing is bound. */
+export interface HotkeyResult { ok: boolean; active: string }
+
 export interface Api {
   readFile(path: string): Promise<ReadResult>
   writeFile(path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number): Promise<WriteResult>
@@ -145,6 +149,8 @@ export interface Api {
   /** Registers/removes the Windows startup entry. Persisting `openAtLogin` is separate
    *  (updateSettings) — this performs only the OS side-effect, like setContextMenu. */
   setLoginItem(enabled: boolean): Promise<void>
+  /** Rebind the summon hotkey. '' clears it. Main persists on success only. */
+  setGlobalHotkey(accel: string): Promise<HotkeyResult>
   onOpenFile(cb: (path: string) => void): void     // implemented in Task 13
   saveAsDialog(): Promise<string | null>
   openDialog(): Promise<string | null>

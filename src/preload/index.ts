@@ -11,6 +11,7 @@ const api: Api = {
   updateSettings: (partial) => ipcRenderer.invoke('settings:update', partial),
   setContextMenu: (enabled) => ipcRenderer.invoke('contextmenu:set', enabled),
   setLoginItem: (enabled) => ipcRenderer.invoke('loginitem:set', enabled),
+  setGlobalHotkey: (accel) => ipcRenderer.invoke('hotkey:set', accel),
   onOpenFile: (cb) => {
     ipcRenderer.removeAllListeners('open-file')
     ipcRenderer.on('open-file', (_e, path: string) => cb(path))

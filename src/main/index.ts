@@ -10,6 +10,7 @@ import { glyphImage } from './themeIcon'
 import { buildMenu } from './menu'
 import { RecentFilesStore } from './recentFilesStore'
 import { SettingsStore } from './settingsStore'
+import type { HotkeyResult } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 let pendingFile: string | null = null
@@ -20,6 +21,10 @@ let unsavedCount = 0
 const FLUSH_QUIT_FALLBACK_MS = 2000
 let recentStore: RecentFilesStore | null = null
 let settingsStore: SettingsStore | null = null
+// Tracks whatever accelerator is actually bound right now (or '' if none), so applyHotkey()
+// knows what to unregister/restore. Kept independent of settings.globalHotkey — that's the
+// persisted intent, this is the live OS-level state.
+let activeHotkey = ''
 
 async function rebuildMenu(): Promise<void> {
   if (!recentStore) return
@@ -100,6 +105,56 @@ function toggleWindow(): void {
   else showWindow()
 }
 
+/**
+ * Bind `accel` as the summon hotkey, test-then-commit.
+ *
+ * Registering IS the test — there is no way to ask Windows whether a combo is free without
+ * taking it, and our own live binding would falsely conflict. So: drop the current one, try
+ * the new one, and put the old one back if the new one won't take. Settings are written only
+ * on success, so they can never hold a combo that doesn't work.
+ *
+ * Under NC_HEADLESS the OS-level bind is skipped entirely (smoke runs on a real desktop; a
+ * test that seizes a global hotkey mid-run is intrusive and flaky) but the persist and the
+ * result shape stay real, so the renderer plumbing is still covered.
+ */
+async function applyHotkey(accel: string): Promise<HotkeyResult> {
+  const previous = activeHotkey
+  if (previous) globalShortcut.unregister(previous)
+
+  if (process.env.NC_HEADLESS) {
+    activeHotkey = accel
+    await settingsStore?.update({ globalHotkey: accel })
+    return { ok: true, active: accel }
+  }
+
+  if (accel === '') {                       // cleared on purpose — no hotkey at all
+    activeHotkey = ''
+    await settingsStore?.update({ globalHotkey: '' })
+    return { ok: true, active: '' }
+  }
+
+  let bound = false
+  try { bound = globalShortcut.register(accel, toggleWindow) }
+  catch { bound = false }                   // Electron throws on a malformed accelerator
+
+  if (bound) {
+    activeHotkey = accel
+    await settingsStore?.update({ globalHotkey: accel })
+    return { ok: true, active: accel }
+  }
+
+  // Failed to take the new one — put the old one back. If THAT also fails (something
+  // grabbed it in between) we end with no hotkey; report it honestly and leave settings
+  // on the old value so the next launch retries.
+  let restored = false
+  if (previous) {
+    try { restored = globalShortcut.register(previous, toggleWindow) }
+    catch { restored = false }
+  }
+  activeHotkey = restored ? previous : ''
+  return { ok: false, active: activeHotkey }
+}
+
 function createWindow(hidden = false): BrowserWindow {
   const win = new BrowserWindow({
     width: 1100,
@@ -164,6 +219,7 @@ if (!gotLock) {
       getWindow: () => mainWindow,
       setContextMenu: (enabled) => setContextMenu(enabled, app.getPath('exe')),
       setLoginItem: (enabled) => setLoginItem(enabled),
+      setGlobalHotkey: (accel) => applyHotkey(accel),
       onDirtyCount: (n) => { unsavedCount = n },
       onQuitNow: () => { isQuitting = true; app.quit() },
       onRecentChanged: () => { void rebuildMenu() }
@@ -207,22 +263,28 @@ if (!gotLock) {
     if (app.isPackaged && settings.contextMenuEnabled) {
       void setContextMenu(true, app.getPath('exe'))
     }
-    const hotkey = settings.globalHotkey || 'CommandOrControl+Shift+Space'
+    // '' means the user deliberately cleared the hotkey — DON'T fall back to the default
+    // (a `||` here would silently re-bind it on every restart). undefined/null means a
+    // settings file written before the field existed, which does take the default.
+    const hotkey = settings.globalHotkey ?? 'CommandOrControl+Shift+Space'
     // Keep the live window/taskbar glyph contrasting when the taskbar theme flips.
     nativeTheme.on('updated', () => mainWindow?.setIcon(glyphImage()))
 
     // Skip the OS-level global hotkey under automated smoke (NC_HEADLESS) — it's a
     // singleton, can't be automated, and a machine already holding it would inject a
     // conflict toast into unrelated tests. Real dev/packaged runs always register it.
-    if (!process.env.NC_HEADLESS) {
+    if (!process.env.NC_HEADLESS && hotkey) {
       const ok = globalShortcut.register(hotkey, toggleWindow)
-      if (!ok) {
+      if (ok) activeHotkey = hotkey
+      else {
         // Non-blocking: another app/instance already holds the hotkey. Degrade
         // gracefully with a toast instead of a modal — a blocking dialog here froze
         // startup (and every second-instance smoke test). See notifyRenderer.
         console.error('global hotkey registration failed:', hotkey)
-        notifyRenderer(`Summon hotkey "${hotkey}" is unavailable — another app may be using it. You can change it in Settings.`)
+        notifyRenderer(`Summon hotkey "${hotkey}" is unavailable — another app may be using it. You can change it in Settings ▸ Startup.`)
       }
+    } else if (process.env.NC_HEADLESS) {
+      activeHotkey = hotkey
     }
 
     app.on('activate', () => {

@@ -12,7 +12,7 @@ import { FileWatcher } from './fileWatcher'
 import { FileHistoryStore } from './fileHistoryStore'
 import { HighlightStore } from './highlightStore'
 import { saveHtml, savePdf } from './exportService'
-import type { SessionData, Settings, EolMode, Encoding } from '../shared/types'
+import type { SessionData, Settings, EolMode, Encoding, HotkeyResult } from '../shared/types'
 
 export interface IpcDeps {
   baseDir: string
@@ -23,6 +23,7 @@ export interface IpcDeps {
   getWindow: () => BrowserWindow | null
   setContextMenu: (enabled: boolean) => Promise<void>
   setLoginItem: (enabled: boolean) => void
+  setGlobalHotkey: (accel: string) => Promise<HotkeyResult>
   onDirtyCount: (n: number) => void
   onQuitNow: () => void
   onRecentChanged?: () => void
@@ -77,6 +78,7 @@ export function registerIpc(deps: IpcDeps): void {
   handle('settings:update', (_e, partial: Partial<Settings>) => settings.update(partial))
   handle('contextmenu:set', (_e, enabled: boolean) => deps.setContextMenu(enabled))
   handle('loginitem:set', (_e, enabled: boolean) => deps.setLoginItem(enabled))
+  handle('hotkey:set', (_e, accel: string) => deps.setGlobalHotkey(accel))
   handle('dialog:saveAs', async () => {
     const r = await dialog.showSaveDialog({ title: 'Save As' })
     return r.canceled ? null : r.filePath ?? null
