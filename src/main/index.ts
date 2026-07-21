@@ -119,13 +119,14 @@ function toggleWindow(): void {
  */
 async function applyHotkey(accel: string): Promise<HotkeyResult> {
   const previous = activeHotkey
-  if (previous) globalShortcut.unregister(previous)
 
   if (process.env.NC_HEADLESS) {
     activeHotkey = accel
     await settingsStore?.update({ globalHotkey: accel })
     return { ok: true, active: accel }
   }
+
+  if (previous) globalShortcut.unregister(previous)
 
   if (accel === '') {                       // cleared on purpose — no hotkey at all
     activeHotkey = ''
@@ -274,14 +275,31 @@ if (!gotLock) {
     // singleton, can't be automated, and a machine already holding it would inject a
     // conflict toast into unrelated tests. Real dev/packaged runs always register it.
     if (!process.env.NC_HEADLESS && hotkey) {
-      const ok = globalShortcut.register(hotkey, toggleWindow)
-      if (ok) activeHotkey = hotkey
-      else {
-        // Non-blocking: another app/instance already holds the hotkey. Degrade
-        // gracefully with a toast instead of a modal — a blocking dialog here froze
-        // startup (and every second-instance smoke test). See notifyRenderer.
+      // globalShortcut.register throws on a malformed accelerator string — and
+      // settings.json is user-editable (and, as of this branch, written from a recorded
+      // keystroke), so a bad value here is reachable. An uncaught throw inside this async
+      // whenReady callback would be an unhandled rejection with no .catch(), which can take
+      // the whole main process down. Treat a throw exactly like a failed bind: degrade,
+      // never crash — same as the corrupt-safe load() contract every store follows.
+      let ok = false
+      let malformed = false
+      try { ok = globalShortcut.register(hotkey, toggleWindow) }
+      catch { malformed = true }
+      if (ok) {
+        activeHotkey = hotkey
+      } else {
+        // activeHotkey must describe reality: no binding was made, so it stays ''
+        // (never claim `hotkey` is active when register() failed or threw).
+        activeHotkey = ''
+        // Non-blocking: never a modal (dialog.showErrorBox) here — one froze startup
+        // and every smoke test the last time this path grew a blocking call. See
+        // notifyRenderer. Two different problems get two different messages: a conflict
+        // is fixed by picking a different combo, a malformed value means settings.json
+        // itself holds something unusable and needs to be reset, not just changed.
         console.error('global hotkey registration failed:', hotkey)
-        notifyRenderer(`Summon hotkey "${hotkey}" is unavailable — another app may be using it. You can change it in Settings ▸ Startup.`)
+        notifyRenderer(malformed
+          ? `Summon hotkey "${hotkey}" in your settings isn't a valid shortcut, so no hotkey is active. Set a new one in Settings ▸ Startup.`
+          : `Summon hotkey "${hotkey}" is unavailable — another app may be using it. You can change it in Settings ▸ Startup.`)
       }
     } else if (process.env.NC_HEADLESS) {
       activeHotkey = hotkey
