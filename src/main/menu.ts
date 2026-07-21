@@ -38,6 +38,8 @@ export function buildMenu(d: MenuDeps): void {
         cmd('Export to PDF…', 'export-pdf')
       ] },
       { type: 'separator' },
+      cmd('Preferences…', 'settings', 'CmdOrCtrl+,'),
+      { type: 'separator' },
       { label: 'Exit', accelerator: 'CmdOrCtrl+Q', click: () => d.requestQuit() }
     ] },
     { label: 'Edit', submenu: [

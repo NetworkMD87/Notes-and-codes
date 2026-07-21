@@ -26,6 +26,7 @@ export const HELP_SECTIONS: HelpCategory[] = [
     { label: 'Close Tab',         keys: 'Ctrl+W' },
     { label: 'Export to HTML…',   desc: 'Turn the current note (written in Markdown) into a web-page file.' },
     { label: 'Export to PDF…',    desc: 'Turn the current note (written in Markdown) into a PDF document.' },
+    { label: 'Preferences…',      keys: 'Ctrl+,', desc: 'Open Settings — theme, fonts, editor, folder, and startup options. Same panel as View ▸ Settings….' },
     { label: 'Exit',              keys: 'Ctrl+Q' },
   ] },
   { title: 'Edit', entries: [
@@ -52,7 +53,7 @@ export const HELP_SECTIONS: HelpCategory[] = [
     { label: 'Zoom Out', keys: 'Ctrl+-' },
     { label: 'Reset Zoom', keys: 'Ctrl+0' },
     { label: 'Appearance…', desc: 'Change the theme, accent colour, and font.' },
-    { label: 'Settings…', desc: 'Open Settings: appearance, font, editor, folder, and integration options in one place.' },
+    { label: 'Settings…', desc: 'Open Settings: appearance, font, editor, folder, and integration options in one place. Same panel as File ▸ Preferences… (Ctrl+,).' },
     { label: 'Always on Top', desc: 'Keep the window above your other apps.' },
   ] },
   { title: 'Tools', entries: [
@@ -66,7 +67,7 @@ export const HELP_SECTIONS: HelpCategory[] = [
     { label: 'Manage Snippets',             desc: 'Add, rename, or delete your saved snippets.' },
     { label: 'Toggle Highlighter',          desc: 'Mark text with a coloured pen, like a highlighter.' },
     { label: 'Clear Highlights (current file)', desc: 'Remove all highlighter marks from this file.' },
-    { label: 'Toggle "Open with Notes & Codes" right-click menu', desc: 'Add or remove this app from Windows’ right-click menu.' },
+    { label: 'Toggle "Open with Notes & Codes" right-click menu', desc: 'Add or remove this app from Windows’ right-click menu. Also in Settings ▸ Integration.' },
   ] },
   { title: 'Editor', entries: [
     { label: 'Command Palette (editor)', keys: 'F1', desc: 'The editor’s own built-in command list.' },

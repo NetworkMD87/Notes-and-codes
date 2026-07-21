@@ -12,6 +12,7 @@ export interface ToolbarHandlers {
   toggleHighlighter: () => void
   pickHighlightColour: (c: HighlightColour) => void
   clearHighlights: () => void
+  openSettings: () => void
 }
 
 const S = 'viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
@@ -27,6 +28,7 @@ const ICONS = {
   // stroke-only, so the button matches the pointer without leaving the row's icon language.
   highlighter: `<svg ${S}><path d="M9.5 12.5 17 5l3 3-7.5 7.5z"/><path d="M9.5 12.5 12.5 15.5 3.5 20.5z"/></svg>`,
   history: `<svg ${S}><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>`,
+  gear: `<svg ${S}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
 }
 
 export class Toolbar {
@@ -88,7 +90,9 @@ export class Toolbar {
       sep(),
       hlWrap,
       mk('Start diff', ICONS.diff, h.startDiff),
-      mk('Paste from history', ICONS.paste, h.pasteFromHistory)
+      mk('Paste from history', ICONS.paste, h.pasteFromHistory),
+      sep(),
+      mk('Settings', ICONS.gear, h.openSettings)
     )
     host.appendChild(this.el)
   }

@@ -248,6 +248,46 @@ test('Settings: Integration category holds the "Open with" toggle', async () => 
   }
 })
 
+test('Settings: gear button and Ctrl+, both open the panel', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-doors-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+
+    await win.locator('.tb-btn[title="Settings"]').click()
+    await expect(win.locator('#settings')).toBeVisible()
+    await win.keyboard.press('Escape')
+    await expect(win.locator('#settings')).toBeHidden()
+
+    await win.keyboard.press('Control+Comma')
+    await expect(win.locator('#settings')).toBeVisible()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: File ▸ Preferences… menu item opens the Settings panel', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-menu-prefs-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    // Real menu click — same technique as the View ▸ Appearance… menu test above.
+    await app.evaluate(({ Menu }) => {
+      const menu = Menu.getApplicationMenu()!
+      const file = menu.items.find(i => i.label === 'File')!
+      const prefs = file.submenu!.items.find(i => i.label === 'Preferences…')!
+      prefs.click()
+    })
+    await expect(win.locator('#settings')).toBeVisible()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('Settings: Integration checkbox reflects a stored true value', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-integration-true-'))
   // Seed the setting directly rather than clicking the checkbox — clicking would fire the

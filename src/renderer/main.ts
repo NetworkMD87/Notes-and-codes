@@ -608,6 +608,7 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
   toggleHighlighter,
   pickHighlightColour: setHighlightColour,
   clearHighlights,
+  openSettings: () => openSettings(),
 })
 // Seed the pen cursor for the manager's default colour. `toggleHighlighter` applies the
 // `.hl-mode` class before it calls `syncHighlightChrome`, so without this seed there would be a
@@ -719,6 +720,7 @@ window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
+  if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === ',') { e.preventDefault(); openSettings() }
   // Escape (incl. closing the diff) is handled centrally by overlayManager.
 })
 
@@ -794,7 +796,7 @@ installMenuCommands({
   wrap: () => { const on = paneFor(view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) },
   lines: () => paneFor(view.focusedPane()).toggleLineNumbers(),
   'zoom-in': () => zoomBy(1), 'zoom-out': () => zoomBy(-1), 'zoom-reset': zoomReset,
-  appearance: openAppearance, aot: toggleAlwaysOnTop,
+  appearance: openAppearance, settings: () => openSettings(), aot: toggleAlwaysOnTop,
   diff: startDiff, 'diff-clip': () => void diffClipboard(), 'diff-files': () => void diffFiles(),
   history: openHistory,
   revert: () => void revertActive(),
