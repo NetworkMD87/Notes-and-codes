@@ -76,8 +76,6 @@ export function buildMenu(d: MenuDeps): void {
       cmd('Insert Snippet', 'snip-insert'),
       cmd('Save Selection as Snippet', 'snip-save'),
       cmd('Manage Snippets', 'snip-manage'),
-      { type: 'separator' },
-      cmd('Toggle "Open with" right-click menu', 'ctxmenu')
     ] },
     { label: 'Help', submenu: [
       cmd('Shortcuts & Commands…', 'help-shortcuts'),

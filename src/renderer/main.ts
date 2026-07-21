@@ -27,7 +27,6 @@ import { SnippetList } from './snippets'
 import { SnippetPicker } from './snippetPicker'
 import { SnippetManager } from './snippetManager'
 import { promptInput, confirmDialog } from './inputOverlay'
-import { AppearancePanel } from './appearancePanel'
 import { SettingsPanel, type SettingsCategory, type SettingsDeps } from './settingsPanel'
 import { penCursor } from './penCursor'
 import { FileHistoryPanel } from './fileHistoryPanel'
@@ -197,6 +196,7 @@ for (const which of ['A', 'B'] as const) {
 let autoSave = true
 let autoSaveToDisk = false
 let formatOnSave = false
+let contextMenuEnabled = false
 const conflicts = new Set<string>()
 const selfWrites = new Map<string, number>()
 const autosaveFailed = new Set<string>()
@@ -260,6 +260,7 @@ async function boot(): Promise<void> {
   autoSave = settings.autoSaveSession
   autoSaveToDisk = settings.autoSaveToDisk
   formatOnSave = settings.formatOnSave
+  contextMenuEnabled = settings.contextMenuEnabled
   theme.apply(migrateThemeId(settings), settings.accent ?? null)
   fontFamily = settings.fontFamily ?? 'JetBrains Mono'
   uiFontFamily = settings.uiFontFamily ?? 'System'
@@ -442,6 +443,20 @@ function toggleFormatOnSave(): void {
   toast(`Format on save: ${formatOnSave ? 'on' : 'off'}`)
 }
 
+// Single source of truth for the "Open with" shell-integration toggle — the palette
+// command, the View-menu-equivalent Tools entry (now removed, see menu.ts), and the
+// Settings ▸ Integration checkbox all funnel through this one setter so there is
+// exactly one place that calls window.api.setContextMenu + updateSettings.
+function setContextMenuEnabled(on: boolean): void {
+  contextMenuEnabled = on
+  void window.api.setContextMenu(on)
+  void window.api.updateSettings({ contextMenuEnabled: on })
+}
+function toggleContextMenu(): void {
+  setContextMenuEnabled(!contextMenuEnabled)
+  toast(`"Open with" right-click menu: ${contextMenuEnabled ? 'on' : 'off'}`)
+}
+
 window.addEventListener('blur', () => autosave.flushNow())
 document.addEventListener('visibilitychange', () => { if (document.hidden) autosave.flushNow() })
 
@@ -604,13 +619,14 @@ const settingsDeps: SettingsDeps = {
     formatOnSave = on
     void window.api.updateSettings({ formatOnSave: on })
   },
+  contextMenuEnabled: () => contextMenuEnabled,
+  setContextMenu: setContextMenuEnabled,
 }
-const appearance = new AppearancePanel(document.getElementById('app')!, settingsDeps)
-const openAppearance = () => appearance.open()
-themeBtn.onclick = openAppearance
 
 const settings = new SettingsPanel(document.getElementById('app')!, settingsDeps)
 const openSettings = (category: SettingsCategory = 'appearance') => settings.open(category)
+const openAppearance = () => openSettings('appearance')
+themeBtn.onclick = openAppearance
 
 const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
   current: () => {
@@ -676,6 +692,7 @@ registerCommands({
   formatDocument: () => void paneFor(view.focusedPane()).formatDocument(),
   formatSelection: () => void paneFor(view.focusedPane()).formatSelection(),
   toggleFormatOnSave,
+  toggleContextMenu,
   toggleHighlighter,
   clearHighlights,
   openHelp: () => helpOverlay.openShortcuts(),
@@ -769,7 +786,7 @@ installMenuCommands({
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
   'format-doc': () => void paneFor(view.focusedPane()).formatDocument(),
   'format-selection': () => void paneFor(view.focusedPane()).formatSelection(),
-  ctxmenu: async () => { const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled; await window.api.setContextMenu(next); await window.api.updateSettings({ contextMenuEnabled: next }); toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`) },
+  ctxmenu: toggleContextMenu,
   'folder-open': () => void openFolderFromDialog(),
   'folder-close': () => folder.closeFolder(),
   'sidebar-toggle': () => folder.toggleSidebar(),

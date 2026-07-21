@@ -47,6 +47,7 @@ export interface CommandDeps {
   formatDocument: () => void
   formatSelection: () => void
   toggleFormatOnSave: () => void
+  toggleContextMenu: () => void
   toggleHighlighter: () => void
   clearHighlights: () => void
   openHelp: () => void
@@ -91,11 +92,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'clear-highlights', label: 'Clear Highlights (current file)', run: () => d.clearHighlights() })
   p.register({ id: 'paste-history', label: 'Paste from History', run: () => d.pasteFromHistory() })
   p.register({ id: 'clear-paste-history', label: 'Clear Paste History', run: () => d.clearPasteHistory() })
-  p.register({ id: 'ctxmenu', label: 'Toggle "Open with Notes & Codes" right-click menu', run: async () => {
-    const s = await window.api.loadSettings(); const next = !s.contextMenuEnabled
-    await window.api.setContextMenu(next); await window.api.updateSettings({ contextMenuEnabled: next })
-    toast(`Right-click menu ${next ? 'enabled' : 'disabled'}.`)
-  } })
+  p.register({ id: 'ctxmenu', label: 'Toggle "Open with Notes & Codes" right-click menu', run: () => d.toggleContextMenu() })
   p.register({ id: 'snip-save', label: 'Save Selection as Snippet', run: () => d.saveSelectionAsSnippet() })
   p.register({ id: 'snip-insert', label: 'Insert Snippet', run: () => d.insertSnippet() })
   p.register({ id: 'snip-manage', label: 'Manage Snippets', run: () => d.manageSnippets() })

@@ -26,6 +26,8 @@ export interface SettingsDeps {
   setAutoSaveToDisk: (on: boolean) => void
   formatOnSave: () => boolean
   setFormatOnSave: (on: boolean) => void
+  contextMenuEnabled: () => boolean
+  setContextMenu: (on: boolean) => void
 }
 
 const FONTS = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Lucida Console', 'Courier New']
@@ -36,6 +38,7 @@ const CATEGORIES: { id: SettingsCategory; label: string }[] = [
   { id: 'font', label: 'Font' },
   { id: 'editor', label: 'Editor' },
   { id: 'folder', label: 'Folder' },
+  { id: 'integration', label: 'Integration' },
 ]
 
 export class SettingsPanel {
@@ -207,11 +210,23 @@ export class SettingsPanel {
     return wrap
   }
 
+  private renderIntegration(): HTMLElement {
+    const wrap = document.createElement('div')
+    const ih = document.createElement('h3'); ih.textContent = 'Integration'
+    wrap.append(
+      ih,
+      this.checkboxRow('Open with Notes & Codes — Windows right-click menu',
+        this.d.contextMenuEnabled(), (on) => this.d.setContextMenu(on)),
+    )
+    return wrap
+  }
+
   private renderDetail(): HTMLElement {
     switch (this.active) {
       case 'font': return this.renderFont()
       case 'editor': return this.renderEditor()
       case 'folder': return this.renderFolder()
+      case 'integration': return this.renderIntegration()
       default: return this.renderAppearance()
     }
   }

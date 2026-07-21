@@ -57,7 +57,7 @@ test('Settings: renders landscape — category nav left, detail right', async ()
 
     await expect(win.locator('.settings-nav')).toBeVisible()
     await expect(win.locator('.settings-detail')).toBeVisible()
-    await expect(win.locator('.settings-nav .settings-cat')).toHaveCount(4)
+    await expect(win.locator('.settings-nav .settings-cat')).toHaveCount(5)
     await expect(win.locator('.settings-detail .appearance-themes')).toBeVisible()
     await expect(win.locator('.settings-detail .appearance-sw')).toBeVisible()
 
@@ -161,6 +161,87 @@ test('Settings: every theme row shows four palette swatches', async () => {
       'rgb(248, 248, 242)', // #f8f8f2 bar text
       'rgb(249, 38, 114)'   // #f92672 accent
     ])
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+// The old #appearance overlay is gone (Task 3) — the theme button, the palette's
+// "Appearance…" command, and the View ▸ Appearance… menu item all now deep-link into
+// #settings on the Appearance category via the same `openAppearance` alias. Nothing
+// previously asserted the theme button opened anything at all (it used to open the
+// now-deleted panel), so this closes that gap; the other two confirm the alias's other
+// two entry points weren't silently broken by the rewire.
+
+test('Settings: theme button opens Settings on the Appearance category', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-themebtn-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await win.locator('#theme-toggle').click()
+    await expect(win.locator('#settings')).toBeVisible()
+    await expect(win.locator('.settings-cat.active')).toContainText('Appearance')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: palette "Appearance…" command opens Settings on the Appearance category', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-palette-appear-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Appearance')
+    await win.keyboard.press('Enter')
+    await expect(win.locator('#settings')).toBeVisible()
+    await expect(win.locator('.settings-cat.active')).toContainText('Appearance')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: View ▸ Appearance… menu item opens Settings on the Appearance category', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-menu-appear-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    // Real menu click, invoked from the main process the same way clean-quit.spec.ts and
+    // overwrite-warning.spec.ts trigger File ▸ Exit / File ▸ Save — MenuItem.click() runs
+    // the actual registered handler, not a synthetic IPC send.
+    await app.evaluate(({ Menu }) => {
+      const menu = Menu.getApplicationMenu()!
+      const view = menu.items.find(i => i.label === 'View')!
+      const appearance = view.submenu!.items.find(i => i.label === 'Appearance…')!
+      appearance.click()
+    })
+    await expect(win.locator('#settings')).toBeVisible()
+    await expect(win.locator('.settings-cat.active')).toContainText('Appearance')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: Integration category holds the "Open with" toggle', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-integration-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Integration')
+
+    // Present and reflecting the stored setting (default false). NEVER click it —
+    // toggling would write to the developer's real HKCU shell-integration key.
+    const cb = win.locator('.appearance-row', { hasText: 'Open with' }).locator('input[type=checkbox]')
+    await expect(cb).toBeVisible()
+    await expect(cb).not.toBeChecked()
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
