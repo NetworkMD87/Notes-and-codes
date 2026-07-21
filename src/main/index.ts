@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, globalShortcut, nativeTheme, Tray } from 'e
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { pickFileArg } from './fileArg'
+import { shouldStartHidden } from './startupFlags'
 import { registerIpc } from './ipc'
 import { setContextMenu } from './contextMenu'
 import { createTray } from './tray'
@@ -99,12 +100,15 @@ function toggleWindow(): void {
   else showWindow()
 }
 
-function createWindow(): BrowserWindow {
+function createWindow(hidden = false): BrowserWindow {
   const win = new BrowserWindow({
     width: 1100,
     height: 720,
     title: 'Notes & Codes',
     backgroundColor: '#1e1e1e',
+    // Launch-on-login starts parked in the tray; the renderer still loads fully behind the
+    // hidden window, so the first summon is instant instead of a cold start.
+    show: !hidden,
     // Live window icon = the contrast-aware {&} glyph (taskbar button + title bar). The
     // static exe/installer icon stays build/icon.ico (the dark tile). Swapped on theme
     // change below.
@@ -185,7 +189,7 @@ if (!gotLock) {
       }
     }
 
-    mainWindow = createWindow()
+    mainWindow = createWindow(shouldStartHidden(process.argv, pendingFile !== null))
     void rebuildMenu()
     mainWindow.webContents.on('did-finish-load', () => {
       if (pendingFile) mainWindow!.webContents.send('open-file', pendingFile)
