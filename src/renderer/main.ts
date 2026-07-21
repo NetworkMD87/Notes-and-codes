@@ -214,6 +214,7 @@ let fontFamily = 'JetBrains Mono'
 let fontLigatures = true
 let showAllFiles = false
 let restoreFolder = true
+let openAtLogin = false
 function fontStack(name: string): string { return `'${name}', Consolas, monospace` }
 function applyFont(): void {
   view.paneA.setFontFamily(fontStack(fontFamily)); view.paneB.setFontFamily(fontStack(fontFamily))
@@ -267,6 +268,7 @@ async function boot(): Promise<void> {
   fontLigatures = settings.fontLigatures ?? true
   showAllFiles = settings.showAllFiles
   restoreFolder = settings.restoreFolderOnLaunch
+  openAtLogin = settings.openAtLogin
   applyFont()
   applyUiFont()
   fontSize = settings.fontSize ?? 14; applyFontSize()
@@ -638,6 +640,12 @@ const settingsDeps: SettingsDeps = {
   },
   contextMenuEnabled: () => contextMenuEnabled,
   setContextMenu: setContextMenuEnabled,
+  openAtLogin: () => openAtLogin,
+  setOpenAtLogin: (on) => {
+    openAtLogin = on
+    void window.api.setLoginItem(on)
+    void window.api.updateSettings({ openAtLogin: on })
+  },
 }
 
 const settings = new SettingsPanel(document.getElementById('app')!, settingsDeps)

@@ -32,6 +32,8 @@ export interface SettingsDeps {
    *  settle (not the boolean) as a cue to re-render, so a reverted value shows up in the
    *  checkbox even though it was set optimistically before the write resolved. */
   setContextMenu: (on: boolean) => Promise<boolean>
+  openAtLogin: () => boolean
+  setOpenAtLogin: (on: boolean) => void
 }
 
 const FONTS = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Lucida Console', 'Courier New']
@@ -42,6 +44,7 @@ const CATEGORIES: { id: SettingsCategory; label: string }[] = [
   { id: 'font', label: 'Font' },
   { id: 'editor', label: 'Editor' },
   { id: 'folder', label: 'Folder' },
+  { id: 'startup', label: 'Startup' },
   { id: 'integration', label: 'Integration' },
 ]
 
@@ -214,6 +217,17 @@ export class SettingsPanel {
     return wrap
   }
 
+  private renderStartup(): HTMLElement {
+    const wrap = document.createElement('div')
+    const sh = document.createElement('h3'); sh.textContent = 'Startup'
+    wrap.append(
+      sh,
+      this.checkboxRow('Launch when Windows starts (opens hidden in the tray)',
+        this.d.openAtLogin(), (on) => this.d.setOpenAtLogin(on)),
+    )
+    return wrap
+  }
+
   private renderIntegration(): HTMLElement {
     const wrap = document.createElement('div')
     const ih = document.createElement('h3'); ih.textContent = 'Integration'
@@ -234,6 +248,7 @@ export class SettingsPanel {
       case 'font': return this.renderFont()
       case 'editor': return this.renderEditor()
       case 'folder': return this.renderFolder()
+      case 'startup': return this.renderStartup()
       case 'integration': return this.renderIntegration()
       default: return this.renderAppearance()
     }

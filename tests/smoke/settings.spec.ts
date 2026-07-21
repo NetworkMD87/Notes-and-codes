@@ -57,7 +57,7 @@ test('Settings: renders landscape — category nav left, detail right', async ()
 
     await expect(win.locator('.settings-nav')).toBeVisible()
     await expect(win.locator('.settings-detail')).toBeVisible()
-    await expect(win.locator('.settings-nav .settings-cat')).toHaveCount(5)
+    await expect(win.locator('.settings-nav .settings-cat')).toHaveCount(6)
     await expect(win.locator('.settings-detail .appearance-themes')).toBeVisible()
     await expect(win.locator('.settings-detail .appearance-sw')).toBeVisible()
 
@@ -307,6 +307,36 @@ test('Settings: Integration checkbox reflects a stored true value', async () => 
     const cb = win.locator('.appearance-row', { hasText: 'Open with' }).locator('input[type=checkbox]')
     await expect(cb).toBeVisible()
     await expect(cb).toBeChecked()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: launch-on-login toggle persists across relaunch', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-login-'))
+  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    let win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Startup')
+
+    const cb = win.locator('.appearance-row', { hasText: 'Launch when Windows starts' }).locator('input[type=checkbox]')
+    await expect(cb).not.toBeChecked()
+    // Safe to click: the main-side OS write is gated on app.isPackaged, and smoke runs
+    // unpackaged — so this exercises the persist path without touching HKCU.
+    await cb.click()
+    await expect(cb).toBeChecked()
+
+    await win.keyboard.press('Escape')
+    await app.close()
+
+    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Startup')
+    await expect(win.locator('.appearance-row', { hasText: 'Launch when Windows starts' })
+      .locator('input[type=checkbox]')).toBeChecked()
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })

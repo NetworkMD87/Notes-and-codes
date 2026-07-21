@@ -53,7 +53,7 @@ export const HELP_SECTIONS: HelpCategory[] = [
     { label: 'Zoom Out', keys: 'Ctrl+-' },
     { label: 'Reset Zoom', keys: 'Ctrl+0' },
     { label: 'Appearance…', desc: 'Change the theme, accent colour, and font.' },
-    { label: 'Settings…', desc: 'Open Settings: appearance, font, editor, folder, and integration options in one place. Same panel as File ▸ Preferences… (Ctrl+,).' },
+    { label: 'Settings…', desc: 'Open Settings: appearance, font, editor, folder, startup, and integration options in one place. Same panel as File ▸ Preferences… (Ctrl+,).' },
     { label: 'Always on Top', desc: 'Keep the window above your other apps.' },
   ] },
   { title: 'Tools', entries: [
