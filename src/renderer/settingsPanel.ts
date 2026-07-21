@@ -27,7 +27,11 @@ export interface SettingsDeps {
   formatOnSave: () => boolean
   setFormatOnSave: (on: boolean) => void
   contextMenuEnabled: () => boolean
-  setContextMenu: (on: boolean) => void
+  /** Resolves once the registry write (and, on success, the settings persist) have
+   *  settled — the boolean reports whether it succeeded. renderIntegration() uses the
+   *  settle (not the boolean) as a cue to re-render, so a reverted value shows up in the
+   *  checkbox even though it was set optimistically before the write resolved. */
+  setContextMenu: (on: boolean) => Promise<boolean>
 }
 
 const FONTS = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Lucida Console', 'Courier New']
@@ -216,7 +220,11 @@ export class SettingsPanel {
     wrap.append(
       ih,
       this.checkboxRow('Open with Notes & Codes — Windows right-click menu',
-        this.d.contextMenuEnabled(), (on) => this.d.setContextMenu(on)),
+        this.d.contextMenuEnabled(),
+        // Re-render once the write settles so a failure's revert (setContextMenuEnabled
+        // flips contextMenuEnabled back and toasts) is reflected here — the checkbox was
+        // already flipped optimistically by the browser's own native click behaviour.
+        (on) => { void this.d.setContextMenu(on).then(() => this.render()) }),
     )
     return wrap
   }

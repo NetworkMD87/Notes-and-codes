@@ -447,14 +447,30 @@ function toggleFormatOnSave(): void {
 // command, the View-menu-equivalent Tools entry (now removed, see menu.ts), and the
 // Settings ▸ Integration checkbox all funnel through this one setter so there is
 // exactly one place that calls window.api.setContextMenu + updateSettings.
-function setContextMenuEnabled(on: boolean): void {
+//
+// The registry write can reject (src/main/ipc.ts forwards the setContextMenu promise, and
+// src/main/contextMenu.ts can genuinely fail). Persisting to settings.json and reporting
+// success must only happen once the write has actually succeeded — otherwise a rejected
+// write leaves settings.json claiming `true` while HKCU has nothing, and the user sees a
+// success toast for a change that didn't happen. On failure, revert the optimistic in-memory
+// flip and tell the user. Returns whether it succeeded so callers (the toggle's success
+// toast, the Settings panel checkbox's post-settle re-render) can react to the real outcome.
+function setContextMenuEnabled(on: boolean): Promise<boolean> {
   contextMenuEnabled = on
-  void window.api.setContextMenu(on)
-  void window.api.updateSettings({ contextMenuEnabled: on })
+  return window.api.setContextMenu(on)
+    .then(() => window.api.updateSettings({ contextMenuEnabled: on }))
+    .then(() => true)
+    .catch(() => {
+      contextMenuEnabled = !on
+      toast('Could not update the "Open with" right-click menu.')
+      return false
+    })
 }
 function toggleContextMenu(): void {
-  setContextMenuEnabled(!contextMenuEnabled)
-  toast(`"Open with" right-click menu: ${contextMenuEnabled ? 'on' : 'off'}`)
+  const next = !contextMenuEnabled
+  void setContextMenuEnabled(next).then(ok => {
+    if (ok) toast(`"Open with" right-click menu: ${next ? 'on' : 'off'}`)
+  })
 }
 
 window.addEventListener('blur', () => autosave.flushNow())

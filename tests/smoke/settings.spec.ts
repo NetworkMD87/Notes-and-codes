@@ -1,5 +1,5 @@
 import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
@@ -242,6 +242,31 @@ test('Settings: Integration category holds the "Open with" toggle', async () => 
     const cb = win.locator('.appearance-row', { hasText: 'Open with' }).locator('input[type=checkbox]')
     await expect(cb).toBeVisible()
     await expect(cb).not.toBeChecked()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: Integration checkbox reflects a stored true value', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-integration-true-'))
+  // Seed the setting directly rather than clicking the checkbox — clicking would fire the
+  // real registry write and mutate the developer's own HKCU shell-integration key. This is
+  // registry-safe: the startup re-apply (src/main/index.ts:170) is gated on app.isPackaged,
+  // and smoke tests launch the unpackaged app, so seeding settings.json here never touches
+  // HKCU. This only proves the checkbox reads the stored `true` value (the sibling test
+  // above only proves the default-`false` case, which can't distinguish "reflects the
+  // stored setting" from "always renders unchecked").
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ contextMenuEnabled: true }))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Integration')
+
+    const cb = win.locator('.appearance-row', { hasText: 'Open with' }).locator('input[type=checkbox]')
+    await expect(cb).toBeVisible()
+    await expect(cb).toBeChecked()
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
