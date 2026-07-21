@@ -52,6 +52,93 @@ describe('accelFromEvent', () => {
     const r = accelFromEvent(ev({ key: 'Control', code: 'ControlLeft', ctrlKey: true }))
     expect(r.ok).toBe(false)
   })
+
+  it('gives the modifier-only "keep going" reason specifically, not a generic failure', () => {
+    const r = accelFromEvent(ev({ key: 'Control', code: 'ControlLeft', ctrlKey: true }))
+    expect(r).toEqual({ ok: false, reason: 'Press a key to finish the shortcut.' })
+  })
+
+  it.each(['ControlRight', 'ShiftLeft', 'ShiftRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight'])(
+    'treats bare %s the same way — combo still being assembled',
+    (code) => {
+      const r = accelFromEvent(ev({ key: code, code, ctrlKey: true }))
+      expect(r).toEqual({ ok: false, reason: 'Press a key to finish the shortcut.' })
+    },
+  )
+})
+
+describe('keyNameFrom — every mapped punctuation/navigation branch (via accelFromEvent)', () => {
+  it.each([
+    ['Backspace', 'Backspace'],
+    ['Delete', 'Delete'],
+    ['Insert', 'Insert'],
+    ['Home', 'Home'],
+    ['End', 'End'],
+    ['PageUp', 'PageUp'],
+    ['PageDown', 'PageDown'],
+    ['Comma', ','],
+    ['Period', '.'],
+    ['Slash', '/'],
+    ['Backslash', '\\'],
+    ['Semicolon', ';'],
+    ['Quote', "'"],
+    ['BracketLeft', '['],
+    ['BracketRight', ']'],
+    ['Minus', '-'],
+    ['Equal', '='],
+    ['Backquote', '`'],
+  ])('maps code %s to accelerator key %s', (code, expected) => {
+    const r = accelFromEvent(ev({ key: code, code, ctrlKey: true }))
+    expect(r).toEqual({ ok: true, accel: `CommandOrControl+${expected}` })
+  })
+})
+
+describe('Super (the Windows/Meta key)', () => {
+  it('records Win+<key> as Super, not folded into CommandOrControl', () => {
+    const r = accelFromEvent(ev({ key: 'n', code: 'KeyN', metaKey: true }))
+    expect(r).toEqual({ ok: true, accel: 'Super+N' })
+  })
+
+  it('still qualifies as a modifier on its own — Win+N is a legal combo to record', () => {
+    const r = accelFromEvent(ev({ key: 'n', code: 'KeyN', metaKey: true }))
+    expect(r.ok).toBe(true)
+  })
+
+  it('orders CommandOrControl, Super, Alt, Shift deterministically when all four are held', () => {
+    const r = accelFromEvent(
+      ev({ key: 'n', code: 'KeyN', ctrlKey: true, metaKey: true, altKey: true, shiftKey: true }),
+    )
+    expect(r).toEqual({ ok: true, accel: 'CommandOrControl+Super+Alt+Shift+N' })
+  })
+
+  it('formatAccel displays Super as Win', () => {
+    expect(formatAccel('Super+N')).toEqual(['Win', 'N'])
+  })
+
+  it('formatAccel displays a combined Ctrl+Super+Alt+Shift chip row', () => {
+    expect(formatAccel('CommandOrControl+Super+Alt+Shift+N')).toEqual(['Ctrl', 'Win', 'Alt', 'Shift', 'N'])
+  })
+})
+
+describe('unmapped-but-fully-pressed keys get their own accurate reason', () => {
+  it.each([
+    ['CapsLock', 'Caps Lock'],
+    ['NumLock', 'Num Lock'],
+    ['PrintScreen', 'Print Screen'],
+    ['ContextMenu', 'Menu'],
+    ['Numpad5', 'Numpad 5'],
+    ['MediaPlayPause', 'Media Play/Pause'],
+  ])('gives %s its own reason, distinct from the modifier-only message', (code, label) => {
+    const r = accelFromEvent(ev({ key: code, code, ctrlKey: true }))
+    expect(r).toEqual({ ok: false, reason: `${label} can't be used as a shortcut.` })
+  })
+})
+
+describe('blocked recorder keys use a friendly label, not the raw DOM code', () => {
+  it('names NumpadEnter as "Numpad Enter" in the reason', () => {
+    const r = accelFromEvent(ev({ key: 'Enter', code: 'NumpadEnter', ctrlKey: true }))
+    expect(r).toEqual({ ok: false, reason: "Numpad Enter can't be used as a shortcut." })
+  })
 })
 
 describe('formatAccel', () => {
