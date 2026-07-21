@@ -37,6 +37,7 @@ const api: Api = {
   onFlushAndQuit: (cb) => { ipcRenderer.removeAllListeners('app:flushAndQuit'); ipcRenderer.on('app:flushAndQuit', () => cb()) },
   onMenuCommand: (cb) => { ipcRenderer.removeAllListeners('menu:command'); ipcRenderer.on('menu:command', (_e, id: string) => cb(id)) },
   onAppNotify: (cb) => { ipcRenderer.removeAllListeners('app:notify'); ipcRenderer.on('app:notify', (_e, msg: string) => cb(msg)) },
+  onWindowBlur: (cb) => { ipcRenderer.removeAllListeners('window:blur'); ipcRenderer.on('window:blur', () => cb()) },
   snapshotHistory: (path, content, eol, encoding) => ipcRenderer.invoke('history:snapshot', path, content, eol, encoding),
   listHistory: (path) => ipcRenderer.invoke('history:list', path),
   getHistory: (path, ts) => ipcRenderer.invoke('history:get', path, ts),

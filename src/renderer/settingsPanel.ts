@@ -105,6 +105,32 @@ export class SettingsPanel {
     this.render()
   }
 
+  // The window can go away without any in-panel path ever running: hide-to-tray (the X
+  // button), the OS-level summon hotkey (globalShortcut, bound in the main process — this
+  // renderer's preventDefault() cannot intercept it), a minimise, or a plain alt-tab. Once the
+  // window can't receive the keys being recorded, an armed recorder is worse than useless —
+  // every later keystroke (Monaco, Ctrl+S, everything) gets silently swallowed by the
+  // still-attached capture-phase keyHandler until Settings is reopened and Escape pressed
+  // twice. main.ts wires window.api.onWindowBlur() to this — main's `win.on('blur', …)` is
+  // the one signal that actually covers all four triggers uniformly (Electron emits it
+  // whenever the BrowserWindow loses OS focus, which subsumes hide/minimise/alt-tab).
+  //
+  // Not a renderer-side `window`/`document` listener: the DOM `blur` and `visibilitychange`
+  // events do NOT reliably fire on a real BrowserWindow.hide()/.show() under Playwright/CDP
+  // automation (verified directly — document.hidden and document.hasFocus() both kept
+  // reporting the pre-hide state, and neither event fired, even though
+  // BrowserWindow.isVisible() genuinely went false and Electron's own main-process 'blur'
+  // fired right on cue). A renderer-only fix would therefore be both unverifiable by the
+  // required smoke test AND, per that same evidence, not something to trust in the packaged
+  // app either. Cancels the same way Escape does — the user just presses Record again — and
+  // is a no-op via stopRecording() when nothing is armed, so this can't spuriously cancel a
+  // recording the user is actively making: focus moving between elements INSIDE this window
+  // (nav clicks, Clear, a checkbox toggle) never fires 'blur' on the BrowserWindow itself,
+  // only a genuine loss of the window's OS focus does.
+  windowLostFocus(): void {
+    if (this.recording) this.cancelRecording()
+  }
+
   private startRecording(): void {
     this.recording = true
     // Capture phase + preventDefault: the keys being recorded must not reach Monaco or the

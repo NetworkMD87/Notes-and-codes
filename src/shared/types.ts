@@ -173,6 +173,11 @@ export interface Api {
   onFlushAndQuit(cb: () => void): void
   onMenuCommand(cb: (id: string) => void): void
   onAppNotify(cb: (msg: string) => void): void
+  /** Fires whenever the BrowserWindow loses OS focus — hide-to-tray, the summon hotkey,
+   *  minimise, and alt-tab all take this same path in the main process (`win.on('blur', …)`),
+   *  so a renderer-side widget that only works while the window can receive keystrokes (e.g.
+   *  the hotkey recorder) has one uniform signal to tear itself down on. */
+  onWindowBlur(cb: () => void): void
   snapshotHistory(path: string, content: string, eol: EolMode, encoding: Encoding): Promise<void>
   listHistory(path: string): Promise<{ ts: number }[]>
   getHistory(path: string, ts: number): Promise<FileVersion | null>

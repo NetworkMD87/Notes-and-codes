@@ -185,6 +185,16 @@ function createWindow(hidden = false): BrowserWindow {
   // Ctrl+Q is owned solely by the File ▸ Exit menu accelerator (CmdOrCtrl+Q).
   // No before-input-event handler here — it would double-fire requestQuit (the
   // event fires on both keyDown and keyUp, and again via the menu accelerator).
+  // Renderer-side widgets that only make sense while this window can receive keystrokes
+  // (the Settings hotkey recorder) need to know the moment that stops being true. Electron's
+  // 'blur' fires whenever the window loses OS focus — hide-to-tray, the summon hotkey
+  // (globalShortcut, main-process-only — a renderer preventDefault() can't intercept it),
+  // minimise, and alt-tab all take this one path, so it's a single uniform signal rather than
+  // one case per trigger. Verified this actually fires on a real hide(): the renderer's own
+  // DOM `blur`/`visibilitychange` do NOT reliably fire under Playwright/CDP automation (the
+  // page stays reporting focused/visible even once BrowserWindow.isVisible() is false), so
+  // this main-process event is what both production and the smoke test can depend on.
+  win.on('blur', () => win.webContents.send('window:blur'))
   return win
 }
 

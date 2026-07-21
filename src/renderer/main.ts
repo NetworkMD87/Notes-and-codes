@@ -804,6 +804,11 @@ window.api.onOpenFile((path) => { void openPath(path) })
 // Non-blocking startup diagnostics from main (e.g. global-hotkey conflict).
 window.api.onAppNotify((msg) => toast(msg))
 
+// The window can be hidden (tray, the summon hotkey, minimise, alt-tab) without any in-panel
+// path ever running — main tells the renderer whenever it loses OS focus so an armed hotkey
+// recorder tears itself down instead of leaking a capture-phase keydown listener onto window.
+window.api.onWindowBlur(() => settings.windowLostFocus())
+
 installMenuCommands({
   new: () => { manager.create(); showActive(); scheduleSessionSave() },
   open: () => void openFromDisk(),

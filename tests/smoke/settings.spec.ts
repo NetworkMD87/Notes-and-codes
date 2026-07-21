@@ -465,6 +465,50 @@ test('Settings: Clear mid-recording tears down the listener too (typing elsewher
   }
 })
 
+test('Settings: hiding and reshowing the window mid-recording tears down the listener (typing elsewhere still works)', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hkhide-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Startup')
+
+    await win.locator('.hk-record').click()
+    await expect(win.locator('.hk-record')).toHaveText('Press keys…')
+
+    // This is the actual leak: neither Escape nor Clear nor a category switch runs — the
+    // window itself goes away, which is exactly what hide-to-tray (the X button) and the OS
+    // summon hotkey do (globalShortcut fires in the main process; this renderer's
+    // preventDefault() can't intercept it). Drive that directly rather than faking a DOM
+    // event, the same way startup-window.spec.ts proves the real hide/show cycle.
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.hide())
+    await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible()), { timeout: 5000 }).toBe(false)
+
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.show())
+    await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible()), { timeout: 5000 }).toBe(true)
+
+    // The recorder cancelled itself and the hotkey was never rebound mid-flight.
+    await expect(win.locator('.hk-record')).toHaveText('Record')
+    await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Shift', 'Space'])
+
+    // Real signal, staying on the Startup tab throughout (isolating this path from the
+    // nav-switch fix, same reasoning as the Clear-mid-recording test above): a plain Space
+    // keydown on the login checkbox must still reach its default action. If the leftover
+    // capture-phase listener were still attached it would preventDefault/stopPropagation on
+    // every keydown (accelFromEvent never resolves a bare Space), silently swallowing the
+    // toggle — an internal `recording` check would not have caught that, only a real keydown
+    // reaching a real element does.
+    const loginBox = win.locator('.appearance-row', { hasText: 'Launch when Windows starts' }).locator('input[type=checkbox]')
+    await expect(loginBox).not.toBeChecked()
+    await loginBox.focus()
+    await win.keyboard.press('Space')
+    await expect(loginBox).toBeChecked()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('Settings: Clear removes the hotkey entirely and it stays cleared', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hkclear-'))
   let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
