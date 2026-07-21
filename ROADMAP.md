@@ -17,33 +17,55 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — 🚧 Phase 4 first slice code-complete on branch, not yet merged (**v1.14.0**)
+## ▶ NEXT ACTION — 🚧 **Manual installer eyeball of v1.14.0** (everything else is done)
 
 **Settings home + launch on login + configurable global hotkey** — the first Phase 4 slice — is
-implemented and reviewed on `feat/settings-home-and-startup` (all 11 implementation tasks done,
-every task individually reviewed clean). This is task 12 of 13: docs + version bump only, no
-behaviour change.
+code-complete, fully reviewed (**whole-branch verdict: ready to merge**) and **packaged** on
+`feat/settings-home-and-startup`. The only thing standing between here and the release is the
+manual checklist below, which needs a real reboot and real OS-level hotkey binding and therefore
+cannot be automated.
 
-**Shipping as v1.14.0:**
-- ✅ Settings home — new overlay panel (gear button / `Ctrl+,` / palette `Settings…` / `File ▸
-  Preferences…`), left category nav: Appearance / Font / Editor / Folder / Startup / Integration.
-  Replaces the old Appearance-only panel; the "Open with" right-click-menu toggle moved out of the
-  Tools menu into Settings ▸ Integration in the same pass.
-- ✅ Launch on login — opt-in, starts hidden in the tray; reconciles to the real OS state if
-  disabled behind the app's back.
-- ✅ Configurable global hotkey — Record/Clear in Settings ▸ Startup, test-then-commit rebind; fixed
-  a cleared-hotkey-reverts-on-restart bug and a malformed-hotkey-can-crash-startup bug along the way.
+**Build to test:** `dist/Notes & Codes Setup 1.14.0.exe` (installer) · `dist/Notes & Codes 1.14.0.exe`
+(portable). Both built 2026-07-21.
 
-**⚠️ RESUME STATE (2026-07-21):** all 11 implementation tasks complete + reviewed on
-`feat/settings-home-and-startup`; `package.json` is bumped to **v1.14.0** and `CHANGELOG.md`
-resolves the slice under `## [1.14.0] — 2026-07-21` on the branch. **Nothing merged or tagged
-yet.** Remaining: task 13 — whole-branch review, `npm run package`, the manual tray/hotkey
-installer eyeball, merge `--no-ff` to `master`, and tag `v1.14.0`.
+### ⬜ The checklist
 
-**Next candidates (after this slice ships):** the remaining Phase 4 items — code signing (needs a
-purchased cert), native Win11 `IExplorerCommand` "Open with", and snippet placeholders/tabstops.
-Also still open: the dead `Shift+Alt+F` hotkey (Format Document known-issue), and the deferred
-`app.isPackaged` gating gap on the context-menu toggle noted under Phase 4 below.
+_Launch on login — the reboot test:_
+- ⬜ Tick **Settings ▸ Startup ▸ Launch when Windows starts**, then **reboot**.
+- ⬜ App is in the tray, **no window**, and the summon hotkey opens it.
+- ⬜ **Reopen Settings ▸ Startup and confirm the box is STILL TICKED.** ⚠️ **Do not skip this one.**
+  The steps above look correct whether or not the bug is present — the app really does launch. This
+  checkbox is the *only* observable for the `getLoginItemSettings` args-mismatch defect found in the
+  whole-branch review, and the entire automated suite is structurally blind to it (the reconcile is
+  `app.isPackaged`-gated and no test may call `setLoginItemSettings`).
+- ⬜ Untick it, and confirm the entry disappears from Task Manager ▸ Startup.
+
+_Configurable hotkey:_
+- ⬜ Record `Ctrl+Alt+J`; confirm it summons the window from inside another app.
+- ⬜ Restart the app; confirm it still summons.
+- ⬜ Record a combo another running app already owns → expect a toast naming it, the widget snapping
+  back to the previous combo, and that previous combo still working.
+- ⬜ **Clear** the hotkey, restart, confirm it stays cleared (this is the regression guard for the
+  cleared-hotkey-reverts-on-restart bug).
+
+_Settings panel:_
+- ⬜ Gear button looks right in **light and dark** themes; `Ctrl+,` opens Settings and does nothing
+  unwanted while Monaco has focus.
+- ⬜ Every migrated control still works: theme click, hover preview + revert, accent, editor font,
+  interface font, size, ligatures, both Folder toggles, both Editor toggles, the "Open with" toggle.
+- ⬜ Narrow the window — the panel wraps rather than clipping.
+- ⬜ Standard tray / hotkey release checklist.
+
+**Then:** merge `--no-ff` → `master`, tag `v1.14.0`, `npm run package` on `master`, publish the
+GitHub release with both assets. **Nothing is merged or tagged until the checklist passes.**
+
+**After that ships:** the remaining Phase 4 items — code signing (needs a purchased cert), native
+Win11 `IExplorerCommand` "Open with", and snippet placeholders/tabstops. Also still open: the dead
+`Shift+Alt+F` hotkey (Format Document known-issue), the deferred `app.isPackaged` gating gap on the
+context-menu toggle (noted under Phase 4 below), and the `overlayManager` registration-overwrite
+pattern — fixed in `settingsPanel.ts` this slice, but `commandPalette.ts`, `helpOverlay.ts`,
+`quickOpen.ts` and `snippetManager.ts` all still stack a stale close-callback on re-entrant open,
+which silently eats one Escape press each. Wants its own sweep.
 
 ---
 
