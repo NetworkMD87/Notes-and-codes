@@ -68,6 +68,10 @@ export class SettingsPanel {
   }
 
   open(category: SettingsCategory = 'appearance'): void {
+    // Re-entrant open() (gear button / Ctrl+, / a palette command fired again while the
+    // panel is already open) would otherwise switch `active` out from under an in-flight
+    // recording the same way the nav-row switch does — tear it down first so that can't happen.
+    this.stopRecording()
     this.active = category
     this.render()
     this.host.classList.remove('hidden')
@@ -84,9 +88,20 @@ export class SettingsPanel {
     this.host.classList.add('hidden')
   }
 
-  private cancelRecording(): void {
+  // The one place the recording flag and its window-level keydown listener are torn down.
+  // Bare teardown only — no render() here, since callers need the teardown to happen
+  // synchronously (e.g. before an active-category change or an async IPC call) independent
+  // of whether/when they choose to repaint. Safe to call unconditionally: a no-op when not
+  // recording. This is what makes it structurally impossible to leave `keyHandler` attached
+  // to `window` while the recorder widget isn't the thing on screen — every path that changes
+  // `active` or hides the panel routes through here first, instead of each trusting the others.
+  private stopRecording(): void {
     this.recording = false
     if (this.keyHandler) { window.removeEventListener('keydown', this.keyHandler, true); this.keyHandler = undefined }
+  }
+
+  private cancelRecording(): void {
+    this.stopRecording()
     this.render()
   }
 
@@ -100,8 +115,7 @@ export class SettingsPanel {
       const r = accelFromEvent(e)
       if (!r.ok) return                       // incomplete combo — keep waiting
       const accel = r.accel
-      this.recording = false
-      if (this.keyHandler) { window.removeEventListener('keydown', this.keyHandler, true); this.keyHandler = undefined }
+      this.stopRecording()
       void this.d.setGlobalHotkey(accel).then(() => this.render())
     }
     window.addEventListener('keydown', this.keyHandler, true)
@@ -275,7 +289,10 @@ export class SettingsPanel {
     rec.textContent = this.recording ? 'Press keys…' : 'Record'
     rec.onclick = () => { if (!this.recording) this.startRecording() }
     const clear = document.createElement('button'); clear.className = 'hk-clear'; clear.textContent = 'Clear'
-    clear.onclick = () => { void this.d.setGlobalHotkey('').then(() => this.render()) }
+    // Clear supersedes an in-flight recording: tear it down synchronously (not merely
+    // reset a flag) before firing the async clear, so a combo mid-flight can't complete
+    // afterwards and race the clear, and no keydown listener survives on `window`.
+    clear.onclick = () => { this.stopRecording(); void this.d.setGlobalHotkey('').then(() => this.render()) }
     hkRow.append(chips, rec, clear)
 
     wrap.append(hkRow)
@@ -316,7 +333,10 @@ export class SettingsPanel {
       const row = document.createElement('div')
       row.className = 'settings-cat' + (c.id === this.active ? ' active' : '')
       row.textContent = c.label
-      row.onclick = () => { this.active = c.id; this.render() }
+      // Switching category leaves the recorder widget (if the Startup tab was active and
+      // armed) off-screen while `recording`/`keyHandler` would otherwise survive — tear it
+      // down first so that can't happen.
+      row.onclick = () => { this.stopRecording(); this.active = c.id; this.render() }
       nav.appendChild(row)
     }
 

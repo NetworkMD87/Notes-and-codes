@@ -398,6 +398,73 @@ test('Settings: Escape cancels recording without closing the panel', async () =>
   }
 })
 
+test('Settings: switching category mid-recording tears down the listener (typing elsewhere still works)', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hknav-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Startup')
+
+    await win.locator('.hk-record').click()
+    await expect(win.locator('.hk-record')).toHaveText('Press keys…')
+
+    // Switch away before finishing the combo — the widget that could cancel it is gone,
+    // but the recorder's capture-phase keydown listener must not still be on `window`.
+    await win.locator('.settings-cat', { hasText: 'Font' }).click()
+    await expect(win.locator('.settings-cat.active')).toContainText('Font')
+    await expect(win.locator('.hk-record')).toHaveCount(0)
+
+    // Real signal: a plain (non-modifier) keydown must reach an ordinary control's default
+    // action. If the leftover listener were still attached it would preventDefault/
+    // stopPropagation on every keydown (accelFromEvent never resolves a bare Space), so the
+    // checkbox would silently fail to toggle — an internal-state check on `recording` would
+    // not have caught that, only a real keydown reaching a real element does.
+    const lig = win.locator('.appearance-row', { hasText: 'Ligatures' }).locator('input[type=checkbox]')
+    await expect(lig).toBeChecked() // fontLigatures defaults to true
+    await lig.focus()               // focus only — a click would toggle it via the mouse path, not keydown
+    await win.keyboard.press('Space')
+    await expect(lig).not.toBeChecked()
+
+    // And the abandoned recording didn't silently rebind the hotkey from the Font tab either.
+    await win.locator('.settings-cat', { hasText: 'Startup' }).click()
+    await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Shift', 'Space'])
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: Clear mid-recording tears down the listener too (typing elsewhere still works)', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hkclearmid-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Startup')
+
+    await win.locator('.hk-record').click()
+    await expect(win.locator('.hk-record')).toHaveText('Press keys…')
+
+    // Clear supersedes the in-flight recording without finishing the combo.
+    await win.locator('.hk-clear').click()
+    await expect(win.locator('.hk-none')).toBeVisible()
+    await expect(win.locator('.hk-record')).toHaveText('Record')
+
+    // Same real signal as the category-switch case, but proven without ever leaving the
+    // Startup tab, so this isolates the Clear path from the nav-switch fix: a plain Space
+    // keydown on the login checkbox must still reach its default action.
+    const loginBox = win.locator('.appearance-row', { hasText: 'Launch when Windows starts' }).locator('input[type=checkbox]')
+    await expect(loginBox).not.toBeChecked()
+    await loginBox.focus()
+    await win.keyboard.press('Space')
+    await expect(loginBox).toBeChecked()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('Settings: Clear removes the hotkey entirely and it stays cleared', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hkclear-'))
   let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
