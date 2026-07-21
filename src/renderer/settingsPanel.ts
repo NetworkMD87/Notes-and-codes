@@ -1,5 +1,6 @@
 import { THEME_LIST, ACCENT_SWATCHES, swatchColours } from './themes'
 import { pushOverlay } from './overlayManager'
+import { accelFromEvent, formatAccel } from '../shared/accelerator'
 
 export type SettingsCategory = 'appearance' | 'font' | 'editor' | 'folder' | 'startup' | 'integration'
 
@@ -34,6 +35,8 @@ export interface SettingsDeps {
   setContextMenu: (on: boolean) => Promise<boolean>
   openAtLogin: () => boolean
   setOpenAtLogin: (on: boolean) => void
+  globalHotkey: () => string
+  setGlobalHotkey: (accel: string) => Promise<boolean>
 }
 
 const FONTS = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Lucida Console', 'Courier New']
@@ -53,6 +56,8 @@ export class SettingsPanel {
   private unreg?: () => void
   private hoverTimer: number | undefined
   private active: SettingsCategory = 'appearance'
+  private recording = false
+  private keyHandler?: (e: KeyboardEvent) => void
 
   constructor(parent: HTMLElement, private d: SettingsDeps) {
     this.host = document.createElement('div')
@@ -70,9 +75,37 @@ export class SettingsPanel {
   }
 
   private close(): void {
+    // Esc during recording cancels the RECORDING, not the panel. Checking here rather than
+    // racing overlayManager's capture-phase listener keeps this independent of listener
+    // ordering — a second Esc then closes the panel as normal.
+    if (this.recording) { this.cancelRecording(); return }
     this.stopPreview()
     this.unreg?.(); this.unreg = undefined
     this.host.classList.add('hidden')
+  }
+
+  private cancelRecording(): void {
+    this.recording = false
+    if (this.keyHandler) { window.removeEventListener('keydown', this.keyHandler, true); this.keyHandler = undefined }
+    this.render()
+  }
+
+  private startRecording(): void {
+    this.recording = true
+    // Capture phase + preventDefault: the keys being recorded must not reach Monaco or the
+    // app's own accelerators while the recorder is armed.
+    this.keyHandler = (e: KeyboardEvent) => {
+      e.preventDefault(); e.stopPropagation()
+      if (e.code === 'Escape') { this.cancelRecording(); return }
+      const r = accelFromEvent(e)
+      if (!r.ok) return                       // incomplete combo — keep waiting
+      const accel = r.accel
+      this.recording = false
+      if (this.keyHandler) { window.removeEventListener('keydown', this.keyHandler, true); this.keyHandler = undefined }
+      void this.d.setGlobalHotkey(accel).then(() => this.render())
+    }
+    window.addEventListener('keydown', this.keyHandler, true)
+    this.render()
   }
 
   // Hover-intent delay: sweeping the cursor down 14 rows shouldn't re-theme Monaco 14 times.
@@ -225,6 +258,27 @@ export class SettingsPanel {
       this.checkboxRow('Launch when Windows starts (opens hidden in the tray)',
         this.d.openAtLogin(), (on) => this.d.setOpenAtLogin(on)),
     )
+
+    const { row: hkRow } = this.row('Summon hotkey')
+    const chips = document.createElement('div'); chips.className = 'hk-chips'
+    const parts = formatAccel(this.d.globalHotkey())
+    if (parts.length === 0) {
+      const none = document.createElement('span'); none.className = 'hk-none'; none.textContent = 'None'
+      chips.appendChild(none)
+    } else {
+      for (const p of parts) {
+        const chip = document.createElement('kbd'); chip.className = 'hk-chip'; chip.textContent = p
+        chips.appendChild(chip)
+      }
+    }
+    const rec = document.createElement('button'); rec.className = 'hk-record'
+    rec.textContent = this.recording ? 'Press keys…' : 'Record'
+    rec.onclick = () => { if (!this.recording) this.startRecording() }
+    const clear = document.createElement('button'); clear.className = 'hk-clear'; clear.textContent = 'Clear'
+    clear.onclick = () => { void this.d.setGlobalHotkey('').then(() => this.render()) }
+    hkRow.append(chips, rec, clear)
+
+    wrap.append(hkRow)
     return wrap
   }
 

@@ -151,6 +151,11 @@
       .settings h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
       .settings select,.settings input[type=number],.settings input[type=text]{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);padding:4px}
       .settings select{min-width:150px}
+      .hk-chips{display:flex;gap:4px;align-items:center}
+      .hk-chip{background:var(--bar);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px;font-family:inherit}
+      .hk-none{color:var(--muted);font-size:12px}
+      .hk-record,.hk-clear{font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bar);color:var(--panel-text);cursor:pointer}
+      .hk-record:hover,.hk-clear:hover{background:var(--bar-hover)}
       .file-history{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding-top:80px;z-index:100}
       .file-history.hidden{display:none}
       .fh-box{width:460px;max-height:80vh;overflow:auto;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
@@ -203,7 +208,7 @@
       .about-link{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;cursor:pointer;font-size:13px}
       .about-link:hover{background:var(--accent);color:var(--accent-text)}
       /* --- micro-motion layer (Phase 3.5 P1) --- */
-      .tab,.tb-btn,.tab-add,.tab-close,#theme-toggle,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch,.snip-mgr-head button,.snip-mgr-row button,.accent-default-btn,.settings-cat{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
+      .tab,.tb-btn,.tab-add,.tab-close,#theme-toggle,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch,.snip-mgr-head button,.snip-mgr-row button,.accent-default-btn,.settings-cat,.hk-record,.hk-clear{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
       @keyframes overlayIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
       .palette-box,.qo-box,.settings-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast{animation:overlayIn var(--motion) var(--ease)}
       @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}

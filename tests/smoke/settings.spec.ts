@@ -342,3 +342,85 @@ test('Settings: launch-on-login toggle persists across relaunch', async () => {
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('Settings: recording a hotkey updates the chips and persists', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hotkey-'))
+  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    let win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Startup')
+
+    await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Shift', 'Space'])
+
+    await win.locator('.hk-record').click()
+    await expect(win.locator('.hk-record')).toHaveText('Press keys…')
+    await win.keyboard.press('Control+Alt+J')
+    await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Alt', 'J'])
+
+    await win.keyboard.press('Escape')     // closes the panel (not recording any more)
+    await app.close()
+
+    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Startup')
+    await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Alt', 'J'])
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: Escape cancels recording without closing the panel', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hkesc-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Startup')
+
+    await win.locator('.hk-record').click()
+    await expect(win.locator('.hk-record')).toHaveText('Press keys…')
+
+    // First Escape cancels the recording — the panel MUST stay open.
+    await win.keyboard.press('Escape')
+    await expect(win.locator('#settings')).toBeVisible()
+    await expect(win.locator('.hk-record')).toHaveText('Record')
+    await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Shift', 'Space'])
+
+    // Second Escape closes the panel, as normal.
+    await win.keyboard.press('Escape')
+    await expect(win.locator('#settings')).toBeHidden()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: Clear removes the hotkey entirely and it stays cleared', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hkclear-'))
+  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    let win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Startup')
+
+    await win.locator('.hk-clear').click()
+    await expect(win.locator('.hk-chip')).toHaveCount(0)
+    await expect(win.locator('.hk-none')).toBeVisible()
+
+    await win.keyboard.press('Escape')
+    await app.close()
+
+    // Guards the `??` fix from Task 10: a `||` fallback would silently re-bind the default.
+    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Startup')
+    await expect(win.locator('.hk-chip')).toHaveCount(0)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

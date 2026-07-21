@@ -39,6 +39,7 @@ import { clampToLength } from './highlights'
 import { HelpOverlay } from './helpOverlay'
 import { uiFontStack } from './uiFont'
 import type { Highlight, HighlightColour } from '../shared/types'
+import { formatAccel } from '../shared/accelerator'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -215,6 +216,7 @@ let fontLigatures = true
 let showAllFiles = false
 let restoreFolder = true
 let openAtLogin = false
+let globalHotkey = ''
 function fontStack(name: string): string { return `'${name}', Consolas, monospace` }
 function applyFont(): void {
   view.paneA.setFontFamily(fontStack(fontFamily)); view.paneB.setFontFamily(fontStack(fontFamily))
@@ -269,6 +271,7 @@ async function boot(): Promise<void> {
   showAllFiles = settings.showAllFiles
   restoreFolder = settings.restoreFolderOnLaunch
   openAtLogin = settings.openAtLogin
+  globalHotkey = settings.globalHotkey
   applyFont()
   applyUiFont()
   fontSize = settings.fontSize ?? 14; applyFontSize()
@@ -645,6 +648,15 @@ const settingsDeps: SettingsDeps = {
     openAtLogin = on
     void window.api.setLoginItem(on)
     void window.api.updateSettings({ openAtLogin: on })
+  },
+  globalHotkey: () => globalHotkey,
+  setGlobalHotkey: async (accel) => {
+    const r = await window.api.setGlobalHotkey(accel)
+    globalHotkey = r.active
+    if (r.ok) toast(accel === '' ? 'Summon hotkey cleared' : 'Summon hotkey: ' + formatAccel(accel).join('+'))
+    else if (r.active) toast(`"${formatAccel(accel).join('+')}" is already in use by another app.`)
+    else toast(`"${formatAccel(accel).join('+')}" is unavailable, and the previous shortcut could not be restored.`)
+    return r.ok
   },
 }
 
