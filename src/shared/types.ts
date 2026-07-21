@@ -62,6 +62,7 @@ export interface Settings {
   contextMenuEnabled: boolean
   windowBounds: { width: number; height: number } | null
   alwaysOnTop: boolean
+  openAtLogin: boolean
   globalHotkey: string
   fontSize: number
   themeId: string
@@ -84,6 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
   contextMenuEnabled: false,
   windowBounds: null,
   alwaysOnTop: false,
+  openAtLogin: false,
   globalHotkey: 'CommandOrControl+Shift+Space',
   fontSize: 14,
   themeId: 'dark',
@@ -140,6 +142,9 @@ export interface Api {
    *  read-modify-write race). Prefer this over loadSettings()+saveSettings(). */
   updateSettings(partial: Partial<Settings>): Promise<Settings>
   setContextMenu(enabled: boolean): Promise<void>
+  /** Registers/removes the Windows startup entry. Persisting `openAtLogin` is separate
+   *  (updateSettings) — this performs only the OS side-effect, like setContextMenu. */
+  setLoginItem(enabled: boolean): Promise<void>
   onOpenFile(cb: (path: string) => void): void     // implemented in Task 13
   saveAsDialog(): Promise<string | null>
   openDialog(): Promise<string | null>

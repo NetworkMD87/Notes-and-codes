@@ -75,6 +75,19 @@ function requestQuit(): void {
   mainWindow.webContents.send('app:saveAllAndQuit')
 }
 
+// Windows startup entry. MUST stay gated on app.isPackaged: in dev, process.execPath is
+// Electron's own binary, so an ungated write would register a real HKCU\...\Run entry that
+// launches a bare Electron at every boot of the developer's machine. The renderer still
+// persists the setting either way, so the checkbox behaves normally in dev — it just has
+// no OS effect until the app is installed.
+function setLoginItem(enabled: boolean): void {
+  if (!app.isPackaged) {
+    notifyRenderer('Launch on login applies to the installed app, not a dev run.')
+    return
+  }
+  app.setLoginItemSettings({ openAtLogin: enabled, args: ['--hidden'] })
+}
+
 function showWindow(): void {
   if (!mainWindow) { mainWindow = createWindow() }
   if (mainWindow.isMinimized()) mainWindow.restore()
@@ -146,6 +159,7 @@ if (!gotLock) {
       recent: recentStore,
       getWindow: () => mainWindow,
       setContextMenu: (enabled) => setContextMenu(enabled, app.getPath('exe')),
+      setLoginItem: (enabled) => setLoginItem(enabled),
       onDirtyCount: (n) => { unsavedCount = n },
       onQuitNow: () => { isQuitting = true; app.quit() },
       onRecentChanged: () => { void rebuildMenu() }
@@ -159,6 +173,14 @@ if (!gotLock) {
 
     tray = createTray({ onShow: showWindow, onQuit: () => { requestQuit() } })
     const settings = await settingsStore.load()
+    // Windows Task Manager ▸ Startup lets the user disable our entry behind our back.
+    // The OS is the truth; reconcile so the Settings checkbox can't lie. Packaged only —
+    // in dev the login item is never written, so getLoginItemSettings would always
+    // report false and would clobber a setting the user just ticked.
+    if (app.isPackaged) {
+      const real = app.getLoginItemSettings().openAtLogin
+      if (real !== settings.openAtLogin) void settingsStore.update({ openAtLogin: real })
+    }
     // Re-apply the context-menu registration on every packaged startup, not just when the
     // user toggles it — the registry write is idempotent (reg add /f overwrites) and
     // self-healing (it also repairs a stale exe path after a reinstall elsewhere), so this

@@ -22,6 +22,7 @@ export interface IpcDeps {
   recent: RecentFilesStore
   getWindow: () => BrowserWindow | null
   setContextMenu: (enabled: boolean) => Promise<void>
+  setLoginItem: (enabled: boolean) => void
   onDirtyCount: (n: number) => void
   onQuitNow: () => void
   onRecentChanged?: () => void
@@ -75,6 +76,7 @@ export function registerIpc(deps: IpcDeps): void {
   handle('settings:save', (_e, s: Settings) => settings.save(s))
   handle('settings:update', (_e, partial: Partial<Settings>) => settings.update(partial))
   handle('contextmenu:set', (_e, enabled: boolean) => deps.setContextMenu(enabled))
+  handle('loginitem:set', (_e, enabled: boolean) => deps.setLoginItem(enabled))
   handle('dialog:saveAs', async () => {
     const r = await dialog.showSaveDialog({ title: 'Save As' })
     return r.canceled ? null : r.filePath ?? null

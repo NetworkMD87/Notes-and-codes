@@ -51,4 +51,16 @@ describe('SettingsStore', () => {
     expect(s.fontSize).toBe(20)
     expect(s.themeId).toBe('nord')
   })
+  it('defaults openAtLogin to false for a settings file written before the field existed', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nc-settings-oal-'))
+    try {
+      writeFileSync(join(dir, 'settings.json'), JSON.stringify({ themeId: 'nord' }))
+      const store = new SettingsStore(dir)
+      const s = await store.load()
+      expect(s.openAtLogin).toBe(false)
+      expect(s.themeId).toBe('nord')   // the stored field still wins
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })
