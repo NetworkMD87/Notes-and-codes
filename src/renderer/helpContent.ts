@@ -81,7 +81,8 @@ export const HELP_SECTIONS: HelpCategory[] = [
   ] },
   { title: 'Global', entries: [
     { label: 'Command Palette',          keys: 'Ctrl+Shift+P', desc: 'Search and run any command by name.' },
-    { label: 'Summon / hide window (default; configurable)', keys: 'Ctrl+Shift+Space', desc: 'Show or hide the app from anywhere with one keypress.' },
+    { label: 'Summon / hide window', keys: 'Ctrl+Shift+Space', desc: 'Show or hide the app from anywhere with one keypress. Change it in Settings ▸ Startup.' },
+    { label: 'Launch when Windows starts', desc: 'Start hidden in the tray on login — Settings ▸ Startup.' },
     { label: 'Zoom',                    keys: 'Ctrl+scroll' },
   ] },
 ]

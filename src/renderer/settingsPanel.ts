@@ -127,6 +127,10 @@ export class SettingsPanel {
   // recording the user is actively making: focus moving between elements INSIDE this window
   // (nav clicks, Clear, a checkbox toggle) never fires 'blur' on the BrowserWindow itself,
   // only a genuine loss of the window's OS focus does.
+  //
+  // Known, accepted edge case: a native dialog (e.g. Save As) or undocked DevTools stealing OS
+  // focus also cancels an in-progress recording — same graceful degrade as Escape (press Record
+  // again), never silent corruption.
   windowLostFocus(): void {
     if (this.recording) this.cancelRecording()
   }

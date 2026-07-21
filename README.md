@@ -8,8 +8,8 @@
 # Notes & Codes
 
 A fast, Windows-first dev scratchpad: Notepad-simple, code-editor-powerful. Tabs,
-split panes, live diffs, markdown preview, paste history, snippets, and a global
-summon hotkey — all in a lightweight tray app.
+split panes, live diffs, markdown preview, paste history, snippets, and a configurable
+global summon hotkey — all in a lightweight tray app.
 
 ## Install
 1. Download **Notes.Codes.Setup.x.y.z.exe** from the [latest release](../../releases/latest)
@@ -35,6 +35,9 @@ summon hotkey — all in a lightweight tray app.
 - UTF-8 / UTF-16 encoding + LF/CRLF control.
 - Paste history and reusable snippets.
 - **In-app Help** — a searchable keyboard-shortcut & command reference (with plain-English descriptions) plus an About dialog.
+- **Settings** (gear button, `Ctrl+,`, or `File ▸ Preferences…`) — one panel for Appearance, Font, Editor, Folder, Startup and Integration, replacing the old Appearance-only panel.
+- **Launch on login** (opt-in, Settings ▸ Startup) — starts hidden in the system tray so the app is ready to summon the moment Windows boots, instead of throwing a window at you.
+- The global summon hotkey is now **configurable** (Settings ▸ Startup) — record a new combo or clear it entirely.
 - System tray: closing hides to the tray; summon from anywhere. The tray glyph flips bright/dark to contrast with your Windows taskbar theme; the app icon itself is a contrast-safe tile that stays legible either way, showing a compact `{&}` mark at the small sizes Windows uses for the taskbar, Alt+Tab and Explorer.
 
 ## Shortcuts
@@ -44,7 +47,8 @@ summon hotkey — all in a lightweight tray app.
 | Quick-open (folder mode) | Ctrl+P |
 | Save / Open | Ctrl+S / Ctrl+O |
 | Toggle split | Ctrl+\\ |
-| Summon / hide (global) | Ctrl+Shift+Space |
+| Summon / hide (global, configurable) | Ctrl+Shift+Space |
+| Settings | Ctrl+, |
 | Quit (from tray app) | Ctrl+Q |
 
 Closing the window hides it to the tray. Quit via the tray icon's menu or Ctrl+Q.

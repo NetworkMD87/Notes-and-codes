@@ -4,6 +4,41 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [1.14.0] — 2026-07-21
+
+_First Phase 4 slice: a proper Settings home, launch on login, and a configurable global hotkey._
+
+### Added
+
+- **Settings panel.** A new overlay with a left category nav — Appearance / Font / Editor / Folder
+  / Startup / Integration — replaces the old, Appearance-only panel; its contents (including the
+  theme hover live-preview) moved in unchanged. Open it from the new gear button on the toolbar,
+  `Ctrl+,`, the command palette (`Settings…`), or `File ▸ Preferences…`. The old `View ▸
+  Appearance…` menu item, the theme button, and the palette `Appearance…` command all still work,
+  and now deep-link straight to the Appearance category.
+- **Launch when Windows starts** (Settings ▸ Startup) — opt-in. Starts hidden in the system tray,
+  so the app is ready to summon instantly instead of throwing a window at you on boot. If the entry
+  gets disabled behind the app's back (Task Manager ▸ Startup), the checkbox reconciles to the
+  truth the next time the app launches instead of lying.
+- **Configurable summon hotkey** (Settings ▸ Startup) — Record captures a keystroke, Clear removes
+  the hotkey entirely (previously mandatory). Rebinding is test-then-commit: if the new combo is
+  already taken by another app, the previous one is restored and a toast says so, so settings can
+  never end up storing a combo that isn't actually bound.
+
+### Changed
+
+- **The "Open with Notes & Codes" right-click-menu toggle moved out of the Tools menu** into
+  Settings ▸ Integration — it was a setting filed under Tools. Its previously-duplicated toggle
+  logic (the palette command and the menu item each ran their own copy) is now single-sourced.
+
+### Fixed
+
+- **A deliberately-cleared summon hotkey no longer comes back after a restart.** Settings used to
+  fall back to the default hotkey whenever the stored value was falsy, which silently undid a
+  Clear (an empty string) the next time the app launched.
+- **A malformed hotkey value in `settings.json` no longer risks the launch.** Registering it with
+  Windows can throw; the throw is now caught and degrades to a toast instead of crashing startup.
+
 ## [1.13.0] — 2026-07-20
 
 _Phase 3.7 polish & discoverability — the whole pass, shipped as one release._

@@ -17,34 +17,33 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — ✅ Phase 3.7 complete (all 7 slices merged; **v1.13.0**)
+## ▶ NEXT ACTION — 🚧 Phase 4 first slice code-complete on branch, not yet merged (**v1.14.0**)
 
-**Phase 3.7 "Polish & discoverability" is done.** Every slice took its own `feat/` branch
-(brainstorm → spec → plan → TDD → merge `--no-ff`) with **no per-slice version bump** — the whole pass
-shipped as ONE release.
+**Settings home + launch on login + configurable global hotkey** — the first Phase 4 slice — is
+implemented and reviewed on `feat/settings-home-and-startup` (all 11 implementation tasks done,
+every task individually reviewed clean). This is task 12 of 13: docs + version bump only, no
+behaviour change.
 
-**Shipped in v1.13.0:**
-- ✅ File History button on the toolbar + toolbar regroup
-- ✅ Rounded tab tops (6px)
-- ✅ Revert File command (confirm-when-dirty)
-- ✅ Diff-theme fix (bonus bug) — opening a diff no longer flips the editors to a light theme on any
-  dark theme whose id isn't literally `dark` (Monokai/Dracula/Nord/…)
-- ✅ Theme-picker swatch previews + hover live-preview
-- ✅ Highlighter pen-tip cursor (+ the toolbar button redrawn to match it)
-- ✅ Taskbar icon `{&}` at small sizes (+ stable AppUserModelID, + the Explorer context-menu entry's
-  own icon — a pre-existing gap spotted during the eyeball and fixed in the same slice)
+**Shipping as v1.14.0:**
+- ✅ Settings home — new overlay panel (gear button / `Ctrl+,` / palette `Settings…` / `File ▸
+  Preferences…`), left category nav: Appearance / Font / Editor / Folder / Startup / Integration.
+  Replaces the old Appearance-only panel; the "Open with" right-click-menu toggle moved out of the
+  Tools menu into Settings ▸ Integration in the same pass.
+- ✅ Launch on login — opt-in, starts hidden in the tray; reconciles to the real OS state if
+  disabled behind the app's back.
+- ✅ Configurable global hotkey — Record/Clear in Settings ▸ Startup, test-then-commit rebind; fixed
+  a cleared-hotkey-reverts-on-restart bug and a malformed-hotkey-can-crash-startup bug along the way.
 
-**⚠️ RESUME STATE (2026-07-20):** `master` holds all 7 slices, `package.json` is **v1.13.0**, and
-`CHANGELOG.md` resolves them under `## [1.13.0] — 2026-07-20`. Installer eyeballs passed for the
-swatch/hover slice (2026-07-19), the pen cursor (2026-07-20, two rounds — the first artwork was
-rejected) and the taskbar icon (2026-07-20, plus a second round for the context-menu icon).
-**Release state: CLOSED.** `v1.13.0` is tagged and the GitHub release is published (2026-07-20)
-carrying both assets — `Notes.Codes.Setup.1.13.0.exe` (installer) and `Notes.Codes.1.13.0.exe`
-(portable). Nothing outstanding.
+**⚠️ RESUME STATE (2026-07-21):** all 11 implementation tasks complete + reviewed on
+`feat/settings-home-and-startup`; `package.json` is bumped to **v1.14.0** and `CHANGELOG.md`
+resolves the slice under `## [1.14.0] — 2026-07-21` on the branch. **Nothing merged or tagged
+yet.** Remaining: task 13 — whole-branch review, `npm run package`, the manual tray/hotkey
+installer eyeball, merge `--no-ff` to `master`, and tag `v1.14.0`.
 
-**Next candidates:** dead `Shift+Alt+F` hotkey (Format Document known-issue), parked Phase 4.
-Phase 3.6 closed 2026-07-20 (real two-process second-instance smoke test). The v1.12.0 codebase
-audit is fully resolved.
+**Next candidates (after this slice ships):** the remaining Phase 4 items — code signing (needs a
+purchased cert), native Win11 `IExplorerCommand` "Open with", and snippet placeholders/tabstops.
+Also still open: the dead `Shift+Alt+F` hotkey (Format Document known-issue), and the deferred
+`app.isPackaged` gating gap on the context-menu toggle noted under Phase 4 below.
 
 ---
 
@@ -251,13 +250,36 @@ command-registry changes on systems already in place. Shipped as **one release u
   packaged startup** (gated on `app.isPackaged`) so existing users get it without re-toggling the
   setting; the re-apply also self-heals a stale exe path after a reinstall elsewhere._
 
-## 🧊 Phase 4 — Platform & power (parked)
+## 🚧 Phase 4 — Platform & power (2 of 5 shipped — v1.14.0; 3 remain parked)
 
 - 🧊 **Code signing** (**M**, needs a purchased cert) — removes the SmartScreen warning.
 - 🧊 **Native Win11 top-level "Open with"** (**L**) — `IExplorerCommand` handler so it's not under "Show more options".
-- 🧊 **Configurable global hotkey** (**M**) — capture-the-keystroke UI (today: `settings.json` only).
+- ✅ **Settings home** (not originally on the roadmap — shipped v1.14.0) — a new Settings overlay
+  (gear button on the toolbar / `Ctrl+,` / palette `Settings…` / `File ▸ Preferences…`) with a left
+  category nav: Appearance / Font / Editor / Folder / Startup / Integration. Replaces the old,
+  Appearance-only panel; its contents (incl. the theme hover live-preview) moved in unchanged. The
+  Windows "Open with" right-click-menu toggle moved out of the Tools menu into Settings ▸
+  Integration in the same pass (it was a setting filed as a tool), and its previously-duplicated
+  toggle logic is now single-sourced. Forced by the configurable-hotkey and launch-on-login items
+  below needing a home.
+- ✅ **Configurable global hotkey** (**M**) — shipped v1.14.0. Record/Clear widget in Settings ▸
+  Startup, replacing the `settings.json`-only mandatory hotkey. Rebinding is test-then-commit: a
+  combo already taken by another app reverts to the previous one with a toast, so settings can
+  never store a combo that isn't actually bound. Fixed two bugs surfaced along the way: a
+  deliberately-cleared hotkey silently reverting to the default on restart (an `||` treating `''`
+  as unset), and a malformed `settings.json` hotkey value that could throw during startup instead
+  of degrading to a toast.
 - 🧊 **Snippet placeholders / tabstops** (**M–L**) — VS Code-style `$1` + abbreviation expansion.
-- 🧊 **Launch on login** (**S**) — optional start-with-Windows.
+- ✅ **Launch on login** (**S**) — shipped v1.14.0. Opt-in "Launch when Windows starts" in Settings
+  ▸ Startup; starts hidden in the system tray so the app is ready to summon instantly. Reconciles
+  to the real OS state (`getLoginItemSettings`) on next launch if the entry is disabled behind the
+  app's back (Task Manager ▸ Startup), so the checkbox can't lie.
+
+**Deferred item surfaced during this slice:** the existing `contextmenu:set` toggle path (Settings
+▸ Integration's right-click-menu checkbox → `setContextMenu` called directly from `index.ts`) is
+**not** gated on `app.isPackaged` — unlike the packaged-startup context-menu re-apply and the new
+login-item write, both of which are. Toggling it in a dev run writes to the developer's own real
+`HKCU`. Not fixed on this branch; needs its own small pass.
 
 ## 💡 Someday / maybe
 
