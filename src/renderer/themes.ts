@@ -26,7 +26,7 @@ interface Palette {
   base: 'light' | 'dark'
   bg: string; fg: string; bar: string; barText: string; dim: string
   tab: string; tabActive: string; border: string; accent: string
-  /** Overrides for the derived ladder. Only set where the formula misfires — see monokai / high-contrast. */
+  /** Overrides for the derived ladder. Only set where a theme must opt out — see high-contrast. */
   panel?: string; status?: string
   accentText?: string
   monacoBase?: monaco.editor.BuiltinTheme
