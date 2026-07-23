@@ -162,12 +162,6 @@ describe('tonal ladder', () => {
       const c = THEMES[id].chrome
       const up = THEMES[id].base === 'dark'
       expect(lighter(c['--panel-bg'], c['--bar']), `${id} panel`).toBe(up)
-      // Monokai's `bar` (#1e1f1c) is darker than its own `editor bg` (#272822) — the reverse of
-      // every other dark theme, where the editor is the darkest surface. Its `status` override
-      // deliberately sits between bar and editor bg (see the palette comment) rather than
-      // stepping further dark, which read as a black slab — so it's lighter than bar on purpose,
-      // breaking the generic direction rule for this one theme only.
-      if (id === 'monokai') continue
       expect(lighter(c['--statusbar-bg'], c['--bar']), `${id} statusbar`).toBe(!up)
     }
   })

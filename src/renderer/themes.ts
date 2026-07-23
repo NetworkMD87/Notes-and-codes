@@ -109,7 +109,6 @@ export const THEMES: Record<string, ThemeDef> = {
   monokai: makeTheme('monokai', 'Monokai', {
     base: 'dark', bg: '#272822', fg: '#f8f8f2', bar: '#1e1f1c', barText: '#f8f8f2', dim: '#75715e',
     tab: '#2d2e28', tabActive: '#272822', border: '#3e3d32', accent: '#f92672',
-    status: '#232420',
     syntax: { comment: '#75715e', string: '#e6db74', keyword: '#f92672', number: '#ae81ff', type: '#66d9ef' }
   }),
   'high-contrast': makeTheme('high-contrast', 'High Contrast', {
