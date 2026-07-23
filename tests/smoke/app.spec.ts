@@ -532,19 +532,37 @@ test('command palette is one stacked box and still runs commands', async () => {
   }
 })
 
-test('status bar reads as quiet chrome, not an accent slab', async () => {
+test('status bar sits a half-step below the header, not an accent slab', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
     const win = await app.firstWindow()
     await expect(win.locator('#statusbar')).toBeVisible()
-    // panel-bg and bar resolve to the same color in every theme, so a de-loudified
-    // status bar (panel-bg) matches the header (bar); the old accent slab did not.
+    // The tonal ladder deliberately steps --statusbar-bg away from --bar (one step
+    // darker on the default dark theme) rather than reusing --panel-bg, so the status
+    // bar and header no longer resolve to the same color. This guards the ladder's
+    // direction while still catching a regression to a loud accent fill: an accent
+    // slab is both outside the ±16-per-channel tonal family and not darker overall.
     const [sbBg, headerBg] = await win.evaluate(() => {
       const bg = (sel: string) => getComputedStyle(document.querySelector(sel)!).backgroundColor
       return [bg('#statusbar'), bg('#header')]
     })
-    expect(sbBg).toBe(headerBg)
+    const parseRgb = (s: string): [number, number, number] => {
+      const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(s)
+      if (!m) throw new Error(`unparseable color: ${s}`)
+      return [Number(m[1]), Number(m[2]), Number(m[3])]
+    }
+    const [sr, sg, sb] = parseRgb(sbBg)
+    const [hr, hg, hb] = parseRgb(headerBg)
+
+    // 1. The ladder is live: statusbar must not equal the header.
+    expect(sbBg).not.toBe(headerBg)
+    // 2. Still the same tonal family, not a loud fill: each channel within 16 of the header's.
+    expect(Math.abs(sr - hr)).toBeLessThanOrEqual(16)
+    expect(Math.abs(sg - hg)).toBeLessThanOrEqual(16)
+    expect(Math.abs(sb - hb)).toBeLessThanOrEqual(16)
+    // 3. On the default (dark) theme the status bar sits below the header.
+    expect(sr + sg + sb).toBeLessThan(hr + hg + hb)
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
