@@ -23,7 +23,7 @@ describe('floating chrome tokens', () => {
   })
   it('rounds every overlay box with --radius-lg', () => {
     for (const sel of ['.palette-box', '.qo-box', '.settings-box', '.help-box', '.fh-box',
-      '.snip-mgr-box', '.input-box', '.diff-picker-box', '.toast', '#ctx-menu', '.tb-hl-pop']) {
+      '.snip-mgr-box', '.input-box', '.diff-picker-box', '.toast', '#ctx-menu', '.tb-hl-pop', '.ph-list,.snip-list']) {
       expect(ruleFor(sel), sel).toContain('border-radius:var(--radius-lg)')
     }
   })
@@ -31,5 +31,10 @@ describe('floating chrome tokens', () => {
     for (const sel of ['.palette-box', '.settings-box', '.toast', '#ctx-menu']) {
       expect(ruleFor(sel), sel).toContain('border:1px solid var(--accent)')
     }
+  })
+  it('migrates .tb-hl-pop shadow to --shadow variable', () => {
+    const rule = ruleFor('.tb-hl-pop')
+    expect(rule, '.tb-hl-pop').toContain('box-shadow:var(--shadow)')
+    expect(rule, '.tb-hl-pop').not.toContain('0 4px 14px rgba(0,0,0,.3)')
   })
 })
