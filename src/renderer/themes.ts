@@ -170,6 +170,84 @@ export function contrastText(hex: string): string {
   return yiq >= 128 ? '#111111' : '#ffffff'
 }
 
+// ── Lightness maths ──────────────────────────────────────────────────────────
+// HSL round-trip rather than raw channel addition: adding a constant to r/g/b
+// desaturates as it lightens, which turns tinted chrome (Nord, Dracula) grey.
+// Pure and DOM-free so the ladder and the accent tokens are both unit-testable.
+
+function toRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '')
+  const s = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+  return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)]
+}
+
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  const rn = r / 255, gn = g / 255, bn = b / 255
+  const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn)
+  const l = (max + min) / 2
+  if (max === min) return [0, 0, l * 100]
+  const d = max - min
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+  const h = max === rn ? (gn - bn) / d + (gn < bn ? 6 : 0)
+    : max === gn ? (bn - rn) / d + 2
+      : (rn - gn) / d + 4
+  return [h * 60, s * 100, l * 100]
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  const sn = s / 100, ln = l / 100
+  const c = (1 - Math.abs(2 * ln - 1)) * sn
+  const hp = (((h % 360) + 360) % 360) / 60
+  const x = c * (1 - Math.abs((hp % 2) - 1))
+  const [r1, g1, b1] = hp < 1 ? [c, x, 0] : hp < 2 ? [x, c, 0] : hp < 3 ? [0, c, x]
+    : hp < 4 ? [0, x, c] : hp < 5 ? [x, 0, c] : [c, 0, x]
+  const m = ln - c / 2
+  return [Math.round((r1 + m) * 255), Math.round((g1 + m) * 255), Math.round((b1 + m) * 255)]
+}
+
+const hex2 = (n: number): string => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')
+
+/** Shift a hex colour's HSL lightness by `pct` points, clamped to [0,100]. */
+export function shiftL(hex: string, pct: number): string {
+  const [r, g, b] = toRgb(hex)
+  const [h, s, l] = rgbToHsl(r, g, b)
+  const [r2, g2, b2] = hslToRgb(h, s, Math.max(0, Math.min(100, l + pct)))
+  return '#' + hex2(r2) + hex2(g2) + hex2(b2)
+}
+
+function luminance(hex: string): number {
+  const [r, g, b] = toRgb(hex)
+  const ch = [r, g, b].map(v => {
+    const x = v / 255
+    return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)
+  })
+  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+}
+
+/** WCAG contrast ratio, 1 (identical) to 21 (black on white). */
+export function contrastRatio(a: string, b: string): number {
+  const la = luminance(a), lb = luminance(b)
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+}
+
+// The counterpart to contrastText(): that one picks TEXT to sit ON an accent fill; this one
+// keeps an accent-COLOURED glyph legible on chrome. Needed because the accent is user-chosen
+// from an 18-colour palette — a pale one (Yellow, Lime) on light chrome is otherwise invisible.
+// Walks lightness away from the surface in 4-point steps and stops at 3:1 (the WCAG floor for
+// a UI glyph). Bounded loop + a no-progress guard, so it terminates for any input including
+// readableOn(x, x).
+export function readableOn(fg: string, surface: string): string {
+  const dir = luminance(surface) > 0.18 ? -4 : 4
+  let out = fg
+  for (let i = 0; i < 25; i++) {
+    if (contrastRatio(out, surface) >= 3) return out
+    const next = shiftL(out, dir)
+    if (next === out) return out
+    out = next
+  }
+  return out
+}
+
 export function chromeVars(themeId: string, accent?: string | null): ChromeTokens {
   const t = THEMES[resolveThemeId(themeId)]
   if (accent) return { ...t.chrome, '--accent': accent, '--accent-text': contrastText(accent) }
