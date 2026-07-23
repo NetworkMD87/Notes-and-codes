@@ -6,8 +6,8 @@ const hex = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i
 
 describe('themes', () => {
   it('registers every theme in IDS', () => { for (const id of IDS) expect(THEMES[id], id).toBeTruthy() })
-  it('every theme has all 14 chrome keys', () => {
-    expect(CHROME_KEYS).toHaveLength(14)
+  it('every theme has all 17 chrome keys', () => {
+    expect(CHROME_KEYS).toHaveLength(17)
     for (const id of IDS) for (const k of CHROME_KEYS) expect(THEMES[id].chrome[k], `${id} ${k}`).toBeTruthy()
   })
   it('every theme monaco.base is valid; accent is hex', () => {
@@ -132,5 +132,62 @@ describe('readableOn', () => {
     const out = readableOn('#000000', '#000000')
     expect(out).toMatch(/^#[0-9a-f]{6}$/)
     expect(contrastRatio(out, '#000000')).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('tonal ladder', () => {
+  // Higher contrast against black == lighter colour. Avoids exporting luminance just for tests.
+  const lighter = (a: string, b: string): boolean =>
+    contrastRatio(a, '#000000') > contrastRatio(b, '#000000')
+
+  it('gives every theme three distinct chrome levels, except High Contrast', () => {
+    for (const id of IDS) {
+      const c = THEMES[id].chrome
+      for (const k of ['--bar', '--panel-bg', '--statusbar-bg'] as const) {
+        expect(c[k], `${id} ${k}`).toMatch(hex)
+      }
+      if (id === 'high-contrast') continue
+      expect(c['--panel-bg'], id).not.toBe(c['--bar'])
+      expect(c['--statusbar-bg'], id).not.toBe(c['--bar'])
+    }
+  })
+  it('opts High Contrast out of the ladder on purpose (borders carry structure there)', () => {
+    const c = THEMES['high-contrast'].chrome
+    expect(c['--panel-bg']).toBe(c['--bar'])
+    expect(c['--statusbar-bg']).toBe(c['--bar'])
+  })
+  it('puts panels above and the status bar below chrome, per base', () => {
+    for (const id of IDS) {
+      if (id === 'high-contrast') continue
+      const c = THEMES[id].chrome
+      const up = THEMES[id].base === 'dark'
+      expect(lighter(c['--panel-bg'], c['--bar']), `${id} panel`).toBe(up)
+      // Monokai's `bar` (#1e1f1c) is darker than its own `editor bg` (#272822) — the reverse of
+      // every other dark theme, where the editor is the darkest surface. Its `status` override
+      // deliberately sits between bar and editor bg (see the palette comment) rather than
+      // stepping further dark, which read as a black slab — so it's lighter than bar on purpose,
+      // breaking the generic direction rule for this one theme only.
+      if (id === 'monokai') continue
+      expect(lighter(c['--statusbar-bg'], c['--bar']), `${id} statusbar`).toBe(!up)
+    }
+  })
+})
+
+describe('accent-derived tokens', () => {
+  it('derives soft + readable from the theme accent', () => {
+    const c = THEMES.dark.chrome
+    expect(c['--accent-soft']).toBe(c['--accent'] + '33')
+    expect(c['--accent-readable']).toMatch(hex)
+  })
+  it('re-derives BOTH from a custom accent, not the theme accent', () => {
+    const o = chromeVars('light', '#eab308')
+    expect(o['--accent-soft']).toBe('#eab30833')
+    expect(o['--accent-readable']).not.toBe(THEMES.light.chrome['--accent-readable'])
+    expect(contrastRatio(o['--accent-readable'], THEMES.light.chrome['--bar'])).toBeGreaterThanOrEqual(3)
+  })
+  it('leaves the ladder alone when only the accent is overridden', () => {
+    const o = chromeVars('dark', '#eab308')
+    expect(o['--panel-bg']).toBe(THEMES.dark.chrome['--panel-bg'])
+    expect(o['--statusbar-bg']).toBe(THEMES.dark.chrome['--statusbar-bg'])
   })
 })

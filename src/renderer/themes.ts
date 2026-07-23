@@ -4,12 +4,14 @@ import { ACCENT_PALETTE } from '../shared/types'
 export type ChromeKey =
   | '--bar' | '--bartext' | '--bar-hover' | '--tabbg' | '--tab-active-bg'
   | '--tab-inactive-text' | '--editorbg' | '--panel-bg' | '--panel-text'
-  | '--border' | '--muted' | '--accent' | '--accent-text' | '--danger'
+  | '--statusbar-bg' | '--border' | '--muted' | '--accent' | '--accent-text'
+  | '--accent-soft' | '--accent-readable' | '--danger'
 export type ChromeTokens = Record<ChromeKey, string>
 
 export const CHROME_KEYS: ChromeKey[] = [
   '--bar','--bartext','--bar-hover','--tabbg','--tab-active-bg','--tab-inactive-text',
-  '--editorbg','--panel-bg','--panel-text','--border','--muted','--accent','--accent-text','--danger'
+  '--editorbg','--panel-bg','--panel-text','--statusbar-bg','--border','--muted',
+  '--accent','--accent-text','--accent-soft','--accent-readable','--danger'
 ]
 
 export interface ThemeDef {
@@ -24,6 +26,8 @@ interface Palette {
   base: 'light' | 'dark'
   bg: string; fg: string; bar: string; barText: string; dim: string
   tab: string; tabActive: string; border: string; accent: string
+  /** Overrides for the derived ladder. Only set where the formula misfires — see monokai / high-contrast. */
+  panel?: string; status?: string
   accentText?: string
   monacoBase?: monaco.editor.BuiltinTheme
   syntax?: { comment: string; string: string; keyword: string; number: string; type: string }
@@ -39,14 +43,24 @@ function makeTheme(id: string, label: string, p: Palette): ThemeDef {
     { token: 'number', foreground: hx(p.syntax.number) },
     { token: 'type', foreground: hx(p.syntax.type) }
   ] : []
+  // Tonal ladder: overlays a half-step above chrome, the status bar a half-step below, so
+  // depth reads without relying on 1px borders. Dark themes step up to lift a panel off the
+  // chrome; light themes step down for the same reason.
+  const up = p.base === 'dark'
+  const panel = p.panel ?? shiftL(p.bar, up ? 4 : -3)
+  const statusbar = p.status ?? shiftL(p.bar, up ? -3 : 2)
   return {
     id, label, base: p.base,
     chrome: {
       '--bar': p.bar, '--bartext': p.barText, '--bar-hover': 'rgba(127,127,127,.18)',
       '--tabbg': p.tab, '--tab-active-bg': p.tabActive, '--tab-inactive-text': p.dim,
-      '--editorbg': p.bg, '--panel-bg': p.bar, '--panel-text': p.barText,
+      '--editorbg': p.bg, '--panel-bg': panel, '--panel-text': p.barText,
+      '--statusbar-bg': statusbar,
       '--border': p.border, '--muted': p.dim, '--accent': p.accent,
-      '--accent-text': p.accentText ?? contrastText(p.accent), '--danger': '#e5484d'
+      '--accent-text': p.accentText ?? contrastText(p.accent),
+      '--accent-soft': p.accent + '33',
+      '--accent-readable': readableOn(p.accent, p.bar),
+      '--danger': '#e5484d'
     },
     monaco: {
       base: p.monacoBase ?? (p.base === 'dark' ? 'vs-dark' : 'vs'),
@@ -95,11 +109,13 @@ export const THEMES: Record<string, ThemeDef> = {
   monokai: makeTheme('monokai', 'Monokai', {
     base: 'dark', bg: '#272822', fg: '#f8f8f2', bar: '#1e1f1c', barText: '#f8f8f2', dim: '#75715e',
     tab: '#2d2e28', tabActive: '#272822', border: '#3e3d32', accent: '#f92672',
+    status: '#232420',
     syntax: { comment: '#75715e', string: '#e6db74', keyword: '#f92672', number: '#ae81ff', type: '#66d9ef' }
   }),
   'high-contrast': makeTheme('high-contrast', 'High Contrast', {
     base: 'dark', bg: '#000000', fg: '#ffffff', bar: '#000000', barText: '#ffffff', dim: '#c0c0c0',
     tab: '#000000', tabActive: '#0d0d0d', border: '#6fc3df', accent: '#00a8ff',
+    panel: '#000000', status: '#000000',
     monacoBase: 'hc-black'
   }),
   nord: makeTheme('nord', 'Nord', {
@@ -203,7 +219,12 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   return [Math.round((r1 + m) * 255), Math.round((g1 + m) * 255), Math.round((b1 + m) * 255)]
 }
 
-const hex2 = (n: number): string => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')
+// Function declaration (not a const arrow) so it's hoisted: makeTheme now derives the ladder
+// eagerly while THEMES is being built at module load, via shiftL, before this line would
+// otherwise have run — a const here would leave shiftL calling into its own temporal dead zone.
+function hex2(n: number): string {
+  return Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')
+}
 
 /** Shift a hex colour's HSL lightness by `pct` points, clamped to [0,100]. */
 export function shiftL(hex: string, pct: number): string {
@@ -248,8 +269,14 @@ export function readableOn(fg: string, surface: string): string {
 
 export function chromeVars(themeId: string, accent?: string | null): ChromeTokens {
   const t = THEMES[resolveThemeId(themeId)]
-  if (accent) return { ...t.chrome, '--accent': accent, '--accent-text': contrastText(accent) }
-  return t.chrome
+  if (!accent) return t.chrome
+  return {
+    ...t.chrome,
+    '--accent': accent,
+    '--accent-text': contrastText(accent),
+    '--accent-soft': accent + '33',
+    '--accent-readable': readableOn(accent, t.chrome['--bar'])
+  }
 }
 
 export function migrateThemeId(s: { themeId?: string; theme?: string }): string {
