@@ -38,3 +38,12 @@ describe('floating chrome tokens', () => {
     expect(rule, '.tb-hl-pop').not.toContain('0 4px 14px rgba(0,0,0,.3)')
   })
 })
+
+describe('active toolbar button', () => {
+  it('uses a tint plus a readable glyph, not a solid accent block', () => {
+    const rule = ruleFor('.tb-btn.tb-active')
+    expect(rule).toContain('background:var(--accent-soft)')
+    expect(rule).toContain('color:var(--accent-readable)')
+    expect(rule).not.toContain('background:var(--accent)')
+  })
+})
