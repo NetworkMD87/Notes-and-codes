@@ -163,9 +163,7 @@ export function swatchColours(themeId: string): string[] {
 // raw WCAG max-contrast) because max-contrast flips the conventional white-on-saturated-
 // blue to dark; YIQ matches how accents are conventionally paired with text.
 export function contrastText(hex: string): string {
-  const h = hex.replace('#', '')
-  const s = h.length === 3 ? h.split('').map(c => c + c).join('') : h
-  const r = parseInt(s.slice(0, 2), 16), g = parseInt(s.slice(2, 4), 16), b = parseInt(s.slice(4, 6), 16)
+  const [r, g, b] = toRgb(hex)
   const yiq = (r * 299 + g * 587 + b * 114) / 1000
   return yiq >= 128 ? '#111111' : '#ffffff'
 }
