@@ -242,13 +242,16 @@ done** (polish-pass convention — don't bump per slice)._
 - ✅ **Slice 3 — structural chrome** (**S**) — the on-disk-change banner floats as a `--warning`
   notification (panel chrome + accent border + shared `toastGlyph`) instead of a full-width accent
   slab; the folder sidebar gains a muted folder-name header caption and depth-driven tree indent guides.
-- ⬜ **File-type icon glyphs in the tab bar** (**S**) — the sidebar half shipped in Slice 4 (tinted
+- ✅ **File-type icon glyphs in the tab bar** (**S**) — the sidebar half shipped in Slice 4 (tinted
   extension badges); the tab bar could reuse the same `fileType()` map. (The original #8's "monochrome
   first" caution was reconsidered for the sidebar — tinting only from the shared `ACCENT_PALETTE`
   avoided a genuinely new colour system, so the badges went colourful.)
 - ✅ **Slice 4 — sidebar personality** (**M**) — tinted file-type extension badges (colours drawn from
   the shared `ACCENT_PALETTE` via a pure `fileType()` map) + folder glyphs in the tree, and a visible
   edge-tab open/close toggle at the main-pane seam. (Tab-bar file-type icons remain a possible follow-up.)
+- ✅ **Slice 5 — tab-bar file-type badges** (**S**) — each tab shows a tinted badge from the buffer's
+  Monaco language via a pure `langBadge()` (reusing the sidebar's shared `ACCENT_PALETTE` colours), so
+  a tab's type is scannable and sidebar/tab badges match. Completes UI-IDEAS #8.
 - 🧊 **Re-harmonize theme chrome hues** — parked. Most of the 13 are faithful upstream ports
   (Solarized, Nord, Dracula, Gruvbox, Monokai, Tokyo Night); tinting their chrome off canonical
   values reads as *wrong* to anyone who knows them.
