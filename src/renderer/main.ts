@@ -708,7 +708,7 @@ mainEl.appendChild(sbToggle)
 const syncSbToggle = (): void => {
   const hidden = sbEl.classList.contains('hidden')
   sbToggle.textContent = hidden ? '›' : '‹' // › when collapsed, ‹ when open
-  sbToggle.classList.toggle('collapsed', hidden)
+  sbToggle.setAttribute('aria-label', hidden ? 'Show sidebar' : 'Hide sidebar')
 }
 sbToggle.onclick = () => folder.toggleSidebar()
 new MutationObserver(syncSbToggle).observe(sbEl, { attributes: true, attributeFilter: ['class'] })
