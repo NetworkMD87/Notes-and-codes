@@ -40,8 +40,9 @@ export function fileType(name: string): FileBadge {
   return { label: ext.slice(0, 4), colour: EXT_COLOUR[ext] ?? null }
 }
 
-// Monaco language id → short label. The label is ALSO an EXT_COLOUR key, so a language badge and the
-// matching extension badge (sidebar) resolve to the same palette colour with no duplicated choices.
+// Monaco language id → short label. For coloured types the label is ALSO an EXT_COLOUR key, so a
+// language badge and the matching extension badge (sidebar) resolve to the same palette colour with no
+// duplicated choices. plaintext→'txt' and csharp→'cs' have no EXT_COLOUR key on purpose → muted badge.
 const LANG_LABEL: Record<string, string> = {
   typescript: 'ts', javascript: 'js', json: 'json', markdown: 'md',
   html: 'html', xml: 'xml', css: 'css', scss: 'scss', less: 'less',
