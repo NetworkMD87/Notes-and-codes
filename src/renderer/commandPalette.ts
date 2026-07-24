@@ -41,7 +41,16 @@ export class CommandPalette {
       row.className = 'palette-row' + (i === this.cursor ? ' active' : '')
       const label = document.createElement('span'); label.textContent = c.label
       row.appendChild(label)
-      if (c.hint) { const h = document.createElement('span'); h.className = 'palette-hint'; h.textContent = c.hint; row.appendChild(h) }
+      if (c.hint) {
+        const h = document.createElement('span'); h.className = 'palette-hint'
+        // Split on '+': every current hint ('Ctrl+Shift+S', 'Ctrl+=', 'Shift+Alt+F') splits cleanly;
+        // no hint uses '+' as a literal key.
+        for (const key of c.hint.split('+')) {
+          const chip = document.createElement('span'); chip.className = 'kbd'; chip.textContent = key
+          h.appendChild(chip)
+        }
+        row.appendChild(h)
+      }
       row.onclick = () => { this.exec(c) }
       return row
     }))
