@@ -484,7 +484,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) autos
 async function openFromDisk(): Promise<void> {
   const path = await window.api.openDialog(); if (!path) return
   const r = await window.api.readFile(path)
-  if (!r.ok) { toast(r.reason); return }
+  if (!r.ok) { toast(r.reason, 'error'); return }
   manager.open(r.file); showActive()
   await window.api.addRecentFile(path)
 }
@@ -505,8 +505,8 @@ async function diffFiles(): Promise<void> {
   const a = await window.api.openDialog(); if (!a) return
   const bPath = await window.api.openDialog(); if (!bPath) return
   const [ra, rb] = await Promise.all([window.api.readFile(a), window.api.readFile(bPath)])
-  if (!ra.ok) { toast(ra.reason); return }
-  if (!rb.ok) { toast(rb.reason); return }
+  if (!ra.ok) { toast(ra.reason, 'error'); return }
+  if (!rb.ok) { toast(rb.reason, 'error'); return }
   diff.show(
     { title: a.split(/[\\/]/).pop() ?? a, content: ra.file.content, language: languageFromPath(a) },
     { title: bPath.split(/[\\/]/).pop() ?? bPath, content: rb.file.content, language: languageFromPath(bPath) }
@@ -747,9 +747,9 @@ window.addEventListener('keydown', (e) => {
 async function openPath(path: string): Promise<void> {
   try {
     const r = await window.api.readFile(path)
-    if (!r.ok) { toast(r.reason); return }
+    if (!r.ok) { toast(r.reason, 'error'); return }
     manager.open(r.file); window.api.addRecentFile(path); showActive(); scheduleSessionSave()
-  } catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`) }
+  } catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`, 'error') }
 }
 
 function openPaths(): string[] { return manager.list().map(b => b.filePath).filter((p): p is string => !!p) }
@@ -758,7 +758,7 @@ function syncWatch(): void { window.api.watchPaths(openPaths()) }
 async function reloadBuffer(id: string): Promise<void> {
   const b = manager.get(id); if (!b || !b.filePath) return
   const r = await window.api.readFile(b.filePath)
-  if (!r.ok) { toast(r.reason); return }
+  if (!r.ok) { toast(r.reason, 'error'); return }
   b.content = r.file.content; b.eol = r.file.eol; b.encoding = r.file.encoding; b.dirty = false
   b.diskMtime = r.file.mtimeMs // reloading rebases the guard on what we just read
   conflicts.delete(id)
