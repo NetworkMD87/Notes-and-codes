@@ -457,8 +457,11 @@ test('Settings has a Format on save toggle that persists', async () => {
 
 test('drag reorders tabs and the new order persists across relaunch', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-reorder-'))
+  // Read the `.tab-title` span specifically, not the whole `.tab` — a tab now also carries a
+  // leading `.badge` chip (Task 2: tab language badges), so `.tab`'s raw textContent would
+  // include the badge label (e.g. 'txt') concatenated onto the title.
   const titlesOf = (w: Awaited<ReturnType<Awaited<ReturnType<typeof electron.launch>>['firstWindow']>>) =>
-    w.locator('.tab').evaluateAll(els => els.map(e => (e.textContent ?? '').replace('×', '').trim()))
+    w.locator('.tab .tab-title').evaluateAll(els => els.map(e => (e.textContent ?? '').replace('×', '').trim()))
 
   const app1 = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {

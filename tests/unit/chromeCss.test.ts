@@ -130,7 +130,7 @@ describe('sidebar indent guides', () => {
 
 describe('sidebar file-type badges', () => {
   it('defines a badge chip and a folder glyph', () => {
-    expect(ruleFor('.sb-badge')).toContain('border-radius')
+    expect(ruleFor('.badge,.sb-badge')).toContain('border-radius')
     expect(ruleFor('.sb-folder svg')).toContain('stroke:currentColor')
   })
 })
@@ -151,5 +151,13 @@ describe('sidebar selected file row', () => {
     expect(rule).toContain('color:var(--accent-readable)')
     expect(rule).toContain('inset 3px 0 0 var(--accent)')
     expect(rule).not.toContain('background:var(--accent)')
+  })
+})
+
+describe('shared badge chip', () => {
+  it('.sb-badge and .badge share one keycap-style rule', () => {
+    const rule = ruleFor('.badge,.sb-badge')
+    expect(rule).toContain('border-radius')
+    expect(rule).toContain('font-family')
   })
 })

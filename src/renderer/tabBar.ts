@@ -1,4 +1,6 @@
 import type { BufferState } from '../shared/types'
+import { HL_HEX } from '../shared/types'
+import { langBadge } from './fileType'
 
 export interface TabHandlers {
   onSelect: (id: string) => void
@@ -25,7 +27,13 @@ export class TabBar {
       tab.className = 'tab' + (b.id === activeId ? ' active' : '')
       tab.dataset.id = b.id
       tab.draggable = true
-      tab.textContent = (b.dirty ? '● ' : '') + b.title
+      const badge = document.createElement('span'); badge.className = 'badge'
+      const lb = langBadge(b.language); badge.textContent = lb.label
+      if (lb.colour) { const hex = HL_HEX[lb.colour]; badge.style.color = hex; badge.style.background = hex + '22' }
+      else badge.style.color = 'var(--muted)'
+      const title = document.createElement('span'); title.className = 'tab-title'
+      title.textContent = (b.dirty ? '● ' : '') + b.title
+      tab.append(badge, title)
       tab.onclick = (e) => { if ((e.target as HTMLElement).dataset.close !== '1') this.handlers.onSelect(b.id) }
       tab.onauxclick = (e) => { if (e.button === 1) this.handlers.onClose(b.id) } // middle-click
       const x = document.createElement('span')
