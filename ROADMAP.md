@@ -17,16 +17,18 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — 🚧 **Manual installer eyeball of v1.14.0** (everything else is done)
+## ▶ NEXT ACTION — 🚧 **Manual release checklist for v1.14.0** (all code merged to `master`; release pending)
 
-**Settings home + launch on login + configurable global hotkey** — the first Phase 4 slice — is
-code-complete, fully reviewed (**whole-branch verdict: ready to merge**) and **packaged** on
-`feat/settings-home-and-startup`. The only thing standing between here and the release is the
-manual checklist below, which needs a real reboot and real OS-level hotkey binding and therefore
-cannot be automated.
+**v1.14.0 is fully merged to `master`** (`0a98e49`, 2026-07-24): the first Phase 4 slice (Settings home +
+launch-on-login + configurable global hotkey) **and** the entire **Phase 4.5 design-polish pass, slices
+1–5** (tonal ladder, floating chrome, interactive states, structural chrome, sidebar + tab file-type
+badges). It all rides on the still-**unreleased** `v1.14.0` — the `1.13.0 → 1.14.0` bump already happened,
+so the whole thing ships as one v1.14.0 release, no further bump. The settings eyeball PASSED
+(2026-07-23) and every polish slice passed its own eyeball. The only thing between here and a **release**
+is the manual checklist below — a real reboot + OS-level hotkey binding, not automatable.
 
 **Build to test:** `dist/Notes & Codes Setup 1.14.0.exe` (installer) · `dist/Notes & Codes 1.14.0.exe`
-(portable). Both built 2026-07-21.
+(portable). Rebuilt 2026-07-24 (includes the whole polish pass).
 
 ### ⬜ The checklist
 
@@ -56,8 +58,8 @@ _Settings panel:_
 - ⬜ Narrow the window — the panel wraps rather than clipping.
 - ⬜ Standard tray / hotkey release checklist.
 
-**Then:** merge `--no-ff` → `master`, tag `v1.14.0`, `npm run package` on `master`, publish the
-GitHub release with both assets. **Nothing is merged or tagged until the checklist passes.**
+**Then (release):** tag `v1.14.0` (the merge to `master` is already done), `npm run package` on `master`,
+publish the GitHub release with both assets. **Nothing is tagged or released until the checklist passes.**
 
 **After that ships:** the remaining Phase 4 items — code signing (needs a purchased cert), native
 Win11 `IExplorerCommand` "Open with", and snippet placeholders/tabstops. Also still open: the dead
