@@ -218,7 +218,8 @@ done** (polish-pass convention — don't bump per slice)._
 
 - ✅ **Slice 1 — tonal ladder, softer floating chrome, calmer accent, Monaco feel** (**S**) —
   three-step chrome ladder across all 13 themes (`--panel-bg` / `--bar` / `--statusbar-bg`, derived
-  via a pure `shiftL`, hand-overridden for Monokai and High Contrast); `--radius-lg:10px` + a
+  via a pure `shiftL`; High Contrast opts out of the formula, Monokai keeps it and lands the
+  darkest band on screen); `--radius-lg:10px` + a
   two-layer `--shadow` on overlay boxes; the active toolbar button tinted with `--accent-soft` and
   an `--accent-readable` glyph; Monaco smooth caret/scrolling (reduced-motion gated), 8px top
   padding, accent active line number, faint line highlight, indent guides. Unit-tested (colour
