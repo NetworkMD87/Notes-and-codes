@@ -17,57 +17,23 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — 🚧 **Manual release checklist for v1.14.0** (all code merged to `master`; release pending)
+## ▶ NEXT ACTION — nothing release-critical in flight
 
-**v1.14.0 is fully merged to `master`** (`0a98e49`, 2026-07-24): the first Phase 4 slice (Settings home +
-launch-on-login + configurable global hotkey) **and** the entire **Phase 4.5 design-polish pass, slices
-1–5** (tonal ladder, floating chrome, interactive states, structural chrome, sidebar + tab file-type
-badges). It all rides on the still-**unreleased** `v1.14.0` — the `1.13.0 → 1.14.0` bump already happened,
-so the whole thing ships as one v1.14.0 release, no further bump. The settings eyeball PASSED
-(2026-07-23) and every polish slice passed its own eyeball. The only thing between here and a **release**
-is the manual checklist below — a real reboot + OS-level hotkey binding, not automatable.
+**v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
+portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable
+global hotkey**) and the entire **Phase 4.5 design-polish pass, slices 1–5** (tonal ladder, floating
+chrome, interactive states, structural chrome, sidebar + tab file-type badges) — all under the one
+`1.13.0 → 1.14.0` bump (polish-pass convention: one bump for the whole pass). The manual
+tray / hotkey / launch-on-login checklist passed on the real build before tagging.
 
-**Build to test:** `dist/Notes & Codes Setup 1.14.0.exe` (installer) · `dist/Notes & Codes 1.14.0.exe`
-(portable). Rebuilt 2026-07-24 (includes the whole polish pass).
-
-### ⬜ The checklist
-
-_Launch on login — the reboot test:_
-- ⬜ Tick **Settings ▸ Startup ▸ Launch when Windows starts**, then **reboot**.
-- ⬜ App is in the tray, **no window**, and the summon hotkey opens it.
-- ⬜ **Reopen Settings ▸ Startup and confirm the box is STILL TICKED.** ⚠️ **Do not skip this one.**
-  The steps above look correct whether or not the bug is present — the app really does launch. This
-  checkbox is the *only* observable for the `getLoginItemSettings` args-mismatch defect found in the
-  whole-branch review, and the entire automated suite is structurally blind to it (the reconcile is
-  `app.isPackaged`-gated and no test may call `setLoginItemSettings`).
-- ⬜ Untick it, and confirm the entry disappears from Task Manager ▸ Startup.
-
-_Configurable hotkey:_
-- ⬜ Record `Ctrl+Alt+J`; confirm it summons the window from inside another app.
-- ⬜ Restart the app; confirm it still summons.
-- ⬜ Record a combo another running app already owns → expect a toast naming it, the widget snapping
-  back to the previous combo, and that previous combo still working.
-- ⬜ **Clear** the hotkey, restart, confirm it stays cleared (this is the regression guard for the
-  cleared-hotkey-reverts-on-restart bug).
-
-_Settings panel:_
-- ⬜ Gear button looks right in **light and dark** themes; `Ctrl+,` opens Settings and does nothing
-  unwanted while Monaco has focus.
-- ⬜ Every migrated control still works: theme click, hover preview + revert, accent, editor font,
-  interface font, size, ligatures, both Folder toggles, both Editor toggles, the "Open with" toggle.
-- ⬜ Narrow the window — the panel wraps rather than clipping.
-- ⬜ Standard tray / hotkey release checklist.
-
-**Then (release):** tag `v1.14.0` (the merge to `master` is already done), `npm run package` on `master`,
-publish the GitHub release with both assets. **Nothing is tagged or released until the checklist passes.**
-
-**After that ships:** the remaining Phase 4 items — code signing (needs a purchased cert), native
-Win11 `IExplorerCommand` "Open with", and snippet placeholders/tabstops. Also still open: the dead
-`Shift+Alt+F` hotkey (Format Document known-issue), the deferred `app.isPackaged` gating gap on the
-context-menu toggle (noted under Phase 4 below), and the `overlayManager` registration-overwrite
-pattern — fixed in `settingsPanel.ts` this slice, but `commandPalette.ts`, `helpOverlay.ts`,
-`quickOpen.ts` and `snippetManager.ts` all still stack a stale close-callback on re-entrant open,
-which silently eats one Escape press each. Wants its own sweep.
+**Open, none blocking a release** — candidates for the next pass:
+- The three parked Phase 4 items (see below): **code signing** (needs a purchased cert), native
+  Win11 `IExplorerCommand` **"Open with"**, and **snippet placeholders / tabstops**.
+- The `overlayManager` registration-overwrite pattern — fixed in `settingsPanel.ts`, but
+  `commandPalette.ts`, `helpOverlay.ts`, `quickOpen.ts` and `snippetManager.ts` each still stack a
+  stale close-callback on re-entrant open, silently eating one Escape press. Wants a small sweep.
+- The deferred `app.isPackaged` gating gap on the context-menu *toggle* (noted under Phase 4).
+- The dead `Shift+Alt+F` Format Document hotkey (known-issue).
 
 ---
 
@@ -211,7 +177,7 @@ Neither depends on 3.5 — they can land before, during, or after it._
   Esc not closing the About view). _Deferred: a dedicated hotkey (F1/Monaco conflict),
   clickable-to-run rows, auto-derived content, a shared shortcut-constants refactor._
 
-## 🚧 Phase 4.5 — Design polish pass 2 (slices 1–4 shipped; more possible)
+## ✅ Phase 4.5 — Design polish pass 2 (shipped v1.14.0)
 
 _From an outside design review (2026-07-23, `UI-IDEAS.md`): the app reads flat because every
 surface is a near-identical tone separated by 1px hairlines. All token/CSS/config work — no
