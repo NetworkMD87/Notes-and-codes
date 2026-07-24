@@ -38,6 +38,7 @@ export class Sidebar {
       const row = document.createElement('div')
       row.className = 'sb-row' + (entry.path === this.activePath ? ' active' : '')
       row.style.paddingLeft = `${8 + depth * 14}px`
+      row.style.setProperty('--depth', String(depth))
       const twisty = document.createElement('span'); twisty.className = 'sb-twisty'
       twisty.textContent = entry.isDir ? (this.d.model.isExpanded(entry.path) ? '▾' : '▸') : ''
       const label = document.createElement('span'); label.className = 'sb-label'; label.textContent = entry.name

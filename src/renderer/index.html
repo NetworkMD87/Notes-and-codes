@@ -75,9 +75,9 @@
       .ctx-item:hover{background:var(--accent);color:var(--accent-text)}
       #sidebar{background:var(--bar);color:var(--bartext);border-right:1px solid var(--border);overflow:auto;min-width:0;font-size:13px;user-select:none}
       #sidebar.hidden{display:none}
-      .sb-row{display:flex;align-items:center;gap:4px;height:24px;cursor:pointer;white-space:nowrap;overflow:hidden}
-      .sb-row:hover{background:var(--bar-hover)}
-      .sb-row.active{background:var(--accent);color:var(--accent-text)}
+      .sb-row{display:flex;align-items:center;gap:4px;height:24px;cursor:pointer;white-space:nowrap;overflow:hidden;background-image:repeating-linear-gradient(90deg,var(--border) 0 1px,transparent 1px 14px);background-position:8px 0;background-size:calc(var(--depth,0) * 14px) 100%;background-repeat:no-repeat}
+      .sb-row:hover{background:var(--bar-hover);background-image:none}
+      .sb-row.active{background:var(--accent);color:var(--accent-text);background-image:none}
       .sb-twisty{width:12px;flex:none;text-align:center;opacity:.7}
       .sb-label{overflow:hidden;text-overflow:ellipsis}
       .sb-header{padding:6px 10px 4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

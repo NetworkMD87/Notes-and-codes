@@ -30,3 +30,22 @@ test('sidebar shows a header caption with the open folder name', async () => {
     rmSync(projectDir, { recursive: true, force: true })
   }
 })
+
+test('nested sidebar rows carry a --depth for indent guides', async () => {
+  const { userDataDir, projectDir } = seededFolder()
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#sidebar')).toBeVisible()
+    // top-level 'src' dir is depth 0; expand it so its child 'alpha.ts' renders at depth 1.
+    await win.locator('.sb-row', { hasText: 'src' }).click()
+    const child = win.locator('.sb-row', { hasText: 'alpha.ts' })
+    await expect(child).toBeVisible()
+    const depth = await child.evaluate((el) => (el as HTMLElement).style.getPropertyValue('--depth'))
+    expect(Number(depth)).toBeGreaterThanOrEqual(1)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+    rmSync(projectDir, { recursive: true, force: true })
+  }
+})

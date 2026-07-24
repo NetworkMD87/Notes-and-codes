@@ -117,3 +117,13 @@ describe('sidebar header caption', () => {
     expect(rule).toContain('color:var(--muted)')
   })
 })
+
+describe('sidebar indent guides', () => {
+  it('draws depth-driven vertical guides on rows, suppressed on active/hover', () => {
+    const row = ruleFor('.sb-row')
+    expect(row).toContain('repeating-linear-gradient')
+    expect(row).toContain('var(--depth')
+    expect(ruleFor('.sb-row.active')).toContain('background-image:none')
+    expect(ruleFor('.sb-row:hover')).toContain('background-image:none')
+  })
+})
