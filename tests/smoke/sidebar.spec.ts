@@ -89,3 +89,18 @@ test('the edge tab toggles the sidebar and flips its chevron', async () => {
     rmSync(projectDir, { recursive: true, force: true })
   }
 })
+
+test('the edge tab is hidden when no folder is open (default scratchpad)', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-')) // no settings.json → no folder restored
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('#sidebar')).toBeHidden()
+    // No folder → no sidebar to toggle → the edge tab must not float over the editor.
+    await expect(win.locator('.sb-toggle')).toBeHidden()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})

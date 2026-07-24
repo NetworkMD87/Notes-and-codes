@@ -697,21 +697,27 @@ const folder = new FolderMode({
   }
 })
 
-// Edge-tab sidebar toggle: one handle at #main's left edge — the sidebar/editor seam when the
-// sidebar is open, the far-left window edge when it's hidden — so it's always reachable. It mirrors
-// #sidebar's visibility via a MutationObserver (robust to toggleSidebar's async show path).
+// Edge-tab sidebar toggle: one handle at #main's left edge — the sidebar/editor seam when the sidebar
+// is open, the far-left window edge when it's collapsed. Shown ONLY while a folder is open; it mirrors
+// #sidebar's state via a MutationObserver (robust to toggleSidebar's async show path).
 const sbEl = document.getElementById('sidebar')!
 const mainEl = document.getElementById('main')!
 const sbToggle = document.createElement('button')
 sbToggle.className = 'sb-toggle'; sbToggle.title = 'Toggle Sidebar'
 mainEl.appendChild(sbToggle)
 const syncSbToggle = (): void => {
-  const hidden = sbEl.classList.contains('hidden')
-  sbToggle.textContent = hidden ? '›' : '‹' // › when collapsed, ‹ when open
-  sbToggle.setAttribute('aria-label', hidden ? 'Show sidebar' : 'Hide sidebar')
+  // The tab only makes sense with a folder open: #sidebar has content (header + rows) iff a folder is
+  // open, and is empty in the default no-folder scratchpad — where an always-on tab would just float
+  // over the editor and nag on click. Gate on that, not on `.hidden` (also true when a folder's
+  // sidebar is collapsed). Inline display overrides the rule's display:flex (so `.hidden` won't do).
+  const hasFolder = sbEl.childElementCount > 0
+  sbToggle.style.display = hasFolder ? '' : 'none'
+  const collapsed = sbEl.classList.contains('hidden')
+  sbToggle.textContent = collapsed ? '›' : '‹' // › when collapsed, ‹ when open
+  sbToggle.setAttribute('aria-label', collapsed ? 'Show sidebar' : 'Hide sidebar')
 }
 sbToggle.onclick = () => folder.toggleSidebar()
-new MutationObserver(syncSbToggle).observe(sbEl, { attributes: true, attributeFilter: ['class'] })
+new MutationObserver(syncSbToggle).observe(sbEl, { attributes: true, attributeFilter: ['class'], childList: true })
 syncSbToggle()
 
 async function openFolderFromDialog(): Promise<void> {
