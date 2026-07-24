@@ -543,9 +543,9 @@ test('status bar sits a half-step below the header, not an accent slab', async (
     // bar and header no longer resolve to the same color. This guards the ladder's
     // direction while still catching a regression to a loud accent fill: an accent
     // slab is both outside the ±16-per-channel tonal family and not darker overall.
-    const [sbBg, headerBg] = await win.evaluate(() => {
+    const [sbBg, headerBg, theme] = await win.evaluate(() => {
       const bg = (sel: string) => getComputedStyle(document.querySelector(sel)!).backgroundColor
-      return [bg('#statusbar'), bg('#header')]
+      return [bg('#statusbar'), bg('#header'), document.body.dataset.theme]
     })
     const parseRgb = (s: string): [number, number, number] => {
       const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(s)
@@ -561,7 +561,10 @@ test('status bar sits a half-step below the header, not an accent slab', async (
     expect(Math.abs(sr - hr)).toBeLessThanOrEqual(16)
     expect(Math.abs(sg - hg)).toBeLessThanOrEqual(16)
     expect(Math.abs(sb - hb)).toBeLessThanOrEqual(16)
-    // 3. On the default (dark) theme the status bar sits below the header.
+    // 3. The darker-sum check below only holds on a dark base; assert the default theme
+    //    explicitly so a future change to the default fails HERE with a clear message
+    //    instead of as a cryptic sum comparison.
+    expect(theme, 'this guard assumes the default dark theme').toBe('dark')
     expect(sr + sg + sb).toBeLessThan(hr + hg + hb)
   } finally {
     await app.close()

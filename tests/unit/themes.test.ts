@@ -133,6 +133,22 @@ describe('readableOn', () => {
     expect(out).toMatch(/^#[0-9a-f]{6}$/)
     expect(contrastRatio(out, '#000000')).toBeGreaterThanOrEqual(3)
   })
+  it('corrects a dark accent on dark chrome (the +4 lighten branch)', () => {
+    // Mirror of the light-chrome case above: a low-contrast accent on a DARK bar must be
+    // lightened, exercising readableOn's dir=+4 branch on a real colour — not only the
+    // degenerate same-colour case.
+    const out = readableOn('#1e3a5f', '#252526') // dark navy on the Dark theme bar
+    expect(out).not.toBe('#1e3a5f')
+    expect(contrastRatio(out, '#252526')).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('contrastRatio', () => {
+  it('spans 1 (identical) to 21 (black on white)', () => {
+    expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 5)
+    expect(contrastRatio('#ffffff', '#000000')).toBeCloseTo(21, 5) // order-independent
+    expect(contrastRatio('#7f7f7f', '#7f7f7f')).toBe(1)            // identical colours → the 1 floor
+  })
 })
 
 describe('tonal ladder', () => {

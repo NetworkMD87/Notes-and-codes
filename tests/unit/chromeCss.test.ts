@@ -5,8 +5,14 @@ const css = readFileSync('src/renderer/index.html', 'utf8')
 
 /** The single CSS declaration block for a selector, e.g. '.palette-box'. */
 function ruleFor(selector: string): string {
-  const i = css.indexOf(selector + '{')
-  expect(i, `selector ${selector} not found`).toBeGreaterThan(-1)
+  // Match `selector{` only as a standalone RULE HEAD — at a boundary (start of file,
+  // whitespace, or after a `}`), never the tail of a grouped list like `.a,.b,.toast{…}`
+  // (a different rule; a bare substring match would latch onto it). Asserting exactly one
+  // such head also guards against a future duplicate rule silently shadowing this one.
+  const head = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{'
+  const heads = [...css.matchAll(new RegExp('(?:^|[\\s}])' + head, 'g'))]
+  expect(heads.length, `selector ${selector} should appear exactly once as a rule head, found ${heads.length}`).toBe(1)
+  const i = css.indexOf(selector + '{', heads[0].index)
   return css.slice(i, css.indexOf('}', i))
 }
 

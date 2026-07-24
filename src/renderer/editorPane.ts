@@ -24,7 +24,9 @@ export class EditorPane {
     this.container = container
     // Monaco options are plain config and are invisible to the CSS prefers-reduced-motion
     // kill-switch in index.html — so the motion options are gated here by hand, or the app's
-    // documented global reduced-motion guarantee would only be half true.
+    // documented global reduced-motion guarantee would only be half true. Read ONCE at
+    // construction (not a live media query): a mid-session OS reduce-motion toggle only takes
+    // effect when the pane is next rebuilt.
     const calm = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
     this.editor = monaco.editor.create(container, {
       value: '',
