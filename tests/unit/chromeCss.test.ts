@@ -127,3 +127,10 @@ describe('sidebar indent guides', () => {
     expect(ruleFor('.sb-row:hover')).toContain('background-image:none')
   })
 })
+
+describe('sidebar file-type badges', () => {
+  it('defines a badge chip and a folder glyph', () => {
+    expect(ruleFor('.sb-badge')).toContain('border-radius')
+    expect(ruleFor('.sb-folder svg')).toContain('stroke:currentColor')
+  })
+})

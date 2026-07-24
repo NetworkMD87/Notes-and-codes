@@ -1,5 +1,10 @@
 import type { DirEntry } from '../shared/types'
+import { HL_HEX } from '../shared/types'
 import type { TreeModel } from './treeModel'
+import { fileType } from './fileType'
+
+const SVGNS = 'http://www.w3.org/2000/svg'
+const FOLDER_PATH = 'M4 7a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7z'
 
 export interface SidebarDeps {
   model: TreeModel
@@ -41,8 +46,20 @@ export class Sidebar {
       row.style.setProperty('--depth', String(depth))
       const twisty = document.createElement('span'); twisty.className = 'sb-twisty'
       twisty.textContent = entry.isDir ? (this.d.model.isExpanded(entry.path) ? '▾' : '▸') : ''
+      const type = document.createElement('span')
+      if (entry.isDir) {
+        type.className = 'sb-folder'
+        const svg = document.createElementNS(SVGNS, 'svg'); svg.setAttribute('viewBox', '0 0 24 24')
+        const p = document.createElementNS(SVGNS, 'path'); p.setAttribute('d', FOLDER_PATH); svg.appendChild(p)
+        type.appendChild(svg)
+      } else {
+        const b = fileType(entry.name)
+        type.className = 'sb-badge'; type.textContent = b.label
+        if (b.colour) { const hex = HL_HEX[b.colour]; type.style.color = hex; type.style.background = hex + '22' }
+        else type.style.color = 'var(--muted)'
+      }
       const label = document.createElement('span'); label.className = 'sb-label'; label.textContent = entry.name
-      row.append(twisty, label)
+      row.append(twisty, type, label)
       row.onclick = () => { entry.isDir ? void this.toggleDir(entry.path) : this.d.openFile(entry.path) }
       row.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); this.d.onContext(entry, e.clientX, e.clientY) }
       into.appendChild(row)

@@ -49,3 +49,21 @@ test('nested sidebar rows carry a --depth for indent guides', async () => {
     rmSync(projectDir, { recursive: true, force: true })
   }
 })
+
+test('sidebar file rows show a tinted extension badge; dirs show a folder glyph', async () => {
+  const { userDataDir, projectDir } = seededFolder()
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#sidebar')).toBeVisible()
+    // top-level 'readme.md' → badge 'md'
+    const mdRow = win.locator('.sb-row', { hasText: 'readme.md' })
+    await expect(mdRow.locator('.sb-badge')).toHaveText('md')
+    // the 'src' directory row → folder glyph
+    await expect(win.locator('.sb-row', { hasText: 'src' }).locator('.sb-folder svg')).toBeVisible()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+    rmSync(projectDir, { recursive: true, force: true })
+  }
+})
