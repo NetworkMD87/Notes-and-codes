@@ -209,6 +209,42 @@ Neither depends on 3.5 — they can land before, during, or after it._
   Esc not closing the About view). _Deferred: a dedicated hotkey (F1/Monaco conflict),
   clickable-to-run rows, auto-derived content, a shared shortcut-constants refactor._
 
+## 🚧 Phase 4.5 — Design polish pass 2 (slice 1 of N)
+
+_From an outside design review (2026-07-23, `UI-IDEAS.md`): the app reads flat because every
+surface is a near-identical tone separated by 1px hairlines. All token/CSS/config work — no
+dependency, no layout change, no density change. **Ships under one version bump when the pass is
+done** (polish-pass convention — don't bump per slice)._
+
+- ✅ **Slice 1 — tonal ladder, softer floating chrome, calmer accent, Monaco feel** (**S**) —
+  three-step chrome ladder across all 13 themes (`--panel-bg` / `--bar` / `--statusbar-bg`, derived
+  via a pure `shiftL`, hand-overridden for Monokai and High Contrast); `--radius-lg:10px` + a
+  two-layer `--shadow` on overlay boxes; the active toolbar button tinted with `--accent-soft` and
+  an `--accent-readable` glyph; Monaco smooth caret/scrolling (reduced-motion gated), 8px top
+  padding, accent active line number, faint line highlight, indent guides. Unit-tested (colour
+  helpers, ladder direction per theme, HC opt-out, accent-override re-derivation, CSS token wiring).
+- ⬜ **`:focus-visible` rings on chrome** (**S**) — keyboard users get hover styles only today; an
+  accent outline is both an a11y fix and a modern touch.
+- ⬜ **Palette hints as kbd chips** (**S**) — reuse the Help overlay's `.help-kbd` style for the
+  palette / quick-open right-aligned hints, and give `.palette-row.active` the same tinted treatment
+  the toolbar button got in slice 1.
+- ⬜ **Toast hierarchy** (**S**) — an inline-SVG info/success/warning glyph plus a 3px semantic left
+  bar (`--danger` for errors), so toasts can be glance-read.
+- ⬜ **Sidebar header caption + tree indent guides** (**S**) — folder mode starts with rows and no
+  header, which reads as bolted on.
+- ⬜ **Change bar as a floating banner** (**S**) — margins + radius + shadow instead of a full-width
+  accent slab.
+- ⬜ **File-type icon glyphs in tabs and the sidebar** (**M**) — a language → inline-SVG map,
+  ~10-15 languages plus a fallback. Biggest personality lever, but **monochrome first**: per-type
+  tinting would introduce a second colour system alongside the accent.
+- 🧊 **Re-harmonize theme chrome hues** — parked. Most of the 13 are faithful upstream ports
+  (Solarized, Nord, Dracula, Gruvbox, Monokai, Tokyo Night); tinting their chrome off canonical
+  values reads as *wrong* to anyone who knows them.
+- 🧊 **One gradient moment** — parked; lowest value per unit of taste risk.
+- ❌ **Retire the accent border on floating chrome** — rejected 2026-07-23 after a side-by-side
+  mockup review. It reverses a shipped, documented convention and removes the app's one visual
+  signature; radius + shadow carry the softening instead.
+
 ## ✅ Phase 3.7 — Polish & discoverability (round 2) (shipped v1.13.0)
 
 _A second small polish/QoL cluster: finish the Phase 3.5 Slice C/D leftovers, surface the buried safety
