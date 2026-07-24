@@ -682,7 +682,7 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
     manager.update(id, v.content)
     paneFor(view.focusedPane()).refreshBuffer(b)
     tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
-    toast('Restored an earlier version — unsaved, Save to keep it.')
+    toast('Restored an earlier version — unsaved, Save to keep it.', 'success')
   }
 })
 const openHistory = () => void fileHistory.open()
