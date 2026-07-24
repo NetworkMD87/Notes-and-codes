@@ -89,3 +89,10 @@ describe('calmer active list row', () => {
     expect(ruleFor('.qo-row:hover')).toContain('background:var(--bar-hover)')
   })
 })
+
+describe('keyboard focus rings', () => {
+  it('draws a 2px accent outline on :focus-visible chrome', () => {
+    // A rule that targets :focus-visible and sets a 2px accent outline must exist.
+    expect(css).toMatch(/:focus-visible[^{]*\{[^}]*outline:\s*2px solid var\(--accent\)/)
+  })
+})

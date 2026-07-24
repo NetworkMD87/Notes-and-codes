@@ -209,6 +209,8 @@
       .about-logo svg{width:100%;height:auto;display:block}
       .about-logo .wm-brace{fill:var(--accent)}
       .about-rule{width:44px;height:3px;border-radius:2px;background:var(--accent);margin-bottom:6px}
+      /* Keyboard-only focus rings on chrome controls (never on mouse click; scoped off Monaco). */
+      .tb-btn:focus-visible,#theme-toggle:focus-visible,.tab-add:focus-visible,.about-link:focus-visible,.help-close:focus-visible,.diff-close:focus-visible,.tb-hl-clear:focus-visible,.tb-swatch:focus-visible,.accent-default-btn:focus-visible,.hk-record:focus-visible,.hk-clear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       .about-version{color:var(--muted);font-size:13px}
       .about-tagline{opacity:.85;font-size:14px;margin-bottom:8px}
       .about-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
