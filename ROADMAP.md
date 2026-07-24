@@ -224,13 +224,17 @@ done** (polish-pass convention — don't bump per slice)._
   an `--accent-readable` glyph; Monaco smooth caret/scrolling (reduced-motion gated), 8px top
   padding, accent active line number, faint line highlight, indent guides. Unit-tested (colour
   helpers, ladder direction per theme, HC opt-out, accent-override re-derivation, CSS token wiring).
-- ⬜ **`:focus-visible` rings on chrome** (**S**) — keyboard users get hover styles only today; an
+- ✅ **`:focus-visible` rings on chrome** (**S**) — keyboard users get hover styles only today; an
   accent outline is both an a11y fix and a modern touch.
-- ⬜ **Palette hints as kbd chips** (**S**) — reuse the Help overlay's `.help-kbd` style for the
+- ✅ **Palette hints as kbd chips** (**S**) — reuse the Help overlay's `.help-kbd` style for the
   palette / quick-open right-aligned hints, and give `.palette-row.active` the same tinted treatment
   the toolbar button got in slice 1.
-- ⬜ **Toast hierarchy** (**S**) — an inline-SVG info/success/warning glyph plus a 3px semantic left
+- ✅ **Toast hierarchy** (**S**) — an inline-SVG info/success/warning glyph plus a 3px semantic left
   bar (`--danger` for errors), so toasts can be glance-read.
+- ✅ **Slice 2 — interactive-state polish** (**S**) — toast severity levels (info/success/warning/
+  error, inline-SVG glyph + 3px semantic left bar, new `--success`/`--warning` constants); palette
+  shortcut hints as `.kbd` keycap chips; the active palette/quick-open row tinted with `--accent-soft`
+  + a left bar (decoupling quick-open hover); keyboard-only `:focus-visible` accent rings on chrome.
 - ⬜ **Sidebar header caption + tree indent guides** (**S**) — folder mode starts with rows and no
   header, which reads as bolted on.
 - ⬜ **Change bar as a floating banner** (**S**) — margins + radius + shadow instead of a full-width
