@@ -67,3 +67,25 @@ test('sidebar file rows show a tinted extension badge; dirs show a folder glyph'
     rmSync(projectDir, { recursive: true, force: true })
   }
 })
+
+test('the edge tab toggles the sidebar and flips its chevron', async () => {
+  const { userDataDir, projectDir } = seededFolder()
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    const tab = win.locator('.sb-toggle')
+    await expect(win.locator('#sidebar')).toBeVisible()
+    await expect(tab).toBeVisible()
+    await expect(tab).toHaveText('‹')            // ‹ = open
+    await tab.click()
+    await expect(win.locator('#sidebar')).toBeHidden()
+    await expect(tab).toHaveText('›')            // › = collapsed
+    await tab.click()
+    await expect(win.locator('#sidebar')).toBeVisible()
+    await expect(tab).toHaveText('‹')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+    rmSync(projectDir, { recursive: true, force: true })
+  }
+})

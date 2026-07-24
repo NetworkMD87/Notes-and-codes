@@ -134,3 +134,11 @@ describe('sidebar file-type badges', () => {
     expect(ruleFor('.sb-folder svg')).toContain('stroke:currentColor')
   })
 })
+
+describe('sidebar edge-tab toggle', () => {
+  it('is a handle pinned to the main pane left edge', () => {
+    const rule = ruleFor('.sb-toggle')
+    expect(rule).toContain('position:absolute')
+    expect(rule).toContain('left:0')
+  })
+})

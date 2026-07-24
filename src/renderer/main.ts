@@ -696,6 +696,24 @@ const folder = new FolderMode({
     return manager.get(id)?.filePath ?? null
   }
 })
+
+// Edge-tab sidebar toggle: one handle at #main's left edge — the sidebar/editor seam when the
+// sidebar is open, the far-left window edge when it's hidden — so it's always reachable. It mirrors
+// #sidebar's visibility via a MutationObserver (robust to toggleSidebar's async show path).
+const sbEl = document.getElementById('sidebar')!
+const mainEl = document.getElementById('main')!
+const sbToggle = document.createElement('button')
+sbToggle.className = 'sb-toggle'; sbToggle.title = 'Toggle Sidebar'
+mainEl.appendChild(sbToggle)
+const syncSbToggle = (): void => {
+  const hidden = sbEl.classList.contains('hidden')
+  sbToggle.textContent = hidden ? '›' : '‹' // › when collapsed, ‹ when open
+  sbToggle.classList.toggle('collapsed', hidden)
+}
+sbToggle.onclick = () => folder.toggleSidebar()
+new MutationObserver(syncSbToggle).observe(sbEl, { attributes: true, attributeFilter: ['class'] })
+syncSbToggle()
+
 async function openFolderFromDialog(): Promise<void> {
   const root = await window.api.openFolderDialog(); if (!root) return
   await folder.openFolder(root)
