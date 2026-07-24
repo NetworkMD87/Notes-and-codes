@@ -185,3 +185,28 @@ describe('accent-derived tokens', () => {
     expect(o['--statusbar-bg']).toBe(THEMES.dark.chrome['--statusbar-bg'])
   })
 })
+
+describe('monaco editor colours', () => {
+  it('marks the cursor line number with the theme accent', () => {
+    for (const id of IDS) {
+      expect(THEMES[id].monaco.colors!['editorLineNumber.activeForeground'], id)
+        .toBe(THEMES[id].chrome['--accent'])
+    }
+  })
+  it('defines a faint line highlight and indent guides for every theme', () => {
+    for (const id of IDS) {
+      const c = THEMES[id].monaco.colors!
+      for (const k of ['editor.lineHighlightBackground', 'editorIndentGuide.background',
+        'editorIndentGuide.activeBackground']) {
+        expect(c[k], `${id} ${k}`).toMatch(/^#([0-9a-f]{6}|[0-9a-f]{8})$/i)
+      }
+    }
+  })
+  it('keeps the line highlight under 10% alpha so highlighter pen colours do not drift', () => {
+    for (const id of IDS) {
+      const v = THEMES[id].monaco.colors!['editor.lineHighlightBackground']
+      expect(v.length, `${id} needs an 8-digit hex`).toBe(9)
+      expect(parseInt(v.slice(7, 9), 16), id).toBeLessThanOrEqual(26) // 26/255 ≈ 10%
+    }
+  })
+})

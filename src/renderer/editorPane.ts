@@ -22,6 +22,10 @@ export class EditorPane {
 
   constructor(container: HTMLElement) {
     this.container = container
+    // Monaco options are plain config and are invisible to the CSS prefers-reduced-motion
+    // kill-switch in index.html — so the motion options are gated here by hand, or the app's
+    // documented global reduced-motion guarantee would only be half true.
+    const calm = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
     this.editor = monaco.editor.create(container, {
       value: '',
       language: 'plaintext',
@@ -33,7 +37,11 @@ export class EditorPane {
       fontSize: 14,
       mouseWheelZoom: true,
       fontFamily: "'JetBrains Mono', Consolas, monospace",
-      fontLigatures: true
+      fontLigatures: true,
+      cursorSmoothCaretAnimation: calm ? 'off' : 'on',
+      cursorBlinking: calm ? 'blink' : 'smooth',
+      smoothScrolling: !calm,
+      padding: { top: 8 }
     })
     this.highlightDecorations = this.editor.createDecorationsCollection()
     this.editor.onMouseUp(() => this.handleHighlighterMouseUp())

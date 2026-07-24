@@ -70,6 +70,14 @@ function makeTheme(id: string, label: string, p: Palette): ThemeDef {
         'editor.background': p.bg,
         'editor.foreground': p.fg,
         'editorLineNumber.foreground': p.dim,
+        // The cursor's line number is the only "where am I" cue when line numbers are
+        // uniformly dim. Kept at full accent — it is one glyph on the editor surface.
+        'editorLineNumber.activeForeground': p.accent,
+        // Deliberately ~6% alpha: this fill sits UNDER the highlighter's translucent .hl-*
+        // spans, so anything stronger stacks two layers and shifts the pen colour.
+        'editor.lineHighlightBackground': (p.base === 'dark' ? '#ffffff' : '#000000') + '0f',
+        'editorIndentGuide.background': p.border,
+        'editorIndentGuide.activeBackground': p.dim,
         'editor.selectionBackground': p.accent + '55',
         'editorCursor.foreground': p.accent
       }
