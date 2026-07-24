@@ -23,6 +23,10 @@ export class Sidebar {
     const root = this.d.model.root
     this.host.replaceChildren()
     if (!root) return
+    const header = document.createElement('div'); header.className = 'sb-header'
+    // basename without a node import (renderer is sandboxed): strip trailing slashes, take the last segment.
+    header.textContent = root.split(/[\\/]/).filter(Boolean).pop() ?? root
+    this.host.appendChild(header)
     const list = document.createElement('div'); list.className = 'sb-list'
     this.renderLevel(root, 0, list)
     this.host.appendChild(list)

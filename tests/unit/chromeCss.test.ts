@@ -109,3 +109,11 @@ describe('floating change banner', () => {
     expect(rule).not.toContain('left:0;right:0') // no longer a full-width slab
   })
 })
+
+describe('sidebar header caption', () => {
+  it('is a muted uppercase caption', () => {
+    const rule = ruleFor('.sb-header')
+    expect(rule).toContain('text-transform:uppercase')
+    expect(rule).toContain('color:var(--muted)')
+  })
+})
