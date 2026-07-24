@@ -136,9 +136,20 @@ describe('sidebar file-type badges', () => {
 })
 
 describe('sidebar edge-tab toggle', () => {
-  it('is a handle pinned to the main pane left edge', () => {
+  it('is a handle pinned to the main pane left edge with an accent chevron', () => {
     const rule = ruleFor('.sb-toggle')
     expect(rule).toContain('position:absolute')
     expect(rule).toContain('left:0')
+    expect(rule).toContain('color:var(--accent)')
+  })
+})
+
+describe('sidebar selected file row', () => {
+  it('uses the calm tint + accent left bar (like the palette rows), not a solid fill', () => {
+    const rule = ruleFor('.sb-row.active')
+    expect(rule).toContain('background:var(--accent-soft)')
+    expect(rule).toContain('color:var(--accent-readable)')
+    expect(rule).toContain('inset 3px 0 0 var(--accent)')
+    expect(rule).not.toContain('background:var(--accent)')
   })
 })
