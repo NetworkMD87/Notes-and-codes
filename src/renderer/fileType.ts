@@ -18,7 +18,7 @@ const EXT_COLOUR: Record<string, HighlightColour> = {
   py: 'green',
   go: 'cyan',
   rs: 'orange',
-  java: 'crimson', kt: 'crimson',
+  java: 'crimson', kt: 'crimson', cs: 'fuchsia',
   c: 'indigo', h: 'indigo',
   cpp: 'violet', cc: 'violet', hpp: 'violet',
   rb: 'red',
@@ -42,7 +42,7 @@ export function fileType(name: string): FileBadge {
 
 // Monaco language id → short label. For coloured types the label is ALSO an EXT_COLOUR key, so a
 // language badge and the matching extension badge (sidebar) resolve to the same palette colour with no
-// duplicated choices. plaintext→'txt' and csharp→'cs' have no EXT_COLOUR key on purpose → muted badge.
+// duplicated choices. plaintext→'txt' has no EXT_COLOUR key on purpose → muted badge.
 const LANG_LABEL: Record<string, string> = {
   typescript: 'ts', javascript: 'js', json: 'json', markdown: 'md',
   html: 'html', xml: 'xml', css: 'css', scss: 'scss', less: 'less',

@@ -25,7 +25,7 @@ describe('fileType', () => {
   })
   it('only ever returns colour names that exist in the shared palette', () => {
     for (const n of ['a.js','a.ts','a.tsx','a.json','a.md','a.css','a.scss','a.html','a.py','a.go',
-      'a.rs','a.java','a.c','a.cpp','a.rb','a.php','a.sh','a.yml','a.sql','a.vue']) {
+      'a.rs','a.java','a.cs','a.c','a.cpp','a.rb','a.php','a.sh','a.yml','a.sql','a.vue']) {
       const c = fileType(n).colour
       if (c) expect(HL_HEX[c], `${n} → ${c}`).toBeTruthy()
     }
@@ -38,6 +38,7 @@ describe('langBadge', () => {
     expect(langBadge('markdown')).toEqual({ label: 'md', colour: 'slate' })
     expect(langBadge('python')).toEqual({ label: 'py', colour: 'green' })
     expect(langBadge('json')).toEqual({ label: 'json', colour: 'yellow' })
+    expect(langBadge('csharp')).toEqual({ label: 'cs', colour: 'fuchsia' })
   })
   it('gives plaintext a muted txt badge', () => {
     expect(langBadge('plaintext')).toEqual({ label: 'txt', colour: null })
@@ -47,7 +48,7 @@ describe('langBadge', () => {
   })
   it('only returns palette colour names (or null)', () => {
     for (const l of ['typescript','javascript','json','markdown','html','css','python','go','rust',
-      'java','ruby','php','shell','yaml','sql','xml','cpp','c','plaintext']) {
+      'java','csharp','ruby','php','shell','yaml','sql','xml','cpp','c','plaintext']) {
       const c = langBadge(l).colour
       if (c) expect(HL_HEX[c], `${l} → ${c}`).toBeTruthy()
     }
