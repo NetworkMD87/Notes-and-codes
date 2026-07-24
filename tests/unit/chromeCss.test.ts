@@ -74,3 +74,18 @@ describe('toast severity', () => {
     }
   })
 })
+
+describe('calmer active list row', () => {
+  it('tints the active palette + quick-open row with a left bar, not a solid fill', () => {
+    for (const sel of ['.palette-row.active', '.qo-row.active']) {
+      const rule = ruleFor(sel)
+      expect(rule, sel).toContain('background:var(--accent-soft)')
+      expect(rule, sel).toContain('color:var(--accent-readable)')
+      expect(rule, sel).toContain('inset 3px 0 0 var(--accent)')
+      expect(rule, sel).not.toContain('background:var(--accent)')
+    }
+  })
+  it('decouples quick-open hover from active (hover uses --bar-hover)', () => {
+    expect(ruleFor('.qo-row:hover')).toContain('background:var(--bar-hover)')
+  })
+})
