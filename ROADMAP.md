@@ -209,7 +209,7 @@ Neither depends on 3.5 — they can land before, during, or after it._
   Esc not closing the About view). _Deferred: a dedicated hotkey (F1/Monaco conflict),
   clickable-to-run rows, auto-derived content, a shared shortcut-constants refactor._
 
-## 🚧 Phase 4.5 — Design polish pass 2 (slice 1 of N)
+## 🚧 Phase 4.5 — Design polish pass 2 (slices 1–4 shipped; more possible)
 
 _From an outside design review (2026-07-23, `UI-IDEAS.md`): the app reads flat because every
 surface is a near-identical tone separated by 1px hairlines. All token/CSS/config work — no
