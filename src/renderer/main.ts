@@ -654,8 +654,8 @@ const settingsDeps: SettingsDeps = {
     const r = await window.api.setGlobalHotkey(accel)
     globalHotkey = r.active
     if (r.ok) toast(accel === '' ? 'Summon hotkey cleared' : 'Summon hotkey: ' + formatAccel(accel).join('+'))
-    else if (r.active) toast(`"${formatAccel(accel).join('+')}" is already in use by another app.`)
-    else toast(`"${formatAccel(accel).join('+')}" is unavailable, and the previous shortcut could not be restored.`)
+    else if (r.active) toast(`"${formatAccel(accel).join('+')}" is already in use by another app.`, 'warning')
+    else toast(`"${formatAccel(accel).join('+')}" is unavailable, and the previous shortcut could not be restored.`, 'error')
     return r.ok
   },
 }
@@ -844,7 +844,7 @@ installMenuCommands({
 boot().catch(err => {
   // A bad session or any other startup failure must never leave a dead blank window.
   console.error('boot failed', err)
-  toast('Could not restore your last session — starting fresh.')
+  toast('Could not restore your last session — starting fresh.', 'error')
   try { manager.create(); showActive() } catch (e) { console.error('fallback boot failed', e) }
 })
 
