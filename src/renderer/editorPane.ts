@@ -224,8 +224,8 @@ export class EditorPane {
     try {
       formatted = await formatText(text, lang, range)
     } catch (err) {
-      if (err instanceof UnsupportedLanguageError) toast(`Can't format — ${lang} isn't supported.`)
-      else toast(`Format failed: ${(err as Error).message.split('\n')[0]}`)
+      if (err instanceof UnsupportedLanguageError) toast(`Can't format — ${lang} isn't supported.`, 'error')
+      else toast(`Format failed: ${(err as Error).message.split('\n')[0]}`, 'error')
       return
     }
     if (formatted === text) return

@@ -249,7 +249,7 @@ function scheduleSessionSave(): void {
       .then(() => { sessionSaveFailed = false })
       .catch(err => {
         console.error('session save failed', err)
-        if (!sessionSaveFailed) { sessionSaveFailed = true; toast('Session save failed — check disk space / permissions.') }
+        if (!sessionSaveFailed) { sessionSaveFailed = true; toast('Session save failed — check disk space / permissions.', 'error') }
       })
   }, 500) as unknown as number
 }
@@ -300,7 +300,7 @@ window.api.onSaveAllAndQuit(async () => {
     }
   } catch (err) {
     console.error('save-on-quit failed', err)
-    toast('Could not save — quit cancelled.')
+    toast('Could not save — quit cancelled.', 'error')
     tabBar.render(manager.list(), manager.activeId); refreshStatus()
     return
   }
@@ -383,12 +383,12 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
 async function revertActive(): Promise<void> {
   const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
   const b = manager.get(id); if (!b) return
-  if (!b.filePath) { toast('Nothing to revert — save the file first.'); return }
-  if (!b.dirty) { toast('No unsaved changes to revert.'); return }
+  if (!b.filePath) { toast('Nothing to revert — save the file first.', 'warning'); return }
+  if (!b.dirty) { toast('No unsaved changes to revert.', 'warning'); return }
   const ok = await confirmDialog(`Discard unsaved changes to "${b.title}" and reload the saved version?`, 'Revert')
   if (!ok) return
   await reloadBuffer(id)
-  toast('Reverted to the saved version.')
+  toast('Reverted to the saved version.', 'success')
 }
 async function saveActive(): Promise<void> {
   const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
@@ -396,7 +396,7 @@ async function saveActive(): Promise<void> {
     await saveBuffer(id)
   } catch (err) {
     console.error('save failed', err)
-    toast('Save failed — check disk space / permissions.')
+    toast('Save failed — check disk space / permissions.', 'error')
   }
   tabBar.render(manager.list(), manager.activeId); refreshStatus()
 }
@@ -426,7 +426,7 @@ function autosaveFlush(): void {
         // Leave the buffer dirty (markSaved was never reached). Toast once per failure streak.
         if (!autosaveFailed.has(id)) {
           autosaveFailed.add(id)
-          toast(`Auto-save failed for "${manager.get(id)?.title ?? 'file'}" — save manually.`)
+          toast(`Auto-save failed for "${manager.get(id)?.title ?? 'file'}" — save manually.`, 'error')
         }
       })
   }
@@ -467,7 +467,7 @@ function setContextMenuEnabled(on: boolean): Promise<boolean> {
     .then(() => true)
     .catch(() => {
       contextMenuEnabled = !on
-      toast('Could not update the "Open with" right-click menu.')
+      toast('Could not update the "Open with" right-click menu.', 'error')
       return false
     })
 }
@@ -494,7 +494,7 @@ async function diffClipboard(): Promise<void> {
   const id = pane.currentBufferId(); if (!id) return
   const b = manager.get(id)!
   const clip = await window.api.clipboardRead()
-  if (!clip) { toast('Clipboard is empty.'); return }
+  if (!clip) { toast('Clipboard is empty.', 'warning'); return }
   diff.show(
     { title: b.title, content: pane.getContent(), language: b.language },
     { title: 'Clipboard', content: clip, language: b.language }
@@ -515,7 +515,7 @@ async function diffFiles(): Promise<void> {
 
 function startDiff(): void {
   const buffers = manager.list()
-  if (buffers.length < 2) { toast('Open at least two tabs to diff.'); return }
+  if (buffers.length < 2) { toast('Open at least two tabs to diff.', 'warning'); return }
   diffPicker.open(buffers, (leftId, rightId) => {
     const L = manager.get(leftId), R = manager.get(rightId)
     if (!L || !R) return
@@ -530,7 +530,7 @@ const togglePreview = () => { mdPreview.toggle(); refreshPreview(); refreshToolb
 
 async function exportActive(format: ExportFormat): Promise<void> {
   const content = paneFor(view.focusedPane()).getContent()
-  if (!content.trim()) { toast('Nothing to export.'); return }
+  if (!content.trim()) { toast('Nothing to export.', 'warning'); return }
   const id = paneFor(view.focusedPane()).currentBufferId()
   const b = id ? manager.get(id) : null
   const title = b?.title ?? 'untitled'
@@ -541,14 +541,14 @@ async function exportActive(format: ExportFormat): Promise<void> {
     ? await window.api.exportHtml(html, suggested, sourcePath)
     : await window.api.exportPdf(html, suggested, sourcePath)
   const savedName = r.path ? r.path.replace(/^.*[\\/]/, '') : suggested
-  if (r.ok && !r.canceled) toast(`Exported ${savedName}.`)
-  else if (!r.ok) toast('Export failed.')
+  if (r.ok && !r.canceled) toast(`Exported ${savedName}.`, 'success')
+  else if (!r.ok) toast('Export failed.', 'error')
 }
 const exportHtml = () => void exportActive('html')
 const exportPdf = () => void exportActive('pdf')
 
 const pasteFromHistory = () => phPicker.open(pasteHistory.entries(), (text) => { paneFor(view.focusedPane()).insertAtCursor(text) })
-const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); toast('Paste history cleared.') }
+const clearPasteHistory = () => { pasteHistory.clear(); persistClipHistory(); toast('Paste history cleared.', 'success') }
 
 /** Single place mode/colour changes sync highlighter chrome: toolbar indicator + the pen cursor.
  *  (The pen cursor is also seeded once at startup, below, outside this function.) */
@@ -574,7 +574,7 @@ function clearHighlights(): void {
   const hs = highlights.clear(id)
   applyHighlightsToPanes(id, hs)
   scheduleHighlightSave(id)
-  toast('Highlights cleared.')
+  toast('Highlights cleared.', 'success')
 }
 
 const snippets = new SnippetList(() => crypto.randomUUID())
@@ -592,10 +592,10 @@ const manageSnippets = () => snipManager.open()
 
 async function saveSelectionAsSnippet(): Promise<void> {
   const body = paneFor(view.focusedPane()).getSelectionText()
-  if (!body) { toast('Select some text first.'); return }
+  if (!body) { toast('Select some text first.', 'warning'); return }
   const name = await promptInput('Snippet name')
   if (!name) return
-  snippets.add(name, body); persistSnippets(); toast(`Saved snippet "${name}".`)
+  snippets.add(name, body); persistSnippets(); toast(`Saved snippet "${name}".`, 'success')
 }
 function insertSnippet(): void {
   snipPicker.open(snippets.list(), (s) => paneFor(view.focusedPane()).insertAtCursor(s.body))

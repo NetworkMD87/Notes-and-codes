@@ -64,19 +64,19 @@ export class FolderMode {
   }
 
   toggleSidebar(): void {
-    if (!this.hasFolder()) { toast('Open a folder first (File ▸ Open Folder…).'); return }
+    if (!this.hasFolder()) { toast('Open a folder first (File ▸ Open Folder…).', 'warning'); return }
     if (this.split) this.hideSidebar()
     else void window.api.loadSettings().then(s => { this.showSidebar(s.sidebarWidth); this.sidebar.render() })
   }
 
   openQuickOpen(): void {
-    if (!this.hasFolder()) { toast('Open a folder to use Quick Open.'); return }
+    if (!this.hasFolder()) { toast('Open a folder to use Quick Open.', 'warning'); return }
     this.quick.open()
   }
 
   async revealActive(): Promise<void> {
     const path = this.d.activePath(); const root = this.model.root
-    if (!path || !root || !path.startsWith(root)) { toast('Active file is not in the open folder.'); return }
+    if (!path || !root || !path.startsWith(root)) { toast('Active file is not in the open folder.', 'warning'); return }
     const sep = root.includes('\\') ? '\\' : '/'
     const rel = path.slice(root.length).replace(/^[\\/]/, '')
     const segs = rel.split(/[\\/]/); segs.pop() // drop filename
@@ -165,24 +165,24 @@ export class FolderMode {
   private async newFile(dir: string): Promise<void> {
     const name = await promptInput('New file name'); if (!name) return
     if (await window.api.createFile(dir.replace(/[\\/]$/, '') + '/' + name)) await this.refreshDir(dir)
-    else toast('Could not create file (already exists?).')
+    else toast('Could not create file (already exists?).', 'error')
   }
   private async newFolder(dir: string): Promise<void> {
     const name = await promptInput('New folder name'); if (!name) return
     if (await window.api.createFolder(dir.replace(/[\\/]$/, '') + '/' + name)) await this.refreshDir(dir)
-    else toast('Could not create folder (already exists?).')
+    else toast('Could not create folder (already exists?).', 'error')
   }
   private async rename(entry: DirEntry): Promise<void> {
     const name = await promptInput('Rename', entry.name); if (!name || name === entry.name) return
     const parent = entry.path.replace(/[\\/][^\\/]+$/, '')
     if (await window.api.renamePath(entry.path, parent + '/' + name)) await this.refreshDir(parent)
-    else toast('Could not rename (name in use?).')
+    else toast('Could not rename (name in use?).', 'error')
   }
   private async remove(entry: DirEntry): Promise<void> {
     if (!await confirmDialog(`Delete "${entry.name}"? It will be moved to the Recycle Bin.`)) return
     const parent = entry.path.replace(/[\\/][^\\/]+$/, '')
-    if (await window.api.trashPath(entry.path)) { await this.refreshDir(parent); toast(`Moved "${entry.name}" to Recycle Bin.`) }
-    else toast('Could not delete.')
+    if (await window.api.trashPath(entry.path)) { await this.refreshDir(parent); toast(`Moved "${entry.name}" to Recycle Bin.`, 'success') }
+    else toast('Could not delete.', 'error')
   }
 
   private async refreshDir(dir: string): Promise<void> {
