@@ -39,3 +39,19 @@ export function fileType(name: string): FileBadge {
   const ext = name.slice(dot + 1).toLowerCase()
   return { label: ext.slice(0, 4), colour: EXT_COLOUR[ext] ?? null }
 }
+
+// Monaco language id → short label. The label is ALSO an EXT_COLOUR key, so a language badge and the
+// matching extension badge (sidebar) resolve to the same palette colour with no duplicated choices.
+const LANG_LABEL: Record<string, string> = {
+  typescript: 'ts', javascript: 'js', json: 'json', markdown: 'md',
+  html: 'html', xml: 'xml', css: 'css', scss: 'scss', less: 'less',
+  python: 'py', go: 'go', rust: 'rs', java: 'java', csharp: 'cs',
+  cpp: 'cpp', c: 'c', ruby: 'rb', php: 'php', shell: 'sh',
+  yaml: 'yml', sql: 'sql', plaintext: 'txt',
+}
+
+/** Badge for a buffer's Monaco language (works for unsaved buffers, which have no filename). Pure. */
+export function langBadge(language: string): FileBadge {
+  const label = LANG_LABEL[language] ?? language.slice(0, 4)
+  return { label, colour: EXT_COLOUR[label] ?? null }
+}

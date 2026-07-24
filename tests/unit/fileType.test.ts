@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fileType } from '../../src/renderer/fileType'
+import { fileType, langBadge } from '../../src/renderer/fileType'
 import { HL_HEX } from '../../src/shared/types'
 
 describe('fileType', () => {
@@ -28,6 +28,28 @@ describe('fileType', () => {
       'a.rs','a.java','a.c','a.cpp','a.rb','a.php','a.sh','a.yml','a.sql','a.vue']) {
       const c = fileType(n).colour
       if (c) expect(HL_HEX[c], `${n} → ${c}`).toBeTruthy()
+    }
+  })
+})
+
+describe('langBadge', () => {
+  it('maps Monaco languages to the same label + colour as the extension', () => {
+    expect(langBadge('typescript')).toEqual({ label: 'ts', colour: 'blue' })
+    expect(langBadge('markdown')).toEqual({ label: 'md', colour: 'slate' })
+    expect(langBadge('python')).toEqual({ label: 'py', colour: 'green' })
+    expect(langBadge('json')).toEqual({ label: 'json', colour: 'yellow' })
+  })
+  it('gives plaintext a muted txt badge', () => {
+    expect(langBadge('plaintext')).toEqual({ label: 'txt', colour: null })
+  })
+  it('falls back to a muted short label for an unknown language', () => {
+    expect(langBadge('brainfuck')).toEqual({ label: 'brai', colour: null })
+  })
+  it('only returns palette colour names (or null)', () => {
+    for (const l of ['typescript','javascript','json','markdown','html','css','python','go','rust',
+      'java','ruby','php','shell','yaml','sql','xml','cpp','c','plaintext']) {
+      const c = langBadge(l).colour
+      if (c) expect(HL_HEX[c], `${l} → ${c}`).toBeTruthy()
     }
   })
 })
