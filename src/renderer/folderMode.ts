@@ -69,6 +69,11 @@ export class FolderMode {
     else void window.api.loadSettings().then(s => { this.showSidebar(s.sidebarWidth); this.sidebar.render() })
   }
 
+  /** Reflect the active editor file in the sidebar (highlights its row). No-op with no folder open. */
+  setActiveFile(path: string | null): void {
+    if (this.model.root) this.sidebar.markActive(path)
+  }
+
   openQuickOpen(): void {
     if (!this.hasFolder()) { toast('Open a folder to use Quick Open.', 'warning'); return }
     this.quick.open()

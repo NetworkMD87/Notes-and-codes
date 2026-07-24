@@ -162,6 +162,7 @@ function showActive(): void {
   refreshStatus()
   refreshPreview()
   refreshToolbar()
+  folder.setActiveFile(active.filePath ?? null) // highlight the open file's row in the sidebar
   syncWatch()
   autosave.flushNow()
 }

@@ -104,3 +104,20 @@ test('the edge tab is hidden when no folder is open (default scratchpad)', async
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('opening a file highlights (marks active) its row in the sidebar', async () => {
+  const { userDataDir, projectDir } = seededFolder()
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#sidebar')).toBeVisible()
+    const row = win.locator('.sb-row', { hasText: 'readme.md' })
+    await expect(row).not.toHaveClass(/(^|\s)active(\s|$)/) // nothing selected on launch
+    await row.click()                                       // open the file
+    await expect(row).toHaveClass(/(^|\s)active(\s|$)/)      // its row is now marked active
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+    rmSync(projectDir, { recursive: true, force: true })
+  }
+})

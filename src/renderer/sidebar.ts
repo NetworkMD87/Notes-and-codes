@@ -24,6 +24,16 @@ export class Sidebar {
 
   setActivePath(path: string | null): void { this.activePath = path; this.render() }
 
+  /** Lightweight active-row update — toggles `.active` on existing rows without a full re-render (so a
+   *  tab switch doesn't rebuild the tree or reset scroll). A file in a collapsed dir has no row yet, so
+   *  it simply isn't highlighted until revealed; `setActivePath` (full render) is used by Reveal. */
+  markActive(path: string | null): void {
+    this.activePath = path
+    for (const row of this.host.querySelectorAll<HTMLElement>('.sb-row')) {
+      row.classList.toggle('active', row.dataset.path === path)
+    }
+  }
+
   render(): void {
     const root = this.d.model.root
     this.host.replaceChildren()
@@ -42,6 +52,7 @@ export class Sidebar {
     for (const entry of entries) {
       const row = document.createElement('div')
       row.className = 'sb-row' + (entry.path === this.activePath ? ' active' : '')
+      row.dataset.path = entry.path
       row.style.paddingLeft = `${8 + depth * 14}px`
       row.style.setProperty('--depth', String(depth))
       const twisty = document.createElement('span'); twisty.className = 'sb-twisty'
