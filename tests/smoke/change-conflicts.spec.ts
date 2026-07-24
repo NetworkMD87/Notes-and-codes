@@ -35,6 +35,7 @@ test('two on-disk conflicts queue in the change bar, one resolvable at a time', 
 
     const bar = win.locator('#change-bar')
     await expect(bar).toBeVisible({ timeout: 8000 })
+    await expect(bar.locator('.toast-glyph svg')).toBeVisible() // warning glyph renders on the banner
     await expect(bar).toContainText('1 more', { timeout: 8000 }) // one shown, one queued
 
     // Resolve the first (Keep mine) → the second surfaces, and it's the last one.

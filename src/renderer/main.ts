@@ -15,7 +15,7 @@ import { CommandPalette } from './commandPalette'
 import { StatusBar } from './statusBar'
 import { DiffView } from './diffView'
 import { DiffPicker } from './diffPicker'
-import { toast } from './notify'
+import { toast, toastGlyph } from './notify'
 import { registerCommands } from './commands'
 import { migrateThemeId } from './themes'
 import { MarkdownPreview } from './markdownPreview'
@@ -777,13 +777,15 @@ function refreshChangeBar(): void {
   const b = manager.get(id)!
   const more = queued.length - 1
   changeBar.replaceChildren()
+  const glyph = document.createElement('span'); glyph.className = 'toast-glyph'
+  glyph.appendChild(toastGlyph('warning'))
   const msg = document.createElement('span')
   msg.textContent = more > 0 ? `"${b.title}" changed on disk. (${more} more)` : `"${b.title}" changed on disk.`
   const reload = document.createElement('button'); reload.textContent = 'Reload (discard mine)'
   reload.onclick = () => void reloadBuffer(id) // clears its own conflict + refreshes the bar
   const keep = document.createElement('button'); keep.textContent = 'Keep mine'
   keep.onclick = () => { conflicts.delete(id); refreshChangeBar() }
-  changeBar.append(msg, reload, keep); changeBar.classList.remove('hidden')
+  changeBar.append(glyph, msg, reload, keep); changeBar.classList.remove('hidden')
 }
 window.api.onFileChanged((path) => {
   // Purge self-write markers past their window so a late/never-matching watcher event

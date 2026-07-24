@@ -14,6 +14,20 @@ export const TOAST_ICONS: Record<ToastLevel, string[]> = {
 // Errors/warnings dwell longer so they aren't missed; info/success are transient.
 export const TOAST_MS: Record<ToastLevel, number> = { info: 2200, success: 2200, warning: 3500, error: 3500 }
 
+/** Build the inline-SVG severity glyph for a level (0 0 24 24, stroked via currentColor). Shared by
+ *  the toast host and the change banner. DOM is touched only here at call time — module scope stays
+ *  DOM-free so the level tables remain node-importable. */
+export function toastGlyph(level: ToastLevel): SVGSVGElement {
+  const svg = document.createElementNS(SVGNS, 'svg')
+  svg.setAttribute('viewBox', '0 0 24 24')
+  for (const d of TOAST_ICONS[level]) {
+    const p = document.createElementNS(SVGNS, 'path')
+    p.setAttribute('d', d)
+    svg.appendChild(p)
+  }
+  return svg
+}
+
 export function toast(message: string, level: ToastLevel = 'info'): void {
   let host = document.getElementById('toast-host')
   if (!host) {
@@ -25,14 +39,7 @@ export function toast(message: string, level: ToastLevel = 'info'): void {
   el.className = 'toast toast--' + level
   const glyph = document.createElement('span')
   glyph.className = 'toast-glyph'
-  const svg = document.createElementNS(SVGNS, 'svg')
-  svg.setAttribute('viewBox', '0 0 24 24')
-  for (const d of TOAST_ICONS[level]) {
-    const p = document.createElementNS(SVGNS, 'path')
-    p.setAttribute('d', d)
-    svg.appendChild(p)
-  }
-  glyph.appendChild(svg)
+  glyph.appendChild(toastGlyph(level))
   const text = document.createElement('span')
   text.textContent = message
   el.append(glyph, text)

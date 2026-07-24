@@ -96,3 +96,16 @@ describe('keyboard focus rings', () => {
     expect(css).toMatch(/:focus-visible[^{]*\{[^}]*outline:\s*2px solid var\(--accent\)/)
   })
 })
+
+describe('floating change banner', () => {
+  it('is panel chrome with an accent border and a warning left bar, not a solid accent slab', () => {
+    const rule = ruleFor('#change-bar')
+    expect(rule).toContain('background:var(--panel-bg)')
+    expect(rule).toContain('border:1px solid var(--accent)')
+    expect(rule).toContain('border-radius:var(--radius-lg)')
+    expect(rule).toContain('--toast-accent:var(--warning)')
+    expect(rule).toContain('inset 3px 0 0 var(--toast-accent)')
+    expect(rule).not.toContain('background:var(--accent)')
+    expect(rule).not.toContain('left:0;right:0') // no longer a full-width slab
+  })
+})
