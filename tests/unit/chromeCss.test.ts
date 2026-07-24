@@ -53,3 +53,24 @@ describe('active toolbar button', () => {
     expect(rule).not.toContain('background:var(--accent)')
   })
 })
+
+describe('toast severity', () => {
+  it('defines --success and --warning as root constants', () => {
+    const root = ruleFor(':root')
+    expect(root).toContain('--success:')
+    expect(root).toContain('--warning:')
+  })
+  it('routes the toast left bar + glyph through --toast-accent', () => {
+    expect(ruleFor('.toast')).toContain('inset 3px 0 0 var(--toast-accent')
+    expect(ruleFor('.toast-glyph')).toContain('var(--toast-accent')
+  })
+  it('maps each severity level to its semantic colour', () => {
+    const map: Record<string, string> = {
+      '.toast--info': '--accent', '.toast--success': '--success',
+      '.toast--warning': '--warning', '.toast--error': '--danger',
+    }
+    for (const [sel, v] of Object.entries(map)) {
+      expect(ruleFor(sel), sel).toContain('--toast-accent:var(' + v + ')')
+    }
+  })
+})
