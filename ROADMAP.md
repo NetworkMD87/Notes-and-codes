@@ -235,10 +235,13 @@ done** (polish-pass convention — don't bump per slice)._
   error, inline-SVG glyph + 3px semantic left bar, new `--success`/`--warning` constants); palette
   shortcut hints as `.kbd` keycap chips; the active palette/quick-open row tinted with `--accent-soft`
   + a left bar (decoupling quick-open hover); keyboard-only `:focus-visible` accent rings on chrome.
-- ⬜ **Sidebar header caption + tree indent guides** (**S**) — folder mode starts with rows and no
+- ✅ **Sidebar header caption + tree indent guides** (**S**) — folder mode starts with rows and no
   header, which reads as bolted on.
-- ⬜ **Change bar as a floating banner** (**S**) — margins + radius + shadow instead of a full-width
+- ✅ **Change bar as a floating banner** (**S**) — margins + radius + shadow instead of a full-width
   accent slab.
+- ✅ **Slice 3 — structural chrome** (**S**) — the on-disk-change banner floats as a `--warning`
+  notification (panel chrome + accent border + shared `toastGlyph`) instead of a full-width accent
+  slab; the folder sidebar gains a muted folder-name header caption and depth-driven tree indent guides.
 - ⬜ **File-type icon glyphs in tabs and the sidebar** (**M**) — a language → inline-SVG map,
   ~10-15 languages plus a fallback. Biggest personality lever, but **monochrome first**: per-type
   tinting would introduce a second colour system alongside the accent.
