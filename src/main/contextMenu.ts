@@ -21,6 +21,29 @@ export function buildContextMenuPlan(exePath: string): ContextMenuPlan {
   }
 }
 
+export type ContextMenuAction = { kind: 'write' } | { kind: 'skip'; notice: string }
+
+/**
+ * Should a context-menu toggle actually reach the registry?
+ *
+ * MUST be gated on app.isPackaged, for the same reason setLoginItem and the packaged-startup
+ * re-apply are: in a dev run `app.getPath('exe')` is Electron's own binary, so honouring the
+ * toggle would rewrite the developer's REAL `HKCU\Software\Classes\*\shell\NotesAndCodes` to
+ * launch a bare electron.exe out of node_modules. Note both directions are destructive — a
+ * dev-run *disable* runs `reg delete` and removes the real installed entry outright — so the
+ * gate deliberately ignores `enabled` and skips either way.
+ *
+ * Pure + DI'd so it can be unit-tested without electron and without any test ever touching
+ * HKCU (which would mutate the developer's own shell integration).
+ */
+export function contextMenuAction(enabled: boolean, isPackaged: boolean): ContextMenuAction {
+  void enabled
+  if (!isPackaged) {
+    return { kind: 'skip', notice: 'The right-click menu entry applies to the installed app, not a dev run.' }
+  }
+  return { kind: 'write' }
+}
+
 export async function setContextMenu(enabled: boolean, exePath: string): Promise<void> {
   const plan = buildContextMenuPlan(exePath)
   try {

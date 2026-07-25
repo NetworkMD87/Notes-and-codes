@@ -1,10 +1,10 @@
-import { pushOverlay } from './overlayManager'
+import { OverlayRegistration } from './overlayManager'
 
 export class PasteHistoryPicker {
   private overlay: HTMLDivElement
   private listEl: HTMLDivElement
   private onPick: ((text: string) => void) | null = null
-  private unreg?: () => void
+  private reg = new OverlayRegistration()
 
   constructor(host: HTMLElement) {
     this.overlay = document.createElement('div')
@@ -31,8 +31,8 @@ export class PasteHistoryPicker {
     this.overlay.classList.remove('hidden')
     this.overlay.setAttribute('tabindex', '-1')
     this.overlay.focus()
-    this.unreg = pushOverlay(() => this.close())
+    this.reg.open(() => this.close())
   }
 
-  private close(): void { this.unreg?.(); this.unreg = undefined; this.overlay.classList.add('hidden') }
+  private close(): void { this.reg.release(); this.overlay.classList.add('hidden') }
 }

@@ -10,6 +10,14 @@ async function launch() {
   return { app, userDataDir }
 }
 
+type Win = Awaited<ReturnType<Awaited<ReturnType<typeof electron.launch>>['firstWindow']>>
+
+async function runCmd(win: Win, label: string) {
+  await win.keyboard.press('Control+Shift+P')
+  await win.locator('#palette input').fill(label)
+  await win.keyboard.press('Enter')
+}
+
 test('Escape closes overlays that previously had no Esc handler', async () => {
   const { app, userDataDir } = await launch()
   try {
@@ -33,6 +41,39 @@ test('Escape closes the command palette from any focus', async () => {
     await expect(win.locator('#palette .palette-box')).toBeVisible()
     await win.keyboard.press('Escape')
     await expect(win.locator('#palette')).toBeHidden()
+  } finally {
+    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+// Re-opening an already-open overlay used to push a SECOND close callback onto the overlay
+// stack while the overlay kept only the newest — orphaning the first. Because close() unhooks
+// via its own (now-lost) unregister fn, that orphan could never be removed: it sat on top of
+// the stack for the rest of the session, and handleEscape() preventDefault+stopPropagation's
+// whatever it finds there. Every subsequent Escape was eaten before Monaco could see it.
+test('a re-entrant overlay open leaves no ghost entry to swallow later Escapes', async () => {
+  const { app, userDataDir } = await launch()
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+
+    // Run the same overlay command twice: the second lands while the overlay is already open
+    // (what a user does with Ctrl+P twice, or by re-running a palette command).
+    await runCmd(win, 'Help: Shortcuts & Commands')
+    await expect(win.locator('.help-overlay')).toBeVisible()
+    await runCmd(win, 'Help: Shortcuts & Commands')
+    await expect(win.locator('.help-overlay')).toBeVisible()
+
+    await win.keyboard.press('Escape')
+    await expect(win.locator('.help-overlay')).toBeHidden()
+
+    // Monaco's find widget is the observable victim: with a ghost on the stack its Escape
+    // never arrives, so the widget stays open.
+    await win.locator('.view-lines').first().click()
+    await win.keyboard.press('Control+F')
+    await expect(win.locator('.find-widget.visible')).toBeVisible()
+    await win.keyboard.press('Escape')
+    await expect(win.locator('.find-widget.visible')).toHaveCount(0)
   } finally {
     await app.close(); rmSync(userDataDir, { recursive: true, force: true })
   }

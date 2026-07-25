@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs'
 import { pickFileArg } from './fileArg'
 import { shouldStartHidden } from './startupFlags'
 import { registerIpc } from './ipc'
-import { setContextMenu } from './contextMenu'
+import { setContextMenu, contextMenuAction } from './contextMenu'
 import { createTray } from './tray'
 import { glyphImage } from './themeIcon'
 import { buildMenu } from './menu'
@@ -92,6 +92,16 @@ function setLoginItem(enabled: boolean): void {
     return
   }
   app.setLoginItemSettings({ openAtLogin: enabled, args: ['--hidden'] })
+}
+
+// Settings ▸ Integration's right-click-menu toggle. Gated exactly like setLoginItem above and
+// the packaged-startup re-apply below — see contextMenuAction for why a dev run must not reach
+// the registry in EITHER direction. The renderer still persists the setting, so the checkbox
+// behaves normally in dev; it just has no OS effect until the app is installed.
+async function applyContextMenu(enabled: boolean): Promise<void> {
+  const action = contextMenuAction(enabled, app.isPackaged)
+  if (action.kind === 'skip') { notifyRenderer(action.notice); return }
+  await setContextMenu(enabled, app.getPath('exe'))
 }
 
 function showWindow(): void {
@@ -228,7 +238,7 @@ if (!gotLock) {
       settings: settingsStore,
       recent: recentStore,
       getWindow: () => mainWindow,
-      setContextMenu: (enabled) => setContextMenu(enabled, app.getPath('exe')),
+      setContextMenu: (enabled) => applyContextMenu(enabled),
       setLoginItem: (enabled) => setLoginItem(enabled),
       setGlobalHotkey: (accel) => applyHotkey(accel),
       onDirtyCount: (n) => { unsavedCount = n },
