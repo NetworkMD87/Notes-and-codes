@@ -1,0 +1,63 @@
+name: CI
+
+# Runs on Windows because that is the only platform this app targets — a Linux runner would be
+# cheaper and would prove nothing about the paths that actually break here (registry writes,
+# the tray, path handling, atomicWrite's rename semantics on NTFS).
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build & unit tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # `npm run build` is `tsc --noEmit` THEN electron-vite build. The type-check half is the
+      # real gate: esbuild alone does not type-check, so IPC/type breakage across the
+      # main/preload/renderer boundary is invisible without it.
+      - name: Type-check + build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test
+
+  smoke:
+    name: Smoke tests (Playwright + Electron)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The smoke suite launches the BUILT app from out/main/index.js, so this is required.
+      - name: Build
+        run: npm run build
+
+      # playwright.config.ts sets NC_HEADLESS before workers spawn, so the app skips global-hotkey
+      # registration — a CI job seizing an OS-level hotkey would be both rude and flaky.
+      - name: Smoke tests
+        run: npm run test:smoke
+
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7

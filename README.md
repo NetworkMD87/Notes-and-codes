@@ -7,6 +7,9 @@
 
 # Notes & Codes
 
+[![CI](https://github.com/NetworkMD87/Notes-and-codes/actions/workflows/ci.yml/badge.svg)](https://github.com/NetworkMD87/Notes-and-codes/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A fast, Windows-first dev scratchpad: **Notepad-simple, code-editor-powerful.**
 
 Open it with the global hotkey, paste the thing, close it — it remembers. Or open a folder
@@ -127,6 +130,46 @@ in the tray, starts empty, and never asks you to make a project first.
 | Quit (from tray app) | Ctrl+Q |
 
 The full, searchable list lives in the app under **Help ▸ Shortcuts & Commands**.
+
+## How this is built and verified
+
+Every claim below is checkable from the repo — that's the point of listing them.
+
+**Tests.** 42 unit test files (345 tests, Vitest) covering the pure logic — buffer management,
+encoding, the store layer, theme derivation, path/argv handling, the IPC sender guard. 17
+Playwright specs (85 tests) drive the **real built Electron app** in a window, each with an
+isolated `--user-data-dir` so they never touch a real session. Both run on every push
+([CI workflow](.github/workflows/ci.yml), Windows runners).
+
+**A test is not trusted until it has been seen failing.** Guards here are verified by
+falsification — write the break, watch it go red, revert. The pen-cursor CSP guard was proven by
+tightening `img-src`; the second-instance test by stubbing the handler's `send('open-file')`; the
+overlay-registration guard by removing the fix and confirming Monaco's find widget stopped closing
+on Escape. A test that has only ever been green is evidence of nothing.
+
+**The codebase has been audited twice, and the audits are closed.**
+[AUDIT-CHECKLIST.md](AUDIT-CHECKLIST.md) is the record: 40 findings across two full passes
+(5 High, 7 Medium, 9 Low in the second), each one **verified against the code before being
+fixed** — several were downgraded or rejected on inspection rather than cargo-culted into a patch.
+
+**Rejected changes are recorded with their reasoning**, not quietly dropped. `atomicWrite`
+deliberately has no `fsync`: it was implemented, A/B tested, found to stall writes on Windows
+(`FlushFileBuffers` latency) for a negligible durability gain on NTFS, and backed out — the
+rationale sits in the source. Softening the accent border on floating chrome was mocked up and
+rejected. Native `IExplorerCommand` is parked as not worth its cost.
+
+**Known issues are documented, not hidden.** The `Shift+Alt+F` Format accelerator does not fire;
+that's stated in the feature list above, tracked in [ROADMAP.md](ROADMAP.md), and the in-app help
+deliberately lists Format Document with no shortcut rather than advertising one that does nothing.
+
+**The security boundary is enforced, not assumed.** `contextIsolation: true`, `sandbox: true`,
+`nodeIntegration: false`; the renderer reaches the OS only through a narrow typed `contextBridge`
+API; every IPC handler rejects senders that aren't the app window's own main frame; CSP has no
+`unsafe-eval`, and Markdown goes through `markdown-it` with `html: false` plus DOMPurify.
+
+**The committed artifacts regenerate deterministically.** `npm run make-icon` and
+`npm run screenshots` must both leave `git status` clean when re-run against unchanged input, so
+the icon and the images in this README cannot silently drift from the app they depict.
 
 ## Build from source
 
