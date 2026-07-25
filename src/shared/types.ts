@@ -1,6 +1,15 @@
 export type EolMode = 'LF' | 'CRLF'
 export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 
+export interface SearchOptions { caseSensitive: boolean; wholeWord: boolean }
+
+export interface SearchMatch {
+  line: number
+  column: number
+  length: number
+  preview: string
+}
+
 export interface FileVersion { ts: number; content: string; eol: EolMode; encoding: Encoding }
 
 export interface DirEntry { name: string; path: string; isDir: boolean }
