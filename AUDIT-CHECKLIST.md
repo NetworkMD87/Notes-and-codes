@@ -9,10 +9,10 @@ Consolidated, workable checklist merged from the project's **two** codebase audi
   ("audit the audit"), then fixed; every item below is `[x]`. **Both audits are now CLOSED — this file
   is a resolved record. The "How to work this" flow below is kept for reference / the next audit.**
 
-**Two checks remain unverified by hand**, and are labelled **Open manual check** inline (H1 and L4).
-Both are fixed in code and covered by build + unit tests; what's missing is a human confirming the
-behaviour on a real build, because each needs something a test can't stage — a native OS dialog, and
-a folder of 20,000+ files. They are listed rather than quietly closed.
+**Every manual check is now done too.** Two items could not be smoke-tested — H1 (a native OS
+Save-As dialog) and L4 (a quick-open warning that only fires past 20,000 indexed files) — so both
+were carried out by hand on a packaged 1.14.1 build on 2026-07-25, staging a 22,001-file folder for
+L4. Both passed; the evidence is recorded inline on each item.
 
 The original `AUDIT.md` / `AUDIT-v1.12.0.md` were folded into this file and deleted; their full
 verbatim text stays recoverable from git history if ever needed.
@@ -43,10 +43,10 @@ Coherent theme (close + save code), and the highest-impact class of bug.
   **Done:** `SaveOpts` gained `forceDialog`; `saveBuffer` prompts when `!path || opts.forceDialog`;
   the `save-as` handler no longer nulls `filePath` and passes `{ ...MANUAL_SAVE, forceDialog: true }`
   — so a cancelled Save-As is now a no-op, the association survives. Verified: `npm run build`
-  (strict tsc) clean + 155/155 unit tests. **Open manual check** — the native Save-As dialog is
-  OS-level and can't be smoke-tested, so this fix is verified by build + unit tests only and has
-  not been confirmed by hand on a real build: Save-As a named file → Cancel → confirm the tab keeps
-  its name, Ctrl+S saves silently (no re-prompt), autosave still works.
+  (strict tsc) clean + 155/155 unit tests. **Manual check PASSED** (2026-07-25, packaged 1.14.1
+  build) — the native Save-As dialog is OS-level and can't be smoke-tested, so it was confirmed by
+  hand: opened a named file, edited it, Save-As → Cancel; the tab kept its name, Ctrl+S then saved
+  silently with no re-prompt, and the edit was verified present on disk at the original path.
 
 - [x] **H2 · High · v1.12 H2 — Command-palette "Close Tab" bypasses every close safeguard.** ✅ *Fixed (branch `fix/audit-p1-close-safety`).*
   `src/renderer/commands.ts:55` calls `manager.close()` directly instead of `main.ts`'s
@@ -278,9 +278,10 @@ heavier phases.
   unit-testable without 20k files. `folderMode` stores the flag and passes it to `QuickOpen`, which
   renders a muted `.qo-note` footer ("Index truncated — some files may not appear.") when set. Covered
   by `fsService.test.ts` (recursive-list + cap/truncated cases). Gate: build + 179 unit + smoke.
-  **Open manual check** — the truncated-note footer only appears past the 20k-file cap, so staging it
-  needs a genuinely huge folder. The logic is unit-tested via the `max` param; the note has never been
-  eyeballed rendering in the app.
+  **Manual check PASSED** (2026-07-25, packaged 1.14.1 build) — the footer only appears past the 20k
+  cap, so a throwaway 22,001-file folder was staged to clear it. Opening that folder and pressing
+  `Ctrl+P` rendered the note at the foot of the quick-open box — muted, divider-separated, not
+  clipped — reading "Index truncated — some files may not appear."
 - [x] **L5 · Low · v1.12 L5 — `FileHistoryStore.chains` map entries are never deleted.** ✅ *Fixed (branch `fix/audit-p5-hardening-batch`).*
   `src/main/fileHistoryStore.ts:9` — one retained promise per distinct path for the process lifetime.
   Tiny; delete the entry when the chain settles and equals the stored promise.
