@@ -11,6 +11,8 @@ export const EMPTY_ICONS = {
     'M8 4c-2 0-3 1-3 3v2c0 1-.7 2-2 2 1.3 0 2 1 2 2v2c0 2 1 3 3 3',
     'M16 4c2 0 3 1 3 3v2c0 1 .7 2 2 2-1.3 0-2 1-2 2v2c0 2-1 3-3 3',
   ],
+  // magnifier — for Find in Files
+  search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z', 'M16.5 16.5 21 21'],
 }
 
 export function emptyState(className: string, iconPaths: string[], message: string): HTMLDivElement {

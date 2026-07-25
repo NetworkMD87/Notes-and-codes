@@ -97,6 +97,21 @@
       .qo-row:hover{background:var(--bar-hover)}
       .qo-path{opacity:.55;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .qo-note{padding:6px 10px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)}
+      #find-in-files{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding-top:90px;z-index:100}
+      #find-in-files.hidden{display:none}
+      .fif-box{width:min(760px,92vw);max-height:70vh;display:flex;flex-direction:column;background:var(--panel-bg);border:1px solid var(--accent);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden}
+      .fif-head{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border)}
+      .fif-head input{flex:1;background:transparent;border:0;outline:0;color:inherit;font:inherit}
+      .fif-toggle{border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:var(--radius);padding:2px 7px;cursor:pointer;font-size:12px}
+      .fif-toggle.on{background:var(--accent-soft);color:var(--accent-readable);border-color:var(--accent)}
+      .fif-list{overflow:auto;flex:1}
+      .fif-file{display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:12px;color:var(--muted)}
+      .fif-file-count{margin-left:auto}
+      .fif-row{display:flex;gap:10px;padding:3px 10px 3px 26px;cursor:pointer;font-size:12px;white-space:pre;overflow:hidden}
+      .fif-row:hover{background:var(--bar-hover)}
+      .fif-row.active{background:var(--accent-soft);color:var(--accent-readable);box-shadow:inset 3px 0 0 var(--accent)}
+      .fif-line{opacity:.55;min-width:44px;text-align:right}
+      .fif-note{padding:6px 10px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)}
       .diff-picker{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding-top:90px;z-index:100}
       .diff-picker.hidden{display:none}
       .diff-picker-box{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;background:var(--panel-bg);color:var(--panel-text);padding:16px;border:1px solid var(--accent);border-radius:var(--radius-lg);box-shadow:var(--shadow)}
@@ -227,7 +242,7 @@
       /* --- micro-motion layer (Phase 3.5 P1) --- */
       .tab,.tb-btn,.tab-add,.tab-close,#theme-toggle,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch,.snip-mgr-head button,.snip-mgr-row button,.accent-default-btn,.settings-cat,.hk-record,.hk-clear{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
       @keyframes overlayIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
-      .palette-box,.qo-box,.settings-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast{animation:overlayIn var(--motion) var(--ease)}
+      .palette-box,.qo-box,.settings-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast,.fif-box{animation:overlayIn var(--motion) var(--ease)}
       @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
     </style>
   </head>
