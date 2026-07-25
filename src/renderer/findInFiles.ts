@@ -56,7 +56,11 @@ export class FindInFiles {
     this.reg.open(() => this.close())
     this.input.addEventListener('input', () => { this.query = this.input.value; this.schedule() })
     this.input.addEventListener('keydown', (e) => this.onKey(e))
-    this.render()
+    // Re-run rather than just redisplay: root()/buffers() may have changed while shut
+    // (folder switched, buffer edited), so a carried-over query needs fresh results, not
+    // the stale ones left over from before the overlay closed.
+    if (this.query.length >= MIN_QUERY_LENGTH) void this.runSearch()
+    else this.render()
     this.input.focus()
     this.input.select()
   }
@@ -69,6 +73,7 @@ export class FindInFiles {
     b.onclick = () => {
       this.opts = { ...this.opts, [key]: !this.opts[key] }
       b.classList.toggle('on', this.opts[key])
+      clearTimeout(this.timer)
       this.runSearch()
       this.input.focus()
     }
@@ -111,7 +116,7 @@ export class FindInFiles {
     this.listEl.replaceChildren()
     this.rows = []
     if (this.query.length < MIN_QUERY_LENGTH) {
-      this.listEl.appendChild(emptyState('empty', EMPTY_ICONS.search, `Type at least ${MIN_QUERY_LENGTH} characters to search`))
+      this.listEl.appendChild(emptyState('fif-empty', EMPTY_ICONS.search, `Type at least ${MIN_QUERY_LENGTH} characters to search`))
       this.footEl.textContent = ''
       return
     }
@@ -120,7 +125,7 @@ export class FindInFiles {
       return
     }
     if (!this.results.length) {
-      this.listEl.appendChild(emptyState('empty', EMPTY_ICONS.search, `No matches for “${this.query}”`))
+      this.listEl.appendChild(emptyState('fif-empty', EMPTY_ICONS.search, `No matches for “${this.query}”`))
       this.footEl.textContent = ''
       return
     }
@@ -173,7 +178,7 @@ export class FindInFiles {
   }
 
   private onKey(e: KeyboardEvent): void {
-    if (e.key === 'ArrowDown') { e.preventDefault(); this.active = Math.min(this.active + 1, this.rows.length - 1); this.paintActive() }
+    if (e.key === 'ArrowDown') { e.preventDefault(); this.active = Math.max(0, Math.min(this.active + 1, this.rows.length - 1)); this.paintActive() }
     else if (e.key === 'ArrowUp') { e.preventDefault(); this.active = Math.max(this.active - 1, 0); this.paintActive() }
     else if (e.key === 'Enter') { e.preventDefault(); this.choose() }
     // Escape handled centrally by overlayManager.
@@ -189,6 +194,7 @@ export class FindInFiles {
 
   private close(): void {
     clearTimeout(this.timer)
+    this.searchId++ // invalidate any in-flight search: its response must land as stale, not overwrite the next session
     this.reg.release()
     this.host.classList.add('hidden')
   }
