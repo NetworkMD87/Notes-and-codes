@@ -10,6 +10,29 @@ export interface SearchMatch {
   preview: string
 }
 
+export interface SearchFileResult {
+  path: string           // absolute path; '' for an untitled buffer
+  title?: string         // tab title, only for untitled buffers
+  matches: SearchMatch[]
+  truncated: boolean     // per-file cap hit
+}
+
+export interface SearchRequest {
+  root: string
+  query: string
+  opts: SearchOptions
+  skipPaths: string[]
+  showAll: boolean
+  searchId: number
+}
+
+export interface SearchResponse {
+  files: SearchFileResult[]
+  totalMatches: number
+  truncated: boolean     // total cap hit, or the file index itself was truncated
+  searchId: number
+}
+
 export interface FileVersion { ts: number; content: string; eol: EolMode; encoding: Encoding }
 
 export interface DirEntry { name: string; path: string; isDir: boolean }
