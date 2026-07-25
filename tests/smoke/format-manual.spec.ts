@@ -64,7 +64,7 @@ test('Format Document leaves the buffer untouched on a syntax error, with a toas
   }
 })
 
-// The Shift+Alt+F regression guard. This chord was dead for two releases: EditorPane's
+// The Shift+Alt+F regression guard. This chord was dead from v1.6 to v1.14.1: EditorPane's
 // constructor called editor.addCommand, but Monaco's dynamic keybindings are global, so with
 // SplitView building both panes the LAST registration (hidden, empty paneB) always won and
 // silently no-op'd — which also suppressed the menu accelerator, since Electron only fires those
