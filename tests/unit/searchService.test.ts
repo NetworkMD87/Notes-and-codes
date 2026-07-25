@@ -24,6 +24,14 @@ describe('isBinary', () => {
     expect(isBinary(Buffer.from([0x61, 0x00, 0x62]))).toBe(true)
     expect(isBinary(Buffer.from('plain text'))).toBe(false)
   })
+
+  it('does not treat UTF-16 LE BOM as binary', () => {
+    const utf16le = Buffer.concat([
+      Buffer.from([0xff, 0xfe]),
+      Buffer.from('text', 'utf16le'),
+    ])
+    expect(isBinary(utf16le)).toBe(false)
+  })
 })
 
 describe('searchFiles', () => {

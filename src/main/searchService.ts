@@ -9,14 +9,17 @@ const MAX_MATCHES_TOTAL = 1000
 const MAX_FILE_BYTES = 1024 * 1024
 const BINARY_SNIFF_BYTES = 8192
 
-export function isBinary(buf: Buffer): boolean {
-  // Known text-encoding BOMs are never binary, even if they contain NUL bytes (UTF-16, etc.)
-  if (buf.length >= 2 && ((buf[0] === 0xff && buf[1] === 0xfe) || (buf[0] === 0xfe && buf[1] === 0xff))) {
-    return false
-  }
-  if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return false
+function hasNulByte(buf: Buffer): boolean {
   const n = Math.min(buf.length, BINARY_SNIFF_BYTES)
   for (let i = 0; i < n; i++) if (buf[i] === 0) return true
+  return false
+}
+
+export function isBinary(buf: Buffer): boolean {
+  // Recognized text encodings (UTF-16, UTF-8 BOM) are never binary, even if they contain NUL bytes.
+  // No recognized BOM + NUL bytes ⇒ a binary file (or BOM-less UTF-16).
+  const encoding = detectEncoding(buf)
+  if (encoding === 'utf8' && hasNulByte(buf)) return true
   return false
 }
 
