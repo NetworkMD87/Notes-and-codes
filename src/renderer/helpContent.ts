@@ -38,10 +38,7 @@ export const HELP_SECTIONS: HelpCategory[] = [
     { label: 'Select All', keys: 'Ctrl+A' },
     { label: 'Find',    keys: 'Ctrl+F', desc: 'Search for text in the current file.' },
     { label: 'Replace', keys: 'Ctrl+H', desc: 'Find text and swap it for something else.' },
-    // No `keys` on purpose: the Shift+Alt+F accelerator is registered but does not fire (known
-    // issue, see ROADMAP ▸ Format Document). Listing a shortcut that does nothing is worse than
-    // listing none — restore the key here in the same change that fixes the binding.
-    { label: 'Format Document',  desc: 'Auto-tidy spacing and indentation so code is neatly laid out. Run it from the Edit menu or this palette.' },
+    { label: 'Format Document',  keys: 'Shift+Alt+F', desc: 'Auto-tidy spacing and indentation so code is neatly laid out.' },
     { label: 'Format Selection', desc: 'Tidy just the highlighted part.' },
   ] },
   { title: 'View', entries: [
