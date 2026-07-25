@@ -63,7 +63,12 @@ test('Ctrl+Shift+F finds a match in the folder and jumps to it', async () => {
   }
 })
 
-test('a dirty buffer is searched live, not from its stale copy on disk', async () => {
+// This variant opens NO folder (the file arrives as a bare argv file arg), so runSearch() takes
+// the early `!root` return and never reaches the skipPaths-guarded disk search at all — see the
+// next test for that. What this one DOES prove is real: that a dirty buffer is searched from its
+// current, live content rather than some stale snapshot cached at overlay-open time or at the
+// first debounced search.
+test('with no folder open, a dirty buffer is searched from its live content, not a stale snapshot', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-searchlive-'))
   const folder = mkdtempSync(join(tmpdir(), 'notes-searchlivedir-'))
   const file = join(folder, 'live.txt')
@@ -81,11 +86,49 @@ test('a dirty buffer is searched live, not from its stale copy on disk', async (
     await expect(win.locator('.fif-row')).toHaveCount(1)      // (a) live content IS searched
 
     await win.locator('.fif-head input').fill('ondiskonly')
-    await expect(win.locator('.fif-row')).toHaveCount(0)      // (b) the stale disk copy is NOT
+    await expect(win.locator('.fif-row')).toHaveCount(0)      // (b) the old content is NOT (buffer-only guard)
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
     rmSync(folder, { recursive: true, force: true })
+  }
+})
+
+// THIS is the test that actually exercises skipPaths. A folder must be open AND the dirtied file
+// must live inside it — only then does runSearch() have a non-null root() and reach the
+// window.api.searchFiles() call skipPaths feeds into. Without a folder (the test above), that
+// whole branch is skipped and the guard is untestable — a falsification of skipPaths there stays
+// green no matter what, which is a hollow guard, not a working one. Falsified 2026-07-25: setting
+// skipPaths to [] in findInFiles.ts made assertion (b) below go red (the stale on-disk copy
+// resurfaced); reverting made it green again.
+test('a dirty buffer for a file inside an open folder is searched live, not from its stale copy on disk', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-searchlivefolder-'))
+  const projectDir = mkdtempSync(join(tmpdir(), 'notes-searchlivefolderdir-'))
+  writeFileSync(join(projectDir, 'live.txt'), 'ondiskonly')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true, lastFolder: projectDir, sidebarVisible: true,
+  }))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#sidebar')).toBeVisible()   // the folder was restored
+    await win.locator('.sb-row', { hasText: 'live.txt' }).click()   // open the in-folder file as a tab
+    await expect(win.locator('#paneA .view-lines')).toContainText('ondiskonly')
+    await win.locator('#paneA .monaco-editor').click()
+    await win.keyboard.press('Control+A')
+    await win.keyboard.type('typedonly')   // buffer now differs from disk, unsaved — but the file
+                                            // is still inside the open folder root
+
+    await win.keyboard.press('Control+Shift+F')
+    await win.locator('.fif-head input').fill('typedonly')
+    await expect(win.locator('.fif-row')).toHaveCount(1)      // (a) live content IS searched
+
+    await win.locator('.fif-head input').fill('ondiskonly')
+    await expect(win.locator('.fif-row')).toHaveCount(0)      // (b) the stale on-disk copy is NOT — proves skipPaths
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+    rmSync(projectDir, { recursive: true, force: true })
   }
 })
 
