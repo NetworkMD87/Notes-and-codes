@@ -18,6 +18,7 @@
     "build": "tsc --noEmit && electron-vite build",
     "typecheck": "tsc --noEmit",
     "preview": "electron-vite preview",
+    "screenshots": "node scripts/screenshots.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "playwright test",
