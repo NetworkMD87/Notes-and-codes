@@ -1,5 +1,5 @@
 import type { Snippet } from '../shared/types'
-import { pushOverlay } from './overlayManager'
+import { OverlayRegistration } from './overlayManager'
 import { emptyState, EMPTY_ICONS } from './emptyState'
 
 export interface SnippetManagerDeps {
@@ -14,7 +14,7 @@ export interface SnippetManagerDeps {
 export class SnippetManager {
   private overlay: HTMLDivElement
   private listEl: HTMLDivElement
-  private unreg?: () => void
+  private reg = new OverlayRegistration()
 
   constructor(host: HTMLElement, private deps: SnippetManagerDeps) {
     this.overlay = document.createElement('div')
@@ -35,8 +35,8 @@ export class SnippetManager {
     // Escape handled centrally by overlayManager.
   }
 
-  open(): void { this.render(); this.overlay.classList.remove('hidden'); this.overlay.setAttribute('tabindex', '-1'); this.overlay.focus(); this.unreg = pushOverlay(() => this.close()) }
-  private close(): void { this.unreg?.(); this.unreg = undefined; this.overlay.classList.add('hidden') }
+  open(): void { this.render(); this.overlay.classList.remove('hidden'); this.overlay.setAttribute('tabindex', '-1'); this.overlay.focus(); this.reg.open(() => this.close()) }
+  private close(): void { this.reg.release(); this.overlay.classList.add('hidden') }
 
   private render(): void {
     this.listEl.replaceChildren(...this.deps.list().map(s => {

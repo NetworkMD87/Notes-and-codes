@@ -26,13 +26,29 @@ chrome, interactive states, structural chrome, sidebar + tab file-type badges) �
 `1.13.0 → 1.14.0` bump (polish-pass convention: one bump for the whole pass). The manual
 tray / hotkey / launch-on-login checklist passed on the real build before tagging.
 
+**Two correctness fixes landed on `master` after v1.14.0** (no version bump — no release cut yet;
+they ride the next one):
+- ✅ **`overlayManager` registration-overwrite sweep** — the audit of this turned out **wider and
+  worse** than the note claimed. Not 4 files but **9** (`commandPalette`, `quickOpen`, `helpOverlay`,
+  `snippetManager`, `fileHistoryPanel`, `diffView`, `diffPicker`, `pasteHistoryPicker`,
+  `snippetPicker`), and the leak was not "one eaten Escape" but **permanent**: `close()` unhooks via
+  the unregister fn the re-entrant `open()` already overwrote, so the orphan can never be removed and
+  sinks *every* later Escape for the rest of the session. Fixed structurally rather than by pasting a
+  guard into 9 files — the slot now lives in an `OverlayRegistration` class (`overlayManager.ts`)
+  whose `open()` releases before it re-registers, so double-registration is impossible by
+  construction; all 10 overlays (incl. `settingsPanel`, whose hand-rolled guard this replaces) hold
+  one. Unit-tested (4 cases) + a smoke guard asserting Monaco's find widget still closes on Escape
+  after a re-entrant open — **falsified by hand** (drop the release → red on both).
+- ✅ **`app.isPackaged` gate on the context-menu toggle** — Settings ▸ Integration's checkbox now
+  routes through `applyContextMenu`, gated like `setLoginItem` and the packaged-startup re-apply.
+  Both directions were destructive in dev, not just enable: a dev-run *disable* ran `reg delete` and
+  removed the developer's real installed entry outright. Decision extracted to a pure, DI'd
+  `contextMenuAction(enabled, isPackaged)` (4 unit cases) so it's covered without any test touching
+  `HKCU`.
+
 **Open, none blocking a release** — candidates for the next pass:
 - The three parked Phase 4 items (see below): **code signing** (needs a purchased cert), native
   Win11 `IExplorerCommand` **"Open with"**, and **snippet placeholders / tabstops**.
-- The `overlayManager` registration-overwrite pattern — fixed in `settingsPanel.ts`, but
-  `commandPalette.ts`, `helpOverlay.ts`, `quickOpen.ts` and `snippetManager.ts` each still stack a
-  stale close-callback on re-entrant open, silently eating one Escape press. Wants a small sweep.
-- The deferred `app.isPackaged` gating gap on the context-menu *toggle* (noted under Phase 4).
 - The dead `Shift+Alt+F` Format Document hotkey (known-issue).
 
 ---
@@ -316,11 +332,11 @@ command-registry changes on systems already in place. Shipped as **one release u
   to the real OS state (`getLoginItemSettings`) on next launch if the entry is disabled behind the
   app's back (Task Manager ▸ Startup), so the checkbox can't lie.
 
-**Deferred item surfaced during this slice:** the existing `contextmenu:set` toggle path (Settings
-▸ Integration's right-click-menu checkbox → `setContextMenu` called directly from `index.ts`) is
-**not** gated on `app.isPackaged` — unlike the packaged-startup context-menu re-apply and the new
-login-item write, both of which are. Toggling it in a dev run writes to the developer's own real
-`HKCU`. Not fixed on this branch; needs its own small pass.
+**Deferred item surfaced during this slice — ✅ now fixed** (see ▶ NEXT ACTION): the `contextmenu:set`
+toggle path (Settings ▸ Integration's right-click-menu checkbox) was **not** gated on `app.isPackaged`,
+unlike the packaged-startup re-apply and the login-item write. It now goes through `applyContextMenu`
+→ the pure `contextMenuAction(enabled, isPackaged)`, which skips a dev run in **both** directions
+(a dev-run disable would `reg delete` the developer's real installed entry).
 
 ## 💡 Someday / maybe
 

@@ -1,4 +1,4 @@
-import { pushOverlay } from './overlayManager'
+import { OverlayRegistration } from './overlayManager'
 
 export interface Command { id: string; label: string; run: () => void | Promise<void>; hint?: string }
 
@@ -9,7 +9,7 @@ export class CommandPalette {
   private listEl: HTMLDivElement
   private filtered: Command[] = []
   private cursor = 0
-  private unreg?: () => void
+  private reg = new OverlayRegistration()
 
   constructor() {
     this.overlay = document.createElement('div'); this.overlay.id = 'palette'; this.overlay.className = 'hidden'
@@ -28,9 +28,9 @@ export class CommandPalette {
 
   open(): void {
     this.overlay.classList.remove('hidden'); this.input.value = ''; this.refresh(); this.input.focus()
-    this.unreg = pushOverlay(() => this.close())
+    this.reg.open(() => this.close())
   }
-  close(): void { this.unreg?.(); this.unreg = undefined; this.overlay.classList.add('hidden') }
+  close(): void { this.reg.release(); this.overlay.classList.add('hidden') }
 
   private refresh(): void {
     const q = this.input.value.toLowerCase()

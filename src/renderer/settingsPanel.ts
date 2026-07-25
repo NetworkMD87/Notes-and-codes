@@ -1,5 +1,5 @@
 import { THEME_LIST, ACCENT_SWATCHES, swatchColours } from './themes'
-import { pushOverlay } from './overlayManager'
+import { OverlayRegistration } from './overlayManager'
 import { accelFromEvent, formatAccel } from '../shared/accelerator'
 
 export type SettingsCategory = 'appearance' | 'font' | 'editor' | 'folder' | 'startup' | 'integration'
@@ -53,7 +53,7 @@ const CATEGORIES: { id: SettingsCategory; label: string }[] = [
 
 export class SettingsPanel {
   private host: HTMLElement
-  private unreg?: () => void
+  private reg = new OverlayRegistration()
   private hoverTimer: number | undefined
   private active: SettingsCategory = 'appearance'
   private recording = false
@@ -72,17 +72,12 @@ export class SettingsPanel {
     // panel is already open) would otherwise switch `active` out from under an in-flight
     // recording the same way the nav-row switch does — tear it down first so that can't happen.
     this.stopRecording()
-    // Same re-entrancy also applies to the overlayManager registration: pushOverlay() stacks a
-    // new close callback on every call, and close() only ever pops the latest. Without
-    // unregistering the existing one first, each re-entrant open() while already open leaks a
-    // stale entry that outlives this panel — the NEXT Escape press then consumes that dead
-    // callback (preventDefault + stopPropagation) instead of reaching whatever should actually
-    // handle it (Monaco's find widget, multi-cursor, etc.), one leaked press per re-entrant open.
-    this.unreg?.()
+    // The overlayManager half of the same re-entrancy is handled by OverlayRegistration.open(),
+    // which releases the previous slot before taking a new one.
     this.active = category
     this.render()
     this.host.classList.remove('hidden')
-    this.unreg = pushOverlay(() => this.close())
+    this.reg.open(() => this.close())
   }
 
   private close(): void {
@@ -91,7 +86,7 @@ export class SettingsPanel {
     // ordering — a second Esc then closes the panel as normal.
     if (this.recording) { this.cancelRecording(); return }
     this.stopPreview()
-    this.unreg?.(); this.unreg = undefined
+    this.reg.release()
     this.host.classList.add('hidden')
   }
 

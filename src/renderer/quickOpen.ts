@@ -1,5 +1,5 @@
 import { rankFiles } from './fuzzy'
-import { pushOverlay } from './overlayManager'
+import { OverlayRegistration } from './overlayManager'
 
 export interface QuickOpenDeps {
   files: () => string[]
@@ -13,7 +13,7 @@ export class QuickOpen {
   private listEl!: HTMLElement
   private results: string[] = []
   private active = 0
-  private unreg?: () => void
+  private reg = new OverlayRegistration()
   constructor(parent: HTMLElement, private d: QuickOpenDeps) {
     this.host = document.createElement('div')
     this.host.id = 'quick-open'; this.host.className = 'hidden'
@@ -33,7 +33,7 @@ export class QuickOpen {
     }
     this.host.replaceChildren(box)
     this.host.classList.remove('hidden')
-    this.unreg = pushOverlay(() => this.close())
+    this.reg.open(() => this.close())
     this.input.addEventListener('input', () => this.refresh())
     this.input.addEventListener('keydown', (e) => this.onKey(e))
     this.refresh()
@@ -72,5 +72,5 @@ export class QuickOpen {
     if (path) { this.close(); this.d.openFile(path) }
   }
 
-  private close(): void { this.unreg?.(); this.unreg = undefined; this.host.classList.add('hidden') }
+  private close(): void { this.reg.release(); this.host.classList.add('hidden') }
 }

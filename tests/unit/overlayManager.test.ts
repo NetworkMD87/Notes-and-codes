@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { pushOverlay, openCount, handleEscape } from '../../src/renderer/overlayManager'
+import { pushOverlay, openCount, handleEscape, OverlayRegistration } from '../../src/renderer/overlayManager'
 
 function esc(key = 'Escape') {
   const e = { key, preventDefault: vi.fn(), stopPropagation: vi.fn() }
@@ -43,5 +43,52 @@ describe('overlayManager', () => {
     expect(closed).not.toHaveBeenCalled()
     expect(openCount()).toBe(before + 1)
     un()
+  })
+})
+
+describe('OverlayRegistration', () => {
+  it('re-entrant open() holds exactly one stack entry, never a stale second', () => {
+    const start = openCount()
+    const reg = new OverlayRegistration()
+    reg.open(() => {})
+    reg.open(() => {})   // overlay re-opened while already open (Ctrl+P twice, palette command re-run)
+    reg.open(() => {})
+    expect(openCount()).toBe(start + 1)
+    reg.release()
+    expect(openCount()).toBe(start)
+  })
+
+  it('a re-entrant open() replaces the close callback, so Escape runs the live one', () => {
+    const stale = vi.fn(); const live = vi.fn()
+    const reg = new OverlayRegistration()
+    reg.open(stale)
+    reg.open(live)
+    esc()
+    expect(live).toHaveBeenCalledTimes(1)
+    expect(stale).not.toHaveBeenCalled()
+    reg.release()
+  })
+
+  it('leaves no entry behind that could swallow a later Escape', () => {
+    const start = openCount()
+    const reg = new OverlayRegistration()
+    reg.open(() => reg.release())   // real overlays release inside close()
+    reg.open(() => reg.release())
+    esc()                            // closes it for real
+    expect(openCount()).toBe(start)
+    const after = esc()              // nothing left to consume this one
+    expect(after.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('release() is idempotent and re-opening after release registers again', () => {
+    const start = openCount()
+    const reg = new OverlayRegistration()
+    reg.open(() => {})
+    reg.release()
+    reg.release()                    // no throw, no double-remove of someone else's entry
+    expect(openCount()).toBe(start)
+    reg.open(() => {})
+    expect(openCount()).toBe(start + 1)
+    reg.release()
   })
 })

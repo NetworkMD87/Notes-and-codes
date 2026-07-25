@@ -1,6 +1,6 @@
 import { HELP_SECTIONS, APP_TAGLINE, APP_LINKS, type HelpEntry } from './helpContent'
 import { WORDMARK_SVG } from './brand'
-import { pushOverlay } from './overlayManager'
+import { OverlayRegistration } from './overlayManager'
 
 export class HelpOverlay {
   private root: HTMLDivElement
@@ -9,7 +9,7 @@ export class HelpOverlay {
   private body: HTMLDivElement
   private note: HTMLDivElement
   private descOn = false
-  private unreg?: () => void
+  private reg = new OverlayRegistration()
 
   constructor() {
     this.root = document.createElement('div'); this.root.className = 'help-overlay hidden'
@@ -83,9 +83,9 @@ export class HelpOverlay {
     this.root.classList.remove('hidden')
     this.root.tabIndex = -1
     this.root.focus()
-    this.unreg = pushOverlay(() => this.close())
+    this.reg.open(() => this.close())
   }
-  private close(): void { this.unreg?.(); this.unreg = undefined; this.root.classList.add('hidden') }
+  private close(): void { this.reg.release(); this.root.classList.add('hidden') }
 
   private render(): void {
     this.body.replaceChildren()
