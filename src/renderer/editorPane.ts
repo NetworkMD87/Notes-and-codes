@@ -3,6 +3,35 @@ import type { BufferState, Highlight, HighlightColour } from '../shared/types'
 import { formatText, UnsupportedLanguageError, type FormatRange } from './formatter'
 import { toast } from './notify'
 
+export const FORMAT_DOC_COMMAND = 'notesAndCodes.formatDocument'
+
+/**
+ * Bind Shift+Alt+F to Format Document — ONCE for the whole app, not per pane.
+ *
+ * Monaco's dynamic keybindings are GLOBAL: `editor.addCommand` has no `when` scoping it to the
+ * editor it was called on. SplitView builds both panes up front, so a per-pane registration
+ * registered the chord twice and the LAST one (hidden paneB, empty model) always won —
+ * formatDocument() then returned at `!text.trim()` and the key looked dead. It also killed the
+ * Edit ▸ Format Document accelerator, because matching a binding makes Monaco
+ * preventDefault+stopPropagation the event and Electron only fires menu accelerators for
+ * UNHANDLED keys. One registration routed to the focused pane fixes both.
+ *
+ * Registering at all is load-bearing, not belt-and-braces: Monaco's OWN Shift+Alt+F
+ * (`editor.action.formatDocument`) is live for js/ts/css/less/scss/html/json — its
+ * `hasDocumentFormattingProvider` precondition is satisfied by the bundled ts/css/html/json
+ * workers — and it formats with the TypeScript language service, NOT prettier. Dropping this
+ * binding does not "fall through to the menu accelerator"; it hands most of our formattable
+ * languages to a different formatter than the palette and menu use. The dynamic weight (1000)
+ * outranks Monaco's editor-contrib weight (100), so ours wins.
+ */
+export function registerFormatKeybinding(run: () => void): void {
+  monaco.editor.registerCommand(FORMAT_DOC_COMMAND, () => run())
+  monaco.editor.addKeybindingRules([{
+    keybinding: monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF,
+    command: FORMAT_DOC_COMMAND,
+  }])
+}
+
 export class EditorPane {
   private editor: monaco.editor.IStandaloneCodeEditor
   private container: HTMLElement
@@ -50,7 +79,8 @@ export class EditorPane {
     this.editor.onDidChangeModelContent(() => {
       this.changeCb?.(this.editor.getValue())
     })
-    this.editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => { void this.formatDocument() })
+    // Shift+Alt+F is registered ONCE, app-wide, by registerFormatKeybinding() — never per pane.
+    // See the note there for why.
   }
 
   /** Switch the visible buffer, preserving each buffer's scroll/cursor (view state) and undo history. */

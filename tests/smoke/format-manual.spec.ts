@@ -64,6 +64,31 @@ test('Format Document leaves the buffer untouched on a syntax error, with a toas
   }
 })
 
+// The Shift+Alt+F regression guard. This chord was dead from v1.6 to v1.14.1: EditorPane's
+// constructor called editor.addCommand, but Monaco's dynamic keybindings are global, so with
+// SplitView building both panes the LAST registration (hidden, empty paneB) always won and
+// silently no-op'd — which also suppressed the menu accelerator, since Electron only fires those
+// for UNHANDLED keys. Assert on the SEMICOLON, deliberately: prettier emits `const x = 1;`,
+// while Monaco's built-in editor.action.formatDocument (live for js/ts via the bundled TS worker)
+// emits `const x = 1`. So this fails both if the chord goes dead again AND if Monaco's built-in
+// takes the chord back off us.
+test('Shift+Alt+F formats the focused pane through prettier', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fmtkey-'))
+  const filePath = join(userDataDir, 'ugly.js')
+  writeFileSync(filePath, UGLY_JS)
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#paneA .view-lines')).toContainText('const')
+    await win.locator('#paneA .monaco-editor').click()
+    await win.keyboard.press('Shift+Alt+F')
+    await expect(win.locator('#paneA .view-lines')).toContainText('const x = 1;')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('Format commands are wired into the Edit menu with the Shift+Alt+F accelerator', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fmtmenu-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
@@ -78,7 +103,8 @@ test('Format commands are wired into the Edit menu with the Shift+Alt+F accelera
     const fmtSel = edit.find(i => i.label === 'Format Selection')
     expect(fmtDoc).toBeTruthy()
     expect(fmtSel).toBeTruthy()
-    // Accelerator registered → Electron fires 'format-doc' on the real Shift+Alt+F press.
+    // The accelerator is the path for when focus is OUTSIDE Monaco (sidebar, toolbar); with the
+    // editor focused Monaco's own binding wins the chord first. Both land on the focused pane.
     expect(fmtDoc!.accelerator).toBe('Shift+Alt+F')
   } finally {
     await app.close()

@@ -10,6 +10,7 @@ import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
 import { TabBar } from './tabBar'
 import { SplitView } from './splitView'
+import { registerFormatKeybinding } from './editorPane'
 import { ThemeController } from './theme'
 import { CommandPalette } from './commandPalette'
 import { StatusBar } from './statusBar'
@@ -867,6 +868,11 @@ installMenuCommands({
   'help-shortcuts': () => helpOverlay.openShortcuts(),
   'help-about': () => helpOverlay.openAbout(),
 }, (id) => theme.pick(id))
+
+// Shift+Alt+F while Monaco has focus. Registered once here (not per pane) because Monaco's
+// dynamic keybindings are global — see registerFormatKeybinding. Same target as the 'format-doc'
+// menu accelerator above, which stays as the path for when focus is outside the editor.
+registerFormatKeybinding(() => void paneFor(view.focusedPane()).formatDocument())
 
 boot().catch(err => {
   // A bad session or any other startup failure must never leave a dead blank window.

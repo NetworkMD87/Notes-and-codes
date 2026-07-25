@@ -41,9 +41,8 @@ in the tray, starts empty, and never asks you to make a project first.
 - Each tab carries a tinted **file-type badge** from its language, matching the sidebar's badges.
 - Word wrap, UTF-8 / UTF-16 encoding, and LF / CRLF control.
 - **Format Document** — prettify the active file (JS/TS, JSON, CSS/SCSS/LESS, HTML, Markdown, YAML)
-  from the command palette or the Edit menu, plus optional format-on-save (Settings ▸ Editor).
-  *(The `Shift+Alt+F` accelerator is a known issue and currently does nothing — use the palette or
-  Edit menu.)*
+  with `Shift+Alt+F`, the command palette or the Edit menu, plus optional format-on-save
+  (Settings ▸ Editor).
 - Paste history and reusable snippets.
 
 ### Look & feel
@@ -164,9 +163,11 @@ deliberately has no `fsync`: it was implemented, A/B tested, found to stall writ
 rationale sits in the source. Softening the accent border on floating chrome was mocked up and
 rejected. Native `IExplorerCommand` is parked as not worth its cost.
 
-**Known issues are documented, not hidden.** The `Shift+Alt+F` Format accelerator does not fire;
-that's stated in the feature list above, tracked in [ROADMAP.md](ROADMAP.md), and the in-app help
-deliberately lists Format Document with no shortcut rather than advertising one that does nothing.
+**Known issues are documented, not hidden.** The `Shift+Alt+F` Format accelerator shipped broken and
+said so — in the feature list, in [ROADMAP.md](ROADMAP.md), and by omitting the key from the in-app
+help rather than advertising one that did nothing. It was fixed in 2026-07-25 once the real cause was
+found (two panes racing to claim one global Monaco keybinding), and now carries an end-to-end smoke
+guard that was verified by watching it fail.
 
 **The security boundary is enforced, not assumed.** `contextIsolation: true`, `sandbox: true`,
 `nodeIntegration: false`; the renderer reaches the OS only through a narrow typed `contextBridge`
