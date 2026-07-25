@@ -46,6 +46,7 @@ const api: Api = {
   openFolderDialog: () => ipcRenderer.invoke('dialog:openFolder'),
   readDir: (path, showAll) => ipcRenderer.invoke('dir:read', path, showAll),
   walkFiles: (path, showAll) => ipcRenderer.invoke('dir:walk', path, showAll),
+  searchFiles: (req) => ipcRenderer.invoke('search:files', req),
   createFile: (path) => ipcRenderer.invoke('fs:createFile', path),
   createFolder: (path) => ipcRenderer.invoke('fs:createFolder', path),
   renamePath: (from, to) => ipcRenderer.invoke('fs:rename', from, to),

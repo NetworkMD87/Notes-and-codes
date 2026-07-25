@@ -218,6 +218,7 @@ export interface Api {
   openFolderDialog(): Promise<string | null>
   readDir(path: string, showAll: boolean): Promise<DirEntry[]>
   walkFiles(path: string, showAll: boolean): Promise<WalkResult>
+  searchFiles(req: SearchRequest): Promise<SearchResponse>
   createFile(path: string): Promise<boolean>
   createFolder(path: string): Promise<boolean>
   renamePath(from: string, to: string): Promise<boolean>

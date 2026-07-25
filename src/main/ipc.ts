@@ -2,6 +2,7 @@ import { app, clipboard, dialog, ipcMain, shell, type BrowserWindow, type IpcMai
 import { isTrustedSender } from './senderGuard'
 import { readFileForEditor, writeFile } from './fileService'
 import { readDir, walkFiles, createFile, createFolder, renamePath, dirExists } from './fsService'
+import { searchFiles } from './searchService'
 import { DirWatcher } from './dirWatcher'
 import { SessionStore } from './sessionStore'
 import { SettingsStore } from './settingsStore'
@@ -12,7 +13,7 @@ import { FileWatcher } from './fileWatcher'
 import { FileHistoryStore } from './fileHistoryStore'
 import { HighlightStore } from './highlightStore'
 import { saveHtml, savePdf } from './exportService'
-import type { SessionData, Settings, EolMode, Encoding, HotkeyResult } from '../shared/types'
+import type { SessionData, Settings, EolMode, Encoding, HotkeyResult, SearchRequest } from '../shared/types'
 
 export interface IpcDeps {
   baseDir: string
@@ -109,6 +110,16 @@ export function registerIpc(deps: IpcDeps): void {
   })
   handle('dir:read', (_e, path: string, showAll: boolean) => readDir(path, showAll))
   handle('dir:walk', (_e, path: string, showAll: boolean) => walkFiles(path, showAll))
+
+  // The renderer stamps each request with an increasing searchId. Typing fast queues several
+  // searches; this lets each one bail as soon as a newer request has arrived, instead of running
+  // eight full searches to completion. The counter lives here so searchService stays DI'd.
+  let latestSearchId = 0
+  handle('search:files', (_e, req: SearchRequest) => {
+    latestSearchId = Math.max(latestSearchId, req.searchId)
+    return searchFiles(req, () => req.searchId < latestSearchId)
+  })
+
   handle('fs:createFile', (_e, path: string) => createFile(path))
   handle('fs:createFolder', (_e, path: string) => createFolder(path))
   handle('fs:rename', (_e, from: string, to: string) => renamePath(from, to))
