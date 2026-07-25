@@ -4,6 +4,26 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [1.14.1] — 2026-07-25
+
+_Patch release: the Format Document keyboard shortcut finally works._
+
+### Fixed
+
+- **`Shift+Alt+F` now formats the document.** The shortcut had done nothing since v1.6 — the command
+  itself always worked from the command palette and the Edit menu, so only the keystroke was dead.
+  Two editor panes were each claiming the same editor-wide shortcut and the hidden one won, so every
+  press was swallowed by an empty pane and never reached the file you were looking at. It is now
+  claimed once and always acts on whichever pane has focus, including in split view.
+
+### Changed
+
+- **The in-app help lists `Shift+Alt+F` under Edit again**, now that it does something — it had been
+  left out on purpose rather than advertise a shortcut that did nothing.
+- **`AUDIT-CHECKLIST.md` is now published in the repository.** The README has linked to it as the
+  record of both closed codebase audits, but the file had never actually been committed, so the link
+  led nowhere. Its last two outstanding manual checks were also carried out and recorded.
+
 ## [1.14.0] — 2026-07-21
 
 _First Phase 4 slice: a proper Settings home, launch on login, and a configurable global hotkey._
