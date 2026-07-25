@@ -47,10 +47,11 @@ test('Escape closes the command palette from any focus', async () => {
 })
 
 // Re-opening an already-open overlay used to push a SECOND close callback onto the overlay
-// stack while the overlay kept only the newest — orphaning the first. Because close() unhooks
-// via its own (now-lost) unregister fn, that orphan could never be removed: it sat on top of
-// the stack for the rest of the session, and handleEscape() preventDefault+stopPropagation's
-// whatever it finds there. Every subsequent Escape was eaten before Monaco could see it.
+// stack while the overlay kept only the newest — orphaning the first. Because the only thing
+// that can splice an entry out is the unregister fn the re-entrant open() overwrote, that
+// orphan could never be removed: it sat on top of the stack for the rest of the session, and
+// handleEscape() preventDefault+stopPropagation's whatever it finds there. Every subsequent
+// Escape was eaten before Monaco could see it.
 test('a re-entrant overlay open leaves no ghost entry to swallow later Escapes', async () => {
   const { app, userDataDir } = await launch()
   try {

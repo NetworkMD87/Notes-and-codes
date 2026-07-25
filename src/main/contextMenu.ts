@@ -34,10 +34,11 @@ export type ContextMenuAction = { kind: 'write' } | { kind: 'skip'; notice: stri
  * gate deliberately ignores `enabled` and skips either way.
  *
  * Pure + DI'd so it can be unit-tested without electron and without any test ever touching
- * HKCU (which would mutate the developer's own shell integration).
+ * HKCU (which would mutate the developer's own shell integration). `enabled` is taken but
+ * unused on purpose: it keeps the call shape honest and lets the tests pin that BOTH
+ * directions are gated, which is the half that's easy to forget.
  */
 export function contextMenuAction(enabled: boolean, isPackaged: boolean): ContextMenuAction {
-  void enabled
   if (!isPackaged) {
     return { kind: 'skip', notice: 'The right-click menu entry applies to the installed app, not a dev run.' }
   }
