@@ -26,8 +26,16 @@ chrome, interactive states, structural chrome, sidebar + tab file-type badges) �
 `1.13.0 → 1.14.0` bump (polish-pass convention: one bump for the whole pass). The manual
 tray / hotkey / launch-on-login checklist passed on the real build before tagging.
 
-**Two correctness fixes landed on `master` after v1.14.0** (no version bump — no release cut yet;
-they ride the next one):
+**v1.14.1 shipped 2026-07-25** — patch release: the `Shift+Alt+F` Format Document hotkey, dead since
+v1.6, is fixed (two `EditorPane` instances were each registering the same *global* Monaco keybinding,
+so the hidden empty pane always won and silently no-op'd — which also suppressed the Edit-menu
+accelerator, since Electron only fires those for unhandled keys). Now registered once app-wide and
+routed to the focused pane, with an end-to-end smoke guard verified by falsification and a real
+keypress check on the packaged build. Also published `AUDIT-CHECKLIST.md` (README had linked to a
+file that was gitignored and had never been committed) and closed its last two manual checks, H1 and
+L4 — the audit record now has zero open items, code or manual.
+
+**Two correctness fixes that landed on `master` after v1.14.0** — both rode v1.14.1:
 - ✅ **`overlayManager` registration-overwrite sweep** — the audit of this turned out **wider and
   worse** than the note claimed. Not 4 files but **9** (`commandPalette`, `quickOpen`, `helpOverlay`,
   `snippetManager`, `fileHistoryPanel`, `diffView`, `diffPicker`, `pasteHistoryPicker`,
@@ -58,8 +66,9 @@ they ride the next one):
   runners don't reliably paint Monaco's viewport, so every test asserting on rendered editor
   content fails there regardless of timeout. Revisit with software rendering
   (`--use-gl=swiftshader` / `--disable-gpu`) on the Electron launch args.
-  _(The `Shift+Alt+F` Format Document hotkey was on this list; it is **fixed** as of 2026-07-25 and
-  is now smoke-tested end-to-end — see **Format Document** below.)_
+  Note the Shift+Alt+F fix proved a related assumption wrong: a Playwright key press *does* reach a
+  real Monaco keybinding, so keyboard paths previously written off as untestable are worth retrying
+  before being deferred.
 
 ---
 
@@ -122,8 +131,8 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > ▶ **STATUS (2026-07-20):** all Phase 3 power features shipped (file history, Markdown export,
 > autosave-to-disk, Format Document, folder mode, text highlighter); the Phase 3.5 design-polish pass
 > shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
-> v1.12.2). **Phase 3.7 polish is complete — all 7 slices merged and
-> released as v1.13.0** (tag + GitHub release still outstanding). See ▶ NEXT ACTION at the top.
+> v1.12.2). **Phase 3.7 polish is complete — all 7 slices merged, released as v1.13.0**, tagged and
+> published. See ▶ NEXT ACTION at the top.
 > **Live known issues (deferred):** none.
 > _(① the native `Shift+Alt+F` Format hotkey is resolved — fixed 2026-07-25, details under
 > **Format Document** below. ② the clean-quit clipboard/session flush is resolved — audit R1, v1.12.1. ③ the static
