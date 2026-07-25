@@ -47,9 +47,19 @@ they ride the next one):
   `HKCU`.
 
 **Open, none blocking a release** — candidates for the next pass:
-- The three parked Phase 4 items (see below): **code signing** (needs a purchased cert), native
-  Win11 `IExplorerCommand` **"Open with"**, and **snippet placeholders / tabstops**.
-- The dead `Shift+Alt+F` Format Document hotkey (known-issue).
+- 🔜 **Microsoft Store release via MSIX** (Phase 4) — the chosen next platform move. A free
+  individual account plus Microsoft's automatic re-signing of MSIX packages kills the SmartScreen
+  warning on the Store channel at zero cost, which retires the parked "buy a cert" item. Needs a
+  proper design pass first: MSIX virtualises the registry, so the Explorer context menu and
+  launch-on-login would **silently no-op** in a Store build. Full detail under Phase 4.
+- The parked Phase 4 items: native Win11 `IExplorerCommand` **"Open with"**, **snippet placeholders
+  / tabstops**, and a purchased code-signing cert (now only relevant to the direct-download channel).
+- **CI covers build + unit only.** The Playwright smoke suite is dispatch-only: GitHub-hosted
+  runners don't reliably paint Monaco's viewport, so every test asserting on rendered editor
+  content fails there regardless of timeout. Revisit with software rendering
+  (`--use-gl=swiftshader` / `--disable-gpu`) on the Electron launch args.
+- The dead `Shift+Alt+F` Format Document hotkey (known-issue). The in-app help no longer advertises
+  it (2026-07-25) — restore the `keys` entry in `helpContent.ts` in whatever change fixes the binding.
 
 ---
 
@@ -307,9 +317,50 @@ command-registry changes on systems already in place. Shipped as **one release u
   packaged startup** (gated on `app.isPackaged`) so existing users get it without re-toggling the
   setting; the re-apply also self-heals a stale exe path after a reinstall elsewhere._
 
-## 🚧 Phase 4 — Platform & power (2 of 5 shipped — v1.14.0; 3 remain parked)
+## 🚧 Phase 4 — Platform & power (3 shipped in v1.14.0 · 1 next up · 3 parked)
 
-- 🧊 **Code signing** (**M**, needs a purchased cert) — removes the SmartScreen warning.
+- 🔜 **Microsoft Store release via MSIX** (**M**) — **replaces the parked "buy a code-signing cert"
+  item** (see below). Researched 2026-07-25 against Microsoft's current docs.
+
+  **Why this is the route.** An individual developer account is now **free** (nearly 200 markets;
+  registration must start at `storedeveloper.microsoft.com`, the only supported entry point for the
+  new flow). An MSIX submitted to the Store is **re-signed by Microsoft** with their own certificate
+  after it passes certification — no CA cert, no `.pfx`, no USB token or HSM. So the SmartScreen
+  warning goes away on the Store channel **for £0**, which is the whole reason the cert was ever
+  on this list. The Store also handles updates, which the app has no mechanism for today.
+
+  **The trap: this must NOT be a repackage-and-submit.** MSIX containerises the registry, so writes
+  land in the package's private view and the real system never sees them. Two shipped features do
+  exactly that, and both are gated on `app.isPackaged` — which is **true** in an MSIX build. So they
+  would run, report success, and silently do nothing; the Settings checkbox would tick on with zero
+  effect. Silent no-op is worse than a clean failure.
+  - **Explorer context menu** (`setContextMenu` → `reg add HKCU\Software\Classes\*\shell\…`) —
+    Store apps must declare context-menu / file-association entries in the **app manifest**.
+    Decide: reimplement declaratively, or hide the toggle in Store builds.
+  - **Launch on login** (`app.setLoginItemSettings` → `HKCU\…\Run`) — Store apps use the
+    `windows.startupTask` manifest extension. The `getLoginItemSettings()` drift-reconcile would
+    also start reporting nonsense.
+
+  **The detection hook is `process.windowsStore`** (Electron sets it true when running from a Store
+  package) — the natural third branch alongside the existing `app.isPackaged` gates.
+
+  **Work list:** free account + identity verification · `appx` target + config in
+  `electron-builder.yml` (electron-builder 24.13.3 already supports it) · `process.windowsStore`
+  gating for the two features above · IARC age-rating questionnaire · privacy-policy URL (the app is
+  local-only with no telemetry, so a three-line policy covers it) · Store listing using the
+  screenshots in `assets/screenshots/` · certification review (days, with real rejection risk).
+
+  **Explicitly a trial run.** Owner intent (2026-07-25): learn the Store submission and signing
+  pipeline end-to-end on a free app, before it matters on a paid one.
+
+- 🧊 **Code signing — a purchased cert** (**M**) — **demoted, not deleted.** The Store route above
+  removes the need for this *for the Store channel only*: Microsoft's signature covers the Store
+  copy, and the NSIS installer on GitHub Releases stays unsigned and still trips SmartScreen. So a
+  bought cert (~$200–400/yr) remains the only fix for the **direct-download** channel. Worth
+  revisiting only if direct downloads stay the main way people install after the Store listing is
+  live. _(Note: submitting the **EXE/MSI** to the Store instead of an MSIX does not avoid this —
+  the Store does not re-sign MSI/EXE, so that path requires a CA-chained cert of your own and is
+  therefore the strictly worse option here.)_
 - 🧊 **Native Win11 top-level "Open with"** (**L**) — `IExplorerCommand` handler so it's not under "Show more options".
 - ✅ **Settings home** (not originally on the roadmap — shipped v1.14.0) — a new Settings overlay
   (gear button on the toolbar / `Ctrl+,` / palette `Settings…` / `File ▸ Preferences…`) with a left
