@@ -38,6 +38,7 @@ import { formatText, isFormattable } from './formatter'
 import { HighlightManager } from './highlightManager'
 import { clampToLength } from './highlights'
 import { HelpOverlay } from './helpOverlay'
+import { FindInFiles } from './findInFiles'
 import { uiFontStack } from './uiFont'
 import type { Highlight, HighlightColour } from '../shared/types'
 import { formatAccel } from '../shared/accelerator'
@@ -733,6 +734,18 @@ function refreshToolbar(): void {
 
 const palette = new CommandPalette()
 const helpOverlay = new HelpOverlay()
+const findInFiles = new FindInFiles(document.getElementById('app')!, {
+  root: () => folder.root(),
+  showAll: () => showAllFiles,
+  buffers: () => manager.list().map(b => ({ filePath: b.filePath, title: b.title, content: b.content })),
+  openMatch: (path, title, line, column, length) => {
+    void (async () => {
+      if (path) await openPath(path)
+      else { const b = manager.list().find(x => x.title === title); if (b) { manager.setActive(b.id); showActive() } }
+      paneFor(view.focusedPane()).revealMatch(line, column, length)
+    })()
+  },
+})
 registerCommands({
   palette, manager, view, diff, paneFor, showActive, scheduleSessionSave, closeTab,
   saveActive, saveAll, openFromDisk, startDiff, diffClipboard, diffFiles,
@@ -749,6 +762,7 @@ registerCommands({
   toggleSidebar: () => folder.toggleSidebar(),
   revealActive: () => void folder.revealActive(),
   quickOpen: () => folder.openQuickOpen(),
+  openFindInFiles: () => findInFiles.open(),
   toggleAutoSaveToDisk,
   exportHtml,
   exportPdf,
@@ -765,6 +779,7 @@ registerCommands({
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); findInFiles.open() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
   if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === ',') { e.preventDefault(); openSettings() }
   // Escape (incl. closing the diff) is handled centrally by overlayManager.
@@ -855,6 +870,7 @@ installMenuCommands({
   revert: () => void revertActive(),
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
+  'find-in-files': () => findInFiles.open(),
   'format-doc': () => void paneFor(view.focusedPane()).formatDocument(),
   'format-selection': () => void paneFor(view.focusedPane()).formatSelection(),
   ctxmenu: toggleContextMenu,

@@ -46,6 +46,7 @@ export function buildMenu(d: MenuDeps): void {
       { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
       { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
       { type: 'separator' }, cmd('Find', 'find'), cmd('Replace', 'replace'),
+      cmd('Find in Files…', 'find-in-files'),
       { type: 'separator' },
       cmd('Format Document', 'format-doc', 'Shift+Alt+F'),
       cmd('Format Selection', 'format-selection')

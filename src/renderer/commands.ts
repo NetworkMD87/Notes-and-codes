@@ -41,6 +41,7 @@ export interface CommandDeps {
   toggleSidebar: () => void
   revealActive: () => void
   quickOpen: () => void
+  openFindInFiles: () => void
   toggleAutoSaveToDisk: () => void
   exportHtml: () => void
   exportPdf: () => void
@@ -77,6 +78,7 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'sidebar-toggle', label: 'Toggle Sidebar', run: () => d.toggleSidebar() })
   p.register({ id: 'reveal', label: 'Reveal Active File in Sidebar', run: () => d.revealActive() })
   p.register({ id: 'quick-open', label: 'Quick Open File', hint: 'Ctrl+P', run: () => d.quickOpen() })
+  p.register({ id: 'find-in-files', label: 'Find in Files', hint: 'Ctrl+Shift+F', run: () => d.openFindInFiles() })
   p.register({ id: 'export-html', label: 'Export to HTML…', run: () => d.exportHtml() })
   p.register({ id: 'export-pdf', label: 'Export to PDF…', run: () => d.exportPdf() })
   p.register({ id: 'autosave', label: 'Toggle Auto-Save Session', run: async () => {
