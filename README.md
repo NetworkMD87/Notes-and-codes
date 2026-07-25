@@ -136,10 +136,16 @@ The full, searchable list lives in the app under **Help ▸ Shortcuts & Commands
 Every claim below is checkable from the repo — that's the point of listing them.
 
 **Tests.** 42 unit test files (345 tests, Vitest) covering the pure logic — buffer management,
-encoding, the store layer, theme derivation, path/argv handling, the IPC sender guard. 17
-Playwright specs (85 tests) drive the **real built Electron app** in a window, each with an
-isolated `--user-data-dir` so they never touch a real session. Both run on every push
-([CI workflow](.github/workflows/ci.yml), Windows runners).
+encoding, the store layer, theme derivation, path/argv handling, the IPC sender guard. These plus
+a strict `tsc` type-check run on **every push and pull request** on Windows runners
+([CI workflow](.github/workflows/ci.yml)) — that's what the badge above reports.
+
+On top of those, 17 Playwright specs (85 tests) drive the **real built Electron app** in a window,
+each with an isolated `--user-data-dir` so they never touch a real session. These run locally
+before a release rather than in CI: GitHub-hosted runners don't reliably paint Monaco's viewport,
+so every test asserting on rendered editor content fails there regardless of timeout. The suite is
+sound, the hosted environment isn't, and gating on it would mean a red badge that says nothing
+about the code. It's dispatchable manually from the Actions tab.
 
 **A test is not trusted until it has been seen failing.** Guards here are verified by
 falsification — write the break, watch it go red, revert. The pen-cursor CSP guard was proven by

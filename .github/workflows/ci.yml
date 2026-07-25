@@ -32,8 +32,24 @@ jobs:
       - name: Unit tests
         run: npm test
 
+  # Manual dispatch only — NOT a gate on push/PR, deliberately.
+  #
+  # This suite drives a real Electron window, and GitHub-hosted Windows runners do not reliably
+  # paint Monaco's viewport. Measured across two runs: 77-78 of 87 pass, and the failures are
+  # always the same set — every test that asserts on RENDERED editor content (highlighter
+  # decorations, reformatted text, the pen cursor) rather than on chrome outside Monaco's
+  # virtualised viewport. Tripling the timeouts (10s->30s expect, 30s->90s per test) changed
+  # nothing, which is what rules out slowness as the cause: the text never arrives at all.
+  #
+  # So the suite is sound and the environment is not. Gating the badge on it would mean a red
+  # master that says nothing about the code — worse than no signal. It stays a local pre-release
+  # gate (see tests/CLAUDE.md) and can still be run here on demand.
+  #
+  # Worth revisiting with software rendering (--use-gl=swiftshader / --disable-gpu) on the
+  # Electron launch args, which may be what the runner actually needs.
   smoke:
     name: Smoke tests (Playwright + Electron)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
