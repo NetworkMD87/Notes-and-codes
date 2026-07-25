@@ -268,6 +268,23 @@ export class EditorPane {
 
   triggerFind(): void { this.editor.getAction('actions.find')?.run() }
   triggerReplace(): void { this.editor.getAction('editor.action.startFindReplaceAction')?.run() }
+
+  /**
+   * Put the cursor on a search hit, select it, and seed Monaco's find widget from that selection
+   * so F3 walks the rest of the matches in this file without reopening Find in Files.
+   *
+   * `actions.findWithSelection` is a public Monaco action (FIND_IDS.StartFindWithSelection) that
+   * takes its search string from the current selection — which is why the selection is set first.
+   * Reaching into the find controller contribution directly would work too, and would be private API.
+   */
+  revealMatch(line: number, column: number, length: number): void {
+    const range = new monaco.Range(line, column, line, column + length)
+    this.editor.setSelection(range)
+    this.editor.revealRangeInCenterIfOutsideViewport(range)
+    this.editor.focus()
+    this.editor.getAction('actions.findWithSelection')?.run()
+  }
+
   layout(): void { this.editor.layout() }
   dispose(): void {
     if (this.copyCutHandler) {
