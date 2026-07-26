@@ -17,7 +17,7 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — v1.16.0 whole-branch review + installer eyeball + tag still ahead
+## ▶ NEXT ACTION — v1.16.0 is merged; installer eyeball + tag still ahead
 
 **v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
 portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable
@@ -43,8 +43,8 @@ row is name + path, which fights line numbers and snippets. A dirty buffer is se
 content and its path is sent to main as a skip-set, so one rule covers both staleness and duplication.
 See **Phase 3.6** below. _Manual eyeball passed on the packaged 1.15.0 build (2026-07-26)._
 
-**v1.16.0 — Sidebar folder panel + recent folders (on `feat/sidebar-folder-panel`, whole-branch
-review + installer eyeball + tag still ahead)** — the sidebar edge tab is now always visible; with
+**v1.16.0 — Sidebar folder panel + recent folders (merged to `master` via PR #6, 2026-07-26;
+installer eyeball + tag still ahead)** — the sidebar edge tab is now always visible; with
 no folder open it offers a folder panel (**Open Folder…** + up to 10 recent folders, pruned on
 click if one has gone) and the sidebar header becomes a click-to-switch folder control carrying the
 same recents. `Toggle Sidebar` no longer warns you need a folder open. See **Phase 3.6** below.
@@ -237,8 +237,8 @@ Neither depends on 3.5 — they can land before, during, or after it._
   UTF-16 decoding, the skip-set). 7 task reviews + a whole-branch review + one fix wave; the reviews
   found **7 defects in the plan itself**, including two tests that could not have failed.
   _Deferred: regex, replace-across-files, include/exclude globs, streaming results._
-- ✅ **Sidebar folder panel + recent folders** (**S**, v1.16.0, code-complete on
-  `feat/sidebar-folder-panel` — **pending merge & tag**, see the NEXT ACTION note above) — the
+- ✅ **Sidebar folder panel + recent folders** (**S**, v1.16.0, merged via PR #6 —
+  **pending installer eyeball & tag**, see the NEXT ACTION note above) — the
   sidebar edge tab is now always visible, no longer gated on a folder being open. With none open it
   shows a folder panel with an **Open Folder…** button and a recent-folders list (up to 10,
   case-folded dedupe, mirroring `RecentFilesStore`); the sidebar header doubles as a click-to-switch
