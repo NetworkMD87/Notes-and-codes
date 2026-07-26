@@ -69,60 +69,51 @@ test('Settings: renders landscape — category nav left, detail right', async ()
   }
 })
 
-test('Settings: hovering a theme row previews it; leaving the list reverts', async () => {
+// The hover live-preview is gone (2026-07-26): painting an uncommitted theme meant a
+// full app repaint — every chrome var plus setTheme on both Monaco panes — on hover-in
+// and again on grid-leave, which read as a flicker rather than a feature. Theme changes
+// are click-only now, and this is the guard that keeps a hover from repainting anything.
+//
+// This asserts an absence, so it is timing-sensitive by nature: the deleted preview was
+// on a 120ms hover-intent timer, and the settle wait below is several times that, so a
+// reinstated preview lands well inside the window. Verified by falsification — restoring
+// `row.onmouseenter = () => this.schedulePreview(t.id)` turns this red on the first
+// assertion.
+test('Settings: hovering a theme row does not change the theme', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-hover-'))
-  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
-    let win = await app.firstWindow()
+    const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Appearance')
     const committed = await win.evaluate(() => document.body.dataset.theme)
+    expect(committed).not.toBe('monokai') // else the assertions below prove nothing
 
     await win.locator('.appearance-theme', { hasText: 'Monokai' }).hover()
-    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe('monokai')
+    await win.waitForTimeout(600)
+    expect(await win.evaluate(() => document.body.dataset.theme)).toBe(committed)
 
-    // the active-row highlight stays on the COMMITTED theme while previewing another
-    await expect(win.locator('.appearance-theme.active')).not.toContainText('Monokai')
-
-    // moving off the theme grid reverts
+    // sweeping across rows and back off the grid is equally inert — the old implementation
+    // repainted on both of these
+    await win.locator('.appearance-theme', { hasText: 'Dracula' }).hover()
     await win.locator('#settings .accent-head h3').hover()
-    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe(committed)
+    await win.waitForTimeout(600)
+    expect(await win.evaluate(() => document.body.dataset.theme)).toBe(committed)
 
-    // this session previewed Monokai and committed nothing — relaunch against the same
-    // profile and confirm the committed theme is still what it was. A leaked preview
-    // write would show up as 'monokai' here, since nothing in this session overwrites it
-    // (unlike the Escape/commit test below, whose later Nord commit would mask a leak).
-    await win.keyboard.press('Escape')
-    await app.close()
-
-    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-    win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
-    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 5000 }).toBe(committed)
+    // the active-row highlight never moved off the committed theme either
+    await expect(win.locator('.appearance-theme.active')).not.toContainText('Monokai')
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
 
-test('Settings: Escape mid-preview reverts; a click commits and survives relaunch', async () => {
+test('Settings: clicking a theme commits it and it survives relaunch', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-commit-'))
   let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
     let win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
-    await openSettings(win, 'Appearance')
-    const committed = await win.evaluate(() => document.body.dataset.theme)
-
-    // preview, then close with Escape while the pointer is still on the row —
-    // no mouseleave fires, so close() is the only thing that can revert it
-    await win.locator('.appearance-theme', { hasText: 'Dracula' }).hover()
-    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe('dracula')
-    await win.keyboard.press('Escape')
-    await expect(win.locator('#settings')).toBeHidden()
-    await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe(committed)
-
-    // a click DOES commit, and the preview never wrote anything
     await openSettings(win, 'Appearance')
     await win.locator('.appearance-theme', { hasText: 'Nord' }).click()
     await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe('nord')

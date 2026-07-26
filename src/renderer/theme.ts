@@ -17,10 +17,13 @@ export class ThemeController {
     }
   }
 
-  // Paint only — body dataset + CSS custom properties + Monaco — WITHOUT touching the
-  // committed themeId/accent. No-ops when the same resolved theme + accent is already on
-  // screen, so sweeping the Appearance panel's theme list doesn't re-theme Monaco once
-  // per row. `painted` is keyed on the RESOLVED id so a follow-os OS flip still repaints.
+  // Paint — body dataset + CSS custom properties + Monaco. No-ops when the same resolved
+  // theme + accent is already on screen, so re-picking the active theme, or a settings
+  // re-render, costs nothing. `painted` is keyed on the RESOLVED id so a follow-os OS flip
+  // still repaints. Private, and `apply()` is its only caller: painting a theme the
+  // controller has NOT committed is what the deleted hover preview did, and the repaint it
+  // caused (all chrome vars + setTheme on both panes, twice per pass) is what read as a
+  // flicker. Keep paint reachable only through a state change.
   private paint(themeId: string, accent: string | null): void {
     const resolved = resolveThemeId(themeId)
     const key = resolved + '|' + (accent ?? '')
@@ -37,14 +40,6 @@ export class ThemeController {
     this.accent = accent
     this.paint(themeId, accent)
   }
-
-  // Hover preview in the Appearance panel: paints a theme without committing it. Uses the
-  // committed accent, so what you see under the cursor is exactly what a click would give
-  // you. currentId() keeps reporting the committed theme, so the panel's active-row
-  // highlight doesn't move. onPersist is reachable only from pick()/setAccent(), so a
-  // previewed theme can never be written to settings — by construction, not by care.
-  preview(themeId: string): void { this.paint(themeId, this.accent) }
-  endPreview(): void { this.paint(this.themeId, this.accent) }
 
   pick(themeId: string): void { this.apply(themeId, this.accent); this.onPersist(this.themeId, this.accent) }
   setAccent(accent: string | null): void { this.apply(this.themeId, accent); this.onPersist(this.themeId, this.accent) }

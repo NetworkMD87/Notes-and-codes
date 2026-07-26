@@ -9,8 +9,6 @@ export interface SettingsDeps {
   currentAccent: () => string | null
   pickTheme: (id: string) => void
   setAccent: (accent: string | null) => void
-  previewTheme: (id: string) => void
-  endPreview: () => void
   fontFamily: () => string
   setFontFamily: (name: string) => void
   fontLigatures: () => boolean
@@ -54,7 +52,6 @@ const CATEGORIES: { id: SettingsCategory; label: string }[] = [
 export class SettingsPanel {
   private host: HTMLElement
   private reg = new OverlayRegistration()
-  private hoverTimer: number | undefined
   private active: SettingsCategory = 'appearance'
   private recording = false
   private keyHandler?: (e: KeyboardEvent) => void
@@ -85,7 +82,6 @@ export class SettingsPanel {
     // racing overlayManager's capture-phase listener keeps this independent of listener
     // ordering — a second Esc then closes the panel as normal.
     if (this.recording) { this.cancelRecording(); return }
-    this.stopPreview()
     this.reg.release()
     this.host.classList.add('hidden')
   }
@@ -154,24 +150,6 @@ export class SettingsPanel {
     this.render()
   }
 
-  // Hover-intent delay: sweeping the cursor down 14 rows shouldn't re-theme Monaco 14 times.
-  private schedulePreview(id: string): void {
-    if (this.hoverTimer !== undefined) clearTimeout(this.hoverTimer)
-    this.hoverTimer = window.setTimeout(() => { this.hoverTimer = undefined; this.d.previewTheme(id) }, 120)
-  }
-
-  // Cancel any pending preview and repaint the committed theme. Called from the grid's
-  // mouseleave AND from close(). mouseleave does end up firing on most close paths too
-  // (Chromium recomputes :hover when close() applies display:none, and again when the
-  // pointer leaves the window) — but relying on that would make the revert depend on
-  // Chromium's hover-recomputation timing relative to the hide. Calling stopPreview()
-  // directly from close() makes the revert deterministic and ordered before the hide,
-  // regardless of what mouseleave does or when.
-  private stopPreview(): void {
-    if (this.hoverTimer !== undefined) { clearTimeout(this.hoverTimer); this.hoverTimer = undefined }
-    this.d.endPreview()
-  }
-
   private row(labelText: string): { row: HTMLDivElement; label: HTMLLabelElement } {
     const row = document.createElement('div'); row.className = 'appearance-row'
     const label = document.createElement('label'); label.textContent = labelText
@@ -204,11 +182,13 @@ export class SettingsPanel {
       }
       row.append(label, dots)
       row.onclick = () => { this.d.pickTheme(t.id); this.render() }
-      row.onmouseenter = () => this.schedulePreview(t.id)
       grid.appendChild(row)
     }
-    // on the GRID, not the row — row-to-row movement must not flash the committed theme
-    grid.onmouseleave = () => this.stopPreview()
+    // Deliberately no hover preview. It painted the whole app — chrome vars plus a Monaco
+    // setTheme on both panes — on hover-in and again on grid-leave, so a passing cursor read
+    // as two hard cuts in quick succession: indistinguishable from a rendering bug (owner
+    // decision, 2026-07-26). The per-row dots carry each theme's palette, and a click is
+    // reversible by clicking another row, so nothing is lost by requiring the click.
 
     // heading row: label + a live preview of the current accent + reset-to-default
     const head = document.createElement('div'); head.className = 'accent-head'
