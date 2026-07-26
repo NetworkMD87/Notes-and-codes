@@ -158,6 +158,37 @@ test('Settings: every theme row shows four palette swatches', async () => {
   }
 })
 
+// The accent swatches are laid out as two EQUAL rows, which is a relationship between two
+// numbers that live apart: the column count in index.html's .appearance-sw rule and the
+// length of ACCENT_PALETTE. Adding a 19th colour would silently produce a ragged last row,
+// so this asserts the division comes out exact rather than asserting either number alone.
+test('Settings: accent swatches fill two equal rows', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-swgrid-'))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#tabbar')).toBeVisible()
+    await openSettings(win, 'Appearance')
+
+    const swatches = await win.locator('#settings .appearance-sw .swatch').count()
+    // getComputedStyle resolves the repeat() to one used pixel value per track, so the
+    // track count is the split — read it rather than re-stating the number from the CSS.
+    const columns = await win.evaluate(() =>
+      getComputedStyle(document.querySelector('#settings .appearance-sw')!)
+        .gridTemplateColumns.split(' ').length
+    )
+    // Deliberately no literal 18 or 9 here: growing the palette to 20 and the grid to 10 is
+    // still two equal rows and should stay green. What must not happen is the two numbers
+    // drifting apart from each other.
+    expect(swatches).toBeGreaterThan(0)
+    expect(swatches % columns).toBe(0)   // no ragged last row
+    expect(swatches / columns).toBe(2)   // and exactly two rows, not one or three
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 // The old #appearance overlay is gone (Task 3), and the header's ◐ theme button is gone too
 // — it opened Settings on Appearance, which is exactly what the toolbar gear already does.
 // The two remaining deep-links, the palette's "Appearance…" command and the View ▸
