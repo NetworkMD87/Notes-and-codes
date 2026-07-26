@@ -17,7 +17,7 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — v1.16.0 is merged; installer eyeball + tag still ahead
+## ▶ NEXT ACTION — v1.16.0 is merged and eyeballed; tag + release still ahead
 
 **v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
 portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable
@@ -43,11 +43,26 @@ row is name + path, which fights line numbers and snippets. A dirty buffer is se
 content and its path is sent to main as a skip-set, so one rule covers both staleness and duplication.
 See **Phase 3.6** below. _Manual eyeball passed on the packaged 1.15.0 build (2026-07-26)._
 
-**v1.16.0 — Sidebar folder panel + recent folders (merged to `master` via PR #6, 2026-07-26;
-installer eyeball + tag still ahead)** — the sidebar edge tab is now always visible; with
-no folder open it offers a folder panel (**Open Folder…** + up to 10 recent folders, pruned on
-click if one has gone) and the sidebar header becomes a click-to-switch folder control carrying the
-same recents. `Toggle Sidebar` no longer warns you need a folder open. See **Phase 3.6** below.
+**v1.16.0 — Sidebar folder panel + recent folders + an Appearance tidy-up (merged to `master`;
+tag ahead)** — the sidebar edge tab is now always visible; with no folder open it offers a folder
+panel (**Open Folder…** + up to 10 recent folders, pruned on click if one has gone) and the sidebar
+header becomes a click-to-switch folder control carrying the same recents. `Toggle Sidebar` no
+longer warns you need a folder open (PR #6). See **Phase 3.6** below.
+
+Three follow-ups landed on `master` the same day, all owner-driven from using the build:
+- ✅ **Header `◐` theme button removed** — it and the toolbar gear were wired to the same call
+  (`openSettings('appearance')`, the gear's default category), sitting side by side. Five entry
+  points to Appearance remain, so only the element and its `onclick` went.
+- ✅ **Appearance hover live-preview removed** — painting an uncommitted theme meant every chrome
+  var plus `setTheme` on both Monaco panes, on hover-in and again on grid-leave; a passing cursor
+  read as a rendering bug. `ThemeController.preview`/`endPreview` are gone and `apply()` is now
+  `paint()`'s only caller, so nothing can paint a theme that hasn't been committed. The old hover
+  test is replaced by its inverse (hover changes nothing), falsified before being trusted.
+- ✅ **Accent swatch grid + heading spacing** — the 18 swatches were a wrapping flex row that split
+  differently with panel width; now a fixed 9-column grid (two equal rows), guarded by a smoke test
+  asserting the count divides evenly by the track count rather than restating either number. The
+  **Accent** heading gained an 18px top margin — Theme and Accent share one wrapper, so neither got
+  `.settings-detail`'s child gap and the heading sat flush against the last theme row.
 
 **Two correctness fixes that landed on `master` after v1.14.0** — both rode v1.14.1:
 - ✅ **`overlayManager` registration-overwrite sweep** — the audit of this turned out **wider and

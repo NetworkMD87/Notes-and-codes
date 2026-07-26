@@ -6,7 +6,7 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 
 ## [1.16.0] — 2026-07-26
 
-_The sidebar tab is always there now, and it remembers your folders._
+_The sidebar tab is always there now and it remembers your folders — plus a calmer Appearance panel._
 
 ### Added
 - The sidebar edge tab is always visible. With no folder open it opens a folder panel with an
@@ -16,6 +16,14 @@ _The sidebar tab is always there now, and it remembers your folders._
 
 ### Changed
 - **Toggle Sidebar** no longer warns that you need a folder open — it shows the folder panel instead.
+- Themes no longer change as your pointer passes over the list in Settings ▸ Appearance. Hovering
+  used to repaint the whole window and then repaint it back, which looked like the app glitching.
+  Click a theme to apply it; the four colour dots on each row show you what you're picking.
+- The header's half-circle theme button is gone. It opened Settings on the Appearance page, which
+  is exactly where the gear button next to it already went. Appearance is still reachable from the
+  gear, `Ctrl+,`, the command palette, and View ▸ Appearance….
+- The accent colours in Settings ▸ Appearance sit in two even rows of nine instead of re-wrapping
+  raggedly, and the **Accent** heading no longer sits squashed against the theme list above it.
 
 ### Fixed
 - A recent folder that has been deleted or moved is removed from the list the moment you click it,
