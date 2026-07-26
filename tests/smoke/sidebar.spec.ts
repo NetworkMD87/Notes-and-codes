@@ -113,6 +113,75 @@ test('the edge tab is always available and opens the folder panel with no folder
   }
 })
 
+/** A user-data dir with a seeded recent-folders list and NO settings.json, so the app starts
+ *  with no folder open and the panel is what renders. */
+function seededRecents(paths: string[]): string {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  writeFileSync(join(userDataDir, 'recent-folders.json'), JSON.stringify(paths))
+  return userDataDir
+}
+
+test('the folder panel lists recent folders and opening one shows its tree', async () => {
+  const projectDir = mkdtempSync(join(tmpdir(), 'notes-proj-'))
+  writeFileSync(join(projectDir, 'readme.md'), '# hi')
+  const userDataDir = seededRecents([projectDir])
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await win.locator('.sb-toggle').click()
+    const row = win.locator('.sb-recent-row', { hasText: basename(projectDir) })
+    await expect(row).toBeVisible()
+    await row.click()
+    // The tree replacing the panel is the completion signal — assert on a real file row.
+    await expect(win.locator('.sb-row', { hasText: 'readme.md' })).toBeVisible()
+    await expect(win.locator('.sb-panel')).toHaveCount(0)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+    rmSync(projectDir, { recursive: true, force: true })
+  }
+})
+
+test('clicking a recent folder that no longer exists prunes it from the list', async () => {
+  const gone = join(tmpdir(), 'notes-proj-deleted-2f9c1a')  // never created
+  const userDataDir = seededRecents([gone])
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await win.locator('.sb-toggle').click()
+    await expect(win.locator('.sb-recent-row')).toHaveCount(1)
+    await win.locator('.sb-recent-row').click()
+    await expect(win.locator('.sb-recent-row')).toHaveCount(0)  // pruned
+    await expect(win.locator('.sb-panel')).toBeVisible()        // no folder was opened
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('opening a folder records it in the recent list', async () => {
+  const projectDir = mkdtempSync(join(tmpdir(), 'notes-proj-'))
+  writeFileSync(join(projectDir, 'readme.md'), '# hi')
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true, lastFolder: projectDir, sidebarVisible: true,
+  }))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#sidebar .sb-row', { hasText: 'readme.md' })).toBeVisible()
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('.palette-row', { hasText: 'Close Folder' }).first().click()
+    await win.locator('.sb-toggle').click()
+    // Restore-on-launch went through openFolder(), so the visit must have been recorded.
+    await expect(win.locator('.sb-recent-row', { hasText: basename(projectDir) })).toBeVisible()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+    rmSync(projectDir, { recursive: true, force: true })
+  }
+})
+
 test('opening a file highlights (marks active) its row in the sidebar', async () => {
   const { userDataDir, projectDir } = seededFolder()
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })

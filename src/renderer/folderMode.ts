@@ -38,7 +38,12 @@ export class FolderMode {
       truncated: () => this.indexTruncated,
       openFile: d.openFile
     })
-    this.panel = new FolderPanel(d.sidebarEl, { pickFolder: () => d.pickFolder() })
+    this.panel = new FolderPanel(d.sidebarEl, {
+      pickFolder: () => d.pickFolder(),
+      recents: () => window.api.loadRecentFolders(),
+      chooseRecent: (p) => this.chooseRecent(p),
+      clearRecents: async () => { await window.api.clearRecentFolders() }
+    })
     window.api.onDirChanged(() => void this.onDiskChange())
   }
 
@@ -55,6 +60,7 @@ export class FolderMode {
     this.sidebar.render()
     await window.api.watchDir(root)
     await window.api.updateSettings({ lastFolder: root, sidebarVisible: true })
+    void window.api.addRecentFolder(root)
     void this.reindex()
   }
 
@@ -79,7 +85,21 @@ export class FolderMode {
   /** Mount whichever view matches the current state. The one place that decision is made. */
   private renderSidebar(): void {
     if (this.model.root) this.sidebar.render()
-    else this.panel.render()
+    else void this.panel.render()
+  }
+
+  /** Shared by the folder panel and the header switcher: open a recent folder, or prune it and
+   *  say so if it has gone. One owner, so the two surfaces cannot disagree about dead entries.
+   *  Pruning happens on click rather than on load, so a folder on a temporarily-offline drive is
+   *  not silently forgotten. */
+  private async chooseRecent(path: string): Promise<'opened' | 'gone'> {
+    if (!await window.api.dirExists(path)) {
+      await window.api.removeRecentFolder(path)
+      toast('Folder no longer exists.', 'error')
+      return 'gone'
+    }
+    await this.openFolder(path)
+    return 'opened'
   }
 
   /** Reflect the active editor file in the sidebar (highlights its row). No-op with no folder open. */
