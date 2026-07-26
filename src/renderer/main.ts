@@ -254,6 +254,16 @@ function scheduleSessionSave(): void {
   }, 500) as unknown as number
 }
 
+// The app is only truly ready once boot() has finished applying persisted settings — until
+// then boot() will happily overwrite a user action that landed first (it re-applies
+// settings.alwaysOnTop unconditionally below). `#tabbar` cannot be that signal: it is static
+// markup in index.html, so it is visible almost immediately and says nothing about whether
+// settings have been applied. Set deliberately on BOTH paths that leave a usable window —
+// a clean boot and the catch-fallback at the bottom of this file — but NOT on the
+// preload-bridge failure above, where there is no app to be ready and a caller waiting on
+// this should time out rather than proceed against a dead window.
+function markBooted(): void { document.body.dataset.booted = 'true' }
+
 async function boot(): Promise<void> {
   if (!window.api) {
     document.body.textContent = 'Failed to initialize: the preload bridge did not load.'
@@ -285,6 +295,7 @@ async function boot(): Promise<void> {
   showActive()
   reportDirty()
   await folder.restore()
+  markBooted()
 }
 
 window.api.onSaveAllAndQuit(async () => {
@@ -894,6 +905,9 @@ boot().catch(err => {
   console.error('boot failed', err)
   toast('Could not restore your last session — starting fresh.', 'error')
   try { manager.create(); showActive() } catch (e) { console.error('fallback boot failed', e) }
+  // Recovered into a usable window, so it is ready — and nothing further will overwrite a
+  // user action. Without this a failed boot would hang every caller waiting on the signal.
+  markBooted()
 })
 
 const HISTORY_INTERVAL_MS = 5 * 60 * 1000

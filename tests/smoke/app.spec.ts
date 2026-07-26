@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
+import { waitForBoot } from './appReady'
 
 test('launches, creates tabs, splits, toggles theme', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
@@ -180,7 +181,9 @@ test('snippets save/insert/manage and always-on-top toggle', async () => {
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    // Not `#tabbar` — this test toggles always-on-top, which boot() also writes, so it must
+    // wait for boot to finish or boot overwrites the toggle. See appReady.ts.
+    await waitForBoot(win)
 
     // Manage Snippets -> overlay opens; add a snippet via the manager
     await win.keyboard.press('Control+Shift+P')
@@ -216,7 +219,9 @@ test('zoom changes font size and the app menu exists', async () => {
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    // Zoom writes fontSize, which boot() also applies (main.ts) — same race as the
+    // always-on-top test above, so wait for boot rather than `#tabbar`.
+    await waitForBoot(win)
     const hasMenu = await app.evaluate(({ Menu }) => Menu.getApplicationMenu() !== null)
     expect(hasMenu).toBe(true)
 
