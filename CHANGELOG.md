@@ -4,6 +4,27 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [1.15.0] — 2026-07-26
+
+_Find in Files: search what's **inside** your files, not just their names._
+
+### Added
+
+- **Find in Files** (`Ctrl+Shift+F`, Edit menu, or the command palette) — search the text inside
+  every file in the open folder **and** every open tab. Results group by file with line numbers and
+  a preview of each match; pressing Enter opens the file, puts the cursor on the match and selects
+  it, and seeds the editor's own find widget so `F3` walks the rest of that file. Toggles for
+  match-case and whole-word. Until now the app could only match file *names*.
+  - **Unsaved edits are searched, not the stale copy on disk.** If a file is open with changes you
+    haven't saved, Find in Files searches what's actually on your screen — so it won't offer you
+    text you already deleted, or miss text you just typed.
+  - Works with no folder open, searching just your tabs.
+  - Skips `node_modules` and `.git` (unless Show-all-files is on), binary files, and files over 1 MB.
+    UTF-16 files are searched correctly, not read as mojibake.
+  - Results are capped (20 per file, 1000 total) with a footer saying so, and a slow search over a
+    large folder can be superseded by typing rather than running to completion.
+  - _Deferred: regular expressions, replace-across-files, include/exclude globs._
+
 ## [1.14.1] — 2026-07-25
 
 _Patch release: the Format Document keyboard shortcut finally works._
