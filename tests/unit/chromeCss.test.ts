@@ -161,3 +161,12 @@ describe('shared badge chip', () => {
     expect(rule).toContain('font-family')
   })
 })
+
+describe('sidebar folder panel', () => {
+  it('defines the panel, its recent rows and the clear control', () => {
+    expect(ruleFor('.sb-panel')).toContain('flex-direction:column')
+    expect(ruleFor('.sb-open-btn')).toContain('border:1px solid var(--accent)')
+    expect(ruleFor('.sb-recent-row')).toContain('cursor:pointer')
+    expect(ruleFor('.sb-clear')).toContain('color:var(--muted)')
+  })
+})

@@ -13,6 +13,8 @@ export const EMPTY_ICONS = {
   ],
   // magnifier — for Find in Files
   search: ['M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z', 'M16.5 16.5 21 21'],
+  // folder — for the no-folder sidebar panel (same silhouette as the sidebar's directory glyph)
+  folder: ['M4 7a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7z'],
 }
 
 export function emptyState(className: string, iconPaths: string[], message: string): HTMLDivElement {
