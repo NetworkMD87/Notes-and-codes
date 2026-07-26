@@ -31,10 +31,11 @@ export class FolderPanel {
 
     const recents = await this.d.recents()
     if (!recents.length) {
-      // Set only once the recents round-trip has resolved, so a test can tell "finished with
-      // zero rows" from "mid-render, rows not appended yet" — the two are otherwise identical
-      // in the DOM. Must be stamped on every completing path, including this early return.
-      panel.dataset.rendered = '1'
+      // Stamped only once the recents round-trip has resolved, and carrying the resolved count, so
+      // a test can assert on a positive fact. A bare `[data-rendered] .sb-recent-row` count of 0 is
+      // also satisfied by this panel not being in the DOM yet — which is true for the whole IPC
+      // round-trip, because replaceChildren() mounts a fresh panel before the await.
+      panel.dataset.recents = String(recents.length)
       return
     }
     const head = document.createElement('div')
@@ -48,7 +49,8 @@ export class FolderPanel {
     clear.textContent = 'Clear'
     clear.onclick = () => void this.d.clearRecents().then(() => this.render())
     panel.append(head, list, clear)
-    panel.dataset.rendered = '1'
+    // Stamped after the rows are appended, so a completed render is never observable without them.
+    panel.dataset.recents = String(recents.length)
   }
 
   private recentRow(path: string): HTMLElement {

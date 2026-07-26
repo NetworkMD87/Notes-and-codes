@@ -203,12 +203,14 @@ test('clicking a recent folder that no longer exists prunes it from the list', a
     await win.locator('.sb-toggle').click()
     await expect(win.locator('.sb-recent-row')).toHaveCount(1)
     await win.locator('.sb-recent-row').click()
-    // Anchored on the panel's post-await completion marker, not on the raw row count: render()
+    // Anchored on a positive stamp of the resolved row count, not on the raw row count: render()
     // clears and re-mounts the panel shell *before* awaiting the recents store, so a bare
     // `.sb-recent-row` count of 0 would also pass transiently mid-render (before rows are
-    // re-appended) even if the prune never actually removed the entry. data-rendered='1' is set
-    // only once that await resolves, on every completing path.
-    await expect(win.locator('.sb-panel[data-rendered] .sb-recent-row')).toHaveCount(0)  // pruned
+    // re-appended), and even `[data-rendered] .sb-recent-row` count of 0 is equally satisfied by
+    // the marked panel simply not being in the DOM during that whole window. data-recents="0" is
+    // set only once the await resolves and can only be true once the round-trip is complete AND
+    // resolved zero rows — a count of 1 here cannot be satisfied by absence.
+    await expect(win.locator('.sb-panel[data-recents="0"]')).toHaveCount(1)  // pruned
     await expect(win.locator('.sb-panel')).toBeVisible()        // no folder was opened
   } finally {
     await app.close()
