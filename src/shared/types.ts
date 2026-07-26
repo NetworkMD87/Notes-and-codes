@@ -203,6 +203,12 @@ export interface Api {
   loadRecentFiles(): Promise<string[]>
   addRecentFile(path: string): Promise<string[]>
   clearRecentFiles(): Promise<void>
+  /** Recently opened folder roots, most-recent-first. `add`/`remove` return the updated list so
+   *  the renderer never has to re-read to stay in sync. */
+  loadRecentFolders(): Promise<string[]>
+  addRecentFolder(path: string): Promise<string[]>
+  removeRecentFolder(path: string): Promise<string[]>
+  clearRecentFolders(): Promise<void>
   pathForDroppedFile(file: File): string
   watchPaths(paths: string[]): Promise<void>
   onFileChanged(cb: (path: string) => void): void

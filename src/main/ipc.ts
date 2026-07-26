@@ -9,6 +9,7 @@ import { SettingsStore } from './settingsStore'
 import { ClipboardHistoryStore } from './clipboardHistoryStore'
 import { SnippetStore } from './snippetStore'
 import { RecentFilesStore } from './recentFilesStore'
+import { RecentFoldersStore } from './recentFoldersStore'
 import { FileWatcher } from './fileWatcher'
 import { FileHistoryStore } from './fileHistoryStore'
 import { HighlightStore } from './highlightStore'
@@ -21,6 +22,7 @@ export interface IpcDeps {
   // the renderer IPC hit the *same* store instance — one serialized write chain, no races.
   settings: SettingsStore
   recent: RecentFilesStore
+  recentFolders: RecentFoldersStore
   getWindow: () => BrowserWindow | null
   setContextMenu: (enabled: boolean) => Promise<void>
   setLoginItem: (enabled: boolean) => void
@@ -36,6 +38,7 @@ export function registerIpc(deps: IpcDeps): void {
   const clip = new ClipboardHistoryStore(deps.baseDir)
   const snippets = new SnippetStore(deps.baseDir)
   const recent = deps.recent
+  const recentFolders = deps.recentFolders
   const history = new FileHistoryStore(deps.baseDir)
   const highlights = new HighlightStore(deps.baseDir)
   // One-shot startup GC: drop history/highlight entries whose source file is gone, so
@@ -97,6 +100,10 @@ export function registerIpc(deps: IpcDeps): void {
   handle('recent:load', () => recent.load())
   handle('recent:add', async (_e, path: string) => { const result = await recent.add(path); deps.onRecentChanged?.(); return result })
   handle('recent:clear', () => recent.clear())
+  handle('recentFolders:load', () => recentFolders.load())
+  handle('recentFolders:add', (_e, path: string) => recentFolders.add(path))
+  handle('recentFolders:remove', (_e, path: string) => recentFolders.remove(path))
+  handle('recentFolders:clear', () => recentFolders.clear())
   handle('history:snapshot', (_e, path: string, content: string, eol: EolMode, encoding: Encoding) =>
     history.snapshot(path, content, eol, encoding))
   handle('history:list', (_e, path: string) => history.list(path))
