@@ -4,9 +4,17 @@ export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 export interface SearchOptions { caseSensitive: boolean; wholeWord: boolean }
 
 export interface SearchMatch {
+  /** 1-based line number — Monaco's own convention, so `editorPane.ts` can hand this straight
+   *  to `new monaco.Range(line, column, …)` with no off-by-one adjustment. Emitted as `i + 1`
+   *  by `searchText.ts`. */
   line: number
+  /** 1-based column of the match's START in the ORIGINAL line — not an offset into `preview`,
+   *  which may be truncated/shifted for a long line. Emitted as `m.index + 1`. */
   column: number
   length: number
+  /** Display-only excerpt of the line around the match (may be ellipsised for long lines).
+   *  Never used for positioning — `column` is the true column, always relative to the original
+   *  (untruncated) line. */
   preview: string
 }
 

@@ -41,4 +41,29 @@ describe('mergeResults', () => {
     const merged = mergeResults([f('C:\\p\\a.ts')], [f('C:\\p\\a.ts')])
     expect(merged).toHaveLength(1)
   })
+
+  // Windows paths are case-insensitive: C:\proj\a.txt and c:\proj\A.txt name the same file.
+  // Without case-folding the de-dupe, this pair would sail past `seen.has(...)` and the file
+  // would appear twice — once from the live buffer, once from its stale on-disk copy.
+  it('treats paths differing only by case as the same file', () => {
+    const merged = mergeResults([f('C:\\proj\\a.txt')], [f('c:\\proj\\A.txt')])
+    expect(merged).toHaveLength(1)
+  })
+
+  // Every untitled buffer has path:''. mergeResults keeps bufferResults unconditionally (only
+  // `disk` is ever filtered against the seen-set), so two untitled results can't collide today —
+  // but that safety is a property of the asymmetric merge shape, not of any one line, and a
+  // plausible future "simplify this" refactor (fold both lists into one seen-set-deduped pass)
+  // would silently collapse them. Pin it so that regression breaks loudly.
+  // Falsified 2026-07-25: rewriting mergeResults as a single seen-set pass over
+  // `[...bufferResults, ...disk]` (the natural "simplify" refactor) collapsed this to 1; the
+  // real fix (`.filter(Boolean)` before the case-fold, i.e. never seeding `seen` with '') was
+  // checked separately and does not by itself move this specific test, since disk is empty here
+  // and only bufferResults' own (unconditional) inclusion is what this test actually exercises.
+  it('keeps two untitled-buffer results distinct (empty path must not collide)', () => {
+    const untitled = (title: string): SearchFileResult =>
+      ({ path: '', title, matches: [{ line: 1, column: 1, length: 1, preview: 'x' }], truncated: false })
+    const merged = mergeResults([untitled('Untitled-1'), untitled('Untitled-2')], [])
+    expect(merged).toHaveLength(2)
+  })
 })

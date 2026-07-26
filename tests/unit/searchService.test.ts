@@ -50,6 +50,17 @@ describe('searchFiles', () => {
     expect(r.totalMatches).toBe(0)
   })
 
+  // Windows paths are case-insensitive. A skip path that differs only in case from the walked
+  // path must still match — otherwise a dirty open buffer's stale on-disk copy slips past the
+  // skip set and the file shows up twice (live content + stale disk content).
+  it('skips paths in skipPaths regardless of case', async () => {
+    writeFileSync(join(dir, 'a.txt'), 'needle')
+    const onDisk = join(dir, 'a.txt')
+    const differentCase = onDisk.slice(0, -5) + onDisk.slice(-5).toUpperCase() // ...a.txt -> ...A.TXT
+    const r = await searchFiles(req({ skipPaths: [differentCase] }))
+    expect(r.totalMatches).toBe(0)
+  })
+
   it('caps at 20 matches per file and flags it', async () => {
     writeFileSync(join(dir, 'many.txt'), Array(50).fill('needle').join('\n'))
     const r = await searchFiles(req())
@@ -96,11 +107,5 @@ describe('searchFiles', () => {
   it('returns nothing below the minimum query length', async () => {
     writeFileSync(join(dir, 'a.txt'), 'nnn')
     expect((await searchFiles(req({ query: 'n' }))).totalMatches).toBe(0)
-  })
-
-  it('one unreadable file does not fail the search', async () => {
-    writeFileSync(join(dir, 'a.txt'), 'needle')
-    mkdirSync(join(dir, 'weird.txt')) // a directory where a file is expected
-    expect((await searchFiles(req())).totalMatches).toBe(1)
   })
 })

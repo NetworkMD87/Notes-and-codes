@@ -4,7 +4,22 @@
 import type { SearchMatch, SearchOptions } from './types'
 
 export const MIN_QUERY_LENGTH = 2
+// Cross-process invariant: main (searchService.ts) and the renderer (findInFilesModel.ts) must
+// cap at the same number or their results silently disagree — the exact class of bug the shared
+// matcher exists to prevent. One declaration, imported by both.
+export const MAX_MATCHES_PER_FILE = 20
 const PREVIEW_RADIUS = 100
+
+/**
+ * Case-fold a path for identity comparisons (skip sets, de-dupe merges). Windows filesystem
+ * paths are case-insensitive (`C:\proj\a.txt` and `c:\proj\A.txt` name the same file), and this
+ * is a Windows-only app, so folding is unconditional — no platform branch needed. Shared here
+ * (rather than duplicated in main and renderer) so both processes agree on file identity the
+ * same way they agree on match content.
+ */
+export function pathKey(path: string): string {
+  return path.toLowerCase()
+}
 
 export function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
