@@ -122,6 +122,7 @@ in the tray, starts empty, and never asks you to make a project first.
 | Save / Save As / Save All | Ctrl+S / Ctrl+Shift+A / Ctrl+Shift+S |
 | New tab / Close tab | Ctrl+T / Ctrl+W |
 | Find / Replace | Ctrl+F / Ctrl+H |
+| Find in Files | Ctrl+Shift+F |
 | Toggle split | Ctrl+\\ |
 | Zoom in / out / reset | Ctrl+= / Ctrl+- / Ctrl+0 |
 | Settings | Ctrl+, |
