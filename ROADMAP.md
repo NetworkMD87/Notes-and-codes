@@ -237,15 +237,16 @@ Neither depends on 3.5 — they can land before, during, or after it._
   UTF-16 decoding, the skip-set). 7 task reviews + a whole-branch review + one fix wave; the reviews
   found **7 defects in the plan itself**, including two tests that could not have failed.
   _Deferred: regex, replace-across-files, include/exclude globs, streaming results._
-- ✅ **Sidebar folder panel + recent folders** (**S**, v1.16.0) — the sidebar edge tab is now always
-  visible, no longer gated on a folder being open. With none open it shows a folder panel with an
-  **Open Folder…** button and a recent-folders list (up to 10, case-folded dedupe, mirroring
-  `RecentFilesStore`); the sidebar header doubles as a click-to-switch folder control offering the
-  same recents plus Open Folder… / Close Folder. A recent folder that's been deleted or moved is
-  pruned from the list the moment you click it, with a toast, instead of failing silently — one
-  `chooseRecent` path shared by the panel and the header switcher so the two surfaces can't disagree
-  about a dead entry. **Toggle Sidebar** no longer warns that you need a folder open first; it shows
-  the panel instead.
+- ✅ **Sidebar folder panel + recent folders** (**S**, v1.16.0, code-complete on
+  `feat/sidebar-folder-panel` — **pending merge & tag**, see the NEXT ACTION note above) — the
+  sidebar edge tab is now always visible, no longer gated on a folder being open. With none open it
+  shows a folder panel with an **Open Folder…** button and a recent-folders list (up to 10,
+  case-folded dedupe, mirroring `RecentFilesStore`); the sidebar header doubles as a click-to-switch
+  folder control offering the same recents plus Open Folder… / Close Folder. A recent folder that's
+  been deleted or moved is pruned from the list the moment you click it, with a toast, instead of
+  failing silently — one `chooseRecent` path shared by the panel and the header switcher so the two
+  surfaces can't disagree about a dead entry. **Toggle Sidebar** no longer warns that you need a
+  folder open first; it shows the panel instead.
 - ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
   **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
   from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco
