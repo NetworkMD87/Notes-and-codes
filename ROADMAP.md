@@ -35,8 +35,9 @@ keypress check on the packaged build. Also published `AUDIT-CHECKLIST.md` (READM
 file that was gitignored and had never been committed) and closed its last two manual checks, H1 and
 L4 — the audit record now has zero open items, code or manual.
 
-**v1.15.0 — Find in Files (in review, PR #5)** — content search across the open folder **and** open
-tabs, on `Ctrl+Shift+F` / Edit menu / palette. Closes the "content search in quick-open" deferred
+**v1.15.0 shipped 2026-07-26** — **Find in Files**: content search across the open folder **and** open
+tabs, on `Ctrl+Shift+F` / Edit menu / palette. Merged via PR #5, tagged `v1.15.0`, GitHub release live
+with installer + portable. Closes the "content search in quick-open" deferred
 item from folder mode, though it landed as its own overlay rather than a quick-open mode: quick-open's
 row is name + path, which fights line numbers and snippets. A dirty buffer is searched from its live
 content and its path is sent to main as a skip-set, so one rule covers both staleness and duplication.
