@@ -56,6 +56,12 @@ test('Ctrl+Shift+F finds a match in the folder and jumps to it', async () => {
     await win.keyboard.press('Enter')
     await expect(win.locator('.fif-box')).toBeHidden()
     await expect(win.locator('#paneA .view-lines')).toContainText('zorkmid')
+    // openPath alone (no revealMatch) would leave the cursor at Ln 1 — the file's text renders
+    // either way, so the assertion above passes even with revealMatch deleted. The match is on
+    // line 2 of the fixture; only revealMatch moves the cursor there, and only revealMatch seeds
+    // Monaco's find widget from the selection it makes.
+    await expect(win.locator('#statusbar')).toContainText('Ln 2')
+    await expect(win.locator('.find-widget.visible')).toBeVisible()
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
@@ -124,6 +130,11 @@ test('a dirty buffer for a file inside an open folder is searched live, not from
     await expect(win.locator('.fif-row')).toHaveCount(1)      // (a) live content IS searched
 
     await win.locator('.fif-head input').fill('ondiskonly')
+    // render() clears the list synchronously while `searching` is still true (findInFiles.ts
+    // render()/runSearch()), so `.fif-row` reads 0 the instant the query changes too — before the
+    // disk search has even been asked. Anchor on the completion-only `.fif-empty` state first so
+    // the zero-count assertion below can't be satisfied by that transient empty list.
+    await expect(win.locator('.fif-empty')).toBeVisible()   // search finished, zero results
     await expect(win.locator('.fif-row')).toHaveCount(0)      // (b) the stale on-disk copy is NOT — proves skipPaths
   } finally {
     await app.close()
