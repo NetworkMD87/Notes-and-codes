@@ -136,12 +136,18 @@ See **Phase 3.6** below. _Manual eyeball passed on the packaged 1.15.0 build (20
 
 _The big, on-brand features — built on the Phase-2 styled base, so only their structural layout is new (colors/spacing inherited)._
 
-> ▶ **STATUS (2026-07-20):** all Phase 3 power features shipped (file history, Markdown export,
+> ▶ **STATUS (updated 2026-07-26):** all Phase 3 power features shipped (file history, Markdown export,
 > autosave-to-disk, Format Document, folder mode, text highlighter); the Phase 3.5 design-polish pass
 > shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
 > v1.12.2). **Phase 3.7 polish is complete — all 7 slices merged, released as v1.13.0**, tagged and
 > published. See ▶ NEXT ACTION at the top.
-> **Live known issues (deferred):** none.
+> **Live known issues (deferred), both from Find in Files (v1.15.0), both small:**
+> ① launching the exe from a shell with a **relative** path arg can double-list that file in search
+> results — `pickFileArg` returns the raw argv string, so its `filePath` never matches the absolute
+> path `walkFiles` produces, and neither the skip-set nor the merge de-dupes it. Pre-existing to the
+> search feature; a proper fix changes `pickFileArg`'s contract and breaks `fileArg.test.ts`.
+> Explorer / taskbar / file-association launches are unaffected. ② flipping the match-case or
+> whole-word toggles doesn't reset the selected result row (changing the query text does).
 > _(① the native `Shift+Alt+F` Format hotkey is resolved — fixed 2026-07-25, details under
 > **Format Document** below. ② the clean-quit clipboard/session flush is resolved — audit R1, v1.12.1. ③ the static
 > exe/installer icon not theme-swapping is resolved by design as of v1.13.0 — it carries the `{&}`
