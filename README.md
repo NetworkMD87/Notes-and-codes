@@ -48,8 +48,8 @@ in the tray, starts empty, and never asks you to make a project first.
 ### Look & feel
 
 - **13 cohesive themes** — Light, Dark, Dark Dimmed, Solarized Dark/Light, One Dark, Monokai,
-  High-Contrast, Nord, Dracula, Gruvbox Dark/Light, Tokyo Night, plus follow-OS. The theme list
-  shows each theme's own palette as swatches and **live-previews it on hover**.
+  High-Contrast, Nord, Dracula, Gruvbox Dark/Light, Tokyo Night, plus follow-OS. Each row in the
+  theme list **shows that theme's own palette as swatches**, so you can see what you're picking.
 - A per-theme accent you can override from **18 curated colours**, with automatic text-contrast
   correction so light accents stay legible.
 - Bundled JetBrains Mono, Fira Code and IBM Plex Mono (plus system fonts), and a **separate
@@ -137,12 +137,12 @@ The full, searchable list lives in the app under **Help ▸ Shortcuts & Commands
 
 Every claim below is checkable from the repo — that's the point of listing them.
 
-**Tests.** 42 unit test files (345 tests, Vitest) covering the pure logic — buffer management,
+**Tests.** 47 unit test files (390 tests, Vitest) covering the pure logic — buffer management,
 encoding, the store layer, theme derivation, path/argv handling, the IPC sender guard. These plus
 a strict `tsc` type-check run on **every push and pull request** on Windows runners
 ([CI workflow](.github/workflows/ci.yml)) — that's what the badge above reports.
 
-On top of those, 17 Playwright specs (85 tests) drive the **real built Electron app** in a window,
+On top of those, 18 Playwright specs (98 tests) drive the **real built Electron app** in a window,
 each with an isolated `--user-data-dir` so they never touch a real session. These run locally
 before a release rather than in CI: GitHub-hosted runners don't reliably paint Monaco's viewport,
 so every test asserting on rendered editor content fails there regardless of timeout. The suite is

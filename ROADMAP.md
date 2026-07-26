@@ -219,7 +219,8 @@ hierarchy, micro-motion._
   de-loudified status bar; stacked command palette + themed focus; a reusable token-driven micro-motion
   layer (`overlayIn` entry + `prefers-reduced-motion` kill-switch that later polish inherits); accent
   borders on all floating chrome; one unified container-agnostic scrollbar; shared `overlayManager`
-  (capture-phase Esc closes the topmost overlay); `accent-color` checkboxes; icon-only `◐` theme button;
+  (capture-phase Esc closes the topmost overlay); `accent-color` checkboxes; icon-only `◐` theme button
+  (_removed in v1.16.0 — redundant once the Settings gear landed beside it_);
   highlighter `crosshair`; inline-SVG empty-state glyphs. _Slice C/D leftovers (theme-picker swatch
   previews, highlighter pen-tip SVG cursor) are gathered into **Phase 3.7** below._
 - ✅ **User polish notes (P1 eyeball, 2026-07-03)** — all delivered: accent border on every toast +
@@ -272,8 +273,8 @@ Neither depends on 3.5 — they can land before, during, or after it._
   UTF-16 decoding, the skip-set). 7 task reviews + a whole-branch review + one fix wave; the reviews
   found **7 defects in the plan itself**, including two tests that could not have failed.
   _Deferred: regex, replace-across-files, include/exclude globs, streaming results._
-- ✅ **Sidebar folder panel + recent folders** (**S**, v1.16.0, merged via PR #6 —
-  **pending installer eyeball & tag**, see the NEXT ACTION note above) — the
+- ✅ **Sidebar folder panel + recent folders** (**S**, shipped v1.16.0, merged via PR #6;
+  eyeballed on the packaged build, tagged and released 2026-07-26) — the
   sidebar edge tab is now always visible, no longer gated on a folder being open. With none open it
   shows a folder panel with an **Open Folder…** button and a recent-folders list (up to 10,
   case-folded dedupe, mirroring `RecentFilesStore`); the sidebar header doubles as a click-to-switch
@@ -455,7 +456,8 @@ command-registry changes on systems already in place. Shipped as **one release u
 - ✅ **Settings home** (not originally on the roadmap — shipped v1.14.0) — a new Settings overlay
   (gear button on the toolbar / `Ctrl+,` / palette `Settings…` / `File ▸ Preferences…`) with a left
   category nav: Appearance / Font / Editor / Folder / Startup / Integration. Replaces the old,
-  Appearance-only panel; its contents (incl. the theme hover live-preview) moved in unchanged. The
+  Appearance-only panel; its contents (incl. the theme hover live-preview, _since removed in
+  v1.16.0 — see the top of this file_) moved in unchanged. The
   Windows "Open with" right-click-menu toggle moved out of the Tools menu into Settings ▸
   Integration in the same pass (it was a setting filed as a tool), and its previously-duplicated
   toggle logic is now single-sourced. Forced by the configurable-hotkey and launch-on-login items
