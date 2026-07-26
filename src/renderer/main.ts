@@ -38,6 +38,7 @@ import { formatText, isFormattable } from './formatter'
 import { HighlightManager } from './highlightManager'
 import { clampToLength } from './highlights'
 import { HelpOverlay } from './helpOverlay'
+import { FindInFiles } from './findInFiles'
 import { uiFontStack } from './uiFont'
 import type { Highlight, HighlightColour } from '../shared/types'
 import { formatAccel } from '../shared/accelerator'
@@ -733,6 +734,21 @@ function refreshToolbar(): void {
 
 const palette = new CommandPalette()
 const helpOverlay = new HelpOverlay()
+const findInFiles = new FindInFiles(document.getElementById('app')!, {
+  root: () => folder.root(),
+  showAll: () => showAllFiles,
+  buffers: () => manager.list().map(b => ({ filePath: b.filePath, title: b.title, content: b.content })),
+  openMatch: (path, title, line, column, length) => {
+    void (async () => {
+      // openPath toasts and returns false on failure (deleted/renamed/locked file); revealMatch
+      // must not run then — it would move the cursor and seed the find widget in whatever
+      // buffer happens to be active, which has nothing to do with this match.
+      if (path) { if (!(await openPath(path))) return }
+      else { const b = manager.list().find(x => x.title === title); if (!b) return; manager.setActive(b.id); showActive() }
+      paneFor(view.focusedPane()).revealMatch(line, column, length)
+    })()
+  },
+})
 registerCommands({
   palette, manager, view, diff, paneFor, showActive, scheduleSessionSave, closeTab,
   saveActive, saveAll, openFromDisk, startDiff, diffClipboard, diffFiles,
@@ -749,6 +765,7 @@ registerCommands({
   toggleSidebar: () => folder.toggleSidebar(),
   revealActive: () => void folder.revealActive(),
   quickOpen: () => folder.openQuickOpen(),
+  openFindInFiles: () => findInFiles.open(),
   toggleAutoSaveToDisk,
   exportHtml,
   exportPdf,
@@ -765,17 +782,22 @@ registerCommands({
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); findInFiles.open() }
   if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
   if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === ',') { e.preventDefault(); openSettings() }
   // Escape (incl. closing the diff) is handled centrally by overlayManager.
 })
 
-async function openPath(path: string): Promise<void> {
+// Returns whether the file actually opened. Callers that only fire-and-forget (drop, argv,
+// sidebar) can ignore it with `void`; a caller that does something ELSE with the buffer
+// afterward (openMatch below) must gate on it — see the comment there.
+async function openPath(path: string): Promise<boolean> {
   try {
     const r = await window.api.readFile(path)
-    if (!r.ok) { toast(r.reason, 'error'); return }
+    if (!r.ok) { toast(r.reason, 'error'); return false }
     manager.open(r.file); window.api.addRecentFile(path); showActive(); scheduleSessionSave()
-  } catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`, 'error') }
+    return true
+  } catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`, 'error'); return false }
 }
 
 function openPaths(): string[] { return manager.list().map(b => b.filePath).filter((p): p is string => !!p) }
@@ -855,6 +877,7 @@ installMenuCommands({
   revert: () => void revertActive(),
   'paste-history': pasteFromHistory, 'snip-insert': insertSnippet, 'snip-save': () => void saveSelectionAsSnippet(), 'snip-manage': manageSnippets,
   find: () => paneFor(view.focusedPane()).triggerFind(), replace: () => paneFor(view.focusedPane()).triggerReplace(),
+  'find-in-files': () => findInFiles.open(),
   'format-doc': () => void paneFor(view.focusedPane()).formatDocument(),
   'format-selection': () => void paneFor(view.focusedPane()).formatSelection(),
   ctxmenu: toggleContextMenu,

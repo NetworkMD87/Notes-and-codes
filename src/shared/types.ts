@@ -1,6 +1,46 @@
 export type EolMode = 'LF' | 'CRLF'
 export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 
+export interface SearchOptions { caseSensitive: boolean; wholeWord: boolean }
+
+export interface SearchMatch {
+  /** 1-based line number — Monaco's own convention, so `editorPane.ts` can hand this straight
+   *  to `new monaco.Range(line, column, …)` with no off-by-one adjustment. Emitted as `i + 1`
+   *  by `searchText.ts`. */
+  line: number
+  /** 1-based column of the match's START in the ORIGINAL line — not an offset into `preview`,
+   *  which may be truncated/shifted for a long line. Emitted as `m.index + 1`. */
+  column: number
+  length: number
+  /** Display-only excerpt of the line around the match (may be ellipsised for long lines).
+   *  Never used for positioning — `column` is the true column, always relative to the original
+   *  (untruncated) line. */
+  preview: string
+}
+
+export interface SearchFileResult {
+  path: string           // absolute path; '' for an untitled buffer
+  title?: string         // tab title, only for untitled buffers
+  matches: SearchMatch[]
+  truncated: boolean     // per-file cap hit
+}
+
+export interface SearchRequest {
+  root: string
+  query: string
+  opts: SearchOptions
+  skipPaths: string[]
+  showAll: boolean
+  searchId: number
+}
+
+export interface SearchResponse {
+  files: SearchFileResult[]
+  totalMatches: number
+  truncated: boolean     // total cap hit, or the file index itself was truncated
+  searchId: number
+}
+
 export interface FileVersion { ts: number; content: string; eol: EolMode; encoding: Encoding }
 
 export interface DirEntry { name: string; path: string; isDir: boolean }
@@ -186,6 +226,7 @@ export interface Api {
   openFolderDialog(): Promise<string | null>
   readDir(path: string, showAll: boolean): Promise<DirEntry[]>
   walkFiles(path: string, showAll: boolean): Promise<WalkResult>
+  searchFiles(req: SearchRequest): Promise<SearchResponse>
   createFile(path: string): Promise<boolean>
   createFolder(path: string): Promise<boolean>
   renamePath(from: string, to: string): Promise<boolean>

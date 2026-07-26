@@ -35,6 +35,13 @@ keypress check on the packaged build. Also published `AUDIT-CHECKLIST.md` (READM
 file that was gitignored and had never been committed) and closed its last two manual checks, H1 and
 L4 — the audit record now has zero open items, code or manual.
 
+**v1.15.0 — Find in Files (in review, PR #5)** — content search across the open folder **and** open
+tabs, on `Ctrl+Shift+F` / Edit menu / palette. Closes the "content search in quick-open" deferred
+item from folder mode, though it landed as its own overlay rather than a quick-open mode: quick-open's
+row is name + path, which fights line numbers and snippets. A dirty buffer is searched from its live
+content and its path is sent to main as a skip-set, so one rule covers both staleness and duplication.
+See **Phase 3.6** below. _Manual eyeball passed on the packaged 1.15.0 build (2026-07-26)._
+
 **Two correctness fixes that landed on `master` after v1.14.0** — both rode v1.14.1:
 - ✅ **`overlayManager` registration-overwrite sweep** — the audit of this turned out **wider and
   worse** than the note claimed. Not 4 files but **9** (`commandPalette`, `quickOpen`, `helpOverlay`,
@@ -146,7 +153,7 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 - ✅ **Format Document** (shipped v1.6) — prettify the active buffer (prettier standalone, lazy-loaded) for JS/TS, JSON, CSS/SCSS/LESS, HTML, Markdown, YAML; palette + Edit menu + Format Selection; optional manual-save-only format-on-save. Code-complete + whole-branch reviewed on `feat/format-document` (1 Important found + fixed: stale-text overwrite guard). Smoke-verified: palette reformat, Format Selection, format-on-save + toggle persist, unsupported-language no-op + toast, syntax-error buffer-untouched + toast, Edit-menu items + `Shift+Alt+F` accelerator registered. Manual test passed: Edit-menu reformat, no cursor/scroll jump.
   - ✅ **Fixed: the native `Shift+Alt+F` hotkey (v1.14.1, 2026-07-25).** Manually verified on the packaged build — JS/JSON/CSS all reformat via prettier on a real keypress, plaintext still toasts. Root cause was neither hypothesis on the old list: Monaco's dynamic keybindings are **global** (`editor.addCommand` has no `when` scoping it to one editor), and `SplitView` constructs both panes up front — so `EditorPane`'s per-pane registration bound the chord twice and the **last** one (hidden paneB, empty model) always won, returning at `!text.trim()`. That also killed the Edit-menu accelerator, because matching a binding makes Monaco `preventDefault`+`stopPropagation` the key and Electron only fires menu accelerators for **unhandled** keys. Fix: one app-level `registerFormatKeybinding()` routed to the focused pane. The earlier attempt failed because it targeted Monaco's built-in — which was never the winner. Note the built-in is *not* inert: the bundled ts/css/html/json workers satisfy its `hasDocumentFormattingProvider` precondition, so simply deleting our binding hands js/ts/css/html/json to the **TypeScript** formatter instead of prettier. Contrary to the old note this **is** smoke-testable — a Playwright key press does reach the real binding, so `format-manual.spec.ts` now guards it end-to-end (verified by falsification), asserting prettier's semicolon to also catch the built-in taking the chord back.
     _Deferred: configurable options UI, more languages, `.prettierrc` discovery._
-- ✅ **Folder mode: sidebar file-tree + quick-open** (shipped v1.3) — opt-in "Open Folder" → toggleable, resizable left sidebar tree (lazy-loaded) + basic file ops (New File/Folder, Rename, Delete→Recycle Bin) + `Ctrl+P` quick-open; `.git`/`node_modules` hidden by default (Show-all toggle); startup-restore of the last folder. Scratchpad stays the default with no folder open. _Deferred: drag-to-move, cut/copy/paste, multi-root, content search in quick-open, `.gitignore` awareness._
+- ✅ **Folder mode: sidebar file-tree + quick-open** (shipped v1.3) — opt-in "Open Folder" → toggleable, resizable left sidebar tree (lazy-loaded) + basic file ops (New File/Folder, Rename, Delete→Recycle Bin) + `Ctrl+P` quick-open; `.git`/`node_modules` hidden by default (Show-all toggle); startup-restore of the last folder. Scratchpad stays the default with no folder open. _Deferred: drag-to-move, cut/copy/paste, multi-root, `.gitignore` awareness. (Content search shipped separately as **Find in Files** — Phase 3.6 — on its own overlay rather than inside quick-open.)_
 - ✅ **Text highlighter / pen** (shipped v1.7; **swatches 7 → 18** with the shared palette in v1.12.0, **chisel-marker cursor + matching button icon** in Phase 3.7) — toolbar toggle + swatch dropdown over the full `ACCENT_PALETTE` with a **Clear highlights** action; the button underline shows the active colour, and in paint mode the mouse cursor is a marker whose tip carries it. With the mode on, drag-select paints a persistent semi-transparent highlight (Monaco decorations), re-stroking the same colour erases, dragging a different colour recolours; also a **Clear Highlights** palette command. Persists **per file on disk** (path-keyed store in `userData`), untitled buffers via the session (migrated on Save-As); highlights ride edits (decoration read-back), clamp on reload, and flush on tab close / quit. Pure interval engine + store are unit-tested; paint / clear / persistence are smoke-tested (incl. relaunch). Code-complete + whole-branch reviewed on `feat/text-highlighter`. _Deferred: external-edit re-anchoring, highlights list panel, carrying highlights into HTML/PDF export, a free custom colour picker, an Edit-menu item, keyboard-only painting. (Multi-part select → copy/paste is already native in Monaco — `Alt+Click` / `Ctrl+D`.)_
 
 ## ✅ Phase 3.5 — Design polish pass (P1–P5 complete, merged to master; v1.12.0)
@@ -203,6 +210,20 @@ Neither depends on 3.5 — they can land before, during, or after it._
   and the `open-file` IPC are all covered. Falsified by hand (dropping the handler's
   `send('open-file')` turns it red on the tab count) — the same falsification convention as the
   pen-cursor CSP guard.
+- ✅ **Find in Files — content search** (**M**, v1.15.0, PR #5) — `Ctrl+Shift+F` / Edit menu /
+  palette opens a dedicated overlay searching the open folder **and** every open tab; results group
+  by file with line numbers + preview and a file-type badge, Enter opens the file, selects the match
+  and seeds Monaco's find widget so `F3` walks the rest. Substring matching with match-case and
+  whole-word toggles — **no user-supplied regex**, so an escaped literal pattern cannot backtrack
+  catastrophically over 20k files. The matcher is one pure module in `src/shared/` used by **both**
+  processes, which is what makes disk results and open-buffer results incapable of disagreeing; a
+  dirty buffer is searched live and its path goes to main as a skip-set, so one rule covers staleness
+  *and* duplication. Reads through the existing `detectEncoding`/`decode` (a UTF-16 file read as
+  UTF-8 is mojibake that silently never matches). Caps stop the walk at 20/file and 1000 total;
+  cancellation is a main-owned generation counter. Three guards falsified by hand (query escaping,
+  UTF-16 decoding, the skip-set). 7 task reviews + a whole-branch review + one fix wave; the reviews
+  found **7 defects in the plan itself**, including two tests that could not have failed.
+  _Deferred: regex, replace-across-files, include/exclude globs, streaming results._
 - ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
   **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
   from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco

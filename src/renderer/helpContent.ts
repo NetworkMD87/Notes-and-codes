@@ -38,6 +38,7 @@ export const HELP_SECTIONS: HelpCategory[] = [
     { label: 'Select All', keys: 'Ctrl+A' },
     { label: 'Find',    keys: 'Ctrl+F', desc: 'Search for text in the current file.' },
     { label: 'Replace', keys: 'Ctrl+H', desc: 'Find text and swap it for something else.' },
+    { label: 'Find in Files', keys: 'Ctrl+Shift+F', desc: 'Search the text inside every file in the open folder and every open tab.' },
     { label: 'Format Document',  keys: 'Shift+Alt+F', desc: 'Auto-tidy spacing and indentation so code is neatly laid out.' },
     { label: 'Format Selection', desc: 'Tidy just the highlighted part.' },
   ] },

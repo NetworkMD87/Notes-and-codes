@@ -2,6 +2,7 @@ import { app, clipboard, dialog, ipcMain, shell, type BrowserWindow, type IpcMai
 import { isTrustedSender } from './senderGuard'
 import { readFileForEditor, writeFile } from './fileService'
 import { readDir, walkFiles, createFile, createFolder, renamePath, dirExists } from './fsService'
+import { searchFiles } from './searchService'
 import { DirWatcher } from './dirWatcher'
 import { SessionStore } from './sessionStore'
 import { SettingsStore } from './settingsStore'
@@ -12,7 +13,7 @@ import { FileWatcher } from './fileWatcher'
 import { FileHistoryStore } from './fileHistoryStore'
 import { HighlightStore } from './highlightStore'
 import { saveHtml, savePdf } from './exportService'
-import type { SessionData, Settings, EolMode, Encoding, HotkeyResult } from '../shared/types'
+import type { SessionData, Settings, EolMode, Encoding, HotkeyResult, SearchRequest } from '../shared/types'
 
 export interface IpcDeps {
   baseDir: string
@@ -109,6 +110,22 @@ export function registerIpc(deps: IpcDeps): void {
   })
   handle('dir:read', (_e, path: string, showAll: boolean) => readDir(path, showAll))
   handle('dir:walk', (_e, path: string, showAll: boolean) => walkFiles(path, showAll))
+
+  // Cancellation is keyed on a counter OWNED here, not on the renderer-supplied req.searchId.
+  // The renderer's own counter restarts at 0 every time the renderer reloads (electron-vite HMR
+  // does this on every save in `npm run dev`), but this closure lives for the whole main-process
+  // session — trusting req.searchId as a high-water mark would make every post-reload request
+  // look "behind" the pre-reload mark forever, so disk search would silently return nothing for
+  // the rest of the session. Bumping our own generation on every request sidesteps that: typing
+  // fast still lets each stale request bail as soon as a newer one has arrived, and a renderer
+  // reload can't wedge it. The response still echoes back req.searchId so the renderer can match
+  // an answer to the request that asked for it.
+  let generation = 0
+  handle('search:files', (_e, req: SearchRequest) => {
+    const mine = ++generation
+    return searchFiles(req, () => mine < generation)
+  })
+
   handle('fs:createFile', (_e, path: string) => createFile(path))
   handle('fs:createFolder', (_e, path: string) => createFolder(path))
   handle('fs:rename', (_e, from: string, to: string) => renamePath(from, to))

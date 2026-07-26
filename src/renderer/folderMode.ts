@@ -39,6 +39,7 @@ export class FolderMode {
   }
 
   hasFolder(): boolean { return this.model.root !== null }
+  root(): string | null { return this.model.root }
 
   async openFolder(root: string): Promise<void> {
     const s = await window.api.loadSettings()
