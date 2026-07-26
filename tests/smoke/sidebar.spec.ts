@@ -90,15 +90,23 @@ test('the edge tab toggles the sidebar and flips its chevron', async () => {
   }
 })
 
-test('the edge tab is hidden when no folder is open (default scratchpad)', async () => {
+test('the edge tab is always available and opens the folder panel with no folder', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-')) // no settings.json → no folder restored
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await expect(win.locator('#sidebar')).toBeHidden()
-    // No folder → no sidebar to toggle → the edge tab must not float over the editor.
-    await expect(win.locator('.sb-toggle')).toBeHidden()
+    // No folder open is exactly when the tab is most useful: it is the shortcut to opening one.
+    const tab = win.locator('.sb-toggle')
+    await expect(tab).toBeVisible()
+    await expect(tab).toHaveText('›')
+    await tab.click()
+    await expect(win.locator('#sidebar')).toBeVisible()
+    await expect(win.locator('.sb-panel')).toBeVisible()
+    // The button is asserted present, not clicked: it opens a native OS dialog, which Playwright
+    // cannot drive. This is coverage of the wiring up to the dialog, and no further.
+    await expect(win.locator('.sb-open-btn')).toHaveText('Open Folder…')
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })

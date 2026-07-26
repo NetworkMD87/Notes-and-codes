@@ -2,6 +2,7 @@ import Split from 'split.js'
 import type { DirEntry } from '../shared/types'
 import { TreeModel } from './treeModel'
 import { Sidebar } from './sidebar'
+import { FolderPanel } from './folderPanel'
 import { QuickOpen } from './quickOpen'
 import { showContextMenu } from './contextMenu'
 import { promptInput, confirmDialog } from './inputOverlay'
@@ -12,11 +13,13 @@ export interface FolderModeDeps {
   mainEl: HTMLElement
   openFile: (path: string) => void
   activePath: () => string | null
+  pickFolder: () => Promise<void>   // the same picker the File menu / palette use
 }
 
 export class FolderMode {
   private model = new TreeModel()
   private sidebar: Sidebar
+  private panel: FolderPanel
   private quick: QuickOpen
   private index: string[] = []
   private indexTruncated = false
@@ -35,6 +38,7 @@ export class FolderMode {
       truncated: () => this.indexTruncated,
       openFile: d.openFile
     })
+    this.panel = new FolderPanel(d.sidebarEl, { pickFolder: () => d.pickFolder() })
     window.api.onDirChanged(() => void this.onDiskChange())
   }
 
@@ -61,13 +65,21 @@ export class FolderMode {
     this.indexTruncated = false
     void window.api.watchDir(null)
     this.hideSidebar()
+    this.renderSidebar()
     void window.api.updateSettings({ lastFolder: null, sidebarVisible: false })
   }
 
   toggleSidebar(): void {
-    if (!this.hasFolder()) { toast('Open a folder first (File ▸ Open Folder…).', 'warning'); return }
+    // No longer gated on hasFolder(): with no folder the sidebar shows the folder panel, so the
+    // toggle always has something to show and never needs to nag.
     if (this.split) this.hideSidebar()
-    else void window.api.loadSettings().then(s => { this.showSidebar(s.sidebarWidth); this.sidebar.render() })
+    else void window.api.loadSettings().then(s => { this.showSidebar(s.sidebarWidth); this.renderSidebar() })
+  }
+
+  /** Mount whichever view matches the current state. The one place that decision is made. */
+  private renderSidebar(): void {
+    if (this.model.root) this.sidebar.render()
+    else this.panel.render()
   }
 
   /** Reflect the active editor file in the sidebar (highlights its row). No-op with no folder open. */
