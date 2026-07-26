@@ -4,6 +4,23 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [1.16.0] — 2026-07-26
+
+_The sidebar tab is always there now, and it remembers your folders._
+
+### Added
+- The sidebar edge tab is always visible. With no folder open it opens a folder panel with an
+  **Open Folder…** button and your **recent folders** — no trip to the File menu.
+- The sidebar header is now a folder switcher: click the folder name to jump to a recent folder,
+  open another one, or close the current one.
+
+### Changed
+- **Toggle Sidebar** no longer warns that you need a folder open — it shows the folder panel instead.
+
+### Fixed
+- A recent folder that has been deleted or moved is removed from the list the moment you click it,
+  with a clear message, instead of failing silently.
+
 ## [1.15.0] — 2026-07-26
 
 _Find in Files: search what's **inside** your files, not just their names._

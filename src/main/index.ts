@@ -9,6 +9,7 @@ import { createTray } from './tray'
 import { glyphImage } from './themeIcon'
 import { buildMenu } from './menu'
 import { RecentFilesStore } from './recentFilesStore'
+import { RecentFoldersStore } from './recentFoldersStore'
 import { SettingsStore } from './settingsStore'
 import type { HotkeyResult } from '../shared/types'
 
@@ -237,6 +238,7 @@ if (!gotLock) {
       baseDir: app.getPath('userData'),
       settings: settingsStore,
       recent: recentStore,
+      recentFolders: new RecentFoldersStore(app.getPath('userData')),
       getWindow: () => mainWindow,
       setContextMenu: (enabled) => applyContextMenu(enabled),
       setLoginItem: (enabled) => setLoginItem(enabled),

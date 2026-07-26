@@ -1,16 +1,24 @@
 import { pushOverlay } from './overlayManager'
 
 export interface ContextMenuItem { label: string; run: () => void }
+/** A menu row, or a hairline between groups. */
+export type ContextMenuEntry = ContextMenuItem | { separator: true }
 
 // A small themed popup menu. Themed (CSS tokens) + z-index:100 per the overlay convention —
 // not Electron's native menu, for visual consistency with the app's overlays.
-export function showContextMenu(x: number, y: number, items: ContextMenuItem[]): void {
+export function showContextMenu(x: number, y: number, items: ContextMenuEntry[]): void {
   document.getElementById('ctx-menu')?.remove()
   const menu = document.createElement('div')
   menu.id = 'ctx-menu'
   menu.style.left = `${x}px`
   menu.style.top = `${y}px`
   for (const item of items) {
+    if ('separator' in item) {
+      const sep = document.createElement('div')
+      sep.className = 'ctx-sep'
+      menu.appendChild(sep)
+      continue
+    }
     const row = document.createElement('div')
     row.className = 'ctx-item'
     row.textContent = item.label

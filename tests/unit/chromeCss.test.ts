@@ -161,3 +161,24 @@ describe('shared badge chip', () => {
     expect(rule).toContain('font-family')
   })
 })
+
+describe('sidebar folder panel', () => {
+  it('defines the panel, its recent rows and the clear control', () => {
+    expect(ruleFor('.sb-panel')).toContain('flex-direction:column')
+    expect(ruleFor('.sb-open-btn')).toContain('border:1px solid var(--accent)')
+    expect(ruleFor('.sb-recent-row')).toContain('cursor:pointer')
+    expect(ruleFor('.sb-clear')).toContain('color:var(--muted)')
+  })
+
+  it('styles the clickable folder-switcher header and the menu separator', () => {
+    expect(ruleFor('.sb-header-btn')).toContain('cursor:pointer')
+    expect(ruleFor('.ctx-sep')).toContain('background:var(--border)')
+  })
+
+  it('declares the header control size explicitly and gives it a hover state', () => {
+    // 13px is a deliberate owner decision (bigger hit target than the 11px .sb-header caption) —
+    // it must be a real declaration here, not an accident of `font:inherit` cascading from #sidebar.
+    expect(ruleFor('.sb-header-btn')).toContain('font-size:13px')
+    expect(ruleFor('.sb-header-btn:hover')).toContain('background:var(--bar-hover)')
+  })
+})
