@@ -353,10 +353,12 @@ command-registry changes on systems already in place. Shipped as **one release u
 - ✅ **Theme-picker swatch previews** (**S**, from Phase 3.5 Slice C) — **merged to `master`
   2026-07-19 (no version bump — Phase 3.7 bundle ships together).** Each theme row shows four dots
   from its own chrome tokens (editor bg / bar / bar text / accent), `follow-os` resolving to whatever
-  it currently is. Hovering a row live-previews the theme app-wide (`ThemeController.preview` paints
-  without committing, so it can't reach `onPersist`); the grid's `mouseleave` and the panel's
-  `close()` both revert. Unit-tested (`swatchColours`) + smoke-tested (dots, hover, Escape-mid-preview,
-  click-persists-across-relaunch).
+  it currently is. Unit-tested (`swatchColours`) + smoke-tested (dots, click-persists-across-relaunch).
+  **The hover live-preview half was removed 2026-07-26** — painting an uncommitted theme repainted
+  the whole app (all chrome vars + `setTheme` on both Monaco panes) on hover-in and again on
+  grid-leave, which read as a flicker, not a feature. `ThemeController.preview`/`endPreview` are
+  gone with it; theme changes are click-only, and a smoke guard now asserts hover changes nothing.
+  The dots stay — they're what makes the click informed.
 - ✅ **Highlighter pen-tip SVG cursor** (**S**, from Phase 3.5 Slice D) — **merged to `master`
   2026-07-20 (no version bump — Phase 3.7 bundle ships together).** The paint-mode cursor is a
   chisel marker with its tip filled in the active highlight colour (`penCursor()`,

@@ -175,10 +175,16 @@
       .appearance-theme.active{border-color:var(--accent);outline:1px solid var(--accent)}
       .theme-dots{display:flex;gap:2px;flex:none}
       .theme-dot{width:8px;height:8px;border-radius:50%;border:1px solid var(--border);flex:none}
-      .appearance-sw{display:flex;gap:8px;flex-wrap:wrap}
+      /* 9 fixed columns = two equal rows of the 18-colour ACCENT_PALETTE. Wrapping flex gave
+         ragged rows that shifted with panel width; this is deliberately not responsive. Adding
+         a colour to the palette means revisiting this number — 20 wants 10, and so on. */
+      .appearance-sw{display:grid;grid-template-columns:repeat(9,22px);gap:6px}
       .swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent}
       .swatch.active{border-color:var(--bartext)}
-      .accent-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+      /* margin-top: Theme and Accent are two sections inside one wrap, so they get none of
+         .settings-detail's 14px child gap — without this the heading sits flush against the
+         last theme row. */
+      .accent-head{display:flex;align-items:center;gap:8px;margin-top:18px;margin-bottom:6px}
       .accent-head h3{margin:0}
       .accent-current{width:16px;height:16px;border-radius:50%;border:1px solid var(--border);flex:none}
       .accent-default-btn{margin-left:auto;font-size:11px;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius);background:none;color:var(--panel-text);cursor:pointer}
