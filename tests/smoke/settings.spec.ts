@@ -167,27 +167,11 @@ test('Settings: every theme row shows four palette swatches', async () => {
   }
 })
 
-// The old #appearance overlay is gone (Task 3) — the theme button, the palette's
-// "Appearance…" command, and the View ▸ Appearance… menu item all now deep-link into
-// #settings on the Appearance category via the same `openAppearance` alias. Nothing
-// previously asserted the theme button opened anything at all (it used to open the
-// now-deleted panel), so this closes that gap; the other two confirm the alias's other
-// two entry points weren't silently broken by the rewire.
-
-test('Settings: theme button opens Settings on the Appearance category', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-themebtn-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
-    const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
-    await win.locator('#theme-toggle').click()
-    await expect(win.locator('#settings')).toBeVisible()
-    await expect(win.locator('.settings-cat.active')).toContainText('Appearance')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
-})
+// The old #appearance overlay is gone (Task 3), and the header's ◐ theme button is gone too
+// — it opened Settings on Appearance, which is exactly what the toolbar gear already does.
+// The two remaining deep-links, the palette's "Appearance…" command and the View ▸
+// Appearance… menu item, both go through the same `openAppearance` alias; these two tests
+// are what keep that alias from silently breaking now that no button exercises it.
 
 test('Settings: palette "Appearance…" command opens Settings on the Appearance category', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-palette-appear-'))
