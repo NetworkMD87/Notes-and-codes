@@ -64,9 +64,6 @@ function refreshPreview(): void { mdPreview.update(previewContent()) }
 const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) => {
   void window.api.updateSettings({ themeId, accent })
 })
-const themeBtn = document.createElement('button')
-themeBtn.id = 'theme-toggle'; themeBtn.textContent = '◐'; themeBtn.title = 'Theme'
-document.getElementById('header')!.appendChild(themeBtn)
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
 
@@ -622,8 +619,6 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
 // `.hl-mode` class before it calls `syncHighlightChrome`, so without this seed there would be a
 // brief window where the class is on and `--hl-cursor` is still unset.
 document.body.style.setProperty('--hl-cursor', penCursor(highlights.colour()))
-// keep the theme toggle as the right-most element in the header
-document.getElementById('header')!.appendChild(themeBtn)
 
 const settingsDeps: SettingsDeps = {
   currentThemeId: () => theme.currentId(), currentAccent: () => theme.currentAccent(),
@@ -665,8 +660,9 @@ const settingsDeps: SettingsDeps = {
 
 const settings = new SettingsPanel(document.getElementById('app')!, settingsDeps)
 const openSettings = (category: SettingsCategory = 'appearance') => settings.open(category)
+// Deep-link alias into Settings ▸ Appearance. No button owns it — its consumers are the
+// palette's `Appearance…` command and the View ▸ Appearance… menu item.
 const openAppearance = () => openSettings('appearance')
-themeBtn.onclick = openAppearance
 
 const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
   current: () => {

@@ -637,14 +637,12 @@ test('empty states show an inline-SVG glyph', async () => {
   }
 })
 
-test('chrome polish: themed checkbox + icon-only theme button', async () => {
+test('chrome polish: themed checkbox', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-chrome-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
-    // theme button is icon-only
-    await expect(win.locator('#theme-toggle')).toHaveText('◐')
     // a checkbox resolves accent-color to --accent. Appearance has no checkbox at all, so
     // open on Editor (it has two) — any checkbox works, this only probes accent-color.
     await openSettings(win, 'Editor')
