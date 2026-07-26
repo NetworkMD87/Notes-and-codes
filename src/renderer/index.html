@@ -99,7 +99,10 @@
       .sb-recent-parent{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .sb-clear{align-self:flex-start;padding:2px 4px;background:none;border:none;color:var(--muted);cursor:pointer;font:inherit;font-size:11px}
       .sb-clear:hover{color:var(--accent-readable)}
-      .sb-header-btn{display:flex;align-items:center;gap:6px;width:100%;background:none;border:none;cursor:pointer;font:inherit}
+      /* 13px (not the .sb-header caption's 11px) is deliberate: this header is a control, and the
+         larger hit target was chosen over matching the caption size (owner decision, 2026-07-26). */
+      .sb-header-btn{display:flex;align-items:center;gap:6px;width:100%;background:none;border:none;cursor:pointer;font:inherit;font-size:13px}
+      .sb-header-btn:hover{background:var(--bar-hover)}
       .sb-header-chev{margin-left:auto;opacity:.7}
       #quick-open{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding-top:80px;z-index:100}
       #quick-open.hidden{display:none}

@@ -72,9 +72,13 @@ export class FolderMode {
     this.index = []
     this.indexTruncated = false
     void window.api.watchDir(null)
-    this.hideSidebar()
+    // Spec: "Close Folder returns the panel; the tab stays." The panel replaces the tree in
+    // place rather than collapsing the sidebar — hideSidebar() destroys the Split, which would
+    // force a second click on the tab just to reach Open Folder…/recents. So the Split (if any)
+    // is left exactly as it is; only the sidebar's *content* changes. If the sidebar was already
+    // collapsed, it stays collapsed — this only stops an *open* sidebar from closing on you.
     this.renderSidebar()
-    void window.api.updateSettings({ lastFolder: null, sidebarVisible: false })
+    void window.api.updateSettings({ lastFolder: null, sidebarVisible: this.split !== null })
   }
 
   toggleSidebar(): void {
@@ -84,7 +88,9 @@ export class FolderMode {
     else void window.api.loadSettings().then(s => { this.showSidebar(s.sidebarWidth); this.renderSidebar() })
   }
 
-  /** Mount whichever view matches the current state. The one place that decision is made. */
+  /** Mount whichever view matches the current state — tree vs panel. The one place *that*
+   *  decision is made; it guarantees nothing about when to call it (openFolder, onDiskChange and
+   *  refreshDir all call sidebar.render() directly, since they are already root-guarded). */
   private renderSidebar(): void {
     if (this.model.root) this.sidebar.render()
     else void this.panel.render()
@@ -163,8 +169,12 @@ export class FolderMode {
   }
 
   private async reindex(): Promise<void> {
-    if (!this.model.root) return
-    const r = await window.api.walkFiles(this.model.root, this.showAll)
+    const root = this.model.root
+    if (!root) return
+    const r = await window.api.walkFiles(root, this.showAll)
+    // A folder switch while the walk was in flight makes this answer stale — dropping it is what
+    // stops folder A's index from overwriting folder B's (Quick Open would list the wrong folder).
+    if (this.model.root !== root) return
     this.index = r.files
     this.indexTruncated = r.truncated
   }
@@ -205,7 +215,12 @@ export class FolderMode {
   }
 
   private contextMenu(entry: DirEntry | null, x: number, y: number): void {
-    const dir = entry ? (entry.isDir ? entry.path : entry.path.replace(/[\\/][^\\/]+$/, '')) : this.model.root!
+    const root = this.model.root
+    // The folder panel mounts into #sidebar too, and does not fill it — so a right-click on the
+    // blank area below it reaches Sidebar's host handler with no tree and no root. There is
+    // nothing to create into; the pre-branch code could assume a root here, this cannot.
+    if (!entry && !root) return
+    const dir = entry ? (entry.isDir ? entry.path : entry.path.replace(/[\\/][^\\/]+$/, '')) : root!
     const items = [
       { label: 'New File…', run: () => void this.newFile(dir) },
       { label: 'New Folder…', run: () => void this.newFolder(dir) }

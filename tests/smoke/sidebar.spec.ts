@@ -138,6 +138,33 @@ test('the edge tab is always available and opens the folder panel with no folder
   }
 })
 
+test('right-clicking the blank area below the folder panel does nothing (no tree, no crash)', async () => {
+  // The folder panel (.sb-panel) does not fill #sidebar's full height, so with no folder open
+  // there is a blank region below it that IS #sidebar itself. Sidebar's host contextmenu handler
+  // used to assume a root always existed there (`this.model.root!`), which was true before this
+  // branch made the no-folder sidebar visible at all. Guard: src/renderer/folderMode.ts
+  // contextMenu() early-returns when there is neither an entry nor a root.
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-')) // no settings.json → no folder restored
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const pageErrors: string[] = []
+  try {
+    const win = await app.firstWindow()
+    win.on('pageerror', (e) => pageErrors.push(String(e)))
+    await win.locator('.sb-toggle').click()
+    await expect(win.locator('.sb-panel')).toBeVisible()
+    const box = await win.locator('#sidebar').boundingBox()
+    if (!box) throw new Error('#sidebar has no bounding box')
+    // Right-click near the bottom of #sidebar — below the panel's own (much shorter) content box.
+    await win.mouse.click(box.x + box.width / 2, box.y + box.height - 4, { button: 'right' })
+    await expect(win.locator('#ctx-menu')).toHaveCount(0)
+    await expect(win.locator('.ctx-item')).toHaveCount(0)
+    expect(pageErrors).toEqual([])
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 /** A user-data dir with a seeded recent-folders list and NO settings.json, so the app starts
  *  with no folder open and the panel is what renders. */
 function seededRecents(paths: string[]): string {
@@ -176,7 +203,12 @@ test('clicking a recent folder that no longer exists prunes it from the list', a
     await win.locator('.sb-toggle').click()
     await expect(win.locator('.sb-recent-row')).toHaveCount(1)
     await win.locator('.sb-recent-row').click()
-    await expect(win.locator('.sb-recent-row')).toHaveCount(0)  // pruned
+    // Anchored on the panel's post-await completion marker, not on the raw row count: render()
+    // clears and re-mounts the panel shell *before* awaiting the recents store, so a bare
+    // `.sb-recent-row` count of 0 would also pass transiently mid-render (before rows are
+    // re-appended) even if the prune never actually removed the entry. data-rendered='1' is set
+    // only once that await resolves, on every completing path.
+    await expect(win.locator('.sb-panel[data-rendered] .sb-recent-row')).toHaveCount(0)  // pruned
     await expect(win.locator('.sb-panel')).toBeVisible()        // no folder was opened
   } finally {
     await app.close()
@@ -197,7 +229,11 @@ test('opening a folder records it in the recent list', async () => {
     await expect(win.locator('#sidebar .sb-row', { hasText: 'readme.md' })).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
     await win.locator('.palette-row', { hasText: 'Close Folder' }).first().click()
-    await win.locator('.sb-toggle').click()
+    // Close Folder keeps the sidebar open and swaps the tree for the panel in place (spec:
+    // "Close Folder returns the panel; the tab stays") — no extra .sb-toggle click needed to
+    // reach it, unlike before this fix wave when Close Folder collapsed the sidebar.
+    await expect(win.locator('#sidebar')).toBeVisible()
+    await expect(win.locator('.sb-panel')).toBeVisible()
     // Restore-on-launch went through openFolder(), so the visit must have been recorded.
     await expect(win.locator('.sb-recent-row', { hasText: basename(projectDir) })).toBeVisible()
   } finally {

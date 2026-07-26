@@ -17,7 +17,7 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — nothing release-critical in flight
+## ▶ NEXT ACTION — v1.16.0 whole-branch review + installer eyeball + tag still ahead
 
 **v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
 portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable

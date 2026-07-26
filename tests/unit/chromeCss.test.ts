@@ -174,4 +174,11 @@ describe('sidebar folder panel', () => {
     expect(ruleFor('.sb-header-btn')).toContain('cursor:pointer')
     expect(ruleFor('.ctx-sep')).toContain('background:var(--border)')
   })
+
+  it('declares the header control size explicitly and gives it a hover state', () => {
+    // 13px is a deliberate owner decision (bigger hit target than the 11px .sb-header caption) —
+    // it must be a real declaration here, not an accident of `font:inherit` cascading from #sidebar.
+    expect(ruleFor('.sb-header-btn')).toContain('font-size:13px')
+    expect(ruleFor('.sb-header-btn:hover')).toContain('background:var(--bar-hover)')
+  })
 })
