@@ -147,13 +147,31 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > shipped as v1.12.0; the v1.12.0 codebase audit is fully closed (Phase 1 → v1.12.1, Phases 2–5 →
 > v1.12.2). **Phase 3.7 polish is complete — all 7 slices merged, released as v1.13.0**, tagged and
 > published. See ▶ NEXT ACTION at the top.
-> **Live known issues (deferred), both from Find in Files (v1.15.0), both small:**
+> **Live known issues (deferred), all small:** ①② from Find in Files (v1.15.0), ③ a boot-ordering
+> race surfaced 2026-07-26.
 > ① launching the exe from a shell with a **relative** path arg can double-list that file in search
 > results — `pickFileArg` returns the raw argv string, so its `filePath` never matches the absolute
 > path `walkFiles` produces, and neither the skip-set nor the merge de-dupes it. Pre-existing to the
 > search feature; a proper fix changes `pickFileArg`'s contract and breaks `fileArg.test.ts`.
 > Explorer / taskbar / file-association launches are unaffected. ② flipping the match-case or
 > whole-word toggles doesn't reset the selected result row (changing the query text does).
+> ③ **`boot()` can silently revert a user action that lands before it finishes, and
+> `app.spec.ts:178` (snippets / always-on-top) is the test that catches it — intermittently.**
+> `boot()` unconditionally re-applies `settings.alwaysOnTop` at `src/renderer/main.ts:281`, but the
+> smoke test's readiness signal is `#tabbar`, which is **static HTML in `index.html`** and therefore
+> visible long before `boot()` resolves. So a palette toggle can land first and boot then overwrites
+> it. Same shape applies to a real user on a slow start (large session restore, slow disk, folder
+> restore), not just to tests. Observed **3/3 red on `master` (1.15.0) and 3/3 on the 1.16.0 branch**
+> inside one ~20-minute window on 2026-07-26, then 3/3 green on an idle machine; the failing window
+> followed a full-suite run, so load-dependence is the working theory but is **not proven** — the
+> race could not be forced idle (40 samples, no `true→false` transition). Refuted with evidence, so
+> don't re-check these: wrong command dispatched (palette filter matches exactly one label); 100ms
+> read too short (polled 100/500/2000ms all true); `setAlwaysOnTop` broken in this environment
+> (direct main-process call works); hidden/minimized window losing topmost (`isAlwaysOnTop()` tracks
+> Electron's internal flag, true even while hidden **and** minimized — so a `false` reading means
+> `setAlwaysOnTop(true)` was never called, i.e. the break is upstream of main). Proposed fix: set a
+> real boot-complete signal at the end of `boot()` (e.g. a `data-booted` attribute) and anchor smoke
+> tests on that instead of `#tabbar` — retries do not help, it failed all of them.
 > _(① the native `Shift+Alt+F` Format hotkey is resolved — fixed 2026-07-25, details under
 > **Format Document** below. ② the clean-quit clipboard/session flush is resolved — audit R1, v1.12.1. ③ the static
 > exe/installer icon not theme-swapping is resolved by design as of v1.13.0 — it carries the `{&}`
