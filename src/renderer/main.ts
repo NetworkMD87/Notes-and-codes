@@ -740,8 +740,11 @@ const findInFiles = new FindInFiles(document.getElementById('app')!, {
   buffers: () => manager.list().map(b => ({ filePath: b.filePath, title: b.title, content: b.content })),
   openMatch: (path, title, line, column, length) => {
     void (async () => {
-      if (path) await openPath(path)
-      else { const b = manager.list().find(x => x.title === title); if (b) { manager.setActive(b.id); showActive() } }
+      // openPath toasts and returns false on failure (deleted/renamed/locked file); revealMatch
+      // must not run then — it would move the cursor and seed the find widget in whatever
+      // buffer happens to be active, which has nothing to do with this match.
+      if (path) { if (!(await openPath(path))) return }
+      else { const b = manager.list().find(x => x.title === title); if (!b) return; manager.setActive(b.id); showActive() }
       paneFor(view.focusedPane()).revealMatch(line, column, length)
     })()
   },
@@ -785,12 +788,16 @@ window.addEventListener('keydown', (e) => {
   // Escape (incl. closing the diff) is handled centrally by overlayManager.
 })
 
-async function openPath(path: string): Promise<void> {
+// Returns whether the file actually opened. Callers that only fire-and-forget (drop, argv,
+// sidebar) can ignore it with `void`; a caller that does something ELSE with the buffer
+// afterward (openMatch below) must gate on it — see the comment there.
+async function openPath(path: string): Promise<boolean> {
   try {
     const r = await window.api.readFile(path)
-    if (!r.ok) { toast(r.reason, 'error'); return }
+    if (!r.ok) { toast(r.reason, 'error'); return false }
     manager.open(r.file); window.api.addRecentFile(path); showActive(); scheduleSessionSave()
-  } catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`, 'error') }
+    return true
+  } catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`, 'error'); return false }
 }
 
 function openPaths(): string[] { return manager.list().map(b => b.filePath).filter((p): p is string => !!p) }

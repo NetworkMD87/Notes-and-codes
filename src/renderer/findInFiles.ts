@@ -26,6 +26,10 @@ export class FindInFiles {
   private results: SearchFileResult[] = []
   private rows: Row[] = []
   private active = 0
+  // The query that `results`/`active` currently reflect. Lets runSearch() tell "the same query,
+  // re-run" (reopen with a carried-over query; toggling a search option) from "a genuinely new
+  // query", and reset the selection only for the latter.
+  private resultsQuery = ''
   private query = ''
   private searching = false
   private truncated = false
@@ -87,6 +91,12 @@ export class FindInFiles {
 
   private async runSearch(): Promise<void> {
     const query = this.query
+    // Arrow-key position only survives a re-run of the SAME query (reopen with a carried-over
+    // query, or toggling case/whole-word). A changed query means a different result set, so row
+    // N of the old list has nothing to do with row N of the new one — reset before results even
+    // arrive, so a stale `active` can't be used mid-flight.
+    if (query !== this.resultsQuery) this.active = 0
+    this.resultsQuery = query
     if (query.length < MIN_QUERY_LENGTH) {
       this.results = []; this.truncated = false; this.searching = false; this.render(); return
     }
