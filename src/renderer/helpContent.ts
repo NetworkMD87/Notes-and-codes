@@ -47,7 +47,7 @@ export const HELP_SECTIONS: HelpCategory[] = [
     { label: 'Toggle Markdown Preview', desc: 'See formatted Markdown (headings, lists, links) as it will look.' },
     { label: 'Toggle Word Wrap',      desc: 'Wrap long lines so nothing runs off the right edge.' },
     { label: 'Toggle Line Numbers',   desc: 'Show or hide line numbers down the left side.' },
-    { label: 'Toggle Sidebar',        desc: 'Show or hide the folder file-tree on the left.' },
+    { label: 'Toggle Sidebar',        desc: 'Show or hide the sidebar — the folder tree, or recent folders when none is open.' },
     { label: 'Quick Open File',       keys: 'Ctrl+P', desc: 'Jump to any file in the folder by typing part of its name.' },
     { label: 'Reveal Active File in Sidebar', desc: 'Highlight the current file in the folder tree.' },
     { label: 'Zoom In',  keys: 'Ctrl+=' },

@@ -66,6 +66,8 @@ in the tray, starts empty, and never asks you to make a project first.
 - **Folder mode** — Open Folder → a toggleable sidebar file-tree with tinted file-type badges,
   folder glyphs and indent guides, plus `Ctrl+P` quick-open and basic file ops
   (New File/Folder, Rename, Delete → Recycle Bin).
+- **Folder panel & recent folders** — the sidebar edge tab is always there; with no folder open it
+  offers **Open Folder…** and your recent folders, and the sidebar header switches between them.
 - **Open Recent**, drag & drop to open, and Windows "Open with" / single-instance file routing.
 - Live **markdown preview** and **export to HTML / PDF** (clean light document style, self-contained).
 

@@ -43,6 +43,12 @@ row is name + path, which fights line numbers and snippets. A dirty buffer is se
 content and its path is sent to main as a skip-set, so one rule covers both staleness and duplication.
 See **Phase 3.6** below. _Manual eyeball passed on the packaged 1.15.0 build (2026-07-26)._
 
+**v1.16.0 — Sidebar folder panel + recent folders (on `feat/sidebar-folder-panel`, whole-branch
+review + installer eyeball + tag still ahead)** — the sidebar edge tab is now always visible; with
+no folder open it offers a folder panel (**Open Folder…** + up to 10 recent folders, pruned on
+click if one has gone) and the sidebar header becomes a click-to-switch folder control carrying the
+same recents. `Toggle Sidebar` no longer warns you need a folder open. See **Phase 3.6** below.
+
 **Two correctness fixes that landed on `master` after v1.14.0** — both rode v1.14.1:
 - ✅ **`overlayManager` registration-overwrite sweep** — the audit of this turned out **wider and
   worse** than the note claimed. Not 4 files but **9** (`commandPalette`, `quickOpen`, `helpOverlay`,
@@ -231,6 +237,15 @@ Neither depends on 3.5 — they can land before, during, or after it._
   UTF-16 decoding, the skip-set). 7 task reviews + a whole-branch review + one fix wave; the reviews
   found **7 defects in the plan itself**, including two tests that could not have failed.
   _Deferred: regex, replace-across-files, include/exclude globs, streaming results._
+- ✅ **Sidebar folder panel + recent folders** (**S**, v1.16.0) — the sidebar edge tab is now always
+  visible, no longer gated on a folder being open. With none open it shows a folder panel with an
+  **Open Folder…** button and a recent-folders list (up to 10, case-folded dedupe, mirroring
+  `RecentFilesStore`); the sidebar header doubles as a click-to-switch folder control offering the
+  same recents plus Open Folder… / Close Folder. A recent folder that's been deleted or moved is
+  pruned from the list the moment you click it, with a toast, instead of failing silently — one
+  `chooseRecent` path shared by the panel and the header switcher so the two surfaces can't disagree
+  about a dead entry. **Toggle Sidebar** no longer warns that you need a folder open first; it shows
+  the panel instead.
 - ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
   **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
   from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco
