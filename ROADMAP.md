@@ -17,7 +17,7 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — v1.16.0 is merged and eyeballed; tag + release still ahead
+## ▶ NEXT ACTION — v1.16.0 is shipped; next pass not yet chosen
 
 **v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
 portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable
@@ -43,8 +43,10 @@ row is name + path, which fights line numbers and snippets. A dirty buffer is se
 content and its path is sent to main as a skip-set, so one rule covers both staleness and duplication.
 See **Phase 3.6** below. _Manual eyeball passed on the packaged 1.15.0 build (2026-07-26)._
 
-**v1.16.0 — Sidebar folder panel + recent folders + an Appearance tidy-up (merged to `master`;
-tag ahead)** — the sidebar edge tab is now always visible; with no folder open it offers a folder
+**v1.16.0 shipped 2026-07-26 — Sidebar folder panel + recent folders + an Appearance tidy-up.**
+Tagged `v1.16.0` at `3e08f4d` and published as a GitHub release (installer + portable, both built
+from the tagged commit). The manual tray / hotkey / launch-on-login checklist passed on the real
+build before tagging. The sidebar edge tab is now always visible; with no folder open it offers a folder
 panel (**Open Folder…** + up to 10 recent folders, pruned on click if one has gone) and the sidebar
 header becomes a click-to-switch folder control carrying the same recents. `Toggle Sidebar` no
 longer warns you need a folder open (PR #6). See **Phase 3.6** below.
