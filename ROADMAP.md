@@ -172,23 +172,25 @@ _The big, on-brand features — built on the Phase-2 styled base, so only their 
 > search feature; a proper fix changes `pickFileArg`'s contract and breaks `fileArg.test.ts`.
 > Explorer / taskbar / file-association launches are unaffected. ② flipping the match-case or
 > whole-word toggles doesn't reset the selected result row (changing the query text does).
-> ③ **`boot()` can silently revert a user action that lands before it finishes, and
-> `app.spec.ts:178` (snippets / always-on-top) is the test that catches it — intermittently.**
-> `boot()` unconditionally re-applies `settings.alwaysOnTop` at `src/renderer/main.ts:281`, but the
-> smoke test's readiness signal is `#tabbar`, which is **static HTML in `index.html`** and therefore
-> visible long before `boot()` resolves. So a palette toggle can land first and boot then overwrites
-> it. Same shape applies to a real user on a slow start (large session restore, slow disk, folder
-> restore), not just to tests. Observed **3/3 red on `master` (1.15.0) and 3/3 on the 1.16.0 branch**
-> inside one ~20-minute window on 2026-07-26, then 3/3 green on an idle machine; the failing window
-> followed a full-suite run, so load-dependence is the working theory but is **not proven** — the
-> race could not be forced idle (40 samples, no `true→false` transition). Refuted with evidence, so
-> don't re-check these: wrong command dispatched (palette filter matches exactly one label); 100ms
-> read too short (polled 100/500/2000ms all true); `setAlwaysOnTop` broken in this environment
-> (direct main-process call works); hidden/minimized window losing topmost (`isAlwaysOnTop()` tracks
-> Electron's internal flag, true even while hidden **and** minimized — so a `false` reading means
-> `setAlwaysOnTop(true)` was never called, i.e. the break is upstream of main). Proposed fix: set a
-> real boot-complete signal at the end of `boot()` (e.g. a `data-booted` attribute) and anchor smoke
-> tests on that instead of `#tabbar` — retries do not help, it failed all of them.
+> ③ ~~**`boot()` can silently revert a user action that lands before it finishes.**~~
+> **RESOLVED 2026-07-26.** `boot()` unconditionally re-applies persisted settings
+> (`settings.alwaysOnTop`, `fontSize`, …), but the readiness signal in use was `#tabbar` — **static
+> HTML in `index.html`**, painted long before `boot()` resolves. So an action could land first and
+> boot would overwrite it. This hit a real user on a slow start (large session restore, slow disk,
+> folder restore), not just tests. **Fixed** by `markBooted()` (`src/renderer/main.ts`), which stamps
+> `body[data-booted]` at the end of boot **and** in the `boot().catch` fallback — both paths that
+> leave a usable window, but deliberately *not* the preload-bridge failure path, where a waiting
+> caller should time out rather than act on a dead window. Smoke tests that mutate boot-owned state
+> now wait on `waitForBoot()` (`tests/smoke/appReady.ts`); `#tabbar` stays fine for read-only tests,
+> so the suite was not swept wholesale.
+>
+> The original diagnosis could not force the race on an idle machine (40 samples, no `true→false`
+> transition), so it was **made deterministic instead**: injecting a 1.5s delay into `boot()` turned
+> `app.spec.ts` (snippets / always-on-top) **red at the `isAlwaysOnTop()` assertion every time**.
+> With the same delay still injected, re-anchoring on `data-booted` turned it green — same
+> conditions, only the anchor changed, which is what makes this a fix rather than a hope. Refuted
+> earlier with evidence, so don't re-check these: wrong command dispatched; 100ms read too short;
+> `setAlwaysOnTop` broken in this environment; hidden/minimized window losing topmost.
 > _(① the native `Shift+Alt+F` Format hotkey is resolved — fixed 2026-07-25, details under
 > **Format Document** below. ② the clean-quit clipboard/session flush is resolved — audit R1, v1.12.1. ③ the static
 > exe/installer icon not theme-swapping is resolved by design as of v1.13.0 — it carries the `{&}`
