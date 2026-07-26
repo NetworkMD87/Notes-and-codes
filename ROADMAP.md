@@ -17,7 +17,11 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — v1.16.0 is shipped; next pass not yet chosen
+## ▶ NEXT ACTION — v1.16.0 is shipped; one fix on `master` awaiting a release
+
+**Unreleased on `master`:** the `boot()` readiness fix (known issue ③ below, now resolved) — a
+setting changed during a slow start could be overwritten by boot. It is a patch-level fix, so it
+wants **v1.16.1** whenever the next release is cut; nothing else is pending.
 
 **v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
 portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable

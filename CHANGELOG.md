@@ -4,6 +4,14 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [Unreleased]
+
+### Fixed
+- Changing a setting immediately after launch could be silently undone a moment later, while the
+  app was still finishing its startup. Most likely to bite on a slow start — a large restored
+  session, a slow disk, or reopening a folder — where toggling something like **Always on Top**
+  right away would quietly revert itself.
+
 ## [1.16.0] — 2026-07-26
 
 _The sidebar tab is always there now and it remembers your folders — plus a calmer Appearance panel._
