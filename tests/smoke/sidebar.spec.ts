@@ -23,11 +23,36 @@ test('sidebar shows a header caption with the open folder name', async () => {
     await expect(win.locator('#sidebar')).toBeVisible()
     const header = win.locator('#sidebar .sb-header')
     await expect(header).toBeVisible()
-    await expect(header).toHaveText(basename(projectDir)) // CSS uppercases; DOM text is the basename
+    await expect(header.locator('.sb-label')).toHaveText(basename(projectDir)) // CSS uppercases; DOM text is the basename
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
     rmSync(projectDir, { recursive: true, force: true })
+  }
+})
+
+test('the sidebar header switches folders from the recent list', async () => {
+  const { userDataDir, projectDir } = seededFolder()
+  const other = mkdtempSync(join(tmpdir(), 'notes-other-'))
+  writeFileSync(join(other, 'other.txt'), 'x')
+  writeFileSync(join(userDataDir, 'recent-folders.json'), JSON.stringify([other, projectDir]))
+  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('#sidebar .sb-header .sb-label')).toHaveText(basename(projectDir))
+    await win.locator('.sb-header-btn').click()
+    const item = win.locator('.ctx-item', { hasText: basename(other) })
+    await expect(item).toBeVisible()
+    // The open folder is excluded from its own switcher.
+    await expect(win.locator('.ctx-item', { hasText: basename(projectDir) })).toHaveCount(0)
+    await item.click()
+    await expect(win.locator('.sb-row', { hasText: 'other.txt' })).toBeVisible()
+    await expect(win.locator('#sidebar .sb-header .sb-label')).toHaveText(basename(other))
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+    rmSync(projectDir, { recursive: true, force: true })
+    rmSync(other, { recursive: true, force: true })
   }
 })
 

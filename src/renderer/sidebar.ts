@@ -11,6 +11,7 @@ export interface SidebarDeps {
   loadChildren: (path: string) => Promise<void> // readDir + model.setChildren
   openFile: (path: string) => void
   onContext: (entry: DirEntry | null, x: number, y: number) => void
+  onHeaderClick: (x: number, y: number) => void   // folder switcher pop-out
 }
 
 export class Sidebar {
@@ -38,9 +39,18 @@ export class Sidebar {
     const root = this.d.model.root
     this.host.replaceChildren()
     if (!root) return
-    const header = document.createElement('div'); header.className = 'sb-header'
+    const header = document.createElement('button')
+    header.className = 'sb-header sb-header-btn'
+    header.title = 'Switch folder'
+    const label = document.createElement('span'); label.className = 'sb-label'
     // basename without a node import (renderer is sandboxed): strip trailing slashes, take the last segment.
-    header.textContent = root.split(/[\\/]/).filter(Boolean).pop() ?? root
+    label.textContent = root.split(/[\\/]/).filter(Boolean).pop() ?? root
+    const chev = document.createElement('span'); chev.className = 'sb-header-chev'; chev.textContent = '▾'
+    header.append(label, chev)
+    header.onclick = () => {
+      const r = header.getBoundingClientRect()
+      this.d.onHeaderClick(r.left, r.bottom)
+    }
     this.host.appendChild(header)
     const list = document.createElement('div'); list.className = 'sb-list'
     this.renderLevel(root, 0, list)

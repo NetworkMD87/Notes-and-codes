@@ -169,4 +169,9 @@ describe('sidebar folder panel', () => {
     expect(ruleFor('.sb-recent-row')).toContain('cursor:pointer')
     expect(ruleFor('.sb-clear')).toContain('color:var(--muted)')
   })
+
+  it('styles the clickable folder-switcher header and the menu separator', () => {
+    expect(ruleFor('.sb-header-btn')).toContain('cursor:pointer')
+    expect(ruleFor('.ctx-sep')).toContain('background:var(--border)')
+  })
 })
