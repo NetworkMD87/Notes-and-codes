@@ -15,7 +15,7 @@ class FakeWorker {
   private readonly listeners = new Map<string, Set<Listener>>()
 
   readonly worker = {
-    postMessage: (message: SpellWorkerRequest): void => { this.messages.push(message) },
+    postMessage: (message: SpellWorkerRequest): void => { this.messages.push(structuredClone(message)) },
     terminate: this.terminate,
     addEventListener: (type: string, listener: Listener): void => {
       const listeners = this.listeners.get(type) ?? new Set<Listener>()
@@ -187,6 +187,32 @@ describe('SpellWorkerClient', () => {
     workers[1].respond({ id: 5, ok: true, type: 'mutated' })
     await flush()
     expect(onRestart).toHaveBeenCalledOnce()
+  })
+
+  it('restarts from the personal words sent even if the caller mutates its array before acknowledgement', async () => {
+    const { createWorker, workers } = factory()
+    const client = new SpellWorkerClient({ createWorker })
+    const personalWords = ['Original']
+
+    const loading = client.load('en-GB', personalWords)
+    expect(workers[0].messages[0]).toEqual({
+      id: 1,
+      type: 'load',
+      locale: 'en-GB',
+      personalWords: ['Original']
+    })
+    personalWords.push('AddedTooLate')
+    workers[0].respond({ id: 1, ok: true, type: 'loaded' })
+    await loading
+
+    workers[0].crash()
+
+    expect(workers[1].messages[0]).toEqual({
+      id: 2,
+      type: 'load',
+      locale: 'en-GB',
+      personalWords: ['Original']
+    })
   })
 
   it('disables after the replacement worker crashes and invokes onFatal once', async () => {

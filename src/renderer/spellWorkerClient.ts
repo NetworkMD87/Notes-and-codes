@@ -65,10 +65,15 @@ export class SpellWorkerClient {
   }
 
   async load(locale: ResolvedSpellLocale, personalWords: string[]): Promise<void> {
-    await this.whenReady(() => this.sendMutation({ type: 'load', locale, personalWords }, 'loaded'))
+    const sentPersonalWords = [...personalWords]
+    await this.whenReady(() => this.sendMutation({
+      type: 'load',
+      locale,
+      personalWords: sentPersonalWords
+    }, 'loaded'))
     this.locale = locale
     this.personalWords = new Map()
-    for (const word of personalWords) {
+    for (const word of sentPersonalWords) {
       const key = wordKey(word)
       if (!this.personalWords.has(key)) this.personalWords.set(key, word)
     }
