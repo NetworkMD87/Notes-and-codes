@@ -5,6 +5,7 @@ test-results/
 playwright-report/
 .superpowers/
 .codegraph/
+.worktrees/
 
 # Internal working docs — kept locally, not published
 # (AUDIT-CHECKLIST.md is deliberately NOT here: README links to it as the public
