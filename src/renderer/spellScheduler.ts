@@ -6,15 +6,15 @@ export interface SpellSchedulerDeps {
   apply: (result: SpellBatchResult) => void
   clear: () => void
   failed: () => void
-  setTimer?: typeof setTimeout
-  clearTimer?: typeof clearTimeout
+  setTimer?: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
+  clearTimer?: (timer: ReturnType<typeof setTimeout>) => void
 }
 
 const DEBOUNCE_MS = 300
 
 export class SpellScheduler {
-  private readonly setTimer: typeof setTimeout
-  private readonly clearTimer: typeof clearTimeout
+  private readonly setTimer: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
+  private readonly clearTimer: (timer: ReturnType<typeof setTimeout>) => void
   private generation = 0
   private timer: ReturnType<typeof setTimeout> | null = null
   private inFlight = false
@@ -23,8 +23,10 @@ export class SpellScheduler {
   private disposed = false
 
   constructor(private readonly deps: SpellSchedulerDeps) {
-    this.setTimer = deps.setTimer ?? setTimeout
-    this.clearTimer = deps.clearTimer ?? clearTimeout
+    // Browser timer functions are receiver-sensitive. The wrappers keep Window/globalThis as the
+    // native receiver even though SpellScheduler stores and invokes them as object properties.
+    this.setTimer = deps.setTimer ?? ((callback, delay) => setTimeout(callback, delay))
+    this.clearTimer = deps.clearTimer ?? (timer => clearTimeout(timer))
   }
 
   schedule(): void {

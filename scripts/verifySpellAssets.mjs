@@ -58,7 +58,7 @@ export function verifyBundle(source, label) {
     if (!source.includes(sentinel)) throw new Error(`${label} is missing dictionary sentinel ${sentinel}`)
   }
   if ((source.match(/SET UTF-8/g) ?? []).length < 2) throw new Error(`${label} is missing two Hunspell affix payloads`)
-  if ((source.match(/\d{4,6}(?:\\r?\\n|\r?\n)/g) ?? []).length < 2) throw new Error(`${label} is missing two Hunspell dictionary headers`)
+  if ((source.match(/\d{4,6}(?:\\r\\n|\\n|\r?\n)/g) ?? []).length < 2) throw new Error(`${label} is missing two Hunspell dictionary headers`)
   const executableSource = withoutJavaScriptComments(source)
   if (hasNodeDependency(executableSource)) throw new Error(`${label} contains forbidden Node dependency`)
   for (const value of forbidden) {

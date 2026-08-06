@@ -13,6 +13,12 @@ describe('verifySpellAssets', () => {
     expect(() => verifyBundle(validBundle(), 'fixture')).not.toThrow()
   })
 
+  it('accepts dictionary headers with app-bundle escaped newlines', () => {
+    const appBundle = validBundle().replace('49568\n49601\n', '49568\\n49601\\n')
+
+    expect(() => verifyBundle(appBundle, 'fixture')).not.toThrow()
+  })
+
   it.each([
     'const endpoint = "https://example.test/dictionary"',
     'const url=/https?:\\/\\//; fetch("dictionary")',

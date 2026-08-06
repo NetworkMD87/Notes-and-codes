@@ -1,5 +1,6 @@
 import * as monaco from 'monaco-editor'
 import type { BufferState, Highlight, HighlightColour } from '../shared/types'
+import type { SpellDocument, SpellIssue } from '../shared/spell'
 import { formatText, UnsupportedLanguageError, type FormatRange } from './formatter'
 import { toast } from './notify'
 
@@ -45,6 +46,7 @@ export class EditorPane {
   private models = new Map<string, monaco.editor.ITextModel>()
   private viewStates = new Map<string, monaco.editor.ICodeEditorViewState>()
   private highlightDecorations!: monaco.editor.IEditorDecorationsCollection
+  private spellDecorations!: monaco.editor.IEditorDecorationsCollection
   private hlColours: HighlightColour[] = []
   private highlighterOn = false
   private paintCb: ((range: { start: number; end: number }) => void) | null = null
@@ -75,6 +77,7 @@ export class EditorPane {
       padding: { top: 8 }
     })
     this.highlightDecorations = this.editor.createDecorationsCollection()
+    this.spellDecorations = this.editor.createDecorationsCollection()
     this.editor.onMouseUp(() => this.handleHighlighterMouseUp())
     this.editor.onDidChangeModelContent(() => {
       this.changeCb?.(this.editor.getValue())
@@ -86,6 +89,7 @@ export class EditorPane {
   /** Switch the visible buffer, preserving each buffer's scroll/cursor (view state) and undo history. */
   setBuffer(b: BufferState): void {
     if (b.id === this.bufferId) return
+    this.clearSpellIssues()
     if (this.bufferId) {
       const vs = this.editor.saveViewState()
       if (vs) this.viewStates.set(this.bufferId, vs)
@@ -104,13 +108,17 @@ export class EditorPane {
     const model = monaco.editor.createModel(b.content, b.language)
     this.models.set(b.id, model)
     this.viewStates.delete(b.id)
-    if (this.bufferId === b.id) this.editor.setModel(model)
+    if (this.bufferId === b.id) {
+      this.clearSpellIssues()
+      this.editor.setModel(model)
+    }
     old?.dispose()
   }
 
   /** Drop a closed buffer's cached model + view state. */
   forgetBuffer(id: string): void {
     if (id === this.bufferId) return // still on screen — keep the live model
+    this.clearSpellIssues()
     this.models.get(id)?.dispose()
     this.models.delete(id)
     this.viewStates.delete(id)
@@ -142,6 +150,59 @@ export class EditorPane {
       if (end > start) out.push({ start, end, colour: this.hlColours[i] })
     }
     return out
+  }
+
+  spellSnapshot(): SpellDocument | null {
+    const model = this.editor.getModel()
+    if (!model) return null
+    return {
+      modelUri: model.uri.toString(),
+      modelVersion: model.getVersionId(),
+      languageId: model.getLanguageId(),
+      text: model.getValue(),
+    }
+  }
+
+  setSpellIssues(issues: SpellIssue[]): void {
+    const model = this.editor.getModel()
+    if (!model) { this.spellDecorations.clear(); return }
+    const textLength = model.getValueLength()
+    this.spellDecorations.set(issues.filter(current => (
+      current.start >= 0 && current.end > current.start && current.end <= textLength
+    )).map(current => ({
+      range: monaco.Range.fromPositions(
+        model.getPositionAt(current.start),
+        model.getPositionAt(current.end),
+      ),
+      options: {
+        inlineClassName: 'spell-error',
+        hoverMessage: { value: 'Possible misspelling' },
+        stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+      },
+    })))
+  }
+
+  clearSpellIssues(): void { this.spellDecorations.clear() }
+
+  replaceSpellIssue(issue: SpellIssue, expectedVersion: number, replacement: string): boolean {
+    const model = this.editor.getModel()
+    if (
+      !model ||
+      model.getVersionId() !== expectedVersion ||
+      issue.start < 0 ||
+      issue.end <= issue.start ||
+      issue.end > model.getValueLength() ||
+      model.getValue().slice(issue.start, issue.end) !== issue.text
+    ) return false
+
+    const range = monaco.Range.fromPositions(
+      model.getPositionAt(issue.start),
+      model.getPositionAt(issue.end),
+    )
+    this.editor.pushUndoStop()
+    this.editor.executeEdits('spell-check', [{ range, text: replacement, forceMoveMarkers: true }])
+    this.editor.pushUndoStop()
+    return true
   }
 
   setHighlighterMode(on: boolean): void {
@@ -293,6 +354,7 @@ export class EditorPane {
     }
     this.cursorListener?.dispose()
     this.pasteListener?.dispose()
+    this.clearSpellIssues()
     for (const m of this.models.values()) m.dispose()
     this.models.clear()
     this.editor.dispose()

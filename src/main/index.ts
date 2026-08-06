@@ -190,7 +190,10 @@ function createWindow(hidden = false): BrowserWindow {
   if (process.env.ELECTRON_RENDERER_URL) {
     win.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
-    win.loadFile(join(__dirname, '../renderer/index.html'))
+    const stallSpellWorker = Boolean(process.env.NC_HEADLESS && process.env.NC_TEST_HANG_SPELL_WORKER)
+    win.loadFile(join(__dirname, '../renderer/index.html'), stallSpellWorker
+      ? { query: { 'nc-spell-worker': 'hang' } }
+      : undefined)
   }
   win.on('close', (e) => { if (!isQuitting) { e.preventDefault(); win.hide() } })
   // Ctrl+Q is owned solely by the File ▸ Exit menu accelerator (CmdOrCtrl+Q).

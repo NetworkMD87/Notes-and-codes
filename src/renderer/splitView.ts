@@ -16,6 +16,7 @@ export class SplitView {
 
   isSplit(): boolean { return this.split !== null }
   focusedPane(): 'A' | 'B' { return this.focused }
+  visiblePanes(): EditorPane[] { return this.split ? [this.paneA, this.paneB] : [this.paneA] }
 
   setSplit(on: boolean): void {
     if (on && !this.split) {
