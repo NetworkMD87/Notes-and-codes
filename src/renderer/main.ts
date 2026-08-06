@@ -44,6 +44,9 @@ import type { Highlight, HighlightColour } from '../shared/types'
 import { formatAccel } from '../shared/accelerator'
 import { SpellWorkerClient } from './spellWorkerClient'
 import { SpellCheckController } from './spellCheckController'
+import { PersonalDictionaryPanel } from './personalDictionaryPanel'
+import { resolveSpellLocale } from '../shared/spellText'
+import type { ResolvedSpellLocale } from '../shared/spell'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -53,6 +56,8 @@ let spellSettings: Pick<Settings, 'spellCheckEnabled' | 'spellCheckLanguage'> = 
   spellCheckEnabled: true,
   spellCheckLanguage: 'system',
 }
+let resolvedSpellLocale: ResolvedSpellLocale = 'en-GB'
+let spellSystemLocale = 'en-GB'
 const highlights = new HighlightManager()
 const hlLoaded = new Set<string>()
 const ENC_LABEL: Record<Encoding, string> = { utf8: 'UTF-8', utf8bom: 'UTF-8-BOM', utf16le: 'UTF-16 LE', utf16be: 'UTF-16 BE' }
@@ -287,6 +292,8 @@ async function boot(): Promise<void> {
     spellCheckEnabled: settings.spellCheckEnabled,
     spellCheckLanguage: settings.spellCheckLanguage,
   }
+  spellSystemLocale = systemLocale
+  resolvedSpellLocale = resolveSpellLocale(settings.spellCheckLanguage, systemLocale)
   autoSave = settings.autoSaveSession
   autoSaveToDisk = settings.autoSaveToDisk
   formatOnSave = settings.formatOnSave
@@ -695,6 +702,36 @@ const settingsDeps: SettingsDeps = {
     formatOnSave = on
     void window.api.updateSettings({ formatOnSave: on })
   },
+  spellCheckEnabled: () => spellSettings.spellCheckEnabled,
+  setSpellCheckEnabled: async (enabled) => {
+    try {
+      const saved = await window.api.updateSettings({ spellCheckEnabled: enabled })
+      spellSettings = {
+        spellCheckEnabled: saved.spellCheckEnabled,
+        spellCheckLanguage: saved.spellCheckLanguage,
+      }
+      resolvedSpellLocale = resolveSpellLocale(spellSettings.spellCheckLanguage, spellSystemLocale)
+      await spell?.applySettings()
+    } catch {
+      toast('Could not save the spell check setting.', 'error')
+    }
+  },
+  spellCheckLanguage: () => spellSettings.spellCheckLanguage,
+  setSpellCheckLanguage: async (language) => {
+    try {
+      const saved = await window.api.updateSettings({ spellCheckLanguage: language })
+      spellSettings = {
+        spellCheckEnabled: saved.spellCheckEnabled,
+        spellCheckLanguage: saved.spellCheckLanguage,
+      }
+      resolvedSpellLocale = resolveSpellLocale(spellSettings.spellCheckLanguage, spellSystemLocale)
+      await spell?.applySettings()
+    } catch {
+      toast('Could not save the spell check language.', 'error')
+    }
+  },
+  resolvedSpellLocale: () => resolvedSpellLocale,
+  openPersonalDictionary: () => { void personalDictionary.open() },
   contextMenuEnabled: () => contextMenuEnabled,
   setContextMenu: setContextMenuEnabled,
   openAtLogin: () => openAtLogin,
@@ -715,6 +752,12 @@ const settingsDeps: SettingsDeps = {
 }
 
 const settings = new SettingsPanel(document.getElementById('app')!, settingsDeps)
+const personalDictionary = new PersonalDictionaryPanel(document.getElementById('app')!, {
+  list: () => window.api.listPersonalWords(),
+  remove: word => window.api.removePersonalWord(word),
+  changed: words => { void spell?.personalWordsChanged(words) },
+  notify: (message, level) => toast(message, level),
+})
 const openSettings = (category: SettingsCategory = 'appearance') => settings.open(category)
 // Deep-link alias into Settings ▸ Appearance. No button owns it — its consumers are the
 // palette's `Appearance…` command and the View ▸ Appearance… menu item.

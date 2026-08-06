@@ -2,6 +2,7 @@ import { _electron as electron, expect, test, type ElectronApplication, type Pag
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { openSettings } from './settingsHelper'
 
 async function launch(userDataDir: string, filePath?: string): Promise<{
   app: ElectronApplication
@@ -46,6 +47,25 @@ async function quitDirtyApp(app: ElectronApplication, win: Page): Promise<void> 
   const exited = new Promise<void>(resolve => app.process().once('exit', () => resolve()))
   await win.evaluate(() => window.api.quitNow())
   await exited
+}
+
+async function useSpellAction(win: Page, action: 'add' | 'ignore', pane = '#paneA'): Promise<void> {
+  await win.locator(`${pane} .monaco-editor`).click()
+  await win.keyboard.press('Control+Home')
+  await win.keyboard.press('ArrowRight')
+  await win.keyboard.press('Control+.')
+  const label = action === 'add' ? 'Add to personal dictionary' : 'Ignore for this session'
+  const row = win.locator('.action-widget .monaco-list-row', { hasText: label })
+  await expect(row).toBeVisible()
+  // Monaco's pointer-block layer deliberately intercepts physical pointer input over this
+  // widget. Navigate from its currently focused public row to the requested visible row by
+  // their rendered list indices, so suggestion count/order cannot select the wrong action.
+  const focused = win.locator('.action-widget .monaco-list-row.focused')
+  const targetIndex = Number(await row.getAttribute('data-index'))
+  const focusedIndex = Number(await focused.getAttribute('data-index'))
+  const key = targetIndex >= focusedIndex ? 'ArrowDown' : 'ArrowUp'
+  for (let step = 0; step < Math.abs(targetIndex - focusedIndex); step++) await win.keyboard.press(key)
+  await win.keyboard.press('Enter')
 }
 
 test('a non-responsive spell worker does not block app boot', async () => {
@@ -172,6 +192,113 @@ test('both visible split panes hold independent spell decorations', async () => 
     await expect(spellErrors(win, '#paneB')).toHaveCount(1)
     await expect(spellErrors(win, '#paneA')).toHaveText('speling')
     await expect(spellErrors(win, '#paneB')).toHaveText('speling')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('disabling clears spell decorations immediately and enabling restores them', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-toggle-'))
+  const filePath = join(userDataDir, 'note.txt')
+  writeFileSync(filePath, 'speling')
+  const { app, win } = await launch(userDataDir, filePath)
+  try {
+    await expect(spellErrors(win)).toHaveCount(1)
+    await openSettings(win, 'Editor')
+    const toggle = win.locator('.appearance-row', {
+      hasText: 'Check spelling in plain text and Markdown',
+    }).locator('input[type=checkbox]')
+
+    await toggle.uncheck()
+    await expect(spellErrors(win)).toHaveCount(0)
+    await toggle.check()
+    await expect(spellErrors(win)).toHaveCount(1)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('a personal word clears case variants, persists, and removal rechecks the document', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-personal-'))
+  const filePath = join(userDataDir, 'note.txt')
+  writeFileSync(filePath, 'Openaiish openaiish')
+  let app: ElectronApplication
+  let win: Page
+  ;({ app, win } = await launch(userDataDir, filePath))
+  try {
+    await expect(spellErrors(win)).toHaveCount(2)
+    await useSpellAction(win, 'add')
+    await expect(spellErrors(win)).toHaveCount(0)
+    await app.close()
+
+    ;({ app, win } = await launch(userDataDir, filePath))
+    await win.waitForTimeout(700)
+    await expect(spellErrors(win)).toHaveCount(0)
+
+    await openSettings(win, 'Editor')
+    await win.locator('.personal-dictionary-open').click()
+    const row = win.locator('.personal-word', { hasText: /openaiish/i })
+    await expect(row).toBeVisible()
+    await row.getByRole('button', { name: 'Remove' }).click()
+    await expect(row).toHaveCount(0)
+    await expect(spellErrors(win)).toHaveCount(2)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Ignore for this session clears case variants but does not survive relaunch', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-ignore-'))
+  const filePath = join(userDataDir, 'note.txt')
+  writeFileSync(filePath, 'Openaiish openaiish')
+  let app: ElectronApplication
+  let win: Page
+  ;({ app, win } = await launch(userDataDir, filePath))
+  try {
+    await expect(spellErrors(win)).toHaveCount(2)
+    await useSpellAction(win, 'ignore')
+    await expect(spellErrors(win)).toHaveCount(0)
+    await app.close()
+
+    ;({ app, win } = await launch(userDataDir, filePath))
+    await expect(spellErrors(win)).toHaveCount(2)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('switching UK and US rechecks both visible split panes', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-locale-split-'))
+  const firstPath = join(userDataDir, 'british.txt')
+  const secondPath = join(userDataDir, 'american.txt')
+  writeFileSync(firstPath, 'colour')
+  writeFileSync(secondPath, 'color')
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [
+      { id: 'british', title: 'british.txt', filePath: firstPath, content: 'colour', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'american', title: 'american.txt', filePath: secondPath, content: 'color', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+    ],
+    activeId: 'british',
+  }))
+  const { app, win } = await launch(userDataDir)
+  try {
+    await win.locator('.tb-btn[title="Toggle split pane"]').click()
+    await win.locator('#paneB .monaco-editor').click()
+    await win.locator('.tab', { hasText: 'american.txt' }).click()
+    await openSettings(win, 'Editor')
+    const language = win.getByLabel('Spell check language')
+
+    await language.selectOption('en-GB')
+    await expect(spellErrors(win, '#paneA')).toHaveCount(0)
+    await expect(spellErrors(win, '#paneB')).toHaveCount(1)
+    await language.selectOption('en-US')
+    await expect(spellErrors(win, '#paneA')).toHaveCount(1)
+    await expect(spellErrors(win, '#paneB')).toHaveCount(0)
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
