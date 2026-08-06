@@ -23,3 +23,12 @@ declare module 'nspell' {
   function nspell(dictionary: { aff: string; dic: string }): Nspell
   export default nspell
 }
+
+interface Window {
+  __ncSpellTest?: {
+    failNextWorkerRequest(): void
+    delayNextChecks(count: number): void
+    delayedCheckCount(): number
+    releaseNextCheck(): void
+  }
+}

@@ -362,5 +362,103 @@ describe('SpellCheckCore', () => {
     expect(pane.issues).toEqual([])
     expect(h.notifications).toHaveLength(1)
     expect(h.notifications[0].level).toBe('warning')
+    expect(h.notifications[0].message).not.toContain('speling')
+  })
+
+  it.each(['', '   \r\n\t'])('does not submit %j text for dictionary correctness or suggestions', async text => {
+    const pane = new FakePane(document('inmemory://blank', text))
+    const h = harness([pane])
+
+    await h.core.initialize([])
+    h.core.schedule()
+    vi.advanceTimersByTime(300)
+
+    expect(h.worker.checks).toEqual([])
+  })
+
+  it('clears prior issues when a visible document becomes whitespace without worker work', async () => {
+    const pane = new FakePane(document('inmemory://blank-after-issue'))
+    const h = harness([pane])
+    await h.core.initialize([])
+    const first = h.worker.checks[0]
+    first.result.resolve(checked(first.batch, { 'inmemory://blank-after-issue': [issue()] }))
+    await flush()
+    expect(pane.issues).toEqual([issue()])
+
+    pane.snapshot = document('inmemory://blank-after-issue', '  \n\t', 'plaintext', 2)
+    h.core.refreshNow()
+
+    expect(h.worker.checks).toHaveLength(1)
+    expect(pane.issues).toEqual([])
+    expect(h.core.currentIssue({
+      modelUri: 'inmemory://blank-after-issue',
+      modelVersion: 1,
+      startOffset: 1,
+      endOffset: 1,
+    })).toBeNull()
+  })
+
+  it('submits only a newly captured batch after the first worker failure recovers', async () => {
+    const pane = new FakePane(document('inmemory://recovery', 'first', 'plaintext', 1))
+    const h = harness([pane])
+    await h.core.initialize([])
+    const failed = h.worker.checks[0]
+
+    pane.snapshot = document('inmemory://recovery', 'newly captured', 'plaintext', 2)
+    failed.result.reject(new Error('worker-failed'))
+    await flush()
+    h.core.workerRestarted()
+
+    expect(h.worker.checks.map(check => check.batch.documents[0].text)).toEqual([
+      'first',
+      'newly captured',
+    ])
+    expect(pane.issues).toEqual([])
+    expect(h.notifications).toEqual([{
+      message: 'Spell check restarted after a worker failure.',
+      level: 'warning',
+    }])
+  })
+
+  it('ignores an in-flight result after spell check is disabled', async () => {
+    const pane = new FakePane(document('inmemory://disable'))
+    const h = harness([pane])
+    await h.core.initialize([])
+    const late = h.worker.checks[0]
+
+    h.settings.spellCheckEnabled = false
+    await h.core.applySettings()
+    late.result.resolve(checked(late.batch, { 'inmemory://disable': [issue()] }))
+    await flush()
+
+    expect(pane.issues).toEqual([])
+  })
+
+  it('ignores an old-locale result after a locale switch', async () => {
+    const pane = new FakePane(document('inmemory://locale-late'))
+    const h = harness([pane])
+    await h.core.initialize([])
+    const oldLocale = h.worker.checks[0]
+
+    h.settings.spellCheckLanguage = 'en-GB'
+    const switched = h.core.applySettings()
+    oldLocale.result.resolve(checked(oldLocale.batch, { 'inmemory://locale-late': [issue()] }))
+    await switched
+    await flush()
+
+    expect(pane.issues).toEqual([])
+  })
+
+  it('ignores an in-flight result after controller disposal', async () => {
+    const pane = new FakePane(document('inmemory://disposed'))
+    const h = harness([pane])
+    await h.core.initialize([])
+    const late = h.worker.checks[0]
+
+    h.core.dispose()
+    late.result.resolve(checked(late.batch, { 'inmemory://disposed': [issue()] }))
+    await flush()
+
+    expect(pane.issues).toEqual([])
   })
 })

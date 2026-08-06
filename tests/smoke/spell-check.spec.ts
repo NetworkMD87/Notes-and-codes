@@ -1,5 +1,5 @@
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { openSettings } from './settingsHelper'
@@ -31,6 +31,26 @@ async function launchWithHungSpellWorker(userDataDir: string): Promise<{
     env: { ...process.env, NC_HEADLESS: '1', NC_TEST_HANG_SPELL_WORKER: '1' } as Record<string, string>,
   })
   return { app, win: await app.firstWindow() }
+}
+
+async function launchHeadless(userDataDir: string, filePath?: string): Promise<{
+  app: ElectronApplication
+  win: Page
+}> {
+  const args = ['out/main/index.js', `--user-data-dir=${userDataDir}`]
+  if (filePath) args.push(filePath)
+  const app = await electron.launch({
+    args,
+    env: { ...process.env, NC_HEADLESS: '1' } as Record<string, string>,
+  })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  if (filePath) {
+    const tab = win.locator('.tab', { hasText: filePath.split(/[\\/]/).pop()! })
+    await expect(tab).toBeVisible()
+    await tab.click()
+  }
+  return { app, win }
 }
 
 async function replaceEditorText(win: Page, text: string, pane = '#paneA'): Promise<void> {
@@ -68,6 +88,21 @@ async function useSpellAction(win: Page, action: 'add' | 'ignore', pane = '#pane
   await win.keyboard.press('Enter')
 }
 
+async function useReplacement(win: Page, replacement: string, pane = '#paneA'): Promise<void> {
+  await win.locator(`${pane} .monaco-editor`).click()
+  await win.keyboard.press('Control+Home')
+  await win.keyboard.press('ArrowRight')
+  await win.keyboard.press('Control+.')
+  const row = win.locator('.action-widget .monaco-list-row', { hasText: replacement }).first()
+  await expect(row).toBeVisible()
+  const focused = win.locator('.action-widget .monaco-list-row.focused')
+  const targetIndex = Number(await row.getAttribute('data-index'))
+  const focusedIndex = Number(await focused.getAttribute('data-index'))
+  const key = targetIndex >= focusedIndex ? 'ArrowDown' : 'ArrowUp'
+  for (let step = 0; step < Math.abs(targetIndex - focusedIndex); step++) await win.keyboard.press(key)
+  await win.keyboard.press('Enter')
+}
+
 test('a non-responsive spell worker does not block app boot', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-hung-'))
   const { app, win } = await launchWithHungSpellWorker(userDataDir)
@@ -80,6 +115,110 @@ test('a non-responsive spell worker does not block app boot', async () => {
     await expect(spellErrors(win)).toHaveCount(0)
   } finally {
     await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('a first worker crash warns once, recovers, and never blocks editing or saving', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-recover-'))
+  const filePath = join(userDataDir, 'recover.txt')
+  writeFileSync(filePath, 'ordinary text')
+  const { app, win } = await launchHeadless(userDataDir, filePath)
+  try {
+    expect(new URL(win.url()).searchParams.get('nc-headless')).toBe('1')
+    await win.waitForTimeout(700)
+    await win.evaluate(() => window.__ncSpellTest!.failNextWorkerRequest())
+    await replaceEditorText(win, 'speling after recovery')
+
+    await expect(win.locator('.toast--warning')).toHaveCount(1)
+    await expect(win.locator('.toast--warning')).not.toContainText('speling')
+    await replaceEditorText(win, 'ordinary text saves successfully')
+    // Native menu accelerators are not reliably triggered through Playwright; the palette
+    // reaches the same public Save command without bypassing renderer/main IPC.
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Save')
+    await win.keyboard.press('Enter')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toBe('ordinary text saves successfully')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('a held stale response from model A cannot decorate replacement model B', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-stale-'))
+  const firstPath = join(userDataDir, 'first.txt')
+  const secondPath = join(userDataDir, 'second.txt')
+  writeFileSync(firstPath, 'ordinary first')
+  writeFileSync(secondPath, 'ordinary second')
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [
+      { id: 'first', title: 'first.txt', filePath: firstPath, content: 'ordinary first', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'second', title: 'second.txt', filePath: secondPath, content: 'ordinary second', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+    ],
+    activeId: 'first',
+  }))
+  const { app, win } = await launchHeadless(userDataDir)
+  try {
+    await win.waitForTimeout(700)
+    await win.evaluate(() => window.__ncSpellTest!.delayNextChecks(2))
+    await replaceEditorText(win, 'speling in model A')
+    await expect.poll(() => win.evaluate(() => window.__ncSpellTest!.delayedCheckCount())).toBe(1)
+
+    await win.locator('.tab', { hasText: 'second.txt' }).click()
+    await expect(win.locator('#paneA .view-lines')).toContainText('ordinary second')
+    await win.evaluate(() => window.__ncSpellTest!.releaseNextCheck())
+    await expect.poll(() => win.evaluate(() => window.__ncSpellTest!.delayedCheckCount())).toBe(1)
+
+    await expect(spellErrors(win), 'replacement model B has zero stale decorations before its held response is released').toHaveCount(0)
+    await win.evaluate(() => window.__ncSpellTest!.releaseNextCheck())
+    await expect(spellErrors(win)).toHaveCount(0)
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('UK and US correction workflow succeeds while every external request is actively blocked', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-offline-'))
+  const filePath = join(userDataDir, 'offline.txt')
+  writeFileSync(filePath, 'ordinary')
+  const { app, win } = await launch(userDataDir, filePath)
+  try {
+    await app.evaluate(({ session }) => {
+      const state = globalThis as typeof globalThis & { __ncSpellExternalRequests?: string[] }
+      state.__ncSpellExternalRequests = []
+      session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+        if (/^https?:/i.test(details.url)) {
+          state.__ncSpellExternalRequests!.push(details.url)
+          callback({ cancel: true })
+        } else callback({})
+      })
+    })
+
+    await openSettings(win, 'Editor')
+    await win.getByLabel('Spell check language').selectOption('en-US')
+    await win.keyboard.press('Escape')
+    await replaceEditorText(win, 'colour')
+    await expect(spellErrors(win)).toHaveCount(1)
+    await useReplacement(win, 'color')
+    await expect(win.locator('#paneA .view-lines')).toContainText('color')
+
+    await openSettings(win, 'Editor')
+    await win.getByLabel('Spell check language').selectOption('en-GB')
+    await win.keyboard.press('Escape')
+    await replaceEditorText(win, 'color')
+    await expect(spellErrors(win)).toHaveCount(1)
+    await useReplacement(win, 'colour')
+    await expect(win.locator('#paneA .view-lines')).toContainText('colour')
+
+    const external = await app.evaluate(() => (
+      globalThis as typeof globalThis & { __ncSpellExternalRequests?: string[] }
+    ).__ncSpellExternalRequests ?? [])
+    expect(external).toEqual([])
+  } finally {
+    await quitDirtyApp(app, win)
     rmSync(userDataDir, { recursive: true, force: true })
   }
 })
@@ -110,7 +249,10 @@ test('does not decorate the identical word in a TypeScript buffer', async () => 
     await expect(win.locator('#paneA .view-lines')).toContainText('speling')
     await win.waitForTimeout(700)
 
-    await expect(spellErrors(win)).toHaveCount(0)
+    await expect(
+      spellErrors(win),
+      'TypeScript buffer has zero .spell-error decorations',
+    ).toHaveCount(0)
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
@@ -125,7 +267,10 @@ test('checks Markdown prose but excludes inline and fenced code', async () => {
   try {
     await expect(win.locator('#paneA .view-lines')).toContainText('speling')
 
-    await expect(spellErrors(win)).toHaveCount(1)
+    await expect(
+      spellErrors(win),
+      'fenced mispeling has zero .spell-error; only prose decorates',
+    ).toHaveCount(1)
     await expect(spellErrors(win)).toHaveText('speling')
   } finally {
     await app.close()

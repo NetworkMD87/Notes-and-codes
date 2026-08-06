@@ -7,7 +7,21 @@ import { build } from 'vite'
 import ts from 'typescript'
 import { spellAssetAliases, spellRawAssetAliases } from './spellAssetAliases.mjs'
 
-const forbidden = ['fetch(', 'XMLHttpRequest', 'WebSocket', 'setSpellCheckerDictionaryDownloadURL', 'http://', 'https://', 'node:fs', 'fs/promises', 'require(', 'import(']
+const forbidden = [
+  'fetch(',
+  'XMLHttpRequest',
+  'WebSocket',
+  'EventSource',
+  'sendBeacon(',
+  'importScripts(',
+  'setSpellCheckerDictionaryDownloadURL',
+  'http://',
+  'https://',
+  'node:fs',
+  'fs/promises',
+  'require(',
+  'import(',
+]
 
 async function javascriptFiles(dir) {
   return (await readdir(dir, { withFileTypes: true }))

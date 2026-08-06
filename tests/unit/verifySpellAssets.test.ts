@@ -25,6 +25,9 @@ describe('verifySpellAssets', () => {
     'function proof() { return /https?:\\/\\//; fetch("dictionary") }',
     'return /https?:\\/\\//; fetch("dictionary")',
     'fetch("dictionary")',
+    'new EventSource("/dictionary")',
+    'navigator.sendBeacon("/dictionary")',
+    'importScripts("/dictionary")',
     'new XMLHttpRequest()',
     'new WebSocket("wss://example.test")',
     'setSpellCheckerDictionaryDownloadURL("https://example.test")'

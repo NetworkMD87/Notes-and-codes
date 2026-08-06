@@ -187,12 +187,18 @@ function createWindow(hidden = false): BrowserWindow {
       sandbox: true
     }
   })
+  const headlessQuery: Record<string, string> = {}
+  if (process.env.NC_HEADLESS) headlessQuery['nc-headless'] = '1'
+  if (process.env.NC_HEADLESS && process.env.NC_TEST_HANG_SPELL_WORKER) {
+    headlessQuery['nc-spell-worker'] = 'hang'
+  }
   if (process.env.ELECTRON_RENDERER_URL) {
-    win.loadURL(process.env.ELECTRON_RENDERER_URL)
+    const rendererUrl = new URL(process.env.ELECTRON_RENDERER_URL)
+    for (const [key, value] of Object.entries(headlessQuery)) rendererUrl.searchParams.set(key, value)
+    win.loadURL(rendererUrl.toString())
   } else {
-    const stallSpellWorker = Boolean(process.env.NC_HEADLESS && process.env.NC_TEST_HANG_SPELL_WORKER)
-    win.loadFile(join(__dirname, '../renderer/index.html'), stallSpellWorker
-      ? { query: { 'nc-spell-worker': 'hang' } }
+    win.loadFile(join(__dirname, '../renderer/index.html'), Object.keys(headlessQuery).length
+      ? { query: headlessQuery }
       : undefined)
   }
   win.on('close', (e) => { if (!isQuitting) { e.preventDefault(); win.hide() } })

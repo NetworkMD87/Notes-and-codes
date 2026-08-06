@@ -24,6 +24,15 @@ interface PendingRequest {
   reject: (error: Error) => void
 }
 
+export interface SpellWorkerTestHooks {
+  failNextWorkerRequest(): void
+  delayNextChecks(count: number): void
+  delayedCheckCount(): number
+  releaseNextCheck(): void
+}
+
+interface SpellTestHookTarget { __ncSpellTest?: SpellWorkerTestHooks }
+
 const workerError = (): Error => new Error('worker-failed')
 const wordKey = (word: string): string => word.toLocaleLowerCase('en')
 
@@ -45,9 +54,21 @@ export class SpellWorkerClient {
   private disabled = false
   private disposed = false
   private fatalNotified = false
+  private failNext = false
+  private checksToDelay = 0
+  private readonly delayedChecks: SpellWorkerResponse[] = []
 
   private readonly messageListener = (event: MessageEvent<SpellWorkerResponse>): void => {
     const response = event.data
+    if (response.ok && response.type === 'checked' && this.checksToDelay > 0) {
+      this.checksToDelay--
+      this.delayedChecks.push(response)
+      return
+    }
+    this.deliver(response)
+  }
+
+  private deliver(response: SpellWorkerResponse): void {
     const request = this.pending.get(response.id)
     if (!request) return
     this.pending.delete(response.id)
@@ -109,11 +130,26 @@ export class SpellWorkerClient {
     this.personalWords.delete(wordKey(word))
   }
 
+  failNextWorkerRequest(): void { this.failNext = true }
+
+  delayNextChecks(count: number): void {
+    this.checksToDelay = Math.max(0, Math.trunc(count))
+  }
+
+  delayedCheckCount(): number { return this.delayedChecks.length }
+
+  releaseNextCheck(): void {
+    const response = this.delayedChecks.shift()
+    if (response) this.deliver(response)
+  }
+
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
     this.detach(this.worker)
     this.worker.terminate()
+    this.checksToDelay = 0
+    this.delayedChecks.length = 0
     this.rejectPending()
   }
 
@@ -144,7 +180,12 @@ export class SpellWorkerClient {
         },
         reject
       })
-      this.worker.postMessage({ ...request, id } as SpellWorkerRequest)
+      if (this.failNext) {
+        this.failNext = false
+        this.handleCrash()
+      } else {
+        this.worker.postMessage({ ...request, id } as SpellWorkerRequest)
+      }
     })
   }
 
@@ -156,6 +197,8 @@ export class SpellWorkerClient {
     if (this.disabled || this.disposed) return
     this.detach(this.worker)
     this.worker.terminate()
+    this.checksToDelay = 0
+    this.delayedChecks.length = 0
     this.rejectPending()
 
     if (this.restarted) {
@@ -222,5 +265,19 @@ export class SpellWorkerClient {
   private detach(worker: WorkerPort): void {
     worker.removeEventListener('message', this.messageListener as EventListener)
     worker.removeEventListener('error', this.errorListener)
+  }
+}
+
+export function exposeSpellTestHooks(
+  search: URLSearchParams,
+  client: SpellWorkerClient,
+  target: SpellTestHookTarget,
+): void {
+  if (search.get('nc-headless') !== '1') return
+  target.__ncSpellTest = {
+    failNextWorkerRequest: () => client.failNextWorkerRequest(),
+    delayNextChecks: count => client.delayNextChecks(count),
+    delayedCheckCount: () => client.delayedCheckCount(),
+    releaseNextCheck: () => client.releaseNextCheck(),
   }
 }

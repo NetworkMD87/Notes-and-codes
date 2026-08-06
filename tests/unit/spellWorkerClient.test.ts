@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { SpellWorkerClient, type WorkerFactory } from '../../src/renderer/spellWorkerClient'
+import {
+  exposeSpellTestHooks,
+  SpellWorkerClient,
+  type WorkerFactory,
+} from '../../src/renderer/spellWorkerClient'
 import type {
   SpellBatch,
   SpellBatchResult,
@@ -71,6 +75,17 @@ async function flush(): Promise<void> {
 }
 
 describe('SpellWorkerClient', () => {
+  it('does not expose the smoke-only test hook without the headless navigation flag', () => {
+    const { createWorker } = factory()
+    const client = new SpellWorkerClient({ createWorker })
+    const target: { __ncSpellTest?: unknown } = {}
+
+    exposeSpellTestHooks(new URLSearchParams(), client, target)
+
+    expect(target.__ncSpellTest).toBeUndefined()
+    client.dispose()
+  })
+
   it('correlates out-of-order responses by request id', async () => {
     const { createWorker, workers } = factory()
     const client = new SpellWorkerClient({ createWorker })
@@ -229,5 +244,69 @@ describe('SpellWorkerClient', () => {
     expect(onFatal).toHaveBeenCalledOnce()
     await expect(client.check(batch)).rejects.toThrow('worker-failed')
     expect(workers).toHaveLength(2)
+  })
+
+  it('routes an armed test failure through first-crash recovery without leaking request data', async () => {
+    const { createWorker, workers } = factory()
+    const onRestart = vi.fn()
+    const client = new SpellWorkerClient({ createWorker, onRestart })
+    const loaded = client.load('en-GB', ['PrivatePersonalWord'])
+    workers[0].respond({ id: 1, ok: true, type: 'loaded' })
+    await loaded
+
+    client.failNextWorkerRequest()
+    const failed = client.check(batch)
+
+    await expect(failed).rejects.toThrow('worker-failed')
+    await expect(failed).rejects.not.toThrow('mispeling')
+    expect(workers[0].terminate).toHaveBeenCalledOnce()
+    expect(workers[1].messages).toEqual([
+      { id: 3, type: 'load', locale: 'en-GB', personalWords: ['PrivatePersonalWord'] },
+    ])
+    workers[1].respond({ id: 3, ok: true, type: 'loaded' })
+    await flush()
+    expect(onRestart).toHaveBeenCalledOnce()
+  })
+
+  it('holds only the armed completed check responses and releases them FIFO', async () => {
+    const { createWorker, workers } = factory()
+    const client = new SpellWorkerClient({ createWorker })
+    client.delayNextChecks(2)
+
+    const first = client.check(batch)
+    const secondBatch = { ...batch, generation: 8 }
+    const second = client.check(secondBatch)
+    const third = client.suggest('mispeling')
+    workers[0].respond({ id: 1, ok: true, type: 'checked', result: checked })
+    workers[0].respond({ id: 2, ok: true, type: 'checked', result: { ...checked, generation: 8 } })
+    workers[0].respond({ id: 3, ok: true, type: 'suggested', suggestions: ['misspelling'] })
+
+    await expect(third).resolves.toEqual(['misspelling'])
+    expect(client.delayedCheckCount()).toBe(2)
+    expect(await Promise.race([first.then(() => 'released'), Promise.resolve('held')])).toBe('held')
+
+    client.releaseNextCheck()
+    await expect(first).resolves.toEqual(checked)
+    expect(client.delayedCheckCount()).toBe(1)
+    client.releaseNextCheck()
+    await expect(second).resolves.toEqual({ ...checked, generation: 8 })
+    expect(client.delayedCheckCount()).toBe(0)
+  })
+
+  it('discards pending and completed response holds when the worker crashes', async () => {
+    const { createWorker, workers } = factory()
+    const client = new SpellWorkerClient({ createWorker })
+    client.delayNextChecks(2)
+    const held = client.check(batch)
+    workers[0].respond({ id: 1, ok: true, type: 'checked', result: checked })
+    expect(client.delayedCheckCount()).toBe(1)
+
+    workers[0].crash()
+
+    await expect(held).rejects.toThrow('worker-failed')
+    expect(client.delayedCheckCount()).toBe(0)
+    const afterRestart = client.check(batch)
+    workers[1].respond({ id: 2, ok: true, type: 'checked', result: checked })
+    await expect(afterRestart).resolves.toEqual(checked)
   })
 })

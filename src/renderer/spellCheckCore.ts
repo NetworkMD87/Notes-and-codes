@@ -136,7 +136,10 @@ export class SpellCheckCore {
   }
 
   workerRestarted(): void {
-    if (!this.disposed && !this.sessionDisabled && this.enabled) this.scheduler.invalidate()
+    if (!this.disposed && !this.sessionDisabled && this.enabled) {
+      this.warnOnce('Spell check restarted after a worker failure.')
+      this.scheduler.invalidate()
+    }
   }
 
   workerFailed(): void {
@@ -260,6 +263,11 @@ export class SpellCheckCore {
         this.registry.delete(current.modelUri)
         continue
       }
+      if (!/\S/.test(current.text)) {
+        pane.clearSpellIssues()
+        this.registry.delete(current.modelUri)
+        continue
+      }
       documents.push(current)
       currentUris.add(current.modelUri)
     }
@@ -350,9 +358,12 @@ export class SpellCheckCore {
     this.enabled = false
     this.scheduler.setEnabled(false)
     this.clearAll()
-    if (!this.failureNotified) {
-      this.failureNotified = true
-      this.deps.notify(message, 'warning')
-    }
+    this.warnOnce(message)
+  }
+
+  private warnOnce(message: string): void {
+    if (this.failureNotified) return
+    this.failureNotified = true
+    this.deps.notify(message, 'warning')
   }
 }

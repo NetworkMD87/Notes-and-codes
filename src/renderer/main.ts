@@ -42,7 +42,7 @@ import { FindInFiles } from './findInFiles'
 import { uiFontStack } from './uiFont'
 import type { Highlight, HighlightColour } from '../shared/types'
 import { formatAccel } from '../shared/accelerator'
-import { SpellWorkerClient } from './spellWorkerClient'
+import { exposeSpellTestHooks, SpellWorkerClient } from './spellWorkerClient'
 import { SpellCheckController } from './spellCheckController'
 import { PersonalDictionaryPanel } from './personalDictionaryPanel'
 import { resolveSpellLocale } from '../shared/spellText'
@@ -319,7 +319,9 @@ async function boot(): Promise<void> {
   showActive()
   // Main only adds this query under NC_HEADLESS plus the dedicated smoke-test environment flag.
   // Keeping the stalled port here exercises boot behavior without exposing a production IPC seam.
-  const stallSpellWorker = new URLSearchParams(window.location.search).get('nc-spell-worker') === 'hang'
+  const spellTestParams = new URLSearchParams(window.location.search)
+  const headlessSpellTest = spellTestParams.get('nc-headless') === '1'
+  const stallSpellWorker = headlessSpellTest && spellTestParams.get('nc-spell-worker') === 'hang'
   const worker = new SpellWorkerClient({
     createWorker: stallSpellWorker ? () => ({
       postMessage: () => undefined,
@@ -330,6 +332,7 @@ async function boot(): Promise<void> {
     onRestart: () => spell?.workerRestarted(),
     onFatal: () => spell?.workerFailed(),
   })
+  exposeSpellTestHooks(spellTestParams, worker, window)
   spell = new SpellCheckController({
     panes: () => view.visiblePanes(),
     allPanes: () => [view.paneA, view.paneB],

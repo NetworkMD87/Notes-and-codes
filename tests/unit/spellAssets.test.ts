@@ -7,6 +7,8 @@ const lock = JSON.parse(readFileSync(resolve(root, 'package-lock.json'), 'utf8')
   packages: Record<string, { version?: string }>
 }
 const notices = readFileSync(resolve(root, 'THIRD_PARTY_NOTICES.md'), 'utf8')
+const mainSource = readFileSync(resolve(root, 'src/main/index.ts'), 'utf8')
+const rendererSource = readFileSync(resolve(root, 'src/renderer/main.ts'), 'utf8')
 
 describe('offline spell assets', () => {
   it('locks every runtime package and records its licence notice', () => {
@@ -28,5 +30,12 @@ describe('offline spell assets', () => {
   it.each(['dictionary-en', 'dictionary-en-gb'])('ships raw Hunspell assets for %s', (packageName) => {
     expect(existsSync(resolve(root, 'node_modules', packageName, 'index.aff'))).toBe(true)
     expect(existsSync(resolve(root, 'node_modules', packageName, 'index.dic'))).toBe(true)
+  })
+
+  it('keeps the renderer spell-test seam behind the NC_HEADLESS navigation flag', () => {
+    expect(mainSource).toContain("if (process.env.NC_HEADLESS) headlessQuery['nc-headless'] = '1'")
+    expect(rendererSource).toMatch(/spellTestParams\.get\(['"]nc-headless['"]\)\s*===\s*['"]1['"]/)
+    expect(rendererSource).toContain('exposeSpellTestHooks(spellTestParams, worker, window)')
+    expect(rendererSource).not.toContain('window.__ncSpellTest =')
   })
 })

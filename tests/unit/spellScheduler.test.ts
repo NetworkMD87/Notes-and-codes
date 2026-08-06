@@ -102,7 +102,10 @@ describe('SpellScheduler', () => {
     h.checks[0].resolve(resultFor(h.calls[0]))
     await flush()
 
-    expect(h.calls.map(batch => batch.documents[0].text)).toEqual(['A', 'C'])
+    expect(
+      h.calls.map(batch => batch.documents[0].text),
+      'worker calls are exactly [A, C]',
+    ).toEqual(['A', 'C'])
   })
 
   it('does not apply an in-flight result after generation invalidation', async () => {
