@@ -118,16 +118,28 @@ function findClosingParenthesis(text: string, start: number): number {
   return -1
 }
 
+function isEscaped(text: string, index: number): boolean {
+  let backslashes = 0
+  while (index > 0 && text[--index] === '\\') backslashes++
+  return backslashes % 2 === 1
+}
+
 function maskLinkTargets(chars: string[]): void {
   const text = chars.join('')
   for (let index = 0; index < text.length; index++) {
+    if (isEscaped(text, index)) continue
+    if (text[index] === '[' && text[index - 1] === '!') continue
+    const constructStart = index
     const labelStart = text[index] === '!' && text[index + 1] === '['
       ? index + 1
       : text[index] === '[' ? index : -1
     if (labelStart === -1) continue
 
     const labelEnd = findClosingBracket(text, labelStart + 1, ']')
-    if (labelEnd === -1) continue
+    if (labelEnd === -1) {
+      maskRange(chars, constructStart, text.length)
+      break
+    }
     const suffixStart = labelEnd + 1
     if (text[suffixStart] === '(') {
       const suffixEnd = findClosingParenthesis(text, suffixStart + 1)
@@ -145,8 +157,22 @@ function maskLinkTargets(chars: string[]): void {
 
 function maskHtmlSyntax(chars: string[]): void {
   const text = chars.join('')
-  for (const match of text.matchAll(/<[^>\r\n]*>/g)) {
-    maskRange(chars, match.index, match.index + match[0].length)
+  for (let start = 0; start < text.length; start++) {
+    if (text[start] !== '<') continue
+    if (!/[A-Za-z/!?]/.test(text[start + 1] ?? '')) continue
+    let quote: '"' | "'" | null = null
+    for (let end = start + 1; end < text.length; end++) {
+      const char = text[end]
+      if (quote) {
+        if (char === quote) quote = null
+      } else if (char === '"' || char === "'") {
+        quote = char
+      } else if (char === '>') {
+        maskRange(chars, start, end + 1)
+        start = end
+        break
+      }
+    }
   }
 }
 
@@ -156,8 +182,10 @@ function maskTechnicalTokens(chars: string[]): void {
     /\bwww\.[^\s<>]+/giu,
     /\b[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}\b/gu,
     /(["'])(?:[A-Za-z]:\\|\\\\|\/)[^"'\r\n]+\1/g,
-    /(?:[A-Za-z]:\\|\\\\)[^<>"|?*\r\n]+/g,
-    /(?:^|(?<=[\s(]))\/[^<>"'\r\n]+/gmu,
+    /(?:[A-Za-z]:\\|\\\\)(?:[^\\:\r\n<>"|?*]+?\\)+?[^\\:\r\n<>"|?*]*?\.[\p{L}\p{N}]+/gu,
+    /(?:[A-Za-z]:\\|\\\\)[^\s<>"|?*\r\n]+/g,
+    /(?:^|(?<=[\s(]))\/[^\s<>"'\r\n]+/gmu,
+    /(?<![\p{L}\p{N}._-])(?:[\p{L}\p{N}._-]+[\\/])+[\p{L}\p{N}._-]+(?![\p{L}\p{N}._-])/gu,
     /&(?:#\d+|#x[\dA-Fa-f]+|[\p{L}][\p{L}\p{N}]+);/gu
   ]
 

@@ -84,6 +84,16 @@ describe('offset-stable prose extraction', () => {
       name: 'visible text inside an HTML span',
       text: 'Before <span class="x">human words</span> after',
       expected: words(['Before', 0, 6], ['human', 23, 28], ['words', 29, 34], ['after', 42, 47])
+    },
+    {
+      name: 'visible text after a quoted greater-than attribute',
+      text: '<span title="x > technical">human</span>',
+      expected: words(['human', 28, 33])
+    },
+    {
+      name: 'visible text after an LF multiline opening tag',
+      text: '<span\n title="technical">\nhuman\n</span>',
+      expected: words(['human', 26, 31])
     }
   ])('extracts $name at original UTF-16 offsets', ({ text, expected }) => {
     expectWords(text, 'markdown', expected)
@@ -151,6 +161,68 @@ describe('offset-stable prose extraction', () => {
       'Visible [label](technical-remainder',
       'markdown',
       words(['Visible', 0, 7], ['label', 9, 14])
+    )
+  })
+
+  it('fails closed from an unmatched LF link label while retaining preceding prose', () => {
+    expectWords('Visible\n[technical remainder', 'markdown', words(['Visible', 0, 7]))
+  })
+
+  it('fails closed from an unmatched CRLF image label while retaining preceding prose', () => {
+    expectWords('Visible ![technical\r\nremainder', 'markdown', words(['Visible', 0, 7]))
+  })
+
+  it.each([
+    ['link', 'Visible \\[mispeling remainder', words(['Visible', 0, 7], ['mispeling', 10, 19], ['remainder', 20, 29])],
+    ['image', 'Visible \\![mispeling remainder', words(['Visible', 0, 7], ['mispeling', 11, 20], ['remainder', 21, 30])]
+  ])('keeps an escaped Markdown %s opener as literal prose', (_name, text, expected) => {
+    expectWords(text, 'markdown', expected)
+  })
+
+  it.each([
+    [
+      'absolute Windows',
+      'Open C:\\tmp\\file.txt and fix mispeling',
+      words(['Open', 0, 4], ['and', 21, 24], ['fix', 25, 28], ['mispeling', 29, 38])
+    ],
+    [
+      'absolute POSIX',
+      'Open /tmp/file.txt and fix mispeling',
+      words(['Open', 0, 4], ['and', 19, 22], ['fix', 23, 26], ['mispeling', 27, 36])
+    ],
+    [
+      'relative POSIX',
+      'Open src/shared/spellText.ts and fix mispeling',
+      words(['Open', 0, 4], ['and', 29, 32], ['fix', 33, 36], ['mispeling', 37, 46])
+    ],
+    [
+      'relative Windows',
+      'Open src\\shared\\spellText.ts and fix mispeling',
+      words(['Open', 0, 4], ['and', 29, 32], ['fix', 33, 36], ['mispeling', 37, 46])
+    ]
+  ])('masks only an embedded %s path token', (_name, text, expected) => {
+    expectWords(text, 'plaintext', expected)
+  })
+
+  it('masks two absolute Windows paths without consuming the prose between them', () => {
+    expectWords(
+      'Open C:\\tmp\\one.txt and fix mispeling at D:\\tmp\\two.txt',
+      'plaintext',
+      words(
+        ['Open', 0, 4],
+        ['and', 20, 23],
+        ['fix', 24, 27],
+        ['mispeling', 28, 37],
+        ['at', 38, 40]
+      )
+    )
+  })
+
+  it('does not treat multiline comparison prose as raw HTML', () => {
+    expectWords(
+      'Use x < y\nmispeling > done',
+      'markdown',
+      words(['Use', 0, 3], ['x', 4, 5], ['y', 8, 9], ['mispeling', 10, 19], ['done', 22, 26])
     )
   })
 
