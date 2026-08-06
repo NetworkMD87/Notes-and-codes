@@ -1,6 +1,19 @@
 import type { ResolvedSpellLocale, SpellCheckLanguage, SpellWord } from './spell'
 
 const WORD = /\p{L}+(?:['’]\p{L}+)*(?:-\p{L}+(?:['’]\p{L}+)*)*/gu
+const HTML_TAGS = new Set([
+  'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio', 'b', 'base', 'bdi', 'bdo',
+  'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'cite', 'code', 'col',
+  'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl',
+  'dt', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2',
+  'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i', 'iframe',
+  'img', 'input', 'ins', 'kbd', 'label', 'legend', 'li', 'link', 'main', 'map', 'mark',
+  'menu', 'meta', 'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup', 'option',
+  'output', 'p', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp',
+  'script', 'search', 'section', 'select', 'slot', 'small', 'source', 'span', 'strong',
+  'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea',
+  'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr'
+])
 
 function maskRange(chars: string[], start: number, end: number): void {
   for (let index = start; index < end; index++) {
@@ -155,11 +168,31 @@ function maskLinkTargets(chars: string[]): void {
   }
 }
 
+function isHtmlTagStart(text: string, start: number): boolean {
+  let nameStart = start + 1
+  if (text[nameStart] === '!' || text[nameStart] === '?') return true
+  if (text[nameStart] === '/') nameStart++
+
+  const match = /^[A-Za-z][A-Za-z0-9-]*/.exec(text.slice(nameStart))
+  if (!match) return false
+  const boundary = text[nameStart + match[0].length]
+  if (boundary !== undefined && !/[\s/>]/.test(boundary)) return false
+  const name = match[0].toLowerCase()
+  return HTML_TAGS.has(name) || name.includes('-')
+}
+
 function maskHtmlSyntax(chars: string[]): void {
   const text = chars.join('')
   for (let start = 0; start < text.length; start++) {
     if (text[start] !== '<') continue
-    if (!/[A-Za-z/!?]/.test(text[start + 1] ?? '')) continue
+    if (text.startsWith('<!--', start)) {
+      const closing = text.indexOf('-->', start + 4)
+      const end = closing === -1 ? text.length : closing + 3
+      maskRange(chars, start, end)
+      start = end - 1
+      continue
+    }
+    if (!isHtmlTagStart(text, start)) continue
     let quote: '"' | "'" | null = null
     for (let end = start + 1; end < text.length; end++) {
       const char = text[end]
@@ -182,7 +215,7 @@ function maskTechnicalTokens(chars: string[]): void {
     /\bwww\.[^\s<>]+/giu,
     /\b[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}\b/gu,
     /(["'])(?:[A-Za-z]:\\|\\\\|\/)[^"'\r\n]+\1/g,
-    /(?:[A-Za-z]:\\|\\\\)(?:[^\\:\r\n<>"|?*]+?\\)+?[^\\:\r\n<>"|?*]*?\.[\p{L}\p{N}]+/gu,
+    /(?:[A-Za-z]:\\|\\\\)(?:[^\\:\r\n<>"|?*]+?\\)+?[^\\:\s\r\n<>"|?*]*?(?:\.[\p{L}\p{N}]+)+(?![\p{L}\p{N}])/gu,
     /(?:[A-Za-z]:\\|\\\\)[^\s<>"|?*\r\n]+/g,
     /(?:^|(?<=[\s(]))\/[^\s<>"'\r\n]+/gmu,
     /(?<![\p{L}\p{N}._-])(?:[\p{L}\p{N}._-]+[\\/])+[\p{L}\p{N}._-]+(?![\p{L}\p{N}._-])/gu,

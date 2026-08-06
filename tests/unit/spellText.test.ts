@@ -94,6 +94,11 @@ describe('offset-stable prose extraction', () => {
       name: 'visible text after an LF multiline opening tag',
       text: '<span\n title="technical">\nhuman\n</span>',
       expected: words(['human', 26, 31])
+    },
+    {
+      name: 'visible text inside a custom element',
+      text: '<spell-checker>human</spell-checker>',
+      expected: words(['human', 15, 20])
     }
   ])('extracts $name at original UTF-16 offsets', ({ text, expected }) => {
     expectWords(text, 'markdown', expected)
@@ -218,12 +223,68 @@ describe('offset-stable prose extraction', () => {
     )
   })
 
+  it.each([
+    [
+      'Windows',
+      'Open C:\\tmp\\archive.tar.gz and fix mispeling',
+      words(['Open', 0, 4], ['and', 27, 30], ['fix', 31, 34], ['mispeling', 35, 44])
+    ],
+    [
+      'POSIX',
+      'Open /tmp/archive.tar.gz and fix mispeling',
+      words(['Open', 0, 4], ['and', 25, 28], ['fix', 29, 32], ['mispeling', 33, 42])
+    ]
+  ])('masks the complete multi-dot %s path without consuming following prose', (_name, text, expected) => {
+    expectWords(text, 'plaintext', expected)
+  })
+
+  it('ends a compound Windows path before sentence prose and a later dotted token', () => {
+    expectWords(
+      'Open C:\\tmp\\archive.tar.gz. Then fix note.txt',
+      'plaintext',
+      words(
+        ['Open', 0, 4],
+        ['Then', 28, 32],
+        ['fix', 33, 36],
+        ['note', 37, 41],
+        ['txt', 42, 45]
+      )
+    )
+  })
+
   it('does not treat multiline comparison prose as raw HTML', () => {
     expectWords(
       'Use x < y\nmispeling > done',
       'markdown',
       words(['Use', 0, 3], ['x', 4, 5], ['y', 8, 9], ['mispeling', 10, 19], ['done', 22, 26])
     )
+  })
+
+  it.each([
+    [
+      'LF',
+      'Use x <y\nmispeling > done',
+      words(['Use', 0, 3], ['x', 4, 5], ['y', 7, 8], ['mispeling', 9, 18], ['done', 21, 25])
+    ],
+    [
+      'CRLF',
+      'Use x <y\r\nmispeling > done',
+      words(['Use', 0, 3], ['x', 4, 5], ['y', 7, 8], ['mispeling', 10, 19], ['done', 22, 26])
+    ]
+  ])('does not treat %s comparison prose without a post-angle space as raw HTML', (_name, text, expected) => {
+    expectWords(text, 'markdown', expected)
+  })
+
+  it('masks an HTML comment through its real terminator despite an earlier greater-than', () => {
+    expectWords(
+      'Before <!-- technical > mispeling --> after',
+      'markdown',
+      words(['Before', 0, 6], ['after', 38, 43])
+    )
+  })
+
+  it('fails closed for an unterminated HTML comment', () => {
+    expectWords('Visible <!-- technical > mispeling', 'markdown', words(['Visible', 0, 7]))
   })
 
   it('preserves nested link-label prose while excluding its relative destination', () => {
