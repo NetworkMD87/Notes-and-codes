@@ -223,19 +223,29 @@ test('disabling clears spell decorations immediately and enabling restores them'
 test('a personal word clears case variants, persists, and removal rechecks the document', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-personal-'))
   const filePath = join(userDataDir, 'note.txt')
-  writeFileSync(filePath, 'Openaiish openaiish')
+  // `zzzxqv` is a deliberately unfiltered non-word absent from both bundled dictionaries. It
+  // stays misspelled after saving Openaiish, so its positive decoration after relaunch is the
+  // completion signal that spell initialization and the first check actually finished.
+  writeFileSync(filePath, 'Openaiish openaiish zzzxqv')
   let app: ElectronApplication
   let win: Page
   ;({ app, win } = await launch(userDataDir, filePath))
   try {
-    await expect(spellErrors(win)).toHaveCount(2)
+    const personalErrors = () => spellErrors(win).filter({ hasText: /^openaiish$/i })
+    const controlError = () => spellErrors(win).filter({ hasText: 'zzzxqv' })
+    await expect(personalErrors()).toHaveCount(2)
+    await expect(controlError()).toHaveCount(1)
     await useSpellAction(win, 'add')
-    await expect(spellErrors(win)).toHaveCount(0)
+    await expect(personalErrors()).toHaveCount(0)
+    await expect(controlError()).toHaveCount(1)
     await app.close()
 
     ;({ app, win } = await launch(userDataDir, filePath))
-    await win.waitForTimeout(700)
-    await expect(spellErrors(win)).toHaveCount(0)
+    // Do not use a fixed delay plus zero decorations: boot can finish before async dictionary
+    // initialization, making "nothing yet" pass for the wrong reason. The control word must
+    // decorate first; only then is absence of the two persisted variants meaningful.
+    await expect(controlError()).toHaveCount(1)
+    await expect(personalErrors()).toHaveCount(0)
 
     await openSettings(win, 'Editor')
     await win.locator('.personal-dictionary-open').click()
@@ -243,7 +253,8 @@ test('a personal word clears case variants, persists, and removal rechecks the d
     await expect(row).toBeVisible()
     await row.getByRole('button', { name: 'Remove' }).click()
     await expect(row).toHaveCount(0)
-    await expect(spellErrors(win)).toHaveCount(2)
+    await expect(personalErrors()).toHaveCount(2)
+    await expect(controlError()).toHaveCount(1)
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })
