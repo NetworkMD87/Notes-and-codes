@@ -31,3 +31,17 @@ export interface SpellBatchResult {
   generation: number
   documents: SpellDocumentResult[]
 }
+
+export type SpellWorkerRequest =
+  | { id: number; type: 'load'; locale: ResolvedSpellLocale; personalWords: string[] }
+  | { id: number; type: 'check'; batch: SpellBatch }
+  | { id: number; type: 'suggest'; word: string; limit: number }
+  | { id: number; type: 'ignore'; word: string }
+  | { id: number; type: 'personal:add'; word: string }
+  | { id: number; type: 'personal:remove'; word: string }
+
+export type SpellWorkerResponse =
+  | { id: number; ok: true; type: 'loaded' | 'mutated' }
+  | { id: number; ok: true; type: 'checked'; result: SpellBatchResult }
+  | { id: number; ok: true; type: 'suggested'; suggestions: string[] }
+  | { id: number; ok: false; error: 'load-failed' | 'check-failed' | 'worker-failed' }
