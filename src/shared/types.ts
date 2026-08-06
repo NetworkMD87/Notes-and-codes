@@ -1,3 +1,5 @@
+import type { SpellCheckLanguage } from './spell'
+
 export type EolMode = 'LF' | 'CRLF'
 export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 
@@ -117,6 +119,8 @@ export interface Settings {
   lastFolder: string | null
   sidebarVisible: boolean
   sidebarWidth: number
+  spellCheckEnabled: boolean
+  spellCheckLanguage: SpellCheckLanguage
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -139,7 +143,9 @@ export const DEFAULT_SETTINGS: Settings = {
   formatOnSave: false,
   lastFolder: null,
   sidebarVisible: false,
-  sidebarWidth: 240
+  sidebarWidth: 240,
+  spellCheckEnabled: true,
+  spellCheckLanguage: 'system'
 }
 
 export interface SessionData {
@@ -175,6 +181,8 @@ export interface ExportResult { ok: boolean; canceled?: boolean; path?: string }
  *  accelerator on success, the restored previous one on failure, or '' if nothing is bound. */
 export interface HotkeyResult { ok: boolean; active: string }
 
+export interface SpellDictionaryResult { ok: boolean; words: string[] }
+
 export interface Api {
   readFile(path: string): Promise<ReadResult>
   writeFile(path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number): Promise<WriteResult>
@@ -185,6 +193,10 @@ export interface Api {
   /** Merge a partial into the stored settings atomically in main (no renderer
    *  read-modify-write race). Prefer this over loadSettings()+saveSettings(). */
   updateSettings(partial: Partial<Settings>): Promise<Settings>
+  getSystemLocale(): Promise<string>
+  listPersonalWords(): Promise<string[]>
+  addPersonalWord(word: string): Promise<SpellDictionaryResult>
+  removePersonalWord(word: string): Promise<SpellDictionaryResult>
   setContextMenu(enabled: boolean): Promise<void>
   /** Registers/removes the Windows startup entry. Persisting `openAtLogin` is separate
    *  (updateSettings) — this performs only the OS side-effect, like setContextMenu. */

@@ -7,4 +7,9 @@ describe('DEFAULT_SETTINGS', () => {
     expect(DEFAULT_SETTINGS.autoSaveSession).toBe(true)
     expect(DEFAULT_SETTINGS.contextMenuEnabled).toBe(false)
   })
+
+  it('enables spell check using the system language by default', () => {
+    expect(DEFAULT_SETTINGS.spellCheckEnabled).toBe(true)
+    expect(DEFAULT_SETTINGS.spellCheckLanguage).toBe('system')
+  })
 })
