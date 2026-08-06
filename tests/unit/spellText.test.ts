@@ -99,6 +99,21 @@ describe('offset-stable prose extraction', () => {
       name: 'visible text inside a custom element',
       text: '<spell-checker>human</spell-checker>',
       expected: words(['human', 15, 20])
+    },
+    {
+      name: 'visible text inside an SVG root with attributes',
+      text: '<svg viewBox="0 0 10 10">human</svg>',
+      expected: words(['human', 25, 30])
+    },
+    {
+      name: 'visible text inside a MathML root',
+      text: '<math>human</math>',
+      expected: words(['human', 6, 11])
+    },
+    {
+      name: 'visible text inside an SVG child with attributes',
+      text: '<svg><path d="M0 0h10">human</path></svg>',
+      expected: words(['human', 23, 28])
     }
   ])('extracts $name at original UTF-16 offsets', ({ text, expected }) => {
     expectWords(text, 'markdown', expected)

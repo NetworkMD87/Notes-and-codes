@@ -1,7 +1,7 @@
 import type { ResolvedSpellLocale, SpellCheckLanguage, SpellWord } from './spell'
 
 const WORD = /\p{L}+(?:['’]\p{L}+)*(?:-\p{L}+(?:['’]\p{L}+)*)*/gu
-const HTML_TAGS = new Set([
+const KNOWN_MARKUP_TAGS = new Set([
   'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio', 'b', 'base', 'bdi', 'bdo',
   'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'cite', 'code', 'col',
   'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl',
@@ -12,7 +12,8 @@ const HTML_TAGS = new Set([
   'output', 'p', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp',
   'script', 'search', 'section', 'select', 'slot', 'small', 'source', 'span', 'strong',
   'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea',
-  'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr'
+  'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr',
+  'math', 'svg'
 ])
 
 function maskRange(chars: string[], start: number, end: number): void {
@@ -168,17 +169,46 @@ function maskLinkTargets(chars: string[]): void {
   }
 }
 
-function isHtmlTagStart(text: string, start: number): boolean {
+function hasTagBefore(text: string, start: number, name: string): boolean {
+  return new RegExp(`<${name}(?=[\\s/>])`, 'i').test(text.slice(0, start))
+}
+
+function hasClosingTagAfter(text: string, end: number, name: string): boolean {
+  return new RegExp(`</${name}\\s*>`, 'i').test(text.slice(end + 1))
+}
+
+function isHtmlTagStart(text: string, start: number, end: number): boolean {
   let nameStart = start + 1
   if (text[nameStart] === '!' || text[nameStart] === '?') return true
-  if (text[nameStart] === '/') nameStart++
+  const isClosing = text[nameStart] === '/'
+  if (isClosing) nameStart++
 
   const match = /^[A-Za-z][A-Za-z0-9-]*/.exec(text.slice(nameStart))
   if (!match) return false
   const boundary = text[nameStart + match[0].length]
   if (boundary !== undefined && !/[\s/>]/.test(boundary)) return false
   const name = match[0].toLowerCase()
-  return HTML_TAGS.has(name) || name.includes('-')
+  if (KNOWN_MARKUP_TAGS.has(name) || name.includes('-')) return true
+  if (isClosing) return hasTagBefore(text, start, name)
+
+  const attributes = text.slice(nameStart + match[0].length, end)
+  return /(?:^|\s)[A-Za-z_:][A-Za-z0-9_.:-]*\s*=/.test(attributes) ||
+    hasClosingTagAfter(text, end, name)
+}
+
+function findHtmlTagEnd(text: string, start: number): number {
+  let quote: '"' | "'" | null = null
+  for (let end = start + 1; end < text.length; end++) {
+    const char = text[end]
+    if (quote) {
+      if (char === quote) quote = null
+    } else if (char === '"' || char === "'") {
+      quote = char
+    } else if (char === '>') {
+      return end
+    }
+  }
+  return -1
 }
 
 function maskHtmlSyntax(chars: string[]): void {
@@ -192,20 +222,10 @@ function maskHtmlSyntax(chars: string[]): void {
       start = end - 1
       continue
     }
-    if (!isHtmlTagStart(text, start)) continue
-    let quote: '"' | "'" | null = null
-    for (let end = start + 1; end < text.length; end++) {
-      const char = text[end]
-      if (quote) {
-        if (char === quote) quote = null
-      } else if (char === '"' || char === "'") {
-        quote = char
-      } else if (char === '>') {
-        maskRange(chars, start, end + 1)
-        start = end
-        break
-      }
-    }
+    const end = findHtmlTagEnd(text, start)
+    if (end === -1 || !isHtmlTagStart(text, start, end)) continue
+    maskRange(chars, start, end + 1)
+    start = end
   }
 }
 
