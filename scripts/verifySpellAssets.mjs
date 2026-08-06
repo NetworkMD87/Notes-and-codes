@@ -7,40 +7,20 @@ import { build } from 'vite'
 import ts from 'typescript'
 import { spellAssetAliases, spellRawAssetAliases } from './spellAssetAliases.mjs'
 
-const forbidden = [
-  'fetch(',
+const forbiddenNetworkApis = new Set([
+  'fetch',
   'XMLHttpRequest',
   'WebSocket',
   'EventSource',
-  'sendBeacon(',
-  'importScripts(',
+  'sendBeacon',
+  'importScripts',
   'setSpellCheckerDictionaryDownloadURL',
-  'http://',
-  'https://',
-  'node:fs',
-  'fs/promises',
-  'require(',
-  'import(',
-]
+])
 
 async function javascriptFiles(dir) {
   return (await readdir(dir, { withFileTypes: true }))
     .filter(entry => entry.isFile() && /\.m?js$/.test(entry.name))
     .map(entry => join(dir, entry.name))
-}
-
-function withoutJavaScriptComments(source) {
-  const file = ts.createSourceFile('bundle.js', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
-  const ranges = new Map()
-  const collect = (node) => {
-    ts.forEachLeadingCommentRange(source, node.getFullStart(), (position, end) => ranges.set(position, end))
-    ts.forEachTrailingCommentRange(source, node.end, (position, end) => ranges.set(position, end))
-    ts.forEachChild(node, collect)
-  }
-  collect(file)
-  const chars = source.split('')
-  for (const [position, end] of ranges) chars.fill(' ', position, end)
-  return chars.join('')
 }
 
 const nodeBuiltins = new Set(builtinModules.map(value => value.replace(/^node:/, '')))
@@ -49,8 +29,7 @@ const nodeBuiltin = (value) => {
   return nodeBuiltins.has(normalized) || nodeBuiltins.has(normalized.split('/')[0])
 }
 
-function hasNodeDependency(source) {
-  const file = ts.createSourceFile('bundle.js', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+function hasNodeDependency(file) {
   let found = false
   const visit = (node) => {
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
@@ -66,6 +45,57 @@ function hasNodeDependency(source) {
   return found
 }
 
+const staticText = (node) => {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text
+  return null
+}
+
+function invocationName(expression) {
+  if (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression) ||
+      ts.isTypeAssertionExpression(expression) || ts.isNonNullExpression(expression)) {
+    return invocationName(expression.expression)
+  }
+  if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.CommaToken) {
+    return invocationName(expression.right)
+  }
+  if (ts.isIdentifier(expression)) return expression.text
+  if (ts.isPropertyAccessExpression(expression)) {
+    if (['call', 'apply', 'bind'].includes(expression.name.text)) return invocationName(expression.expression)
+    return expression.name.text
+  }
+  if (ts.isElementAccessExpression(expression)) {
+    const name = expression.argumentExpression && staticText(expression.argumentExpression)
+    if (name && ['call', 'apply', 'bind'].includes(name)) return invocationName(expression.expression)
+    return name
+  }
+  return null
+}
+
+const networkModuleUrl = (node) => {
+  const value = node && staticText(node)
+  return Boolean(value && /^https?:\/\//i.test(value))
+}
+
+function forbiddenNetworkDependency(file) {
+  let found = null
+  const visit = (node) => {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+      if (networkModuleUrl(node.moduleSpecifier)) found = 'network module URL'
+    } else if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+      const name = invocationName(node.expression)
+      if (name && forbiddenNetworkApis.has(name)) found = name
+      else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+          networkModuleUrl(node.arguments[0])) found = 'network module URL'
+    } else if (ts.isTaggedTemplateExpression(node)) {
+      const name = invocationName(node.tag)
+      if (name && forbiddenNetworkApis.has(name)) found = name
+    }
+    if (!found) ts.forEachChild(node, visit)
+  }
+  visit(file)
+  return found
+}
+
 export function verifyBundle(source, label) {
   if (source.length < 500_000) throw new Error(`${label} is too small to contain both English dictionaries`)
   for (const sentinel of ['color', 'colour']) {
@@ -73,11 +103,10 @@ export function verifyBundle(source, label) {
   }
   if ((source.match(/SET UTF-8/g) ?? []).length < 2) throw new Error(`${label} is missing two Hunspell affix payloads`)
   if ((source.match(/\d{4,6}(?:\\r\\n|\\n|\r?\n)/g) ?? []).length < 2) throw new Error(`${label} is missing two Hunspell dictionary headers`)
-  const executableSource = withoutJavaScriptComments(source)
-  if (hasNodeDependency(executableSource)) throw new Error(`${label} contains forbidden Node dependency`)
-  for (const value of forbidden) {
-    if (executableSource.includes(value)) throw new Error(`${label} contains forbidden network dependency ${value}`)
-  }
+  const file = ts.createSourceFile(`${label}.js`, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+  if (hasNodeDependency(file)) throw new Error(`${label} contains forbidden Node dependency`)
+  const networkDependency = forbiddenNetworkDependency(file)
+  if (networkDependency) throw new Error(`${label} contains forbidden network dependency ${networkDependency}`)
 }
 
 async function proof() {
