@@ -324,8 +324,9 @@ function forbiddenDependency(file) {
       if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
         const moduleName = node.arguments[0] && staticExpressionText(node.arguments[0])
         const modulePrefix = moduleName ?? staticExpressionPrefix(node.arguments[0])
+        const nodeSubpathPrefix = modulePrefix.endsWith('/') && nodeBuiltin(modulePrefix.slice(0, -1))
         if (/^https?:\/\//i.test(modulePrefix)) rejectNetwork('network module URL')
-        else if (/^node:/i.test(modulePrefix) || (moduleName && nodeBuiltin(moduleName))) {
+        else if (/^node:/i.test(modulePrefix) || nodeSubpathPrefix || (moduleName && nodeBuiltin(moduleName))) {
           rejectNode(moduleName ?? modulePrefix)
         }
         if (found) return
@@ -382,6 +383,7 @@ function forbiddenDependency(file) {
       return
     } else if (ts.isClassStaticBlockDeclaration(node)) {
       const staticScope = scope(currentScope)
+      staticScope.thisIsGlobalRoot = false
       predeclareVars(node.body, staticScope)
       predeclareLexical(node.body.statements, staticScope)
       for (const statement of node.body.statements) visit(statement, staticScope)
@@ -427,7 +429,11 @@ function forbiddenDependency(file) {
       return
     } else if (ts.isPropertyDeclaration(node)) {
       visitPropertyName(node.name, currentScope)
-      if (node.initializer) visit(node.initializer, currentScope)
+      if (node.initializer && !found) {
+        const initializerScope = scope(currentScope)
+        initializerScope.thisIsGlobalRoot = false
+        visit(node.initializer, initializerScope)
+      }
       return
     } else if (ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) {
       visitPropertyName(node.name, currentScope)

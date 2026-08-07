@@ -251,4 +251,41 @@ describe('verifySpellAssets', () => {
   ])('allows local or indeterminate dynamic-import prefixes: %s', (code) => {
     expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
   })
+
+  it.each([
+    'import(`fs/${subpath}`)',
+    'import("path/" + subpath)',
+    'import(`fs/promises/${subpath}`)',
+    'import(`assert/strict/${subpath}`)',
+    'import(`node:fs/${subpath}`)',
+  ])('rejects guaranteed Node builtin subpath prefixes: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).toThrow(/forbidden Node dependency/)
+  })
+
+  it.each([
+    'import(`fs-${name}`)',
+    'import("fs" + suffix)',
+    'import("path-extra/" + subpath)',
+    'import(`local-package/${subpath}`)',
+    'import(`@scope/fs/${subpath}`)',
+    'import(`${packageName}/file`)',
+  ])('allows non-builtin or indeterminate package prefixes: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
+  })
+
+  it.each([
+    'class Local { value = this }',
+    'class Local { static value = this }',
+    'class Local { static { take(this) } }',
+    'class Local { value = () => this }',
+  ])('allows local this receivers in class initialization: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
+  })
+
+  it.each([
+    'class Local { [this.fetch] = 1 }',
+    'class Local { [this.fetch]() {} }',
+  ])('rejects forbidden global this members in computed class names: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).toThrow(/forbidden network dependency/)
+  })
 })
