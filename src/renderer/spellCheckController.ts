@@ -5,7 +5,7 @@ import {
   type SpellCheckCoreDeps,
   type SpellPane,
 } from './spellCheckCore'
-import { showContextMenu, type ContextMenuEntry } from './contextMenu'
+import { closeContextMenu, showContextMenu, type ContextMenuEntry } from './contextMenu'
 import type { EditorContextMenuTarget } from './editorContextMenu'
 import { SpellContextMenuCoordinator } from './spellContextMenu'
 
@@ -71,10 +71,19 @@ export class SpellCheckController {
       monaco.editor.registerCommand(ADD_COMMAND, (_accessor, action: unknown) => {
         if (isSpellActionArgs(action)) void this.core.add(action)
       }),
-      ...deps.allPanes().map(pane => pane.onPointerContextMenu(target => this.contextMenu.tryOpen(target ? {
-        ...target,
-        editorEntries: () => pane.editorContextEntries(deps.openCommandPalette),
-      } : null))),
+      ...deps.allPanes().map(pane => pane.onPointerContextMenu(target => {
+        if (!target) closeContextMenu()
+        return this.contextMenu.tryOpen(target ? {
+          ...target,
+          editorEntries: () => pane.editorContextEntries(deps.openCommandPalette),
+          isCurrent: action => {
+            const snapshot = pane.spellSnapshot()
+            return snapshot?.modelUri === action.modelUri
+              && snapshot.modelVersion === action.modelVersion
+              && snapshot.text.slice(action.start, action.end) === action.word
+          },
+        } : null)
+      })),
     ]
   }
 

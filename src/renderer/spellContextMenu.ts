@@ -5,6 +5,7 @@ import type { SpellActionArgs, SpellIssueLookup } from './spellCheckCore'
 
 export interface SpellContextMenuTarget extends EditorContextMenuTarget {
   editorEntries: () => ContextMenuEntry[]
+  isCurrent: (action: SpellActionArgs) => boolean
 }
 
 export interface SpellContextMenuDeps {
@@ -50,6 +51,7 @@ export class SpellContextMenuCoordinator {
   private async open(epoch: number, target: SpellContextMenuTarget, action: SpellActionArgs): Promise<void> {
     const requested = await this.deps.suggestions(action)
     if (this.disposed || epoch !== this.epoch) return
+    if (!target.isCurrent(action)) return
     if (!sameIssue(this.deps.currentIssue(target), action)) return
     const suggestions = [...new Set(requested)].slice(0, 5)
     const entries: ContextMenuEntry[] = suggestions.map(replacement => ({

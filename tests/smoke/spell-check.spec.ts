@@ -337,11 +337,12 @@ test('correct text and keyboard context-menu invocations remain Monaco-owned', a
 
     await rightClickRenderedText(win, 'ordinary')
     await expectMonacoContextMenu(win)
+    await win.keyboard.press('Escape')
 
-    await win.locator('#paneA .monaco-editor').click()
-    await win.keyboard.press('Control+Home')
-    await win.keyboard.press('ArrowRight')
+    const spellMenu = await openSpellContextMenu(win)
+    await expect(spellMenu).toBeVisible()
     await win.keyboard.press('Shift+F10')
+    await expect(spellMenu).toBeHidden()
     await expectMonacoContextMenu(win)
   } finally {
     await app.close()

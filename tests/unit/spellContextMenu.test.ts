@@ -17,6 +17,7 @@ const target = (overrides: Partial<SpellContextMenuTarget> = {}): SpellContextMe
   startOffset: 2,
   endOffset: 2,
   editorEntries: () => [{ label: 'Copy', run: vi.fn() }],
+  isCurrent: () => true,
   ...overrides,
 })
 
@@ -81,6 +82,17 @@ describe('SpellContextMenuCoordinator', () => {
     current = null
     h.pending.resolve(['spelling'])
     await flush()
+    expect(h.shown).toEqual([])
+  })
+
+  it('drops suggestions when the clicked pane changes model before they resolve', async () => {
+    const h = harness()
+    const clicked = target({ isCurrent: () => false })
+
+    h.coordinator.tryOpen(clicked)
+    h.pending.resolve(['spelling'])
+    await flush()
+
     expect(h.shown).toEqual([])
   })
 
