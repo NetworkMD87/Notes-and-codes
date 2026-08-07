@@ -68,6 +68,9 @@ describe('verifySpellAssets', () => {
     'let fetch; ({ fetch } = globalThis); fetch("/dictionary")',
     'const first = globalThis.fetch; const second = first; second("/dictionary")',
     '{ const fetch = () => "offline"; fetch() } fetch("/dictionary")',
+    'function run(request = globalThis.fetch) { request("/dictionary") }',
+    'Reflect.apply(globalThis.fetch, null, ["/dictionary"])',
+    'const api = { request: globalThis.fetch }; api.request("/dictionary")',
     'const open = globalThis.XMLHttpRequest; new open()',
   ])('rejects executable aliases of network APIs: %s', (networkCode) => {
     expect(() => verifyBundle(validBundle(networkCode), 'fixture')).toThrow(/forbidden network dependency/)
@@ -78,6 +81,7 @@ describe('verifySpellAssets', () => {
     'function use(fetch) { return fetch() }',
     'let request = globalThis.fetch; request = () => "offline"; request()',
     'const holder = { fetch: globalThis.fetch }',
+    'fetch(); function fetch() { return "local" }',
   ])('accepts shadowed, reassigned, or inert network references: %s', (code) => {
     expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
   })
