@@ -2,7 +2,6 @@ import { test, expect, _electron as electron } from '@playwright/test'
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, basename } from 'node:path'
-import { closeElectronApp } from './closeElectronApp'
 
 function seededFolder() {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
@@ -26,12 +25,9 @@ test('sidebar shows a header caption with the open folder name', async () => {
     await expect(header).toBeVisible()
     await expect(header.locator('.sb-label')).toHaveText(basename(projectDir)) // CSS uppercases; DOM text is the basename
   } finally {
-    try {
-      await closeElectronApp(app)
-    } finally {
-      rmSync(userDataDir, { recursive: true, force: true })
-      rmSync(projectDir, { recursive: true, force: true })
-    }
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+    rmSync(projectDir, { recursive: true, force: true })
   }
 })
 
