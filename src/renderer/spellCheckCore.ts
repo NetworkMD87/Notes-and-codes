@@ -151,9 +151,11 @@ export class SpellCheckCore {
     if (this.disposed || this.sessionDisabled) return null
     const entry = this.registry.get(target.modelUri)
     if (!entry || entry.version !== target.modelVersion) return null
-    return entry.issues.find(current => (
-      current.start <= target.endOffset && current.end >= target.startOffset
-    )) ?? null
+    const collapsed = target.startOffset === target.endOffset
+    return entry.issues.find(current => collapsed
+      ? current.start <= target.startOffset && current.end > target.startOffset
+      : current.start < target.endOffset && current.end > target.startOffset
+    ) ?? null
   }
 
   async suggestions(target: SpellActionArgs): Promise<string[]> {

@@ -276,6 +276,23 @@ describe('SpellCheckCore', () => {
     expect(pane.replaceCount).toBe(0)
   })
 
+  it('does not treat the half-open issue end as part of a collapsed pointer lookup', async () => {
+    const doc = document('inmemory://boundary', 'speling next')
+    const pane = new FakePane(doc)
+    const h = harness([pane])
+    await h.core.initialize([])
+    const check = h.worker.checks[0]
+    check.result.resolve(checked(check.batch, { [doc.modelUri]: [issue()] }))
+    await flush()
+
+    expect(h.core.currentIssue({
+      modelUri: doc.modelUri,
+      modelVersion: doc.modelVersion,
+      startOffset: 7,
+      endOffset: 7,
+    })).toBeNull()
+  })
+
   it('ignores every matching issue case-insensitively across pane registries', async () => {
     const aDoc = document('inmemory://a', 'speling here')
     const bDoc = document('inmemory://b', 'Speling there', 'markdown')

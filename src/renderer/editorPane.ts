@@ -3,8 +3,19 @@ import type { BufferState, Highlight, HighlightColour } from '../shared/types'
 import type { SpellDocument, SpellIssue } from '../shared/spell'
 import { formatText, UnsupportedLanguageError, type FormatRange } from './formatter'
 import { toast } from './notify'
+import type { ContextMenuEntry } from './contextMenu'
+import { buildEditorContextEntries, type EditorContextMenuTarget } from './editorContextMenu'
 
 export const FORMAT_DOC_COMMAND = 'notesAndCodes.formatDocument'
+
+const EDITOR_CONTEXT_COMMANDS = new Set([
+  'undo',
+  'redo',
+  'editor.action.clipboardCutAction',
+  'editor.action.clipboardCopyAction',
+  'editor.action.clipboardPasteAction',
+  'editor.action.selectAll',
+])
 
 /**
  * Bind Shift+Alt+F to Format Document — ONCE for the whole app, not per pane.
@@ -202,6 +213,7 @@ export class EditorPane {
     this.editor.pushUndoStop()
     this.editor.executeEdits('spell-check', [{ range, text: replacement, forceMoveMarkers: true }])
     this.editor.pushUndoStop()
+    this.editor.focus()
     return true
   }
 
@@ -281,6 +293,58 @@ export class EditorPane {
     this.copyCutHandler = handler
     this.container.addEventListener('copy', handler)
     this.container.addEventListener('cut', handler)
+  }
+  onPointerContextMenu(handler: (target: EditorContextMenuTarget | null) => boolean): monaco.IDisposable {
+    const listener = (event: MouseEvent): void => {
+      if (event.button !== 2) {
+        handler(null)
+        return
+      }
+      const target = this.editor.getTargetAtClientPoint(event.clientX, event.clientY)
+      const model = this.editor.getModel()
+      if (!model || target?.type !== monaco.editor.MouseTargetType.CONTENT_TEXT || !target.position) {
+        handler(null)
+        return
+      }
+      const offset = model.getOffsetAt(target.position)
+      if (!handler({
+        clientX: event.clientX,
+        clientY: event.clientY,
+        modelUri: model.uri.toString(),
+        modelVersion: model.getVersionId(),
+        startOffset: offset,
+        endOffset: offset,
+      })) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      const selection = this.editor.getSelection()
+      if (!selection?.containsPosition(target.position)) this.editor.setPosition(target.position)
+      this.editor.focus()
+    }
+    this.container.addEventListener('contextmenu', listener, true)
+    let active = true
+    return {
+      dispose: () => {
+        if (!active) return
+        active = false
+        this.container.removeEventListener('contextmenu', listener, true)
+      },
+    }
+  }
+  editorContextEntries(openCommandPalette: () => void): ContextMenuEntry[] {
+    return buildEditorContextEntries(id => {
+      const action = this.editor.getAction(id)
+      if (action) return action
+      if (!EDITOR_CONTEXT_COMMANDS.has(id)) return null
+      return {
+        isSupported: () => true,
+        run: async () => {
+          this.editor.focus()
+          this.editor.trigger('context-menu', id, null)
+        },
+      }
+    }, openCommandPalette)
   }
   insertAtCursor(text: string): void {
     const sel = this.editor.getSelection()
