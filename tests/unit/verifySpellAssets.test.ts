@@ -122,4 +122,31 @@ describe('verifySpellAssets', () => {
   ])('allows inert syntax and genuine lexical shadows: %s', (code) => {
     expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
   })
+
+  it.each([
+    'const root = globalThis; root.fetch',
+    'take(globalThis)',
+    '(ready ? globalThis : local).fetch',
+    'Reflect.get(ready ? globalThis : local, "fetch")',
+    'Reflect["get"](globalThis, "fetch")',
+    'Reflect["g" + "et"](globalThis, "fetch")',
+    'Reflect.get.call(null, globalThis, "fetch")',
+    'const load = require; load("fs")',
+    'require("local-package")',
+    'import(`node:fs`)',
+  ])('rejects global-root escapes and normalized executable capabilities: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).toThrow(/forbidden (network|Node) dependency/)
+  })
+
+  it.each([
+    'globalThis.console.log("offline")',
+    'globalThis["console"].log("offline")',
+    'Reflect.get(globalThis, "console")',
+    'const globalThis = { fetch: () => "local" }; take(globalThis)',
+    'const require = () => "local"; require("fs")',
+    'require("fs"); function require() { return "local" }',
+    'const Local = class fetch extends fetch {}',
+  ])('allows direct safe root members and genuine local shadows: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
+  })
 })
