@@ -325,11 +325,15 @@ test('decorates exactly one plain-text misspelling after the edit debounce', asy
 test('correct text and keyboard context-menu invocations remain Monaco-owned', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-correct-menu-'))
   const filePath = join(userDataDir, 'note.txt')
-  writeFileSync(filePath, 'ordinary')
+  writeFileSync(filePath, 'ordinary speling')
   const { app, win } = await launch(userDataDir, filePath)
   try {
-    await expect(win.locator('#paneA .view-lines')).toContainText('ordinary')
-    await expect(spellErrors(win)).toHaveCount(0)
+    await expect(win.locator('#paneA .view-lines')).toContainText('ordinary speling')
+    await expect(
+      spellErrors(win),
+      'misspelled control word proves eligible-buffer spell checking completed',
+    ).toHaveCount(1)
+    await expect(spellErrors(win)).toHaveText('speling')
 
     await rightClickRenderedText(win, 'ordinary')
     await expectMonacoContextMenu(win)
@@ -347,18 +351,37 @@ test('correct text and keyboard context-menu invocations remain Monaco-owned', a
 
 test('does not decorate the identical word in a TypeScript buffer', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-ts-'))
-  const filePath = join(userDataDir, 'note.ts')
-  writeFileSync(filePath, 'This is a speling mistake.')
-  const { app, win } = await launch(userDataDir, filePath)
+  const controlPath = join(userDataDir, 'control.txt')
+  const typeScriptPath = join(userDataDir, 'note.ts')
+  writeFileSync(controlPath, 'speling control')
+  writeFileSync(typeScriptPath, 'This is a speling mistake.')
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [
+      { id: 'control', title: 'control.txt', filePath: controlPath, content: 'speling control', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'typescript', title: 'note.ts', filePath: typeScriptPath, content: 'This is a speling mistake.', language: 'typescript', eol: 'LF', encoding: 'utf8', dirty: false },
+    ],
+    activeId: 'control',
+  }))
+  const { app, win } = await launch(userDataDir)
   try {
-    await expect(win.locator('#paneA .view-lines')).toContainText('speling')
-    await win.waitForTimeout(700)
+    await win.locator('.tb-btn[title="Toggle split pane"]').click()
+    await expect(win.locator('#paneB')).toBeVisible()
+    await win.locator('#paneB .monaco-editor').click()
+    await win.locator('.tab', { hasText: 'note.ts' }).click()
+
+    await expect(win.locator('#paneA .view-lines')).toContainText('speling control')
+    await expect(win.locator('#paneB .view-lines')).toContainText('This is a speling mistake.')
+    await expect(
+      spellErrors(win, '#paneA'),
+      'eligible control pane proves spell initialization completed',
+    ).toHaveCount(1)
 
     await expect(
-      spellErrors(win),
+      spellErrors(win, '#paneB'),
       'TypeScript buffer has zero .spell-error decorations',
     ).toHaveCount(0)
-    await rightClickRenderedText(win, 'speling')
+    await rightClickRenderedText(win, 'speling', 0, '#paneB')
     await expectMonacoContextMenu(win)
   } finally {
     await app.close()
@@ -448,9 +471,15 @@ test('right-clicking an underline replaces the clicked occurrence as one undoabl
     ]) {
       await expect(menu.locator('.ctx-item', { hasText: new RegExp(`^${label}$`) })).toBeVisible()
     }
+    await app.evaluate(({ clipboard }) => clipboard.writeText('copy-sentinel-not-document-text'))
     await menu.locator('.ctx-item', { hasText: /^Copy$/ }).click()
     await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText()))
       .toMatch(/^speling and speling\r?\n$/)
+    await expect(
+      win.locator('#paneA .view-lines'),
+      'Copy leaves the real buffer unchanged',
+    ).toContainText('speling and speling')
+    await expect(spellErrors(win)).toHaveCount(2)
 
     await win.locator('#paneA .monaco-editor').click()
     await win.keyboard.press('Control+End')
