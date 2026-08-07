@@ -76,6 +76,7 @@ class FakeWorker implements SpellWorkerPort {
   removed: string[] = []
   disposed = false
   failLoad = false
+  failCommittedSync = false
   holdLoads = false
   pendingLoads: Array<Deferred<void>> = []
 
@@ -98,6 +99,10 @@ class FakeWorker implements SpellWorkerPort {
   async suggest(): Promise<string[]> { return ['spelling'] }
   async ignore(word: string): Promise<void> { this.ignored.push(word) }
   async addPersonal(word: string): Promise<void> { this.added.push(word) }
+  async syncCommittedPersonalWords(words: string[], addedWord: string): Promise<void> {
+    this.added.push(addedWord)
+    if (this.failCommittedSync) throw new Error(`worker-failed:${words.join(',')}`)
+  }
   async removePersonal(word: string): Promise<void> { this.removed.push(word) }
   dispose(): void { this.disposed = true }
 }
@@ -298,6 +303,24 @@ describe('SpellCheckCore', () => {
     const h = harness([pane])
     h.setAddResult({ ok: true, words: ['speling'] })
     await h.core.initialize([])
+    const check = h.worker.checks[0]
+    check.result.resolve(checked(check.batch, { [doc.modelUri]: [issue()] }))
+    await flush()
+
+    await h.core.add(actionFor(doc))
+
+    expect(h.worker.added).toEqual(['speling'])
+    expect(pane.issues).toEqual([])
+    expect(h.notifications).toEqual([])
+  })
+
+  it('keeps committed dictionary state authoritative when live worker synchronization fails', async () => {
+    const doc = document('inmemory://committed-add')
+    const pane = new FakePane(doc)
+    const h = harness([pane])
+    h.setAddResult({ ok: true, words: ['Codex', 'speling'] })
+    h.worker.failCommittedSync = true
+    await h.core.initialize(['Codex'])
     const check = h.worker.checks[0]
     check.result.resolve(checked(check.batch, { [doc.modelUri]: [issue()] }))
     await flush()

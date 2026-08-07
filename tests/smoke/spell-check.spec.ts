@@ -33,6 +33,43 @@ async function launchWithHungSpellWorker(userDataDir: string): Promise<{
   return { app, win: await app.firstWindow() }
 }
 
+async function launchWithFailedSpellWorkerConstruction(userDataDir: string, filePath: string): Promise<{
+  app: ElectronApplication
+  win: Page
+}> {
+  const app = await electron.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath],
+    env: {
+      ...process.env,
+      NC_HEADLESS: '1',
+      NC_TEST_FAIL_SPELL_WORKER_CONSTRUCTION: '1',
+    } as Record<string, string>,
+  })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  const tab = win.locator('.tab', { hasText: filePath.split(/[\\/]/).pop()! })
+  await expect(tab).toBeVisible()
+  await tab.click()
+  return { app, win }
+}
+
+async function launchWithNetworkBlock(userDataDir: string, filePath: string): Promise<{
+  app: ElectronApplication
+  win: Page
+}> {
+  const app = await electron.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath],
+    env: {
+      ...process.env,
+      NC_HEADLESS: '1',
+      NC_TEST_BLOCK_NETWORK: '1',
+    } as Record<string, string>,
+  })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  return { app, win }
+}
+
 async function launchHeadless(userDataDir: string, filePath?: string): Promise<{
   app: ElectronApplication
   win: Page
@@ -119,6 +156,27 @@ test('a non-responsive spell worker does not block app boot', async () => {
   }
 })
 
+test('a spell worker constructor failure cannot become a session restore failure or block editing', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-constructor-'))
+  const filePath = join(userDataDir, 'constructor.txt')
+  writeFileSync(filePath, 'ordinary text')
+  const { app, win } = await launchWithFailedSpellWorkerConstruction(userDataDir, filePath)
+  try {
+    await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+    await expect(win.locator('.toast--warning')).toHaveCount(1)
+    await expect(win.locator('.toast--warning')).not.toContainText('ordinary text')
+    await expect(win.locator('.toast')).not.toContainText('restore your last session')
+    await replaceEditorText(win, 'editing and saving still work')
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Save')
+    await win.keyboard.press('Enter')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toBe('editing and saving still work')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
 test('a first worker crash warns once, recovers, and never blocks editing or saving', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-recover-'))
   const filePath = join(userDataDir, 'recover.txt')
@@ -184,19 +242,8 @@ test('UK and US correction workflow succeeds while every external request is act
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-offline-'))
   const filePath = join(userDataDir, 'offline.txt')
   writeFileSync(filePath, 'ordinary')
-  const { app, win } = await launch(userDataDir, filePath)
+  const { app, win } = await launchWithNetworkBlock(userDataDir, filePath)
   try {
-    await app.evaluate(({ session }) => {
-      const state = globalThis as typeof globalThis & { __ncSpellExternalRequests?: string[] }
-      state.__ncSpellExternalRequests = []
-      session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-        if (/^https?:/i.test(details.url)) {
-          state.__ncSpellExternalRequests!.push(details.url)
-          callback({ cancel: true })
-        } else callback({})
-      })
-    })
-
     await openSettings(win, 'Editor')
     await win.getByLabel('Spell check language').selectOption('en-US')
     await win.keyboard.press('Escape')
@@ -215,7 +262,7 @@ test('UK and US correction workflow succeeds while every external request is act
 
     const external = await app.evaluate(() => (
       globalThis as typeof globalThis & { __ncSpellExternalRequests?: string[] }
-    ).__ncSpellExternalRequests ?? [])
+    ).__ncSpellExternalRequests)
     expect(external).toEqual([])
   } finally {
     await quitDirtyApp(app, win)
@@ -229,6 +276,9 @@ test('decorates exactly one plain-text misspelling after the edit debounce', asy
   writeFileSync(filePath, 'placeholder')
   const { app, win } = await launch(userDataDir, filePath)
   try {
+    expect(await app.evaluate(() => (
+      globalThis as typeof globalThis & { __ncSpellExternalRequests?: string[] }
+    ).__ncSpellExternalRequests)).toBeUndefined()
     await expect(win.locator('.tab', { hasText: 'note.txt' })).toBeVisible()
     await replaceEditorText(win, 'This is a speling mistake.')
     await expect(spellErrors(win)).toHaveCount(1)

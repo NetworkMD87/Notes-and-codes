@@ -75,6 +75,19 @@ async function flush(): Promise<void> {
 }
 
 describe('SpellWorkerClient', () => {
+  it('contains an initial worker-construction failure and disables only spell checking', async () => {
+    const onFatal = vi.fn()
+    const createWorker = vi.fn(() => { throw new Error('private constructor detail') })
+
+    const client = new SpellWorkerClient({ createWorker, onFatal })
+    await flush()
+
+    expect(onFatal).toHaveBeenCalledOnce()
+    await expect(client.check(batch)).rejects.toThrow('worker-failed')
+    await expect(client.check(batch)).rejects.not.toThrow('private constructor detail')
+    client.dispose()
+  })
+
   it('does not expose the smoke-only test hook without the headless navigation flag', () => {
     const { createWorker } = factory()
     const client = new SpellWorkerClient({ createWorker })
@@ -105,14 +118,49 @@ describe('SpellWorkerClient', () => {
     await expect(suggestions).resolves.toEqual(['misspelling'])
   })
 
-  it('rejects only with the fixed worker error code', async () => {
+  it('routes a fixed response failure through the same first-restart path', async () => {
     const { createWorker, workers } = factory()
-    const client = new SpellWorkerClient({ createWorker })
+    const onRestart = vi.fn()
+    const client = new SpellWorkerClient({ createWorker, onRestart })
 
     const result = client.check(batch)
     workers[0].respond({ id: 1, ok: false, error: 'check-failed' })
 
-    await expect(result).rejects.toThrow('check-failed')
+    await expect(result).rejects.toThrow('worker-failed')
+    expect(workers).toHaveLength(2)
+    await flush()
+    expect(onRestart).toHaveBeenCalledOnce()
+  })
+
+  it('times out a silent request, restarts once, and clears every request timer', async () => {
+    vi.useFakeTimers()
+    const { createWorker, workers } = factory()
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
+    const onRestart = vi.fn()
+    const client = new SpellWorkerClient({ createWorker, onRestart, requestTimeoutMs: 50 })
+
+    const successful = client.suggest('first')
+    workers[0].respond({ id: 1, ok: true, type: 'suggested', suggestions: ['firstly'] })
+    await expect(successful).resolves.toEqual(['firstly'])
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(1)
+
+    const silent = client.check(batch)
+    const silentResult = expect(silent).rejects.toThrow('worker-failed')
+    await vi.advanceTimersByTimeAsync(50)
+    await silentResult
+    expect(workers).toHaveLength(2)
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(2)
+    await flush()
+    expect(onRestart).toHaveBeenCalledOnce()
+
+    const secondSilent = client.check(batch)
+    const secondResult = expect(secondSilent).rejects.toThrow('worker-failed')
+    await vi.advanceTimersByTimeAsync(50)
+    await secondResult
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(3)
+    client.dispose()
+    clearTimeoutSpy.mockRestore()
+    vi.useRealTimers()
   })
 
   it('terminates and rejects outstanding and future calls when disposed', async () => {
@@ -150,10 +198,6 @@ describe('SpellWorkerClient', () => {
     workers[0].respond({ id: 4, ok: true, type: 'mutated' })
     await removed
 
-    const rejectedAdd = client.addPersonal('Ghost')
-    workers[0].respond({ id: 5, ok: false, error: 'worker-failed' })
-    await expect(rejectedAdd).rejects.toThrow('worker-failed')
-
     const outstanding = client.suggest('pending')
     workers[0].crash()
 
@@ -161,16 +205,16 @@ describe('SpellWorkerClient', () => {
     expect(workers[0].terminate).toHaveBeenCalledOnce()
     expect(workers).toHaveLength(2)
     expect(workers[1].messages).toEqual([
-      { id: 7, type: 'load', locale: 'en-GB', personalWords: ['Keep', 'Beta'] }
+      { id: 6, type: 'load', locale: 'en-GB', personalWords: ['Keep', 'Beta'] }
     ])
 
-    workers[1].respond({ id: 7, ok: true, type: 'loaded' })
+    workers[1].respond({ id: 6, ok: true, type: 'loaded' })
     await flush()
     expect(workers[1].messages).toEqual([
-      { id: 7, type: 'load', locale: 'en-GB', personalWords: ['Keep', 'Beta'] },
-      { id: 8, type: 'ignore', word: 'SessionWord' }
+      { id: 6, type: 'load', locale: 'en-GB', personalWords: ['Keep', 'Beta'] },
+      { id: 7, type: 'ignore', word: 'SessionWord' }
     ])
-    workers[1].respond({ id: 8, ok: true, type: 'mutated' })
+    workers[1].respond({ id: 7, ok: true, type: 'mutated' })
     await flush()
 
     expect(onRestart).toHaveBeenCalledOnce()
@@ -228,6 +272,23 @@ describe('SpellWorkerClient', () => {
       locale: 'en-GB',
       personalWords: ['Original']
     })
+  })
+
+  it('restores authoritative committed personal words after live synchronization fails', async () => {
+    const { createWorker, workers } = factory()
+    const client = new SpellWorkerClient({ createWorker })
+    const loaded = client.load('en-GB', ['Existing'])
+    workers[0].respond({ id: 1, ok: true, type: 'loaded' })
+    await loaded
+
+    const synchronized = client.syncCommittedPersonalWords(['Existing', 'Persisted'], 'Persisted')
+    workers[0].respond({ id: 2, ok: false, error: 'worker-failed' })
+
+    await expect(synchronized).rejects.toThrow('worker-failed')
+    expect(workers).toHaveLength(2)
+    expect(workers[1].messages).toEqual([
+      { id: 3, type: 'load', locale: 'en-GB', personalWords: ['Existing', 'Persisted'] },
+    ])
   })
 
   it('disables after the replacement worker crashes and invokes onFatal once', async () => {

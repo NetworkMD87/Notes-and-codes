@@ -59,4 +59,26 @@ describe('verifySpellAssets', () => {
   ])('rejects executable network content: %s', (networkCode) => {
     expect(() => verifyBundle(validBundle(networkCode), 'fixture')).toThrow(/forbidden (network|Node) dependency/)
   })
+
+  it.each([
+    'const request = globalThis.fetch; request("/dictionary")',
+    'const request = fetch; request("/dictionary")',
+    'const { fetch: request } = globalThis; request("/dictionary")',
+    'let request; ({ fetch: request } = globalThis); request("/dictionary")',
+    'let fetch; ({ fetch } = globalThis); fetch("/dictionary")',
+    'const first = globalThis.fetch; const second = first; second("/dictionary")',
+    '{ const fetch = () => "offline"; fetch() } fetch("/dictionary")',
+    'const open = globalThis.XMLHttpRequest; new open()',
+  ])('rejects executable aliases of network APIs: %s', (networkCode) => {
+    expect(() => verifyBundle(validBundle(networkCode), 'fixture')).toThrow(/forbidden network dependency/)
+  })
+
+  it.each([
+    'const fetch = () => "offline"; fetch()',
+    'function use(fetch) { return fetch() }',
+    'let request = globalThis.fetch; request = () => "offline"; request()',
+    'const holder = { fetch: globalThis.fetch }',
+  ])('accepts shadowed, reassigned, or inert network references: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
+  })
 })

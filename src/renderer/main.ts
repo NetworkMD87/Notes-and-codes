@@ -321,14 +321,17 @@ async function boot(): Promise<void> {
   // Keeping the stalled port here exercises boot behavior without exposing a production IPC seam.
   const spellTestParams = new URLSearchParams(window.location.search)
   const headlessSpellTest = spellTestParams.get('nc-headless') === '1'
-  const stallSpellWorker = headlessSpellTest && spellTestParams.get('nc-spell-worker') === 'hang'
+  const spellWorkerMode = headlessSpellTest ? spellTestParams.get('nc-spell-worker') : null
+  const createWorker = spellWorkerMode === 'hang' ? () => ({
+    postMessage: () => undefined,
+    terminate: () => undefined,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }) : spellWorkerMode === 'construct-fail' ? () => {
+    throw new Error('worker-failed')
+  } : undefined
   const worker = new SpellWorkerClient({
-    createWorker: stallSpellWorker ? () => ({
-      postMessage: () => undefined,
-      terminate: () => undefined,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-    }) : undefined,
+    createWorker,
     onRestart: () => spell?.workerRestarted(),
     onFatal: () => spell?.workerFailed(),
   })

@@ -211,6 +211,31 @@ function findHtmlTagEnd(text: string, start: number): number {
   return -1
 }
 
+const RAW_TECHNICAL_ELEMENTS = new Set(['code', 'pre', 'script', 'style'])
+
+function maskRawTechnicalElements(chars: string[]): void {
+  const text = chars.join('')
+  for (let start = 0; start < text.length; start++) {
+    if (text[start] !== '<') continue
+    const openingEnd = findHtmlTagEnd(text, start)
+    if (openingEnd === -1 || !isHtmlTagStart(text, start, openingEnd)) continue
+    const opening = /^<([A-Za-z][A-Za-z0-9-]*)\b/.exec(text.slice(start, openingEnd + 1))
+    const name = opening?.[1].toLowerCase()
+    if (!name || !RAW_TECHNICAL_ELEMENTS.has(name)) continue
+    if (/\/\s*>$/.test(text.slice(start, openingEnd + 1))) {
+      maskRange(chars, start, openingEnd + 1)
+      start = openingEnd
+      continue
+    }
+    const closing = new RegExp(`</${name}\\s*>`, 'ig')
+    closing.lastIndex = openingEnd + 1
+    const match = closing.exec(text)
+    const end = match ? match.index + match[0].length : text.length
+    maskRange(chars, start, end)
+    start = end - 1
+  }
+}
+
 function maskHtmlSyntax(chars: string[]): void {
   const text = chars.join('')
   for (let start = 0; start < text.length; start++) {
@@ -271,6 +296,7 @@ export function maskSpellText(text: string, languageId: string): string {
     maskReferenceDefinitions(chars)
     maskInlineCode(chars)
     maskLinkTargets(chars)
+    maskRawTechnicalElements(chars)
     maskHtmlSyntax(chars)
   }
   maskTechnicalTokens(chars)

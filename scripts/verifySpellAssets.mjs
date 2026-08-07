@@ -50,25 +50,15 @@ const staticText = (node) => {
   return null
 }
 
-function invocationName(expression) {
+function unwrapExpression(expression) {
   if (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression) ||
       ts.isTypeAssertionExpression(expression) || ts.isNonNullExpression(expression)) {
-    return invocationName(expression.expression)
+    return unwrapExpression(expression.expression)
   }
   if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.CommaToken) {
-    return invocationName(expression.right)
+    return unwrapExpression(expression.right)
   }
-  if (ts.isIdentifier(expression)) return expression.text
-  if (ts.isPropertyAccessExpression(expression)) {
-    if (['call', 'apply', 'bind'].includes(expression.name.text)) return invocationName(expression.expression)
-    return expression.name.text
-  }
-  if (ts.isElementAccessExpression(expression)) {
-    const name = expression.argumentExpression && staticText(expression.argumentExpression)
-    if (name && ['call', 'apply', 'bind'].includes(name)) return invocationName(expression.expression)
-    return name
-  }
-  return null
+  return expression
 }
 
 const networkModuleUrl = (node) => {
@@ -78,17 +68,139 @@ const networkModuleUrl = (node) => {
 
 function forbiddenNetworkDependency(file) {
   let found = null
+  const scopes = [new Map()]
+  const currentScope = () => scopes[scopes.length - 1]
+  const lookup = (name) => {
+    for (let index = scopes.length - 1; index >= 0; index--) {
+      if (scopes[index].has(name)) return scopes[index].get(name)
+    }
+    return forbiddenNetworkApis.has(name) ? name : null
+  }
+  const propertyName = (node) => {
+    if (ts.isIdentifier(node) || ts.isStringLiteral(node) || ts.isNumericLiteral(node)) return node.text
+    return null
+  }
+  const rootName = (expression) => {
+    let current = unwrapExpression(expression)
+    while (ts.isPropertyAccessExpression(current) || ts.isElementAccessExpression(current)) {
+      current = unwrapExpression(current.expression)
+    }
+    return ts.isIdentifier(current) ? current.text : null
+  }
+  const referenceName = (expression) => {
+    const current = unwrapExpression(expression)
+    if (ts.isIdentifier(current)) return lookup(current.text)
+    if (ts.isPropertyAccessExpression(current)) {
+      if (['call', 'apply', 'bind'].includes(current.name.text)) return referenceName(current.expression)
+      if (forbiddenNetworkApis.has(current.name.text) &&
+          ['globalThis', 'window', 'self', 'navigator', 'electron', 'session'].includes(rootName(current.expression))) {
+        return current.name.text
+      }
+    }
+    if (ts.isElementAccessExpression(current)) {
+      const name = current.argumentExpression && staticText(current.argumentExpression)
+      if (name && ['call', 'apply', 'bind'].includes(name)) return referenceName(current.expression)
+      if (name && forbiddenNetworkApis.has(name) &&
+          ['globalThis', 'window', 'self', 'navigator', 'electron', 'session'].includes(rootName(current.expression))) {
+        return name
+      }
+    }
+    return null
+  }
+  const declareBinding = (name, value, source = null) => {
+    if (ts.isIdentifier(name)) {
+      currentScope().set(name.text, value ? referenceName(value) : null)
+      return
+    }
+    if (ts.isObjectBindingPattern(name)) {
+      const sourceRoot = source && rootName(source)
+      for (const element of name.elements) {
+        const key = propertyName(element.propertyName ?? element.name)
+        const alias = key && forbiddenNetworkApis.has(key) &&
+          ['globalThis', 'window', 'self', 'navigator', 'electron', 'session'].includes(sourceRoot)
+          ? key
+          : null
+        declareBinding(element.name, null)
+        if (ts.isIdentifier(element.name)) currentScope().set(element.name.text, alias)
+      }
+      return
+    }
+    for (const element of name.elements) declareBinding(element.name, null)
+  }
+  const assignBinding = (left, value) => {
+    const setExisting = (name, alias) => {
+      for (let index = scopes.length - 1; index >= 0; index--) {
+        if (scopes[index].has(name)) {
+          scopes[index].set(name, alias)
+          return
+        }
+      }
+      currentScope().set(name, alias)
+    }
+    if (ts.isIdentifier(left)) {
+      setExisting(left.text, referenceName(value))
+    } else if (ts.isObjectLiteralExpression(left)) {
+      const sourceRoot = rootName(value)
+      for (const property of left.properties) {
+        const target = ts.isShorthandPropertyAssignment(property)
+          ? property.name
+          : ts.isPropertyAssignment(property) && ts.isIdentifier(property.initializer)
+            ? property.initializer
+            : null
+        if (!target) continue
+        const key = propertyName(property.name)
+        setExisting(target.text, key && forbiddenNetworkApis.has(key) &&
+          ['globalThis', 'window', 'self', 'navigator', 'electron', 'session'].includes(sourceRoot) ? key : null)
+      }
+    }
+  }
+  const visitFunction = (node) => {
+    scopes.push(new Map())
+    for (const parameter of node.parameters) declareBinding(parameter.name, null)
+    if (node.body) visit(node.body)
+    scopes.pop()
+  }
   const visit = (node) => {
-    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+    if (ts.isBlock(node)) {
+      scopes.push(new Map())
+      for (const statement of node.statements) {
+        if (found) break
+        visit(statement)
+      }
+      scopes.pop()
+      return
+    } else if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
       if (networkModuleUrl(node.moduleSpecifier)) found = 'network module URL'
+      if (ts.isImportDeclaration(node) && node.importClause) {
+        if (node.importClause.name) declareBinding(node.importClause.name, null)
+        const bindings = node.importClause.namedBindings
+        if (bindings && ts.isNamespaceImport(bindings)) declareBinding(bindings.name, null)
+        else if (bindings) for (const element of bindings.elements) declareBinding(element.name, null)
+      }
     } else if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
-      const name = invocationName(node.expression)
+      const name = referenceName(node.expression)
       if (name && forbiddenNetworkApis.has(name)) found = name
       else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword &&
           networkModuleUrl(node.arguments[0])) found = 'network module URL'
     } else if (ts.isTaggedTemplateExpression(node)) {
-      const name = invocationName(node.tag)
+      const name = referenceName(node.tag)
       if (name && forbiddenNetworkApis.has(name)) found = name
+    } else if (ts.isVariableDeclaration(node)) {
+      declareBinding(node.name, node.initializer ?? null, node.initializer ?? null)
+    } else if (ts.isFunctionDeclaration(node)) {
+      if (node.name) declareBinding(node.name, null)
+      visitFunction(node)
+      return
+    } else if (ts.isFunctionExpression(node) || ts.isArrowFunction(node) ||
+        ts.isMethodDeclaration(node) || ts.isConstructorDeclaration(node)) {
+      visitFunction(node)
+      return
+    } else if (ts.isClassDeclaration(node)) {
+      if (node.name) declareBinding(node.name, null)
+    } else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      visit(node.right)
+      assignBinding(unwrapExpression(node.left), node.right)
+      return
     }
     if (!found) ts.forEachChild(node, visit)
   }

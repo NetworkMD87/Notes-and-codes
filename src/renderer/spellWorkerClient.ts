@@ -13,6 +13,7 @@ export interface SpellWorkerClientOptions {
   createWorker?: WorkerFactory
   onRestart?: () => void
   onFatal?: () => void
+  requestTimeoutMs?: number
 }
 
 type RequestBody = SpellWorkerRequest extends infer Request
@@ -22,6 +23,7 @@ type RequestBody = SpellWorkerRequest extends infer Request
 interface PendingRequest {
   resolve: (response: SpellWorkerResponse) => void
   reject: (error: Error) => void
+  timer: ReturnType<typeof setTimeout>
 }
 
 export interface SpellWorkerTestHooks {
@@ -43,7 +45,8 @@ export class SpellWorkerClient {
   private readonly createWorker: WorkerFactory
   private readonly onRestart: () => void
   private readonly onFatal: () => void
-  private worker: WorkerPort
+  private readonly requestTimeoutMs: number
+  private worker: WorkerPort | null = null
   private nextId = 1
   private readonly pending = new Map<number, PendingRequest>()
   private locale: ResolvedSpellLocale | null = null
@@ -72,6 +75,12 @@ export class SpellWorkerClient {
     const request = this.pending.get(response.id)
     if (!request) return
     this.pending.delete(response.id)
+    clearTimeout(request.timer)
+    if (!response.ok) {
+      request.reject(workerError())
+      this.handleCrash()
+      return
+    }
     request.resolve(response)
   }
 
@@ -81,8 +90,15 @@ export class SpellWorkerClient {
     this.createWorker = options.createWorker ?? defaultWorkerFactory
     this.onRestart = options.onRestart ?? (() => undefined)
     this.onFatal = options.onFatal ?? (() => undefined)
-    this.worker = this.createWorker()
-    this.attach(this.worker)
+    this.requestTimeoutMs = Math.max(1, Math.min(options.requestTimeoutMs ?? 5_000, 60_000))
+    try {
+      this.worker = this.createWorker()
+      this.attach(this.worker)
+    } catch {
+      this.disabled = true
+      this.fatalNotified = true
+      queueMicrotask(() => { if (!this.disposed) this.onFatal() })
+    }
   }
 
   async load(locale: ResolvedSpellLocale, personalWords: string[]): Promise<void> {
@@ -125,6 +141,11 @@ export class SpellWorkerClient {
     if (!this.personalWords.has(key)) this.personalWords.set(key, word)
   }
 
+  async syncCommittedPersonalWords(personalWords: string[], addedWord: string): Promise<void> {
+    this.personalWords = this.wordMap(personalWords)
+    await this.whenReady(() => this.sendMutation({ type: 'personal:add', word: addedWord }, 'mutated'))
+  }
+
   async removePersonal(word: string): Promise<void> {
     await this.whenReady(() => this.sendMutation({ type: 'personal:remove', word }, 'mutated'))
     this.personalWords.delete(wordKey(word))
@@ -146,8 +167,11 @@ export class SpellWorkerClient {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
-    this.detach(this.worker)
-    this.worker.terminate()
+    if (this.worker) {
+      this.detach(this.worker)
+      this.worker.terminate()
+      this.worker = null
+    }
     this.checksToDelay = 0
     this.delayedChecks.length = 0
     this.rejectPending()
@@ -172,19 +196,36 @@ export class SpellWorkerClient {
     if (this.disabled || this.disposed) return Promise.reject(workerError())
     const id = this.nextId++
     return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        const pending = this.pending.get(id)
+        if (!pending) return
+        clearTimeout(timer)
+        this.pending.delete(id)
+        pending.reject(workerError())
+        this.handleCrash()
+      }, this.requestTimeoutMs)
       this.pending.set(id, {
         resolve: response => {
           try { resolve(read(response)) } catch (error) {
             reject(error instanceof Error ? error : workerError())
+            this.handleCrash()
           }
         },
-        reject
+        reject,
+        timer,
       })
       if (this.failNext) {
         this.failNext = false
         this.handleCrash()
       } else {
-        this.worker.postMessage({ ...request, id } as SpellWorkerRequest)
+        try {
+          this.worker!.postMessage({ ...request, id } as SpellWorkerRequest)
+        } catch {
+          clearTimeout(timer)
+          this.pending.delete(id)
+          reject(workerError())
+          this.handleCrash()
+        }
       }
     })
   }
@@ -195,8 +236,11 @@ export class SpellWorkerClient {
 
   private handleCrash(): void {
     if (this.disabled || this.disposed) return
-    this.detach(this.worker)
-    this.worker.terminate()
+    if (this.worker) {
+      this.detach(this.worker)
+      this.worker.terminate()
+      this.worker = null
+    }
     this.checksToDelay = 0
     this.delayedChecks.length = 0
     this.rejectPending()
@@ -208,8 +252,9 @@ export class SpellWorkerClient {
 
     this.restarted = true
     try {
-      this.worker = this.createWorker()
-      this.attach(this.worker)
+      const worker = this.createWorker()
+      this.worker = worker
+      this.attach(worker)
     } catch {
       this.disableFatally()
       return
@@ -241,8 +286,11 @@ export class SpellWorkerClient {
     this.disabled = true
     this.recovery = null
     if (!workerStopped) {
-      this.detach(this.worker)
-      this.worker.terminate()
+      if (this.worker) {
+        this.detach(this.worker)
+        this.worker.terminate()
+        this.worker = null
+      }
     }
     this.rejectPending()
     if (!this.fatalNotified) {
@@ -254,7 +302,19 @@ export class SpellWorkerClient {
   private rejectPending(): void {
     const requests = [...this.pending.values()]
     this.pending.clear()
-    for (const request of requests) request.reject(workerError())
+    for (const request of requests) {
+      clearTimeout(request.timer)
+      request.reject(workerError())
+    }
+  }
+
+  private wordMap(words: string[]): Map<string, string> {
+    const result = new Map<string, string>()
+    for (const word of words) {
+      const key = wordKey(word)
+      if (!result.has(key)) result.set(key, word)
+    }
+    return result
   }
 
   private attach(worker: WorkerPort): void {

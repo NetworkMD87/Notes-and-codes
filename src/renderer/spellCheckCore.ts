@@ -22,6 +22,7 @@ export interface SpellWorkerPort {
   suggest(word: string, limit?: number): Promise<string[]>
   ignore(word: string): Promise<void>
   addPersonal(word: string): Promise<void>
+  syncCommittedPersonalWords(words: string[], addedWord: string): Promise<void>
   removePersonal(word: string): Promise<void>
   dispose(): void
 }
@@ -201,10 +202,11 @@ export class SpellCheckCore {
       return
     }
     try {
-      await this.deps.worker.addPersonal(current.issue.text)
+      await this.deps.worker.syncCommittedPersonalWords(result.words, current.issue.text)
     } catch {
-      this.deps.notify('Could not update spell check for that word.', 'error')
-      return
+      // Persistence already succeeded. The worker client has recorded result.words as its
+      // authoritative restart snapshot, so presentation must reflect the committed state even
+      // while the bounded worker recovery path reloads it.
     }
     this.removeWord(current.issue.text)
   }

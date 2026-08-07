@@ -309,4 +309,22 @@ describe('offset-stable prose extraction', () => {
       words(['outer', 1, 6], ['inner', 8, 13], ['label', 15, 20])
     )
   })
+
+  it.each([
+    ['code with attributes', 'Before <CoDe class="lang">hidden speling</cOdE> after'],
+    ['pre with LF body', 'Before <pre data-x="1">\nhidden speling\n</pre> after'],
+    ['script with CRLF body', 'Before <SCRIPT type="module">\r\nhidden speling\r\n</SCRIPT> after'],
+    ['style with multiline attributes', 'Before <style\n media="screen">hidden speling</style> after'],
+  ])('masks the complete raw technical element body: %s', (_name, text) => {
+    const before = text.indexOf('Before')
+    const after = text.lastIndexOf('after')
+    expectWords(text, 'markdown', words(['Before', before, before + 6], ['after', after, after + 5]))
+  })
+
+  it('retains prose inside ordinary presentation elements while masking technical siblings', () => {
+    const text = '<span>visible speling</span><code>hidden speling</code><em>more prose</em>'
+    expectWords(text, 'markdown', words(
+      ['visible', 6, 13], ['speling', 14, 21], ['more', 59, 63], ['prose', 64, 69]
+    ))
+  })
 })
