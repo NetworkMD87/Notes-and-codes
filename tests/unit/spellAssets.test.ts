@@ -10,7 +10,22 @@ const notices = readFileSync(resolve(root, 'THIRD_PARTY_NOTICES.md'), 'utf8')
 const mainSource = readFileSync(resolve(root, 'src/main/index.ts'), 'utf8')
 const rendererSource = readFileSync(resolve(root, 'src/renderer/main.ts'), 'utf8')
 
+function normalizeLineEndings(text: string): string {
+  return text.replace(/\r\n?/g, '\n')
+}
+
+function containsWholeLicence(noticeText: string, licenceText: string): boolean {
+  return normalizeLineEndings(noticeText).includes(normalizeLineEndings(licenceText).trim())
+}
+
 describe('offline spell assets', () => {
+  it('matches full licence text across Windows and Unix line endings', () => {
+    const noticeText = 'header\r\n\r\nline one\r\nline two\r\nfooter'
+    const licenceText = 'line one\nline two'
+
+    expect(containsWholeLicence(noticeText, licenceText)).toBe(true)
+  })
+
   it('locks every runtime package and records its licence notice', () => {
     expect(lock.packages['node_modules/nspell']?.version).toBe('2.1.5')
     expect(lock.packages['node_modules/dictionary-en']?.version).toBe('4.0.0')
@@ -23,7 +38,8 @@ describe('offline spell assets', () => {
 
   it('reproduces both installed dictionary licences verbatim', () => {
     for (const packageName of ['dictionary-en', 'dictionary-en-gb']) {
-      expect(notices).toContain(readFileSync(resolve(root, 'node_modules', packageName, 'license'), 'utf8').trim())
+      const licence = readFileSync(resolve(root, 'node_modules', packageName, 'license'), 'utf8')
+      expect(containsWholeLicence(notices, licence)).toBe(true)
     }
   })
 
