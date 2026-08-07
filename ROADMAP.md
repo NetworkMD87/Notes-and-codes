@@ -17,11 +17,17 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — v1.16.0 is shipped; v1.17.0 is the next release
+## ▶ NEXT ACTION — v1.17.0 is shipped; the next release is not yet scoped
 
-**Next release:** **v1.17.0** — fully offline UK/US spell checking for plain text and Markdown,
-plus the `boot()` readiness fix (known issue ③ below, now resolved). The spell checker is a minor
-feature release; the startup fix rides with it instead of cutting a separate v1.16.1.
+**v1.17.0 shipped 2026-08-07 — Fully offline spell checking + startup readiness fix.** Tagged
+`v1.17.0` and published as a GitHub release (installer + portable). Plain-text and Markdown prose
+now get bundled UK/US spell checking, Quick Fix suggestions, session ignores, and a personal
+dictionary, with no network dependency. It also carries the `boot()` readiness fix that prevents
+an early settings change being silently reverted on a slow startup. See **Phase 4.4** below.
+
+**Next release:** scope is not yet locked. The leading platform candidate remains a Microsoft Store
+release via MSIX, which needs its own design pass because Store sandboxing changes launch-on-login
+and Explorer integration behaviour.
 
 **v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
 portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable
