@@ -4,6 +4,21 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [1.18.0] — 2026-08-07
+
+_Right-click a misspelling for immediate offline corrections, with familiar editing actions kept close at hand._
+
+### Added
+- **Right-click spell corrections.** Right-click a red-underlined word in plain text or Markdown
+  prose to choose up to five local suggestions, ignore it for the session, or add it to your
+  personal dictionary. The menu also retains Undo, Redo, Cut, Copy, Paste, Select All, and the
+  Command Palette; `Ctrl+.` remains available as the keyboard route.
+
+### Fixed
+- Opening a file while the app was still restoring its previous session could leave that file
+  hidden behind a newly created blank Untitled tab. Startup file requests are now applied after
+  session restoration and remain active.
+
 ## [1.17.0] — 2026-08-07
 
 _Private, fully offline spell checking for notes and Markdown, with UK and US English built in._
