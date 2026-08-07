@@ -17,7 +17,7 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — v1.17.0 is shipped; the next release is not yet scoped
+## ▶ NEXT ACTION — Add right-click spell corrections
 
 **v1.17.0 shipped 2026-08-07 — Fully offline spell checking + startup readiness fix.** Tagged
 `v1.17.0` and published as a GitHub release (installer + portable). Plain-text and Markdown prose
@@ -25,9 +25,13 @@ now get bundled UK/US spell checking, Quick Fix suggestions, session ignores, an
 dictionary, with no network dependency. It also carries the `boot()` readiness fix that prevents
 an early settings change being silently reverted on a slow startup. See **Phase 4.4** below.
 
-**Next release:** scope is not yet locked. The leading platform candidate remains a Microsoft Store
-release via MSIX, which needs its own design pass because Store sandboxing changes launch-on-login
-and Explorer integration behaviour.
+**Next release:** add the conventional right-click correction flow for red-underlined words. User
+testing confirmed that the existing `Ctrl+.` Quick Fix works when the text caret is inside the word,
+but hovering or right-clicking the underline offers no corrections. Right-clicking a misspelling
+should directly offer replacement suggestions plus **Ignore for this session** and **Add to personal
+dictionary**, without requiring the user to reposition the caret or know Monaco's shortcut. Design
+and implementation start next session. The Microsoft Store/MSIX release remains the leading platform
+follow-up after this usability fix.
 
 **v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
 portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable
@@ -303,6 +307,10 @@ Neither depends on 3.5 — they can land before, during, or after it._
   worker handles debounced newest-only batches with stale-result guards and bounded crash recovery.
   The built worker is statically checked for network capabilities and the Electron workflow is
   smoke-tested with HTTP/HTTPS blocked before renderer navigation.
+- 🔜 **Right-click spell corrections** (**S–M**, next up) — expose the existing replacement,
+  session-ignore, and personal-dictionary actions directly from the context menu for the
+  red-underlined word that was clicked. `Ctrl+.` remains available, but is no longer the only
+  correction route. Scope and build in the next session.
 - ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
   **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
   from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco
