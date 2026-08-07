@@ -1,201 +1,147 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/branding/notes-and-codes-logo/svg/nc-wordmark-dark.svg">
-    <img alt="Notes & Codes" src="assets/branding/notes-and-codes-logo/svg/nc-wordmark-light.svg" width="420">
+    <img alt="Notes & Codes" src="assets/branding/notes-and-codes-logo/svg/nc-wordmark-light.svg" width="440">
   </picture>
 </p>
 
-# Notes & Codes
+<h1 align="center">Notes & Codes</h1>
 
-[![CI](https://github.com/NetworkMD87/Notes-and-codes/actions/workflows/ci.yml/badge.svg)](https://github.com/NetworkMD87/Notes-and-codes/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <strong>Notepad-simple. Code-editor-powerful.</strong><br>
+  A fast, Windows-first scratchpad for notes, code, and everything in between.
+</p>
 
-A fast, Windows-first dev scratchpad: **Notepad-simple, code-editor-powerful.**
+<p align="center">
+  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/NetworkMD87/Notes-and-codes?display_name=tag&amp;sort=semver&amp;style=flat"></a>
+  <a href="https://github.com/NetworkMD87/Notes-and-codes/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/NetworkMD87/Notes-and-codes/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="#install"><img alt="Windows 10 and 11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4?logo=windows11&amp;logoColor=white&amp;style=flat"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/NetworkMD87/Notes-and-codes?style=flat"></a>
+</p>
 
-Open it with the global hotkey, paste the thing, close it — it remembers. Or open a folder
-and it turns into a real editor: tabs, split panes, quick-open, diffs, file history. It lives
-in the tray, starts empty, and never asks you to make a project first.
+<p align="center">
+  <a href="#install">Download</a> · <a href="#features">Features</a> ·
+  <a href="#shortcuts">Shortcuts</a> · <a href="#build-from-source">Build from source</a>
+</p>
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/hero-dark.png">
-    <img alt="Notes & Codes: folder sidebar with file-type badges, split panes showing TypeScript and Markdown" src="assets/screenshots/hero-light.png">
+    <img alt="Notes & Codes with a folder open and TypeScript and Markdown files in split panes" src="assets/screenshots/hero-light.png">
   </picture>
 </p>
 
+Summon it with a global hotkey, paste the thing, and close it—it remembers. Open a folder and it
+becomes a focused editor with tabs, split panes, quick open, content search, diffs, and file history.
+No workspace setup, account, or cloud connection required.
+
 ## Install
 
-1. Download **Notes.Codes.Setup.x.y.z.exe** from the [latest release](../../releases/latest)
-   (GitHub strips the spaces and `&` from the filename). The **Notes.Codes.x.y.z.exe** asset is
-   the no-install portable build.
-2. Run it. The build is unsigned, so Windows SmartScreen shows
-   "Windows protected your PC" → click **More info → Run anyway**.
-3. It installs per-user (no admin) and adds an "Open with Notes & Codes" entry to
-   the right-click menu (under **Show more options** on Windows 11).
+1. Get **Notes.Codes.Setup.x.y.z.exe** from the [latest release](../../releases/latest), or choose
+   **Notes.Codes.x.y.z.exe** for the portable build.
+2. Run it on Windows x64. Installation is per-user and needs no administrator access.
+3. Start typing, or enable **Open with Notes & Codes** in Settings ▸ Integration for Explorer.
+
+> [!NOTE]
+> Releases are currently unsigned. If SmartScreen appears, choose **More info ▸ Run anyway**.
+
+## What's new
+
+- **[v1.18.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.18.0):** right-click a
+  misspelling for local suggestions, Ignore, Add to Dictionary, and familiar editing actions.
+- **[v1.17.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.17.0):** private,
+  fully offline UK and US English spell checking for plain text and Markdown.
+
+See the [changelog](CHANGELOG.md) for every release and fix.
 
 ## Features
 
-### Editing
-
-- Tabs you can **drag to reorder**; full or split panes with a draggable divider; per-pane line numbers.
-- Each tab carries a tinted **file-type badge** from its language, matching the sidebar's badges.
-- Word wrap, UTF-8 / UTF-16 encoding, and LF / CRLF control.
-- **Format Document** — prettify the active file (JS/TS, JSON, CSS/SCSS/LESS, HTML, Markdown, YAML)
-  with `Shift+Alt+F`, the command palette or the Edit menu, plus optional format-on-save
-  (Settings ▸ Editor).
-- Paste history and reusable snippets.
-
-### Look & feel
-
-- **13 cohesive themes** — Light, Dark, Dark Dimmed, Solarized Dark/Light, One Dark, Monokai,
-  High-Contrast, Nord, Dracula, Gruvbox Dark/Light, Tokyo Night, plus follow-OS. Each row in the
-  theme list **shows that theme's own palette as swatches**, so you can see what you're picking.
-- A per-theme accent you can override from **18 curated colours**, with automatic text-contrast
-  correction so light accents stay legible.
-- Bundled JetBrains Mono, Fira Code and IBM Plex Mono (plus system fonts), and a **separate
-  interface font** for app chrome.
-- All motion respects `prefers-reduced-motion`.
+- **Fast by default.** Configurable global summon hotkey, system-tray lifecycle, optional
+  launch-on-login, single-instance file routing, and automatic session recovery.
+- **A real editor when you need one.** Drag-reorderable tabs, split panes, folder tree, quick open,
+  Prettier formatting, UTF-8/UTF-16 and LF/CRLF control, plus tab, clipboard, and file diffs.
+- **Search what is actually on screen.** Find in Files (`Ctrl+Shift+F`) searches the open folder and
+  every open tab—including unsaved edits—with previews, line numbers, case, and whole-word controls.
+- **Private spelling help.** Offline UK/US/follow-Windows dictionaries, Markdown-aware exclusions,
+  Quick Fix (`Ctrl+.`), right-click suggestions, session ignores, and a personal dictionary.
+- **Designed against data loss.** Atomic writes, scratch-buffer recovery, overwrite protection,
+  queued external-change conflicts, auto-save, Revert File, and browsable file history.
+- **Useful creative tools.** Live Markdown preview, self-contained HTML/PDF export, paste history,
+  snippets, an 18-colour persistent highlighter, command palette, and searchable in-app help.
+- **Made to feel at home.** Thirteen themes, eighteen accents with automatic contrast, bundled
+  coding fonts, separate interface fonts, reduced-motion support, and theme-aware Windows icons.
 
 |  |  |
 |:--:|:--:|
-| ![Dracula](assets/screenshots/theme-dracula.png)<br>**Dracula** | ![Nord](assets/screenshots/theme-nord.png)<br>**Nord** |
-| ![Monokai](assets/screenshots/theme-monokai.png)<br>**Monokai** | ![Gruvbox Light](assets/screenshots/theme-gruvbox-light.png)<br>**Gruvbox Light** |
+| ![Dracula theme](assets/screenshots/theme-dracula.png)<br>**Dracula** | ![Nord theme](assets/screenshots/theme-nord.png)<br>**Nord** |
+| ![Monokai theme](assets/screenshots/theme-monokai.png)<br>**Monokai** | ![Gruvbox Light theme](assets/screenshots/theme-gruvbox-light.png)<br>**Gruvbox Light** |
 
-### Files & folders
+**Find any action.**
 
-- **Folder mode** — Open Folder → a toggleable sidebar file-tree with tinted file-type badges,
-  folder glyphs and indent guides, plus `Ctrl+P` quick-open and basic file ops
-  (New File/Folder, Rename, Delete → Recycle Bin).
-- **Folder panel & recent folders** — the sidebar edge tab is always there; with no folder open it
-  offers **Open Folder…** and your recent folders, and the sidebar header switches between them.
-- **Open Recent**, drag & drop to open, and Windows "Open with" / single-instance file routing.
-- Live **markdown preview** and **export to HTML / PDF** (clean light document style, self-contained).
+![The command palette filtered to matching actions, with shortcut keycaps](assets/screenshots/palette.png)
 
-### Not losing your work
-
-- **Session auto-save + crash recovery** — unsaved scratch buffers survive a restart.
-- Every write is **crash-safe** (atomic temp-write + rename), and save failures surface as a toast
-  rather than failing silently.
-- **On-save overwrite warning** — if the file changed on disk since you opened it, you're asked
-  before you clobber it.
-- **External change detection** — clean files reload silently; a dirty file raises a floating
-  notice with Reload / Keep, and multiple conflicts queue rather than replacing each other.
-- **File history / timeline** — automatic per-file snapshots you can browse, diff and restore.
-- **Revert File** — discard unsaved edits and reload from disk (confirms first when there's
-  something to lose).
-- Closing a dirty tab confirms first — including untitled scratch buffers.
-- Optional **auto-save to disk** for named files (off by default; Settings ▸ Editor).
-
-### Tools
-
-- **Diffs** — tab-vs-tab, current-vs-clipboard, file-vs-file.
-- **Text highlighter** — an 18-colour pen that persists per file, with a marker-pen cursor tipped
-  in the active colour.
-- **Command palette** (`Ctrl+Shift+P`) for everything, with keycap shortcut hints.
-- **In-app Help** — a searchable keyboard-shortcut & command reference with plain-English
-  descriptions, plus an About dialog.
-
-![The command palette, filtered, with keycap shortcut hints](assets/screenshots/palette.png)
+**Compare changes without leaving the app.**
 
 ![A side-by-side diff of two open tabs](assets/screenshots/diff.png)
-
-### Tray & startup
-
-- Closing the window **hides to the tray**; summon it from anywhere with the global hotkey.
-  Quit from the tray menu or `Ctrl+Q`.
-- The global summon hotkey is **configurable** (Settings ▸ Startup) — record a new combo or clear
-  it entirely. If another app already owns the combo, it reverts and tells you instead of
-  silently failing.
-- **Launch on login** (opt-in, Settings ▸ Startup) — starts hidden in the tray, ready to summon
-  the moment Windows boots, instead of throwing a window at you.
-- **Settings** in one place (gear button, `Ctrl+,`, or `File ▸ Preferences…`): Appearance, Font,
-  Editor, Folder, Startup, Integration.
-- The tray glyph flips bright/dark to contrast with your Windows taskbar theme; the app icon is a
-  contrast-safe tile that stays legible either way, showing a compact `{&}` mark at the small
-  sizes Windows uses for the taskbar, Alt+Tab and Explorer.
 
 ## Shortcuts
 
 | Action | Key |
 |---|---|
-| Command palette | Ctrl+Shift+P |
-| Quick-open (folder mode) | Ctrl+P |
-| Open file / Open folder | Ctrl+O / Ctrl+K |
-| Save / Save As / Save All | Ctrl+S / Ctrl+Shift+A / Ctrl+Shift+S |
-| New tab / Close tab | Ctrl+T / Ctrl+W |
-| Find / Replace | Ctrl+F / Ctrl+H |
-| Find in Files | Ctrl+Shift+F |
-| Toggle split | Ctrl+\\ |
-| Zoom in / out / reset | Ctrl+= / Ctrl+- / Ctrl+0 |
-| Settings | Ctrl+, |
-| Summon / hide (global, configurable) | Ctrl+Shift+Space |
-| Quit (from tray app) | Ctrl+Q |
+| Command palette / Quick open | `Ctrl+Shift+P` / `Ctrl+P` |
+| Find in Files / Spelling Quick Fix | `Ctrl+Shift+F` / `Ctrl+.` |
+| Open file / folder | `Ctrl+O` / `Ctrl+K` |
+| Save / Save As / Save All | `Ctrl+S` / `Ctrl+Shift+A` / `Ctrl+Shift+S` |
+| New / close tab | `Ctrl+T` / `Ctrl+W` |
+| Find / replace | `Ctrl+F` / `Ctrl+H` |
+| Format document / Toggle split | `Shift+Alt+F` / `Ctrl+\` |
+| Settings / Quit | `Ctrl+,` / `Ctrl+Q` |
+| Summon / hide globally | `Ctrl+Shift+Space` (configurable) |
 
-The full, searchable list lives in the app under **Help ▸ Shortcuts & Commands**.
+The complete searchable reference lives under **Help ▸ Shortcuts & Commands**.
 
-## How this is built and verified
+## Built with care
 
-Every claim below is checkable from the repo — that's the point of listing them.
+- Strict TypeScript builds and focused Vitest tests run on Windows CI.
+- Playwright drives the real built Electron app in isolated user-data directories before releases.
+- Atomic persistence, overwrite guards, recovery, and file history protect user content.
+- The sandboxed renderer uses a narrow, typed, sender-validated IPC bridge.
+- Two closed codebase audits are published in [AUDIT-CHECKLIST.md](AUDIT-CHECKLIST.md).
 
-**Tests.** 47 unit test files (390 tests, Vitest) covering the pure logic — buffer management,
-encoding, the store layer, theme derivation, path/argv handling, the IPC sender guard. These plus
-a strict `tsc` type-check run on **every push and pull request** on Windows runners
-([CI workflow](.github/workflows/ci.yml)) — that's what the badge above reports.
+<details>
+<summary><strong>Engineering and verification details</strong></summary>
 
-On top of those, 18 Playwright specs (98 tests) drive the **real built Electron app** in a window,
-each with an isolated `--user-data-dir` so they never touch a real session. These run locally
-before a release rather than in CI: GitHub-hosted runners don't reliably paint Monaco's viewport,
-so every test asserting on rendered editor content fails there regardless of timeout. The suite is
-sound, the hosted environment isn't, and gating on it would mean a red badge that says nothing
-about the code. It's dispatchable manually from the Actions tab.
+The app runs with `contextIsolation: true`, `sandbox: true`, and `nodeIntegration: false`. Every IPC
+handler rejects messages outside the app window's own main frame; CSP excludes `unsafe-eval`, and
+Markdown is rendered with raw HTML disabled before DOMPurify sanitisation.
 
-**A test is not trusted until it has been seen failing.** Guards here are verified by
-falsification — write the break, watch it go red, revert. The pen-cursor CSP guard was proven by
-tightening `img-src`; the second-instance test by stubbing the handler's `send('open-file')`; the
-overlay-registration guard by removing the fix and confirming Monaco's find widget stopped closing
-on Escape. A test that has only ever been green is evidence of nothing.
+Cross-cutting guards are falsified before being trusted: introduce the failure, watch the targeted
+assertion turn red, then restore the implementation. Release smoke tests run locally because hosted
+Windows runners do not reliably paint Monaco's viewport.
 
-**The codebase has been audited twice, and the audits are closed.**
-[AUDIT-CHECKLIST.md](AUDIT-CHECKLIST.md) is the record: 40 findings across two full passes
-(5 High, 7 Medium, 9 Low in the second), each one **verified against the code before being
-fixed** — several were downgraded or rejected on inspection rather than cargo-culted into a patch.
+Rejected changes keep their rationale. For example, `fsync` was removed after Windows
+`FlushFileBuffers` latency stalled routine writes for a marginal durability gain. Committed icons
+and screenshots also regenerate deterministically: unchanged input must leave Git clean.
 
-**Rejected changes are recorded with their reasoning**, not quietly dropped. `atomicWrite`
-deliberately has no `fsync`: it was implemented, A/B tested, found to stall writes on Windows
-(`FlushFileBuffers` latency) for a negligible durability gain on NTFS, and backed out — the
-rationale sits in the source. Softening the accent border on floating chrome was mocked up and
-rejected. Native `IExplorerCommand` is parked as not worth its cost.
-
-**Known issues are documented, not hidden.** The `Shift+Alt+F` Format accelerator shipped broken and
-said so — in the feature list, in [ROADMAP.md](ROADMAP.md), and by omitting the key from the in-app
-help rather than advertising one that did nothing. It was fixed in 2026-07-25 once the real cause was
-found (two panes racing to claim one global Monaco keybinding), and now carries an end-to-end smoke
-guard that was verified by watching it fail.
-
-**The security boundary is enforced, not assumed.** `contextIsolation: true`, `sandbox: true`,
-`nodeIntegration: false`; the renderer reaches the OS only through a narrow typed `contextBridge`
-API; every IPC handler rejects senders that aren't the app window's own main frame; CSP has no
-`unsafe-eval`, and Markdown goes through `markdown-it` with `html: false` plus DOMPurify.
-
-**The committed artifacts regenerate deterministically.** `npm run make-icon` and
-`npm run screenshots` must both leave `git status` clean when re-run against unchanged input, so
-the icon and the images in this README cannot silently drift from the app they depict.
+</details>
 
 ## Build from source
 
+```powershell
+npm ci
+npm run dev          # Electron development mode with HMR
+npm run build        # Type-check, then compile
+npm test             # Vitest unit tests
+npm run test:smoke   # Playwright Electron tests; build first
+npm run screenshots  # Regenerate README screenshots
+npm run package      # Installer + portable executable
 ```
-npm install
-npm run dev        # run in development (electron-vite, HMR)
-npm run build      # type-check (tsc --noEmit) then compile to out/
-npm test           # unit tests (Vitest)
-npm run test:smoke # Playwright Electron smoke tests (needs a build first)
-npm run screenshots # regenerate the README screenshots from the built app
-npm run package    # installer + portable exe (needs Windows Developer Mode
-                   # or an elevated shell for electron-builder's symlink step)
-```
+
+Packaging requires Windows Developer Mode or an elevated shell for electron-builder's symlink step.
+Bug reports and focused improvements are welcome in the
+[issue tracker](https://github.com/NetworkMD87/Notes-and-codes/issues).
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Bundled fonts (JetBrains Mono, Fira Code, IBM Plex
-Mono) are licensed under the SIL Open Font License 1.1; see
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE). Bundled JetBrains Mono, Fira Code, and IBM Plex Mono fonts use the SIL Open Font
+License 1.1; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
