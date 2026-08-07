@@ -47,6 +47,7 @@ import { SpellCheckController } from './spellCheckController'
 import { PersonalDictionaryPanel } from './personalDictionaryPanel'
 import { resolveSpellLocale } from '../shared/spellText'
 import type { ResolvedSpellLocale } from '../shared/spell'
+import { StartupOpenQueue } from './startupOpenQueue'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -314,9 +315,7 @@ async function boot(): Promise<void> {
   snippets.load(await window.api.loadSnippets())
   const session = await window.api.loadSession()
   if (session.buffers.length > 0) manager.restore(session)
-  else manager.create()
-  if (!manager.activeId) manager.setActive(manager.list()[0].id)
-  showActive()
+  await finishStartupBuffers()
   // Main only adds this query under NC_HEADLESS plus the dedicated smoke-test environment flag.
   // Keeping the stalled port here exercises boot behavior without exposing a production IPC seam.
   const spellTestParams = new URLSearchParams(window.location.search)
@@ -900,6 +899,16 @@ async function openPath(path: string): Promise<boolean> {
   } catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`, 'error'); return false }
 }
 
+const startupOpenQueue = new StartupOpenQueue(openPath)
+
+async function finishStartupBuffers(): Promise<void> {
+  await startupOpenQueue.finishStartup(() => {
+    if (manager.list().length === 0) manager.create()
+  })
+  if (!manager.activeId && manager.list().length > 0) manager.setActive(manager.list()[0].id)
+  showActive()
+}
+
 function openPaths(): string[] { return manager.list().map(b => b.filePath).filter((p): p is string => !!p) }
 function syncWatch(): void { window.api.watchPaths(openPaths()) }
 
@@ -952,7 +961,14 @@ window.api.onFileChanged((path) => {
 
 installDropOpen((p) => { void openPath(p) })
 
-window.api.onOpenFile((path) => { void openPath(path) })
+window.api.onOpenFile((path) => {
+  const queued = startupOpenQueue.open(path)
+  // Smoke-only ordering probe: the test uses this receipt acknowledgement to decide whether
+  // it must wait for a deliberately bypassed immediate open before releasing session restore.
+  if (new URLSearchParams(window.location.search).get('nc-headless') === '1') {
+    document.body.dataset.startupOpenDisposition = queued ? 'queued' : 'immediate'
+  }
+})
 
 // Non-blocking startup diagnostics from main (e.g. global-hotkey conflict).
 window.api.onAppNotify((msg) => toast(msg))
@@ -1000,11 +1016,11 @@ installMenuCommands({
 // menu accelerator above, which stays as the path for when focus is outside the editor.
 registerFormatKeybinding(() => void paneFor(view.focusedPane()).formatDocument())
 
-boot().catch(err => {
+boot().catch(async err => {
   // A bad session or any other startup failure must never leave a dead blank window.
   console.error('boot failed', err)
   toast('Could not restore your last session — starting fresh.', 'error')
-  try { manager.create(); showActive() } catch (e) { console.error('fallback boot failed', e) }
+  try { await finishStartupBuffers() } catch (e) { console.error('fallback boot failed', e) }
   // Recovered into a usable window, so it is ready — and nothing further will overwrite a
   // user action. Without this a failed boot would hang every caller waiting on the signal.
   markBooted()
