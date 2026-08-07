@@ -211,4 +211,44 @@ describe('verifySpellAssets', () => {
   ])('rejects container-root laundering and static template network imports: %s', (code) => {
     expect(() => verifyBundle(validBundle(code), 'fixture')).toThrow(/forbidden (network|Node) dependency/)
   })
+
+  it.each([
+    'const root = this; root.fetch("/dictionary")',
+    'take(this)',
+    'return this',
+    '(ready ? this : local).console.log("offline")',
+    'const getRoot = () => this; const root = getRoot(); root.fetch("/dictionary")',
+  ])('rejects bare this as a global-root escape: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).toThrow(/forbidden network dependency/)
+  })
+
+  it.each([
+    'this.console.log("offline")',
+    '(0, this).console.log("offline")',
+    'function localReceiver() { take(this); return this }',
+  ])('allows safe this boundaries and local receivers: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
+  })
+
+  it.each([
+    'import(`node:${name}`)',
+    'import(`https://example.test/${name}`)',
+    'import(`http://${host}/dictionary.js`)',
+    'import("node:" + moduleName)',
+    'import("https://" + host + "/dictionary.js")',
+    'import(("https:" + "//example.test/") + name)',
+    'import(`node:${`fs/${name}`}`)',
+    'import(`${`https://${"example.test"}/`}${name}`)',
+  ])('rejects guaranteed forbidden prefixes in dynamic imports: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).toThrow(/forbidden (network|Node) dependency/)
+  })
+
+  it.each([
+    'import(`offline-${name}`)',
+    'import(`${scheme}://example.test/dictionary.js`)',
+    'import("offline-" + name)',
+    'import(scheme + "://example.test/dictionary.js")',
+  ])('allows local or indeterminate dynamic-import prefixes: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
+  })
 })

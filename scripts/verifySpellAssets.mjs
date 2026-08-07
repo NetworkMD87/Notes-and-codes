@@ -61,7 +61,11 @@ function forbiddenDependency(file) {
     if (name === 'require') rejectNode(name)
     else rejectNetwork(name)
   }
-  const scope = (parent = null) => ({ parent, bindings: new Set() })
+  const scope = (parent = null) => ({
+    parent,
+    bindings: new Set(),
+    thisIsGlobalRoot: parent ? parent.thisIsGlobalRoot : true,
+  })
   const isBound = (currentScope, name) => {
     for (let candidate = currentScope; candidate; candidate = candidate.parent) {
       if (candidate.bindings.has(name)) return true
@@ -130,6 +134,28 @@ function forbiddenDependency(file) {
     }
     return null
   }
+  const staticExpressionPrefix = (node) => {
+    if (!node) return ''
+    const current = unwrapExpression(node)
+    const value = staticExpressionText(current)
+    if (value !== null) return value
+    if (ts.isTemplateExpression(current)) {
+      let prefix = current.head.text
+      for (const span of current.templateSpans) {
+        const substitution = staticExpressionText(span.expression)
+        if (substitution === null) return prefix
+        prefix += substitution + span.literal.text
+      }
+      return prefix
+    }
+    if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+      const left = staticExpressionText(current.left)
+      return left !== null
+        ? left + staticExpressionPrefix(current.right)
+        : staticExpressionPrefix(current.left)
+    }
+    return ''
+  }
   const staticMemberName = (node) => {
     if (ts.isPropertyAccessExpression(node)) return node.name.text
     if (ts.isElementAccessExpression(node)) return staticExpressionText(node.argumentExpression)
@@ -153,7 +179,7 @@ function forbiddenDependency(file) {
   const globalRoot = (expression, currentScope) => {
     if (!expression) return null
     const current = unwrapExpression(expression)
-    if (current.kind === ts.SyntaxKind.ThisKeyword) return 'this'
+    if (current.kind === ts.SyntaxKind.ThisKeyword) return currentScope.thisIsGlobalRoot ? 'this' : null
     if (ts.isIdentifier(current)) {
       return globalObjects.has(current.text) && !isBound(currentScope, current.text) ? current.text : null
     }
@@ -228,6 +254,7 @@ function forbiddenDependency(file) {
   }
   const visitFunction = (node, parentScope) => {
     const functionScope = scope(parentScope)
+    if (!ts.isArrowFunction(node)) functionScope.thisIsGlobalRoot = false
     if (node.name && ts.isIdentifier(node.name)) functionScope.bindings.add(node.name.text)
     for (const parameter of node.parameters) declarePattern(parameter.name, functionScope)
     for (const parameter of node.parameters) {
@@ -283,6 +310,9 @@ function forbiddenDependency(file) {
         ts.isTypeAssertionExpression(node) || ts.isNonNullExpression(node)) {
       visit(node.expression, currentScope, allowGlobalRoot)
       return
+    } else if (node.kind === ts.SyntaxKind.ThisKeyword) {
+      if (currentScope.thisIsGlobalRoot && !allowGlobalRoot) rejectNetwork('global root escape this')
+      return
     } else if (ts.isIdentifier(node)) {
       if (forbiddenNetworkApis.has(node.text) && !isBound(currentScope, node.text)) rejectNetwork(node.text)
       else if (node.text === 'require' && !isBound(currentScope, 'require')) rejectNode('require')
@@ -293,8 +323,11 @@ function forbiddenDependency(file) {
     } else if (ts.isCallExpression(node)) {
       if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
         const moduleName = node.arguments[0] && staticExpressionText(node.arguments[0])
-        if (moduleName && /^https?:\/\//i.test(moduleName)) rejectNetwork('network module URL')
-        else if (moduleName && nodeBuiltin(moduleName)) rejectNode(moduleName)
+        const modulePrefix = moduleName ?? staticExpressionPrefix(node.arguments[0])
+        if (/^https?:\/\//i.test(modulePrefix)) rejectNetwork('network module URL')
+        else if (/^node:/i.test(modulePrefix) || (moduleName && nodeBuiltin(moduleName))) {
+          rejectNode(moduleName ?? modulePrefix)
+        }
         if (found) return
       }
       const reflectGet = normalizedCall(node.expression, 'Reflect', 'get', currentScope)
