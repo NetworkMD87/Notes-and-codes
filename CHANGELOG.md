@@ -4,7 +4,7 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
-## [Unreleased]
+## [1.17.0] — 2026-08-07
 
 _Private, fully offline spell checking for notes and Markdown, with UK and US English built in._
 
