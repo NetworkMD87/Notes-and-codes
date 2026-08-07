@@ -6,6 +6,15 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 
 ## [Unreleased]
 
+_Private, fully offline spell checking for notes and Markdown, with UK and US English built in._
+
+### Added
+- **Offline spell checking for plain text and Markdown prose.** Misspellings get a subtle wavy
+  underline with Quick Fix suggestions, **Ignore for this session**, and an atomically persisted
+  personal dictionary that can be managed from Settings. Choose English (UK), English (US), or
+  follow the Windows language. Markdown code, links, HTML, paths, and other technical syntax are
+  ignored, and the bundled checker and dictionaries never need a network connection.
+
 ### Fixed
 - Changing a setting immediately after launch could be silently undone a moment later, while the
   app was still finishing its startup. Most likely to bite on a slow start — a large restored

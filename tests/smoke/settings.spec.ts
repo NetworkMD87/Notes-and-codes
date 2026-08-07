@@ -4,6 +4,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
 
+const spellToggle = (win: import('@playwright/test').Page) => win.locator(
+  '.appearance-row', { hasText: 'Check spelling in plain text and Markdown' },
+).locator('input[type=checkbox]')
+
+const spellLanguage = (win: import('@playwright/test').Page) => win.getByLabel('Spell check language')
+
 test('Settings: nav lists categories, detail shows the active one', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-nav-'))
   const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
@@ -17,6 +23,70 @@ test('Settings: nav lists categories, detail shows the active one', async () => 
     // Appearance is the default category and owns the theme grid
     await expect(win.locator('.settings-detail .appearance-themes')).toBeVisible()
     await expect(win.locator('.settings-detail .appearance-sw')).toBeVisible()
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: spell controls show offline defaults and persist enablement and language', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-spell-'))
+  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
+    let win = await app.firstWindow()
+    await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+    await openSettings(win, 'Editor')
+
+    await expect(spellToggle(win)).toBeChecked()
+    await expect(spellLanguage(win)).toHaveValue('system')
+    await expect(win.locator('.spell-settings-note')).toContainText(
+      'Works fully offline. Markdown code and technical syntax are ignored.',
+    )
+
+    await spellToggle(win).uncheck()
+    await expect(spellToggle(win)).not.toBeChecked()
+    await expect(spellLanguage(win)).toBeDisabled()
+    await expect(win.locator('.personal-dictionary-open')).toBeDisabled()
+    await win.keyboard.press('Escape')
+    await app.close()
+
+    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    win = await app.firstWindow()
+    await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+    await openSettings(win, 'Editor')
+    await expect(spellToggle(win)).not.toBeChecked()
+
+    await spellToggle(win).check()
+    await expect(spellToggle(win)).toBeChecked()
+    await spellLanguage(win).selectOption('en-US')
+    await expect(spellLanguage(win)).toHaveValue('en-US')
+    await win.keyboard.press('Escape')
+    await app.close()
+
+    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    win = await app.firstWindow()
+    await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+    await openSettings(win, 'Editor')
+    await expect(spellToggle(win)).toBeChecked()
+    await expect(spellLanguage(win)).toHaveValue('en-US')
+  } finally {
+    await app.close()
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('Settings: Follow Windows resolves a non-English app locale to English (UK)', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-spell-locale-'))
+  const app = await electron.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, '--lang=fr-FR'],
+  })
+  try {
+    const win = await app.firstWindow()
+    await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+    await openSettings(win, 'Editor')
+
+    await expect(spellLanguage(win)).toHaveValue('system')
+    await expect(win.locator('.spell-settings-resolved')).toHaveText('Currently using English (UK).')
   } finally {
     await app.close()
     rmSync(userDataDir, { recursive: true, force: true })

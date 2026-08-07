@@ -1,6 +1,7 @@
 import { THEME_LIST, ACCENT_SWATCHES, swatchColours } from './themes'
 import { OverlayRegistration } from './overlayManager'
 import { accelFromEvent, formatAccel } from '../shared/accelerator'
+import type { ResolvedSpellLocale, SpellCheckLanguage } from '../shared/spell'
 
 export type SettingsCategory = 'appearance' | 'font' | 'editor' | 'folder' | 'startup' | 'integration'
 
@@ -25,6 +26,12 @@ export interface SettingsDeps {
   setAutoSaveToDisk: (on: boolean) => void
   formatOnSave: () => boolean
   setFormatOnSave: (on: boolean) => void
+  spellCheckEnabled: () => boolean
+  setSpellCheckEnabled: (enabled: boolean) => Promise<void>
+  spellCheckLanguage: () => SpellCheckLanguage
+  setSpellCheckLanguage: (language: SpellCheckLanguage) => Promise<void>
+  resolvedSpellLocale: () => ResolvedSpellLocale
+  openPersonalDictionary: () => void
   contextMenuEnabled: () => boolean
   /** Resolves once the registry write (and, on success, the settings persist) have
    *  settled — the boolean reports whether it succeeded. renderIntegration() uses the
@@ -257,10 +264,54 @@ export class SettingsPanel {
   private renderEditor(): HTMLElement {
     const wrap = document.createElement('div')
     const eh = document.createElement('h3'); eh.textContent = 'Editor'
+    const enabled = this.d.spellCheckEnabled()
+    const spell = document.createElement('div'); spell.className = 'settings-group spell-settings'
+    const heading = document.createElement('h3'); heading.textContent = 'Spelling'
+    const toggle = this.checkboxRow(
+      'Check spelling in plain text and Markdown',
+      enabled,
+      on => { void this.d.setSpellCheckEnabled(on).then(() => this.render()) },
+    )
+    const { row: languageRow } = this.row('Language')
+    const language = document.createElement('select')
+    language.setAttribute('aria-label', 'Spell check language')
+    for (const [value, label] of [
+      ['system', 'Follow Windows'],
+      ['en-GB', 'English (UK)'],
+      ['en-US', 'English (US)'],
+    ] as const) {
+      const option = document.createElement('option')
+      option.value = value
+      option.textContent = label
+      language.appendChild(option)
+    }
+    language.value = this.d.spellCheckLanguage()
+    language.disabled = !enabled
+    language.onchange = () => {
+      void this.d.setSpellCheckLanguage(language.value as SpellCheckLanguage).then(() => this.render())
+    }
+    languageRow.appendChild(language)
+
+    const note = document.createElement('p'); note.className = 'spell-settings-note'
+    note.textContent = 'Works fully offline. Markdown code and technical syntax are ignored.'
+    const dictionary = document.createElement('button'); dictionary.className = 'personal-dictionary-open'
+    dictionary.textContent = 'Personal dictionary…'
+    dictionary.disabled = !enabled
+    dictionary.onclick = () => this.d.openPersonalDictionary()
+    spell.append(heading, toggle, languageRow, note)
+    if (this.d.spellCheckLanguage() === 'system') {
+      const resolved = document.createElement('p'); resolved.className = 'spell-settings-resolved'
+      resolved.textContent = this.d.resolvedSpellLocale() === 'en-US'
+        ? 'Currently using English (US).'
+        : 'Currently using English (UK).'
+      spell.appendChild(resolved)
+    }
+    spell.appendChild(dictionary)
     wrap.append(
       eh,
       this.checkboxRow('Auto-save changes to disk (named files)', this.d.autoSaveToDisk(), (on) => this.d.setAutoSaveToDisk(on)),
       this.checkboxRow('Format on save (named files)', this.d.formatOnSave(), (on) => this.d.setFormatOnSave(on)),
+      spell,
     )
     return wrap
   }

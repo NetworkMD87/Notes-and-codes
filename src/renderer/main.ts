@@ -5,7 +5,7 @@ import '@fontsource/fira-code/400.css'
 import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/700.css'
 import { installMenuCommands } from './menuCommands'
-import type { Api, Encoding } from '../shared/types'
+import type { Api, Encoding, Settings } from '../shared/types'
 import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
 import { TabBar } from './tabBar'
@@ -42,10 +42,22 @@ import { FindInFiles } from './findInFiles'
 import { uiFontStack } from './uiFont'
 import type { Highlight, HighlightColour } from '../shared/types'
 import { formatAccel } from '../shared/accelerator'
+import { exposeSpellTestHooks, SpellWorkerClient } from './spellWorkerClient'
+import { SpellCheckController } from './spellCheckController'
+import { PersonalDictionaryPanel } from './personalDictionaryPanel'
+import { resolveSpellLocale } from '../shared/spellText'
+import type { ResolvedSpellLocale } from '../shared/spell'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
 const view = new SplitView(document.getElementById('paneA')!, document.getElementById('paneB')!)
+let spell: SpellCheckController | null = null
+let spellSettings: Pick<Settings, 'spellCheckEnabled' | 'spellCheckLanguage'> = {
+  spellCheckEnabled: true,
+  spellCheckLanguage: 'system',
+}
+let resolvedSpellLocale: ResolvedSpellLocale = 'en-GB'
+let spellSystemLocale = 'en-GB'
 const highlights = new HighlightManager()
 const hlLoaded = new Set<string>()
 const ENC_LABEL: Record<Encoding, string> = { utf8: 'UTF-8', utf8bom: 'UTF-8-BOM', utf16le: 'UTF-16 LE', utf16be: 'UTF-16 BE' }
@@ -164,6 +176,7 @@ function showActive(): void {
   folder.setActiveFile(active.filePath ?? null) // highlight the open file's row in the sidebar
   syncWatch()
   autosave.flushNow()
+  spell?.schedule()
 }
 
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
@@ -191,6 +204,7 @@ for (const which of ['A', 'B'] as const) {
     scheduleSessionSave()
     autosave.noteEdit()
     refreshPreview()
+    spell?.schedule()
   })
 }
 
@@ -269,7 +283,17 @@ async function boot(): Promise<void> {
     document.body.textContent = 'Failed to initialize: the preload bridge did not load.'
     return
   }
-  const settings = await window.api.loadSettings()
+  const [settings, systemLocale, personalWords] = await Promise.all([
+    window.api.loadSettings(),
+    window.api.getSystemLocale(),
+    window.api.listPersonalWords(),
+  ])
+  spellSettings = {
+    spellCheckEnabled: settings.spellCheckEnabled,
+    spellCheckLanguage: settings.spellCheckLanguage,
+  }
+  spellSystemLocale = systemLocale
+  resolvedSpellLocale = resolveSpellLocale(settings.spellCheckLanguage, systemLocale)
   autoSave = settings.autoSaveSession
   autoSaveToDisk = settings.autoSaveToDisk
   formatOnSave = settings.formatOnSave
@@ -293,6 +317,38 @@ async function boot(): Promise<void> {
   else manager.create()
   if (!manager.activeId) manager.setActive(manager.list()[0].id)
   showActive()
+  // Main only adds this query under NC_HEADLESS plus the dedicated smoke-test environment flag.
+  // Keeping the stalled port here exercises boot behavior without exposing a production IPC seam.
+  const spellTestParams = new URLSearchParams(window.location.search)
+  const headlessSpellTest = spellTestParams.get('nc-headless') === '1'
+  const spellWorkerMode = headlessSpellTest ? spellTestParams.get('nc-spell-worker') : null
+  const createWorker = spellWorkerMode === 'hang' ? () => ({
+    postMessage: () => undefined,
+    terminate: () => undefined,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }) : spellWorkerMode === 'construct-fail' ? () => {
+    throw new Error('worker-failed')
+  } : undefined
+  const worker = new SpellWorkerClient({
+    createWorker,
+    onRestart: () => spell?.workerRestarted(),
+    onFatal: () => spell?.workerFailed(),
+  })
+  exposeSpellTestHooks(spellTestParams, worker, window)
+  spell = new SpellCheckController({
+    panes: () => view.visiblePanes(),
+    allPanes: () => [view.paneA, view.paneB],
+    worker,
+    getSettings: () => spellSettings,
+    systemLocale,
+    listPersonalWords: () => window.api.listPersonalWords(),
+    addPersonalWord: word => window.api.addPersonalWord(word),
+    notify: (message, level) => toast(message, level),
+  })
+  // Spell-check is optional. A worker that never replies must not hold the whole app at an
+  // unbooted window; the controller owns failure cleanup and enables itself only after load.
+  void spell.initialize(personalWords)
   reportDirty()
   await folder.restore()
   markBooted()
@@ -387,7 +443,10 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   conflicts.delete(id)
   refreshChangeBar() // a conflict we just resolved by overwriting must not leave its bar behind
   if (opts.recent) window.api.addRecentFile(path)
-  if (pane && manager.get(id)!.language !== oldLang) pane.refreshBuffer(manager.get(id)!)
+  if (pane && manager.get(id)!.language !== oldLang) {
+    pane.refreshBuffer(manager.get(id)!)
+    spell?.refreshNow()
+  }
   syncWatch()
   return true
 }
@@ -616,7 +675,7 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
   open: openFromDisk,
   save: saveActive,
   openHistory: () => void fileHistory.open(),
-  toggleSplit: () => { view.setSplit(!view.isSplit()); showActive() },
+  toggleSplit: () => { view.setSplit(!view.isSplit()); showActive(); spell?.refreshNow() },
   togglePreview,
   togglePin: toggleAlwaysOnTop,
   startDiff,
@@ -649,6 +708,36 @@ const settingsDeps: SettingsDeps = {
     formatOnSave = on
     void window.api.updateSettings({ formatOnSave: on })
   },
+  spellCheckEnabled: () => spellSettings.spellCheckEnabled,
+  setSpellCheckEnabled: async (enabled) => {
+    try {
+      const saved = await window.api.updateSettings({ spellCheckEnabled: enabled })
+      spellSettings = {
+        spellCheckEnabled: saved.spellCheckEnabled,
+        spellCheckLanguage: saved.spellCheckLanguage,
+      }
+      resolvedSpellLocale = resolveSpellLocale(spellSettings.spellCheckLanguage, spellSystemLocale)
+      await spell?.applySettings()
+    } catch {
+      toast('Could not save the spell check setting.', 'error')
+    }
+  },
+  spellCheckLanguage: () => spellSettings.spellCheckLanguage,
+  setSpellCheckLanguage: async (language) => {
+    try {
+      const saved = await window.api.updateSettings({ spellCheckLanguage: language })
+      spellSettings = {
+        spellCheckEnabled: saved.spellCheckEnabled,
+        spellCheckLanguage: saved.spellCheckLanguage,
+      }
+      resolvedSpellLocale = resolveSpellLocale(spellSettings.spellCheckLanguage, spellSystemLocale)
+      await spell?.applySettings()
+    } catch {
+      toast('Could not save the spell check language.', 'error')
+    }
+  },
+  resolvedSpellLocale: () => resolvedSpellLocale,
+  openPersonalDictionary: () => { void personalDictionary.open() },
   contextMenuEnabled: () => contextMenuEnabled,
   setContextMenu: setContextMenuEnabled,
   openAtLogin: () => openAtLogin,
@@ -669,6 +758,12 @@ const settingsDeps: SettingsDeps = {
 }
 
 const settings = new SettingsPanel(document.getElementById('app')!, settingsDeps)
+const personalDictionary = new PersonalDictionaryPanel(document.getElementById('app')!, {
+  list: () => window.api.listPersonalWords(),
+  remove: word => window.api.removePersonalWord(word),
+  changed: words => { void spell?.personalWordsChanged(words) },
+  notify: (message, level) => toast(message, level),
+})
 const openSettings = (category: SettingsCategory = 'appearance') => settings.open(category)
 // Deep-link alias into Settings ▸ Appearance. No button owns it — its consumers are the
 // palette's `Appearance…` command and the View ▸ Appearance… menu item.
@@ -690,6 +785,7 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
     window.api.snapshotHistory(b.filePath, paneFor(view.focusedPane()).getContent(), b.eol, b.encoding)
     manager.update(id, v.content)
     paneFor(view.focusedPane()).refreshBuffer(b)
+    spell?.refreshNow()
     tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
     toast('Restored an earlier version — unsaved, Save to keep it.', 'success')
   }
@@ -786,7 +882,7 @@ window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); findInFiles.open() }
-  if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive() }
+  if (e.ctrlKey && e.key === '\\') { view.setSplit(!view.isSplit()); showActive(); spell?.refreshNow() }
   if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === ',') { e.preventDefault(); openSettings() }
   // Escape (incl. closing the diff) is handled centrally by overlayManager.
 })
@@ -813,7 +909,10 @@ async function reloadBuffer(id: string): Promise<void> {
   b.content = r.file.content; b.eol = r.file.eol; b.encoding = r.file.encoding; b.dirty = false
   b.diskMtime = r.file.mtimeMs // reloading rebases the guard on what we just read
   conflicts.delete(id)
-  if (paneFor(view.focusedPane()).currentBufferId() === id) paneFor(view.focusedPane()).refreshBuffer(b)
+  if (paneFor(view.focusedPane()).currentBufferId() === id) {
+    paneFor(view.focusedPane()).refreshBuffer(b)
+    spell?.refreshNow()
+  }
   refreshStatus(); tabBar.render(manager.list(), manager.activeId)
   refreshChangeBar() // surface the next queued conflict (or hide the bar)
 }
@@ -869,7 +968,7 @@ installMenuCommands({
   save: () => void saveActive(),
   'save-all': () => void saveAll(),
   close: () => void closeTab(manager.activeId!),
-  split: () => { view.setSplit(!view.isSplit()); showActive() },
+  split: () => { view.setSplit(!view.isSplit()); showActive(); spell?.refreshNow() },
   mdpreview: togglePreview,
   wrap: () => { const on = paneFor(view.focusedPane()).toggleWordWrap(); toast('Word wrap: ' + (on ? 'on' : 'off')) },
   lines: () => paneFor(view.focusedPane()).toggleLineNumbers(),
@@ -917,4 +1016,8 @@ const historyTimer = setInterval(() => {
   }
 }, HISTORY_INTERVAL_MS)
 // Clear on unload so HMR dev reloads don't stack duplicate timers.
-window.addEventListener('beforeunload', () => clearInterval(historyTimer))
+window.addEventListener('beforeunload', () => {
+  clearInterval(historyTimer)
+  spell?.dispose()
+  spell = null
+})

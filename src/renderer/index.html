@@ -20,6 +20,7 @@
       #statusbar{height:22px;background:var(--statusbar-bg);color:var(--muted);border-top:1px solid var(--border);font-size:12px;display:flex;align-items:center;gap:12px;padding:0 8px}
       .sb-state{color:var(--muted)}
       .sb-dirty{color:var(--accent)}
+      .spell-error{text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:var(--danger);text-decoration-thickness:1px;text-underline-offset:2px}
       .tab{box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px;height:100%;color:var(--tab-inactive-text);border-right:1px solid var(--border);border-top:2px solid transparent;cursor:pointer;white-space:nowrap;border-top-left-radius:6px;border-top-right-radius:6px}
       .tab:hover{background:var(--bar-hover)}
       .tab.active{background:var(--tab-active-bg);color:var(--bartext);border-top:2px solid var(--accent)}
@@ -145,8 +146,8 @@
       #mdpreview.hidden{display:none}
       #mdpreview pre{background:var(--bar-hover);padding:8px;border-radius:var(--radius);overflow:auto}
       #mdpreview code{font-family:'JetBrains Mono',Consolas,monospace}
-      .ph-picker,.snip-picker,.input-overlay,.snip-mgr,.settings{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding-top:80px;z-index:100}
-      .ph-picker.hidden,.snip-picker.hidden,.input-overlay.hidden,.snip-mgr.hidden,.settings.hidden{display:none}
+      .ph-picker,.snip-picker,.input-overlay,.snip-mgr,.settings,.personal-dictionary{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding-top:80px;z-index:100}
+      .ph-picker.hidden,.snip-picker.hidden,.input-overlay.hidden,.snip-mgr.hidden,.settings.hidden,.personal-dictionary.hidden{display:none}
       .ph-list,.snip-list{width:560px;max-height:340px;overflow:auto;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius-lg);box-shadow:var(--shadow)}
       .ph-row,.snip-row{padding:6px 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid var(--border)}
       .ph-row:hover,.snip-row:hover{background:var(--accent);color:var(--accent-text)}
@@ -163,6 +164,15 @@
       .snip-mgr-row button{grid-column:2;grid-row:1 / span 2}
       .snip-mgr-head button,.snip-mgr-row button{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:3px 10px;cursor:pointer}
       .snip-mgr-head button:hover,.snip-mgr-row button:hover{background:var(--bar-hover)}
+      .personal-dictionary-box{width:440px;max-width:92vw;max-height:72vh;display:flex;flex-direction:column;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow)}
+      .personal-dictionary-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+      .personal-dictionary-head span{flex:1;font-weight:600}
+      .personal-dictionary-head button,.personal-word button,.personal-dictionary-open{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:3px 10px;cursor:pointer}
+      .personal-dictionary-head button:hover,.personal-word button:hover,.personal-dictionary-open:hover{background:var(--bar-hover)}
+      .personal-dictionary-list{overflow:auto;padding:8px 12px}
+      .personal-dictionary-loading,.personal-dictionary-empty{padding:24px 12px;color:var(--muted);text-align:center}
+      .personal-word{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
+      .personal-word-text{flex:1;overflow:hidden;text-overflow:ellipsis}
       .fh-empty,.snip-mgr-empty,.fif-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 16px;color:var(--muted);text-align:center}
       .empty-glyph{width:40px;height:40px;opacity:.8}
       .empty-glyph svg{width:100%;height:100%;display:block;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
@@ -193,6 +203,11 @@
       .appearance-row{display:flex;align-items:center;gap:8px}
       .appearance-row + .appearance-row{margin-top:8px}
       .appearance-row label{flex:1}
+      .settings-group{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+      .spell-settings-note,.spell-settings-resolved{margin:8px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
+      .spell-settings-resolved{margin-top:3px}
+      .personal-dictionary-open{margin-top:10px}
+      .personal-dictionary-open:disabled,.spell-settings select:disabled{opacity:.5;cursor:default}
       .settings-box{width:720px;max-width:92vw;max-height:80vh;overflow:auto;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:16px;display:flex;flex-wrap:wrap;gap:20px}
       .settings-nav{flex:0 0 160px;min-width:140px;display:flex;flex-direction:column;gap:4px}
       .settings-detail{flex:1 1 380px;min-width:260px;display:flex;flex-direction:column;gap:14px}
@@ -261,9 +276,9 @@
       .about-link{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;cursor:pointer;font-size:13px}
       .about-link:hover{background:var(--accent);color:var(--accent-text)}
       /* --- micro-motion layer (Phase 3.5 P1) --- */
-      .tab,.tb-btn,.tab-add,.tab-close,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch,.snip-mgr-head button,.snip-mgr-row button,.accent-default-btn,.settings-cat,.hk-record,.hk-clear{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
+      .tab,.tb-btn,.tab-add,.tab-close,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch,.snip-mgr-head button,.snip-mgr-row button,.personal-dictionary-head button,.personal-word button,.personal-dictionary-open,.accent-default-btn,.settings-cat,.hk-record,.hk-clear{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
       @keyframes overlayIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
-      .palette-box,.qo-box,.settings-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast,.fif-box{animation:overlayIn var(--motion) var(--ease)}
+      .palette-box,.qo-box,.settings-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.personal-dictionary-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast,.fif-box{animation:overlayIn var(--motion) var(--ease)}
       @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
     </style>
   </head>

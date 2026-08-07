@@ -1,5 +1,6 @@
 import { defineConfig } from 'electron-vite'
 import { resolve } from 'node:path'
+import { spellAssetAliases, spellRawAssetAliases } from './scripts/spellAssetAliases.mjs'
 
 export default defineConfig({
   main: { build: { rollupOptions: { input: resolve(__dirname, 'src/main/index.ts') } } },
@@ -8,6 +9,7 @@ export default defineConfig({
     root: 'src/renderer',
     build: { rollupOptions: { input: resolve(__dirname, 'src/renderer/index.html') } },
     worker: { format: 'es' },
+    resolve: { alias: { ...spellAssetAliases, ...spellRawAssetAliases } },
     optimizeDeps: { include: ['monaco-editor'] }
   }
 })

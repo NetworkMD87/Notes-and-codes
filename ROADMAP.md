@@ -17,11 +17,11 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — v1.16.0 is shipped; one fix on `master` awaiting a release
+## ▶ NEXT ACTION — v1.16.0 is shipped; v1.17.0 is the next release
 
-**Unreleased on `master`:** the `boot()` readiness fix (known issue ③ below, now resolved) — a
-setting changed during a slow start could be overwritten by boot. It is a patch-level fix, so it
-wants **v1.16.1** whenever the next release is cut; nothing else is pending.
+**Next release:** **v1.17.0** — fully offline UK/US spell checking for plain text and Markdown,
+plus the `boot()` readiness fix (known issue ③ below, now resolved). The spell checker is a minor
+feature release; the startup fix rides with it instead of cutting a separate v1.16.1.
 
 **v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
 portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable
@@ -289,6 +289,14 @@ Neither depends on 3.5 — they can land before, during, or after it._
   failing silently — one `chooseRecent` path shared by the panel and the header switcher so the two
   surfaces can't disagree about a dead entry. **Toggle Sidebar** no longer warns that you need a
   folder open first; it shows the panel instead.
+- ✅ **Fully offline spell checker** (**L**, complete for v1.17.0) — checks prose in plain-text and
+  Markdown buffers with bundled English (UK/US) dictionaries, subtle Monaco decorations, public
+  Quick Fix replacements, session ignores, and an atomically persisted personal dictionary.
+  Settings provides an on/off toggle, Follow Windows / UK / US selection, and dictionary manager;
+  code buffers plus Markdown code, links, HTML, paths, and technical syntax stay out of scope. One
+  worker handles debounced newest-only batches with stale-result guards and bounded crash recovery.
+  The built worker is statically checked for network capabilities and the Electron workflow is
+  smoke-tested with HTTP/HTTPS blocked before renderer navigation.
 - ✅ **In-app Help / discoverability** (shipped v1.9.0) — searchable, categorized, read-only
   **keyboard-shortcut / command reference** overlay (File/Edit/View/Tools/Editor/Global) built
   from a curated static `helpContent` module; Help menu + palette entry points (no F1 — Monaco

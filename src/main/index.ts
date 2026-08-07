@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, globalShortcut, nativeTheme, Tray } from 'electron'
+import { app, BrowserWindow, dialog, globalShortcut, nativeTheme, session, Tray } from 'electron'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { pickFileArg } from './fileArg'
@@ -12,6 +12,7 @@ import { RecentFilesStore } from './recentFilesStore'
 import { RecentFoldersStore } from './recentFoldersStore'
 import { SettingsStore } from './settingsStore'
 import type { HotkeyResult } from '../shared/types'
+import { installHeadlessNetworkBlock } from './headlessNetworkBlock'
 
 let mainWindow: BrowserWindow | null = null
 let pendingFile: string | null = null
@@ -187,10 +188,22 @@ function createWindow(hidden = false): BrowserWindow {
       sandbox: true
     }
   })
+  const headlessQuery: Record<string, string> = {}
+  if (process.env.NC_HEADLESS) headlessQuery['nc-headless'] = '1'
+  if (process.env.NC_HEADLESS && process.env.NC_TEST_HANG_SPELL_WORKER) {
+    headlessQuery['nc-spell-worker'] = 'hang'
+  }
+  if (process.env.NC_HEADLESS && process.env.NC_TEST_FAIL_SPELL_WORKER_CONSTRUCTION) {
+    headlessQuery['nc-spell-worker'] = 'construct-fail'
+  }
   if (process.env.ELECTRON_RENDERER_URL) {
-    win.loadURL(process.env.ELECTRON_RENDERER_URL)
+    const rendererUrl = new URL(process.env.ELECTRON_RENDERER_URL)
+    for (const [key, value] of Object.entries(headlessQuery)) rendererUrl.searchParams.set(key, value)
+    win.loadURL(rendererUrl.toString())
   } else {
-    win.loadFile(join(__dirname, '../renderer/index.html'))
+    win.loadFile(join(__dirname, '../renderer/index.html'), Object.keys(headlessQuery).length
+      ? { query: headlessQuery }
+      : undefined)
   }
   win.on('close', (e) => { if (!isQuitting) { e.preventDefault(); win.hide() } })
   // Ctrl+Q is owned solely by the File ▸ Exit menu accelerator (CmdOrCtrl+Q).
@@ -229,6 +242,11 @@ if (!gotLock) {
   })
 
   app.whenReady().then(async () => {
+    const externalAttempts: string[] = []
+    if (installHeadlessNetworkBlock(process.env, session.defaultSession.webRequest, externalAttempts)) {
+      ;(globalThis as typeof globalThis & { __ncSpellExternalRequests?: string[] })
+        .__ncSpellExternalRequests = externalAttempts
+    }
     // Construct the shared stores ONCE here and hand them to the IPC layer, so the menu
     // (Clear Recent, startup hotkey read) and the renderer use the same instances — a
     // single serialized write chain each, instead of two racing copies.

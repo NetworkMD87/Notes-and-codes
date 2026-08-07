@@ -13,6 +13,7 @@ import { RecentFoldersStore } from './recentFoldersStore'
 import { FileWatcher } from './fileWatcher'
 import { FileHistoryStore } from './fileHistoryStore'
 import { HighlightStore } from './highlightStore'
+import { SpellDictionaryStore } from './spellDictionaryStore'
 import { saveHtml, savePdf } from './exportService'
 import type { SessionData, Settings, EolMode, Encoding, HotkeyResult, SearchRequest } from '../shared/types'
 
@@ -41,6 +42,7 @@ export function registerIpc(deps: IpcDeps): void {
   const recentFolders = deps.recentFolders
   const history = new FileHistoryStore(deps.baseDir)
   const highlights = new HighlightStore(deps.baseDir)
+  const spellDictionary = new SpellDictionaryStore(deps.baseDir)
   // One-shot startup GC: drop history/highlight entries whose source file is gone, so
   // these stores can't grow without bound or orphan entries. Fire-and-forget (best-effort).
   void history.sweep()
@@ -80,6 +82,16 @@ export function registerIpc(deps: IpcDeps): void {
   handle('settings:load', () => settings.load())
   handle('settings:save', (_e, s: Settings) => settings.save(s))
   handle('settings:update', (_e, partial: Partial<Settings>) => settings.update(partial))
+  handle('app:getSystemLocale', () => app.getLocale())
+  handle('spell:listPersonalWords', () => spellDictionary.load())
+  handle('spell:addPersonalWord', async (_event, word: unknown) => {
+    try { return { ok: true, words: await spellDictionary.add(word) } }
+    catch { return { ok: false, words: await spellDictionary.load() } }
+  })
+  handle('spell:removePersonalWord', async (_event, word: unknown) => {
+    try { return { ok: true, words: await spellDictionary.remove(word) } }
+    catch { return { ok: false, words: await spellDictionary.load() } }
+  })
   handle('contextmenu:set', (_e, enabled: boolean) => deps.setContextMenu(enabled))
   handle('loginitem:set', (_e, enabled: boolean) => deps.setLoginItem(enabled))
   handle('hotkey:set', (_e, accel: string) => deps.setGlobalHotkey(accel))

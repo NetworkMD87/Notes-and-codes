@@ -63,4 +63,26 @@ describe('SettingsStore', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+  it('defaults spell check settings for a file written before those fields existed', async () => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ themeId: 'nord' }))
+
+    const settings = await new SettingsStore(dir).load()
+
+    expect(settings.spellCheckEnabled).toBe(true)
+    expect(settings.spellCheckLanguage).toBe('system')
+    expect(settings.themeId).toBe('nord')
+  })
+  it('persists explicit spell check settings', async () => {
+    const store = new SettingsStore(dir)
+    await store.save({
+      ...DEFAULT_SETTINGS,
+      spellCheckEnabled: false,
+      spellCheckLanguage: 'en-US',
+    })
+
+    const settings = await new SettingsStore(dir).load()
+
+    expect(settings.spellCheckEnabled).toBe(false)
+    expect(settings.spellCheckLanguage).toBe('en-US')
+  })
 })
