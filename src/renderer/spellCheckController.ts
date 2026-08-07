@@ -3,7 +3,22 @@ import {
   SpellCheckCore,
   type SpellActionArgs,
   type SpellCheckCoreDeps,
+  type SpellPane,
 } from './spellCheckCore'
+import { showContextMenu, type ContextMenuEntry } from './contextMenu'
+import type { EditorContextMenuTarget } from './editorContextMenu'
+import { SpellContextMenuCoordinator } from './spellContextMenu'
+
+interface SpellContextPane extends SpellPane {
+  onPointerContextMenu(handler: (target: EditorContextMenuTarget | null) => boolean): monaco.IDisposable
+  editorContextEntries(openCommandPalette: () => void): ContextMenuEntry[]
+}
+
+interface SpellCheckControllerDeps extends Omit<SpellCheckCoreDeps, 'panes' | 'allPanes'> {
+  panes: () => SpellContextPane[]
+  allPanes: () => SpellContextPane[]
+  openCommandPalette: () => void
+}
 
 const REPLACE_COMMAND = 'notesAndCodes.spell.replace'
 const IGNORE_COMMAND = 'notesAndCodes.spell.ignore'
@@ -28,11 +43,20 @@ const emptyActions = (): monaco.languages.CodeActionList => ({
 
 export class SpellCheckController {
   private readonly core: SpellCheckCore
+  private readonly contextMenu: SpellContextMenuCoordinator
   private readonly registrations: monaco.IDisposable[]
   private disposed = false
 
-  constructor(deps: SpellCheckCoreDeps) {
+  constructor(deps: SpellCheckControllerDeps) {
     this.core = new SpellCheckCore(deps)
+    this.contextMenu = new SpellContextMenuCoordinator({
+      currentIssue: target => this.core.currentIssue(target),
+      suggestions: target => this.core.suggestions(target),
+      replace: target => this.core.replace(target),
+      ignore: target => this.core.ignore(target),
+      add: target => this.core.add(target),
+      show: showContextMenu,
+    })
     this.registrations = [
       monaco.languages.registerCodeActionProvider(['plaintext', 'markdown'], {
         provideCodeActions: (model, range, _context, token) =>
@@ -47,6 +71,10 @@ export class SpellCheckController {
       monaco.editor.registerCommand(ADD_COMMAND, (_accessor, action: unknown) => {
         if (isSpellActionArgs(action)) void this.core.add(action)
       }),
+      ...deps.allPanes().map(pane => pane.onPointerContextMenu(target => this.contextMenu.tryOpen(target ? {
+        ...target,
+        editorEntries: () => pane.editorContextEntries(deps.openCommandPalette),
+      } : null))),
     ]
   }
 
@@ -59,6 +87,7 @@ export class SpellCheckController {
   workerFailed(): void { this.core.workerFailed() }
 
   dispose(): void {
+    this.contextMenu.dispose()
     if (this.disposed) return
     this.disposed = true
     for (const registration of this.registrations) registration.dispose()

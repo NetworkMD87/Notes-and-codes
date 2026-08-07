@@ -100,6 +100,28 @@ function spellErrors(win: Page, pane = '#paneA') {
   return win.locator(`${pane} .spell-error`)
 }
 
+async function rightClickSpellError(win: Page, pane = '#paneA', index = 0): Promise<void> {
+  const underline = spellErrors(win, pane).nth(index)
+  try {
+    await underline.click({ button: 'right', timeout: 1_000 })
+  } catch {
+    const box = await underline.boundingBox()
+    if (!box) throw new Error('Spell-error underline has no pointer target')
+    await win.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' })
+  }
+}
+
+async function rightClickCorrectWordAfterFirstError(win: Page): Promise<void> {
+  const box = await spellErrors(win).first().boundingBox()
+  if (!box) throw new Error('Spell-error underline has no adjacent pointer target')
+  const characterWidth = box.width / 'speling'.length
+  await win.mouse.click(
+    box.x + box.width + characterWidth * 2.5,
+    box.y + box.height / 2,
+    { button: 'right' },
+  )
+}
+
 async function quitDirtyApp(app: ElectronApplication, win: Page): Promise<void> {
   const exited = new Promise<void>(resolve => app.process().once('exit', () => resolve()))
   await win.evaluate(() => window.api.quitNow())
@@ -354,6 +376,58 @@ test('Quick Fix replaces one occurrence as one undoable edit', async () => {
     await expect(spellErrors(win)).toHaveCount(2)
   } finally {
     // Undo restores the bytes but the buffer remains dirty until saved.
+    await quitDirtyApp(app, win)
+    rmSync(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('right-clicking an underline replaces the clicked occurrence as one undoable edit', async () => {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-pointer-fix-'))
+  const filePath = join(userDataDir, 'note.txt')
+  writeFileSync(filePath, 'speling and speling')
+  const { app, win } = await launch(userDataDir, filePath)
+  try {
+    await expect(spellErrors(win)).toHaveCount(2)
+    await win.locator('#paneA .monaco-editor').click()
+    await win.keyboard.press('Control+End')
+    await rightClickSpellError(win)
+
+    const menu = win.locator('#ctx-menu')
+    await expect(menu).toBeVisible()
+    for (const label of [
+      'spelling',
+      'Ignore for this session',
+      'Add to personal dictionary',
+      'Undo',
+      'Redo',
+      'Cut',
+      'Copy',
+      'Paste',
+      'Select All',
+      'Command Palette',
+    ]) {
+      await expect(menu.locator('.ctx-item', { hasText: new RegExp(`^${label}$`) })).toBeVisible()
+    }
+    await menu.locator('.ctx-item', { hasText: /^Copy$/ }).click()
+    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText()))
+      .toMatch(/^speling and speling\r?\n$/)
+
+    await rightClickSpellError(win)
+    await expect(menu).toBeVisible()
+    await menu.locator('.ctx-item', { hasText: /^spelling$/ }).click()
+
+    await expect(win.locator('#paneA .view-lines')).toContainText('spelling and speling')
+    await expect(spellErrors(win)).toHaveCount(1)
+
+    await win.keyboard.press('Control+Z')
+    await expect(win.locator('#paneA .view-lines')).toContainText('speling and speling')
+    await expect(spellErrors(win)).toHaveCount(2)
+
+    await rightClickCorrectWordAfterFirstError(win)
+    await expect(win.locator('#ctx-menu')).toHaveCount(0)
+    await expect(win.locator('.context-view.monaco-menu-container')).toBeVisible()
+    await win.keyboard.press('Escape')
+  } finally {
     await quitDirtyApp(app, win)
     rmSync(userDataDir, { recursive: true, force: true })
   }

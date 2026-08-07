@@ -345,6 +345,7 @@ async function boot(): Promise<void> {
     listPersonalWords: () => window.api.listPersonalWords(),
     addPersonalWord: word => window.api.addPersonalWord(word),
     notify: (message, level) => toast(message, level),
+    openCommandPalette: () => palette.open(),
   })
   // Spell-check is optional. A worker that never replies must not hold the whole app at an
   // unbooted window; the controller owns failure cleanup and enables itself only after load.
