@@ -181,4 +181,34 @@ describe('verifySpellAssets', () => {
   ])('rejects unsafe root boundaries and static Node capability acquisition: %s', (code) => {
     expect(() => verifyBundle(validBundle(code), 'fixture')).toThrow(/forbidden (network|Node) dependency/)
   })
+
+  it.each([
+    'globalThis.console.log("offline")',
+    'globalThis.navigator.language',
+    'globalThis.self.console.log("offline")',
+    'Reflect.get(globalThis, "navigator").language',
+    'const { navigator: { language } } = globalThis; String(language)',
+    'const globalThis = { self: { fetch: () => "local" } }; const root = globalThis.self; root.fetch()',
+    'const electron = { session: { defaultSession: { setSpellCheckerDictionaryDownloadURL: () => "local" } } }; const root = electron.session; root.defaultSession.setSpellCheckerDictionaryDownloadURL()',
+    'const session = { defaultSession: { value: "local" } }; const root = session.defaultSession; root.value',
+    'import(`offline-${"dictionary"}`)',
+  ])('allows immediate safe container chains, lexical shadows, and local template imports: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
+  })
+
+  it.each([
+    'const root = globalThis.self; root.fetch("/dictionary")',
+    'const { self: root } = globalThis; root.fetch("/dictionary")',
+    'const root = Reflect.get(globalThis, "self"); root.fetch("/dictionary")',
+    'take(globalThis.navigator)',
+    'return globalThis.window',
+    'const root = electron.session; root.defaultSession.setSpellCheckerDictionaryDownloadURL("https://example.test")',
+    'const root = globalThis.electron.session; root.defaultSession.setSpellCheckerDictionaryDownloadURL("https://example.test")',
+    'const { defaultSession: root } = electron.session; root.setSpellCheckerDictionaryDownloadURL("https://example.test")',
+    'const root = Reflect.get(electron.session, "defaultSession"); root.setSpellCheckerDictionaryDownloadURL("https://example.test")',
+    'import(`node:${"fs"}`)',
+    'import(`https:${"//example.test/dictionary.js"}`)',
+  ])('rejects container-root laundering and static template network imports: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).toThrow(/forbidden (network|Node) dependency/)
+  })
 })
