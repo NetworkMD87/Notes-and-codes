@@ -79,10 +79,47 @@ describe('verifySpellAssets', () => {
   it.each([
     'const fetch = () => "offline"; fetch()',
     'function use(fetch) { return fetch() }',
-    'let request = globalThis.fetch; request = () => "offline"; request()',
-    'const holder = { fetch: globalThis.fetch }',
     'fetch(); function fetch() { return "local" }',
-  ])('accepts shadowed, reassigned, or inert network references: %s', (code) => {
+  ])('accepts shadowed or inert network references: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
+  })
+
+  it.each([
+    'for (const request of [globalThis.fetch]) { request("/dictionary") }',
+    'try { throw 1 } catch (error) { const request = globalThis.fetch }',
+    'let request; function assign() { request = globalThis.fetch }',
+    'let request = globalThis.fetch; request = () => "offline"; request()',
+    'const request = ready ? globalThis.fetch : (() => "offline")',
+    'const { fetch: request } = globalThis',
+    'let request; ({ fetch: request } = globalThis)',
+    'function run(request = globalThis.fetch) { return request }',
+    'const api = { request: globalThis.fetch, ...safe }',
+    'const api = { [globalThis.fetch]: "value" }',
+    'const api = { [globalThis.fetch]() { return "offline" } }',
+    'consume(globalThis.fetch)',
+    'this.fetch("/dictionary")',
+    'tag`${globalThis.fetch}`',
+    'Reflect.get(globalThis, "fetch")',
+    'globalThis["fe" + "tch"]("/dictionary")',
+    'const { ...request } = globalThis',
+    'queueMicrotask(globalThis.fetch)',
+    'globalThis.fetch.bind(null)',
+    'class Local { method() { var fetch = () => "local"; return fetch() } } fetch("/dictionary")',
+  ])('rejects every executable forbidden-capability reference: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).toThrow(/forbidden network dependency/)
+  })
+
+  it.each([
+    'for (const fetch of localList) { fetch() }',
+    'try { throw 1 } catch (fetch) { fetch() }',
+    'function outer(fetch) { return () => fetch() }',
+    'const api = { fetch: "key", ["fetch"]: "computed key", fetch() { return "local" } }',
+    'fetch: for (;;) { break fetch }',
+    'const tag = (parts) => parts[0]; tag`fetch globalThis.fetch`',
+    'const globalThis = { fetch: () => "local" }; globalThis.fetch()',
+    'function run(fetch = () => "local") { return fetch() }',
+    'const documentation = { fetch: "globalThis.fetch", label: `fetch` }',
+  ])('allows inert syntax and genuine lexical shadows: %s', (code) => {
     expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
   })
 })

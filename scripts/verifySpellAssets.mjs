@@ -69,219 +69,310 @@ const networkModuleUrl = (node) => {
 function forbiddenNetworkDependency(file) {
   let found = null
   const globalObjects = new Set(['globalThis', 'window', 'self', 'navigator', 'electron', 'session', 'Reflect'])
-  const forbidden = (name) => ({ kind: 'forbidden', name })
-  const globalObject = (name) => ({ kind: 'global', name })
-  const objectValue = (properties = new Map()) => ({ kind: 'object', properties })
-  const reflectApply = { kind: 'reflect-apply' }
-  const scope = (parent = null) => ({ parent, bindings: new Map() })
-  const propertyName = (node) => {
-    if (ts.isIdentifier(node) || ts.isStringLiteral(node) || ts.isNumericLiteral(node)) return node.text
-    return null
-  }
-  const lookup = (current, name) => {
-    for (let candidate = current; candidate; candidate = candidate.parent) {
-      if (candidate.bindings.has(name)) return { bound: true, value: candidate.bindings.get(name) }
-    }
-    if (forbiddenNetworkApis.has(name)) return { bound: false, value: forbidden(name) }
-    if (globalObjects.has(name)) return { bound: false, value: globalObject(name) }
-    return { bound: false, value: null }
-  }
-  const cloneValue = (value) => value?.kind === 'object'
-    ? objectValue(new Map([...value.properties].map(([key, nested]) => [key, cloneValue(nested)])))
-    : value
-  const cloneScope = (current) => {
-    if (!current) return null
-    const cloned = scope(cloneScope(current.parent))
-    for (const [name, value] of current.bindings) cloned.bindings.set(name, cloneValue(value))
-    return cloned
-  }
-  const memberValue = (base, name) => {
-    if (!base || !name) return null
-    if (base.kind === 'forbidden' && ['call', 'apply', 'bind'].includes(name)) return base
-    if (base.kind === 'object') return base.properties.get(name) ?? null
-    if (base.kind === 'global') {
-      if (base.name === 'Reflect' && name === 'apply') return reflectApply
-      if (forbiddenNetworkApis.has(name)) return forbidden(name)
-      return base // retain a qualified global root through chains such as electron.session.defaultSession
-    }
-    return null
-  }
-  const valueOf = (expression, currentScope) => {
-    if (!expression) return null
-    const current = unwrapExpression(expression)
-    if (ts.isIdentifier(current)) return lookup(currentScope, current.text).value
-    if (ts.isPropertyAccessExpression(current)) {
-      return memberValue(valueOf(current.expression, currentScope), current.name.text)
-    }
-    if (ts.isElementAccessExpression(current)) {
-      const name = current.argumentExpression && staticText(current.argumentExpression)
-      return memberValue(valueOf(current.expression, currentScope), name)
-    }
-    if (ts.isObjectLiteralExpression(current)) {
-      const properties = new Map()
-      for (const property of current.properties) {
-        if (ts.isPropertyAssignment(property)) {
-          const name = propertyName(property.name)
-          if (name) properties.set(name, valueOf(property.initializer, currentScope))
-        } else if (ts.isShorthandPropertyAssignment(property)) {
-          properties.set(property.name.text, lookup(currentScope, property.name.text).value)
-        }
-      }
-      return objectValue(properties)
-    }
-    if (ts.isCallExpression(current) && ts.isPropertyAccessExpression(current.expression) &&
-        current.expression.name.text === 'bind') {
-      return valueOf(current.expression.expression, currentScope)
-    }
-    return null
-  }
-  const setExisting = (currentScope, name, value) => {
+  const scope = (parent = null) => ({ parent, bindings: new Set() })
+  const isBound = (currentScope, name) => {
     for (let candidate = currentScope; candidate; candidate = candidate.parent) {
-      if (candidate.bindings.has(name)) {
-        candidate.bindings.set(name, value)
-        return
-      }
+      if (candidate.bindings.has(name)) return true
     }
-    currentScope.bindings.set(name, value)
+    return false
   }
   const declarePattern = (name, currentScope) => {
     if (ts.isIdentifier(name)) {
-      currentScope.bindings.set(name.text, null)
+      currentScope.bindings.add(name.text)
       return
     }
-    for (const element of name.elements) declarePattern(element.name, currentScope)
-  }
-  const assignPattern = (left, value, currentScope) => {
-    if (ts.isIdentifier(left)) {
-      setExisting(currentScope, left.text, value)
-      return
-    }
-    if (ts.isObjectBindingPattern(left)) {
-      for (const element of left.elements) {
-        const key = propertyName(element.propertyName ?? element.name)
-        assignPattern(element.name, memberValue(value, key), currentScope)
-      }
-      return
-    }
-    if (ts.isArrayBindingPattern(left)) {
-      for (const element of left.elements) if (ts.isBindingElement(element)) assignPattern(element.name, null, currentScope)
-      return
-    }
-    if (ts.isObjectLiteralExpression(left)) {
-      for (const property of left.properties) {
-        const target = ts.isShorthandPropertyAssignment(property) ? property.name
-          : ts.isPropertyAssignment(property) ? property.initializer : null
-        if (target) assignPattern(target, memberValue(value, propertyName(property.name)), currentScope)
-      }
-      return
-    }
-    if (ts.isPropertyAccessExpression(left) || ts.isElementAccessExpression(left)) {
-      const base = valueOf(left.expression, currentScope)
-      const name = ts.isPropertyAccessExpression(left)
-        ? left.name.text
-        : left.argumentExpression && staticText(left.argumentExpression)
-      if (base?.kind === 'object' && name) base.properties.set(name, value)
+    for (const element of name.elements) {
+      if (ts.isBindingElement(element)) declarePattern(element.name, currentScope)
     }
   }
-  const predeclareStatements = (statements, currentScope) => {
+  const declareImport = (node, currentScope) => {
+    const clause = node.importClause
+    if (!clause) return
+    if (clause.name) currentScope.bindings.add(clause.name.text)
+    const bindings = clause.namedBindings
+    if (bindings && ts.isNamespaceImport(bindings)) currentScope.bindings.add(bindings.name.text)
+    else if (bindings) for (const element of bindings.elements) currentScope.bindings.add(element.name.text)
+  }
+  const predeclareLexical = (statements, currentScope) => {
     for (const statement of statements) {
       if ((ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) && statement.name) {
-        currentScope.bindings.set(statement.name.text, null)
+        currentScope.bindings.add(statement.name.text)
       } else if (ts.isVariableStatement(statement) &&
           (statement.declarationList.flags & (ts.NodeFlags.Let | ts.NodeFlags.Const))) {
         for (const declaration of statement.declarationList.declarations) declarePattern(declaration.name, currentScope)
+      } else if (ts.isImportDeclaration(statement)) {
+        declareImport(statement, currentScope)
       }
     }
   }
-  const predeclareVar = (node, currentScope) => {
-    if (node !== file && (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node))) return
+  const predeclareVars = (node, currentScope) => {
+    if (node !== file && (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) ||
+        ts.isArrowFunction(node) || ts.isMethodDeclaration(node) || ts.isConstructorDeclaration(node) ||
+        ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node) ||
+        ts.isClassStaticBlockDeclaration(node))) return
     if (ts.isVariableDeclarationList(node) && !(node.flags & (ts.NodeFlags.Let | ts.NodeFlags.Const))) {
       for (const declaration of node.declarations) declarePattern(declaration.name, currentScope)
       return
     }
-    ts.forEachChild(node, child => predeclareVar(child, currentScope))
+    ts.forEachChild(node, child => predeclareVars(child, currentScope))
+  }
+  const staticPropertyText = (node) => {
+    if (!node) return null
+    const current = unwrapExpression(node)
+    const simple = staticText(current)
+    if (simple !== null) return simple
+    if (ts.isIdentifier(current) || ts.isNumericLiteral(current)) return current.text
+    if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+      const left = staticPropertyText(current.left)
+      const right = staticPropertyText(current.right)
+      return left !== null && right !== null ? left + right : null
+    }
+    return null
+  }
+  const globalRoot = (expression, currentScope) => {
+    if (!expression) return null
+    const current = unwrapExpression(expression)
+    if (current.kind === ts.SyntaxKind.ThisKeyword) return 'this'
+    if (ts.isIdentifier(current)) {
+      return globalObjects.has(current.text) && !isBound(currentScope, current.text) ? current.text : null
+    }
+    if (ts.isPropertyAccessExpression(current) || ts.isElementAccessExpression(current)) {
+      return globalRoot(current.expression, currentScope)
+    }
+    return null
+  }
+  const extractedCapability = (pattern) => {
+    if (ts.isObjectBindingPattern(pattern)) {
+      for (const element of pattern.elements) {
+        if (element.dotDotDotToken) return 'global object spread'
+        const property = element.propertyName ?? element.name
+        const name = ts.isComputedPropertyName(property)
+          ? staticPropertyText(property.expression)
+          : staticPropertyText(property)
+        if (name === null || forbiddenNetworkApis.has(name)) return name ?? 'dynamic global member'
+        const nested = extractedCapability(element.name)
+        if (nested) return nested
+      }
+    } else if (ts.isObjectLiteralExpression(pattern)) {
+      for (const property of pattern.properties) {
+        if (ts.isSpreadAssignment(property)) return 'global object spread'
+        if (ts.isShorthandPropertyAssignment(property)) {
+          if (forbiddenNetworkApis.has(property.name.text)) return property.name.text
+        } else if (ts.isPropertyAssignment(property)) {
+          const name = ts.isComputedPropertyName(property.name)
+            ? staticPropertyText(property.name.expression)
+            : staticPropertyText(property.name)
+          if (name === null || forbiddenNetworkApis.has(name)) return name ?? 'dynamic global member'
+          const nested = extractedCapability(property.initializer)
+          if (nested) return nested
+        }
+      }
+    }
+    return null
+  }
+  const visitBindingExpressions = (pattern, currentScope) => {
+    if (ts.isIdentifier(pattern)) return
+    for (const element of pattern.elements) {
+      if (!ts.isBindingElement(element)) continue
+      if (element.propertyName && ts.isComputedPropertyName(element.propertyName)) {
+        visit(element.propertyName.expression, currentScope)
+      }
+      if (element.initializer) visit(element.initializer, currentScope)
+      visitBindingExpressions(element.name, currentScope)
+    }
   }
   const visitFunction = (node, parentScope) => {
-    const functionScope = scope(cloneScope(parentScope))
-    if (node.name && ts.isIdentifier(node.name)) functionScope.bindings.set(node.name.text, null)
+    const functionScope = scope(parentScope)
+    if (node.name && ts.isIdentifier(node.name)) functionScope.bindings.add(node.name.text)
     for (const parameter of node.parameters) declarePattern(parameter.name, functionScope)
     for (const parameter of node.parameters) {
-      if (!parameter.initializer) continue
-      visit(parameter.initializer, functionScope)
+      visitBindingExpressions(parameter.name, functionScope)
+      if (parameter.initializer) visit(parameter.initializer, functionScope)
       if (found) return
-      assignPattern(parameter.name, valueOf(parameter.initializer, functionScope), functionScope)
     }
-    if (node.body) {
-      predeclareVar(node.body, functionScope)
+    if (!node.body) return
+    if (!ts.isBlock(node.body)) {
       visit(node.body, functionScope)
+      return
+    }
+    predeclareVars(node.body, functionScope)
+    const bodyScope = scope(functionScope)
+    predeclareLexical(node.body.statements, bodyScope)
+    for (const statement of node.body.statements) {
+      visit(statement, bodyScope)
+      if (found) return
     }
   }
-  const analyzeStatements = (statements, currentScope) => {
-    predeclareStatements(statements, currentScope)
+  const visitPropertyName = (name, currentScope) => {
+    if (ts.isComputedPropertyName(name)) visit(name.expression, currentScope)
+  }
+  const visitStatements = (statements, parentScope) => {
+    const blockScope = scope(parentScope)
+    predeclareLexical(statements, blockScope)
     for (const statement of statements) {
-      if (found) break
-      visit(statement, currentScope)
+      visit(statement, blockScope)
+      if (found) return
     }
   }
   const visit = (node, currentScope) => {
+    if (found) return
     if (ts.isSourceFile(node)) {
-      predeclareVar(node, currentScope)
-      analyzeStatements(node.statements, currentScope)
+      predeclareVars(node, currentScope)
+      predeclareLexical(node.statements, currentScope)
+      for (const statement of node.statements) {
+        visit(statement, currentScope)
+        if (found) return
+      }
       return
     } else if (ts.isBlock(node)) {
-      const blockScope = scope(currentScope)
-      analyzeStatements(node.statements, blockScope)
+      visitStatements(node.statements, currentScope)
       return
     } else if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
       if (networkModuleUrl(node.moduleSpecifier)) found = 'network module URL'
-      if (ts.isImportDeclaration(node) && node.importClause) {
-        if (node.importClause.name) currentScope.bindings.set(node.importClause.name.text, null)
-        const bindings = node.importClause.namedBindings
-        if (bindings && ts.isNamespaceImport(bindings)) currentScope.bindings.set(bindings.name.text, null)
-        else if (bindings) for (const element of bindings.elements) currentScope.bindings.set(element.name.text, null)
-      }
       return
-    } else if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
-      if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-          networkModuleUrl(node.arguments[0])) {
+    } else if (ts.isIdentifier(node)) {
+      if (forbiddenNetworkApis.has(node.text) && !isBound(currentScope, node.text)) found = node.text
+      return
+    } else if (ts.isCallExpression(node)) {
+      if (node.expression.kind === ts.SyntaxKind.ImportKeyword && networkModuleUrl(node.arguments[0])) {
         found = 'network module URL'
         return
       }
-      const callable = valueOf(node.expression, currentScope)
-      if (callable?.kind === 'forbidden') {
-        found = callable.name
+      if (ts.isIdentifier(node.expression) && node.expression.text === 'require' &&
+          !isBound(currentScope, 'require') && networkModuleUrl(node.arguments[0])) {
+        found = 'network module URL'
         return
       }
-      if (callable?.kind === 'reflect-apply') {
-        const target = node.arguments[0] && valueOf(node.arguments[0], currentScope)
-        if (target?.kind === 'forbidden') {
-          found = target.name
+      const callable = unwrapExpression(node.expression)
+      if (ts.isPropertyAccessExpression(callable) && callable.name.text === 'get' &&
+          ts.isIdentifier(callable.expression) && callable.expression.text === 'Reflect' &&
+          !isBound(currentScope, 'Reflect') && globalRoot(node.arguments[0], currentScope)) {
+        const name = staticPropertyText(node.arguments[1])
+        if (name === null || forbiddenNetworkApis.has(name)) {
+          found = name ?? 'dynamic global member'
           return
         }
       }
-      ts.forEachChild(node, child => { if (!found) visit(child, currentScope) })
+      visit(node.expression, currentScope)
+      for (const argument of node.arguments) visit(argument, currentScope)
       return
-    } else if (ts.isTaggedTemplateExpression(node)) {
-      const callable = valueOf(node.tag, currentScope)
-      if (callable?.kind === 'forbidden') found = callable.name
+    } else if (ts.isNewExpression(node)) {
+      visit(node.expression, currentScope)
+      for (const argument of node.arguments ?? []) visit(argument, currentScope)
       return
     } else if (ts.isVariableDeclaration(node)) {
-      if (node.initializer) visit(node.initializer, currentScope)
-      if (!found) assignPattern(node.name, valueOf(node.initializer, currentScope), currentScope)
+      visitBindingExpressions(node.name, currentScope)
+      if (node.initializer && globalRoot(node.initializer, currentScope)) {
+        found = extractedCapability(node.name)
+      }
+      if (!found && node.initializer) visit(node.initializer, currentScope)
       return
     } else if (ts.isFunctionDeclaration(node)) {
       visitFunction(node, currentScope)
       return
-    } else if (ts.isFunctionExpression(node) || ts.isArrowFunction(node) ||
-        ts.isMethodDeclaration(node) || ts.isConstructorDeclaration(node)) {
+    } else if (ts.isFunctionExpression(node) || ts.isArrowFunction(node) || ts.isConstructorDeclaration(node)) {
+      visitFunction(node, currentScope)
+      return
+    } else if (ts.isMethodDeclaration(node)) {
+      visitPropertyName(node.name, currentScope)
+      visitFunction(node, currentScope)
+      return
+    } else if (ts.isClassDeclaration(node) || ts.isClassExpression(node)) {
+      if (node.heritageClauses) for (const clause of node.heritageClauses) {
+        for (const type of clause.types) visit(type.expression, currentScope)
+      }
+      const classScope = scope(currentScope)
+      if (node.name) classScope.bindings.add(node.name.text)
+      for (const member of node.members) visit(member, classScope)
+      return
+    } else if (ts.isClassStaticBlockDeclaration(node)) {
+      const staticScope = scope(currentScope)
+      predeclareVars(node.body, staticScope)
+      predeclareLexical(node.body.statements, staticScope)
+      for (const statement of node.body.statements) visit(statement, staticScope)
+      return
+    } else if (ts.isPropertyAccessExpression(node)) {
+      if (globalRoot(node.expression, currentScope) && forbiddenNetworkApis.has(node.name.text)) {
+        found = node.name.text
+        return
+      }
+      visit(node.expression, currentScope)
+      return
+    } else if (ts.isElementAccessExpression(node)) {
+      if (globalRoot(node.expression, currentScope)) {
+        const name = staticPropertyText(node.argumentExpression)
+        if (name === null || forbiddenNetworkApis.has(name)) {
+          found = name ?? 'dynamic global member'
+          return
+        }
+      }
+      visit(node.expression, currentScope)
+      if (node.argumentExpression) visit(node.argumentExpression, currentScope)
+      return
+    } else if (ts.isPropertyAssignment(node)) {
+      visitPropertyName(node.name, currentScope)
+      visit(node.initializer, currentScope)
+      return
+    } else if (ts.isShorthandPropertyAssignment(node)) {
+      visit(node.name, currentScope)
+      if (node.objectAssignmentInitializer) visit(node.objectAssignmentInitializer, currentScope)
+      return
+    } else if (ts.isSpreadAssignment(node)) {
+      visit(node.expression, currentScope)
+      return
+    } else if (ts.isPropertyDeclaration(node)) {
+      visitPropertyName(node.name, currentScope)
+      if (node.initializer) visit(node.initializer, currentScope)
+      return
+    } else if (ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) {
+      visitPropertyName(node.name, currentScope)
       visitFunction(node, currentScope)
       return
     } else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
       visit(node.right, currentScope)
-      if (!found) assignPattern(unwrapExpression(node.left), valueOf(node.right, currentScope), currentScope)
+      const left = unwrapExpression(node.left)
+      if (!found && globalRoot(node.right, currentScope)) found = extractedCapability(left)
+      if (!found) visit(left, currentScope)
+      return
+    } else if (ts.isCatchClause(node)) {
+      const catchScope = scope(currentScope)
+      if (node.variableDeclaration) {
+        declarePattern(node.variableDeclaration.name, catchScope)
+        visitBindingExpressions(node.variableDeclaration.name, catchScope)
+      }
+      visit(node.block, catchScope)
+      return
+    } else if (ts.isForStatement(node) || ts.isForInStatement(node) || ts.isForOfStatement(node)) {
+      const initializer = node.initializer
+      const lexical = initializer && ts.isVariableDeclarationList(initializer) &&
+        Boolean(initializer.flags & (ts.NodeFlags.Let | ts.NodeFlags.Const))
+      const loopScope = lexical ? scope(currentScope) : currentScope
+      if (lexical) for (const declaration of initializer.declarations) declarePattern(declaration.name, loopScope)
+      if (initializer) visit(initializer, loopScope)
+      if (ts.isForStatement(node)) {
+        if (node.condition) visit(node.condition, loopScope)
+        if (node.incrementor) visit(node.incrementor, loopScope)
+      } else {
+        visit(node.expression, loopScope)
+      }
+      visit(node.statement, loopScope)
+      return
+    } else if (ts.isSwitchStatement(node)) {
+      visit(node.expression, currentScope)
+      const switchScope = scope(currentScope)
+      predeclareLexical(node.caseBlock.clauses.flatMap(clause => [...clause.statements]), switchScope)
+      for (const clause of node.caseBlock.clauses) {
+        if (ts.isCaseClause(clause)) visit(clause.expression, switchScope)
+        for (const statement of clause.statements) visit(statement, switchScope)
+      }
+      return
+    } else if (ts.isLabeledStatement(node)) {
+      visit(node.statement, currentScope)
+      return
+    } else if (ts.isBreakOrContinueStatement(node)) {
       return
     }
-    if (!found) ts.forEachChild(node, child => visit(child, currentScope))
+    ts.forEachChild(node, child => visit(child, currentScope))
   }
   visit(file, scope())
   return found
