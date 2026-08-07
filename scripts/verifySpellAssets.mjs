@@ -55,6 +55,11 @@ function forbiddenDependency(file) {
   const globalObjects = new Set(['globalThis', 'window', 'self', 'navigator', 'electron', 'session', 'Reflect'])
   const rejectNetwork = (name) => { found = { kind: 'network', name } }
   const rejectNode = (name) => { found = { kind: 'Node', name } }
+  const forbiddenCapability = (name) => name === 'require' || forbiddenNetworkApis.has(name)
+  const rejectCapability = (name) => {
+    if (name === 'require') rejectNode(name)
+    else rejectNetwork(name)
+  }
   const scope = (parent = null) => ({ parent, bindings: new Set() })
   const isBound = (currentScope, name) => {
     for (let candidate = currentScope; candidate; candidate = candidate.parent) {
@@ -157,7 +162,7 @@ function forbiddenDependency(file) {
           : ts.isIdentifier(property) || ts.isStringLiteral(property) || ts.isNumericLiteral(property)
             ? property.text
             : null
-        if (name === null || forbiddenNetworkApis.has(name)) return name ?? 'dynamic global member'
+        if (name === null || forbiddenCapability(name)) return name ?? 'dynamic global member'
         const nested = extractedCapability(element.name)
         if (nested) return nested
       }
@@ -165,14 +170,14 @@ function forbiddenDependency(file) {
       for (const property of pattern.properties) {
         if (ts.isSpreadAssignment(property)) return 'global object spread'
         if (ts.isShorthandPropertyAssignment(property)) {
-          if (forbiddenNetworkApis.has(property.name.text)) return property.name.text
+          if (forbiddenCapability(property.name.text)) return property.name.text
         } else if (ts.isPropertyAssignment(property)) {
           const name = ts.isComputedPropertyName(property.name)
             ? staticExpressionText(property.name.expression)
             : ts.isIdentifier(property.name) || ts.isStringLiteral(property.name) || ts.isNumericLiteral(property.name)
               ? property.name.text
               : null
-          if (name === null || forbiddenNetworkApis.has(name)) return name ?? 'dynamic global member'
+          if (name === null || forbiddenCapability(name)) return name ?? 'dynamic global member'
           const nested = extractedCapability(property.initializer)
           if (nested) return nested
         }
@@ -191,13 +196,23 @@ function forbiddenDependency(file) {
       visitBindingExpressions(element.name, currentScope)
     }
   }
+  const visitRootExtraction = (pattern, initializer, currentScope) => {
+    if (!globalRoot(initializer, currentScope) ||
+        !(ts.isObjectBindingPattern(pattern) || ts.isObjectLiteralExpression(pattern))) return false
+    const extracted = extractedCapability(pattern)
+    if (extracted) rejectCapability(extracted)
+    else visit(initializer, currentScope, true)
+    return true
+  }
   const visitFunction = (node, parentScope) => {
     const functionScope = scope(parentScope)
     if (node.name && ts.isIdentifier(node.name)) functionScope.bindings.add(node.name.text)
     for (const parameter of node.parameters) declarePattern(parameter.name, functionScope)
     for (const parameter of node.parameters) {
       visitBindingExpressions(parameter.name, functionScope)
-      if (parameter.initializer) visit(parameter.initializer, functionScope)
+      if (parameter.initializer && !visitRootExtraction(parameter.name, parameter.initializer, functionScope)) {
+        visit(parameter.initializer, functionScope)
+      }
       if (found) return
     }
     if (!node.body) return
@@ -255,8 +270,8 @@ function forbiddenDependency(file) {
       return
     } else if (ts.isCallExpression(node)) {
       if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
-        const moduleName = node.arguments[0] && staticText(node.arguments[0])
-        if (networkModuleUrl(node.arguments[0])) rejectNetwork('network module URL')
+        const moduleName = node.arguments[0] && staticExpressionText(node.arguments[0])
+        if (moduleName && /^https?:\/\//i.test(moduleName)) rejectNetwork('network module URL')
         else if (moduleName && nodeBuiltin(moduleName)) rejectNode(moduleName)
         if (found) return
       }
@@ -267,8 +282,8 @@ function forbiddenDependency(file) {
         const propertyIndex = targetIndex + 1
         const target = node.arguments[targetIndex]
         const name = staticExpressionText(node.arguments[propertyIndex])
-        if (globalRoot(target, currentScope) && (name === null || forbiddenNetworkApis.has(name))) {
-          rejectNetwork(name ?? 'dynamic global member')
+        if (globalRoot(target, currentScope) && (name === null || forbiddenCapability(name))) {
+          rejectCapability(name ?? 'dynamic global member')
           return
         }
         if (globalRoot(target, currentScope)) allowedRootArgument = targetIndex
@@ -284,11 +299,8 @@ function forbiddenDependency(file) {
       return
     } else if (ts.isVariableDeclaration(node)) {
       visitBindingExpressions(node.name, currentScope)
-      if (node.initializer && globalRoot(node.initializer, currentScope)) {
-        const extracted = extractedCapability(node.name)
-        if (extracted) rejectNetwork(extracted)
-      }
-      if (!found && node.initializer) visit(node.initializer, currentScope)
+      const handledExtraction = node.initializer && visitRootExtraction(node.name, node.initializer, currentScope)
+      if (!found && node.initializer && !handledExtraction) visit(node.initializer, currentScope)
       return
     } else if (ts.isFunctionDeclaration(node)) {
       visitFunction(node, currentScope)
@@ -316,8 +328,8 @@ function forbiddenDependency(file) {
       return
     } else if (ts.isPropertyAccessExpression(node)) {
       const root = globalRoot(node.expression, currentScope)
-      if (root && forbiddenNetworkApis.has(node.name.text)) {
-        rejectNetwork(node.name.text)
+      if (root && forbiddenCapability(node.name.text)) {
+        rejectCapability(node.name.text)
         return
       }
       visit(node.expression, currentScope, Boolean(root))
@@ -326,8 +338,8 @@ function forbiddenDependency(file) {
       const root = globalRoot(node.expression, currentScope)
       if (root) {
         const name = staticExpressionText(node.argumentExpression)
-        if (name === null || forbiddenNetworkApis.has(name)) {
-          rejectNetwork(name ?? 'dynamic global member')
+        if (name === null || forbiddenCapability(name)) {
+          rejectCapability(name ?? 'dynamic global member')
           return
         }
       }
@@ -353,13 +365,14 @@ function forbiddenDependency(file) {
       visitPropertyName(node.name, currentScope)
       visitFunction(node, currentScope)
       return
+    } else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.CommaToken) {
+      visit(node.left, currentScope)
+      if (!found) visit(node.right, currentScope, allowGlobalRoot)
+      return
     } else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-      visit(node.right, currentScope)
       const left = unwrapExpression(node.left)
-      if (!found && globalRoot(node.right, currentScope)) {
-        const extracted = extractedCapability(left)
-        if (extracted) rejectNetwork(extracted)
-      }
+      const handledExtraction = visitRootExtraction(left, node.right, currentScope)
+      if (!found && !handledExtraction) visit(node.right, currentScope)
       if (!found) visit(left, currentScope)
       return
     } else if (ts.isCatchClause(node)) {

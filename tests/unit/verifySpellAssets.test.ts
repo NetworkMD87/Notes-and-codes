@@ -4,7 +4,7 @@ import { verifyBundle } from '../../scripts/verifySpellAssets.mjs'
 const validBundle = (extra = '') => [
   '/* @author <https://feross.org> */',
   'const payload = `SET UTF-8\nSET UTF-8\n49568\n49601\ncolor colour',
-  'x'.repeat(500_000) + '`',
+  'x'.repeat(500_000) + '`;',
   extra
 ].join('\n')
 
@@ -148,5 +148,37 @@ describe('verifySpellAssets', () => {
     'const Local = class fetch extends fetch {}',
   ])('allows direct safe root members and genuine local shadows: %s', (code) => {
     expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
+  })
+
+  it.each([
+    'const { console } = globalThis; console.log("offline")',
+    'const { console: logger } = globalThis; logger.log("offline")',
+    'let logger; ({ console: logger } = globalThis); logger.log("offline")',
+    'function use({ console } = globalThis) { console.log("offline") }',
+    'const { console: { log } } = globalThis; log("offline")',
+    '(0, globalThis).console.log("offline")',
+    '(sideEffect(), globalThis)["console"].log("offline")',
+    'import("offline-" + "dictionary")',
+    'const globalThis = { require: () => "local" }; globalThis.require("fs")',
+    'function use(globalThis) { return globalThis["require"]("fs") }',
+    'const globalThis = {}; const Reflect = { get: () => () => "local" }; Reflect.get(globalThis, "require")("fs")',
+  ])('allows proven-safe root boundaries and local require members: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).not.toThrow()
+  })
+
+  it.each([
+    'const { [name]: value } = globalThis',
+    'function use(root = globalThis) { return root }',
+    'function use({ fetch } = globalThis) { return fetch }',
+    '(globalThis, local).console.log("offline")',
+    '(0, globalThis).fetch("/dictionary")',
+    'import("node:" + "fs")',
+    'import("https:" + "//example.test/dictionary.js")',
+    'globalThis.require("fs")',
+    'globalThis["require"]("fs")',
+    'globalThis["re" + "quire"]("fs")',
+    'Reflect.get(globalThis, "require")("fs")',
+  ])('rejects unsafe root boundaries and static Node capability acquisition: %s', (code) => {
+    expect(() => verifyBundle(validBundle(code), 'fixture')).toThrow(/forbidden (network|Node) dependency/)
   })
 })
