@@ -17,7 +17,7 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — Owner-test the v1.18.0 build
+## ▶ NEXT ACTION — Review dependency audit findings
 
 **v1.17.0 shipped 2026-08-07 — Fully offline spell checking + startup readiness fix.** Tagged
 `v1.17.0` and published as a GitHub release (installer + portable). Plain-text and Markdown prose
@@ -25,15 +25,14 @@ now get bundled UK/US spell checking, Quick Fix suggestions, session ignores, an
 dictionary, with no network dependency. It also carries the `boot()` readiness fix that prevents
 an early settings change being silently reverted on a slow startup. See **Phase 4.4** below.
 
-**v1.18.0 local test build — implemented, pending owner sign-off and release.** Right-clicking a
-red-underlined word now opens up to five offline replacements, **Ignore for this session**, **Add to
-personal dictionary**, and familiar Undo/Redo/Cut/Copy/Paste/Select All/Command Palette actions. The
-clicked word and pane own the correction even when the caret was elsewhere; correct words, code,
-excluded Markdown ranges, editor chrome, and keyboard context-menu invocation remain Monaco-owned.
-`Ctrl+.` stays available. Real Electron coverage exercises replacement, Undo, Cut/Copy/Paste,
-dictionary persistence, split panes, fallback paths, and falsified load-bearing guards. The same build
-also fixes startup file requests being hidden behind a late blank Untitled tab. Install and owner-test
-this build before deciding on the public tag/release or the next platform task.
+**v1.18.0 shipped 2026-08-07 — Right-click spell corrections.** Tagged and published as a GitHub
+release after owner testing of the installed build. Right-clicking a red-underlined word now opens up
+to five offline replacements, **Ignore for this session**, **Add to personal dictionary**, and familiar
+Undo/Redo/Cut/Copy/Paste/Select All/Command Palette actions. The clicked word and pane own the
+correction even when the caret was elsewhere; correct words, code, excluded Markdown ranges, editor
+chrome, and keyboard context-menu invocation remain Monaco-owned. `Ctrl+.` stays available. The same
+release also fixes startup file requests being hidden behind a late blank Untitled tab. Next, review
+the dependency audit warnings observed while preparing the release.
 
 **v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
 portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable
@@ -309,8 +308,8 @@ Neither depends on 3.5 — they can land before, during, or after it._
   worker handles debounced newest-only batches with stale-result guards and bounded crash recovery.
   The built worker is statically checked for network capabilities and the Electron workflow is
   smoke-tested with HTTP/HTTPS blocked before renderer navigation.
-- ✅ **Right-click spell corrections** (**S–M**, implemented for the v1.18.0 local test build,
-  pending owner sign-off/release) — a pointer right-click on the exact red-underlined word offers
+- ✅ **Right-click spell corrections** (**S–M**, shipped in v1.18.0) — a pointer right-click on the
+  exact red-underlined word offers
   up to five offline replacements, session-ignore, personal-dictionary, and familiar editor actions.
   It targets the clicked pane/occurrence independently of the caret, preserves the `Ctrl+.` route,
   and leaves correct words, code, excluded Markdown ranges, widgets, scrollbars, and keyboard
