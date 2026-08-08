@@ -161,7 +161,7 @@ async function closeTab(id: string): Promise<void> {
 
 const tabBar = new TabBar(document.getElementById('tabbar')!, {
   onSelect: (id) => { manager.setActive(id); showActive(); scheduleSessionSave() },
-  onClose: (id) => void closeTab(id),
+  onClose: (id) => closeTab(id),
   onNew: () => { manager.create(); showActive(); scheduleSessionSave() },
   onReorder: (id, toIndex) => { manager.move(id, toIndex); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave() }
 })
@@ -179,6 +179,14 @@ function showActive(): void {
   syncWatch()
   autosave.flushNow()
   spell?.schedule()
+}
+
+function switchRelativeTab(direction: -1 | 1): void {
+  const buffers = manager.list()
+  if (buffers.length < 2) return
+  const current = Math.max(0, buffers.findIndex(buffer => buffer.id === manager.activeId))
+  const next = (current + direction + buffers.length) % buffers.length
+  manager.setActive(buffers[next].id); showActive(); scheduleSessionSave(); focusActiveEditor()
 }
 
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
@@ -883,6 +891,9 @@ registerCommands({
 })
 
 window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'PageUp' || e.key === 'PageDown')) {
+    e.preventDefault(); switchRelativeTab(e.key === 'PageUp' ? -1 : 1)
+  }
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); findInFiles.open() }
