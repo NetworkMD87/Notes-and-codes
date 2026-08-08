@@ -1,16 +1,14 @@
-import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { test, expect } from './smokeTest'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { waitForBoot } from './appReady'
 
-test('startup open received before session load completes remains active after boot', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-startup-open-'))
+test('startup open received before session load completes remains active after boot', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-startup-open-')
   const filePath = join(userDataDir, 'startup.txt')
   writeFileSync(filePath, 'startup file content')
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
 
-  try {
     const win = await app.firstWindow()
     await waitForBoot(win)
 
@@ -65,8 +63,4 @@ test('startup open received before session load completes remains active after b
     await waitForBoot(win)
     await expect(win.locator('#paneA .view-lines')).toContainText('startup file content')
     await expect(win.locator('.tab.active')).toContainText('startup.txt')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })

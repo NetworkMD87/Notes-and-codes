@@ -1,27 +1,25 @@
-import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { test, expect } from './smokeTest'
+import type { Page } from '@playwright/test'
+import type { SmokeResources } from './smokeCleanup'
 
 // Audit Phase 1 — H2 (palette "Close Tab" bypasses closeTab safeguards) and
 // M1 (closing a dirty *untitled* tab discards content with no warning).
 
-async function launch() {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-close-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  return { app, userDataDir }
+async function launch(smoke: SmokeResources) {
+  const userDataDir = smoke.tempDir('notes-close-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  return { app }
 }
 
-async function dirtyTheActiveTab(win: Awaited<ReturnType<Awaited<ReturnType<typeof electron.launch>>['firstWindow']>>) {
+async function dirtyTheActiveTab(win: Page) {
   await win.locator('#paneA .monaco-editor').click()
   await win.keyboard.type('unsaved scratch notes')
 }
 
 // M1: the tab-bar × already routes through closeTab; the dirty-confirm must now
 // fire for an untitled buffer with content, not only named files.
-test('closing a dirty untitled tab via the × warns before discarding', async () => {
-  const { app, userDataDir } = await launch()
-  try {
+test('closing a dirty untitled tab via the × warns before discarding', async ({ smoke }) => {
+  const { app } = await launch(smoke)
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await expect(win.locator('.tab')).toHaveCount(1)
@@ -37,16 +35,12 @@ test('closing a dirty untitled tab via the × warns before discarding', async ()
     await win.locator('.input-overlay button', { hasText: 'Cancel' }).click()
     await expect(win.locator('.input-overlay')).toBeHidden()
     await expect(win.locator('.tab')).toHaveCount(1)
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
 // H2: the command-palette "Close Tab" must route through closeTab — so the same
 // dirty-confirm fires there too (today it calls manager.close() raw and skips it).
-test('command-palette Close Tab warns before discarding a dirty tab', async () => {
-  const { app, userDataDir } = await launch()
-  try {
+test('command-palette Close Tab warns before discarding a dirty tab', async ({ smoke }) => {
+  const { app } = await launch(smoke)
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -57,17 +51,13 @@ test('command-palette Close Tab warns before discarding a dirty tab', async () =
 
     await expect(win.locator('.input-overlay')).toBeVisible()
     await expect(win.locator('.input-overlay button', { hasText: 'Discard' })).toBeVisible()
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
 // Same Enter-bleed class as the confirm: a palette command that opens promptInput
 // (Save Selection as Snippet) must not have its triggering Enter bleed through and
 // auto-submit the name prompt.
-test('palette command that opens a text prompt does not auto-submit it', async () => {
-  const { app, userDataDir } = await launch()
-  try {
+test('palette command that opens a text prompt does not auto-submit it', async ({ smoke }) => {
+  const { app } = await launch(smoke)
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -82,16 +72,12 @@ test('palette command that opens a text prompt does not auto-submit it', async (
 
     // The name prompt (an .input-overlay with a text field) must stay open.
     await expect(win.locator('.input-overlay input')).toBeVisible()
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
 // H2 (isolation): only closeTab hides the window when the last tab closes. If the
 // palette still called manager.close() raw, the window would stay visible.
-test('command-palette Close Tab on the last tab hides to tray', async () => {
-  const { app, userDataDir } = await launch()
-  try {
+test('command-palette Close Tab on the last tab hides to tray', async ({ smoke }) => {
+  const { app } = await launch(smoke)
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await expect(win.locator('.tab')).toHaveCount(1)
@@ -104,7 +90,4 @@ test('command-palette Close Tab on the last tab hides to tray', async () => {
       () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isVisible()),
       { timeout: 5000 }
     ).toBe(false)
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
