@@ -47,6 +47,18 @@ describe('Quick Open candidates', () => {
     expect(reverse).toEqual(forward)
   })
 
+  it('orders canonically equivalent Unicode paths independently of enumeration order', () => {
+    const composed = 'C:\\p\\\u00e9\\a.ts'
+    const decomposed = 'C:\\p\\e\u0301\\a.ts'
+    const unicodeCandidates = buildQuickOpenCandidates('C:\\p', [composed, decomposed])
+    const expected = [decomposed, composed]
+
+    for (const input of [unicodeCandidates, [...unicodeCandidates].reverse()]) {
+      expect(rankFileCandidates('a', input, 2).map(item => item.path)).toEqual(expected)
+      expect(rankFileCandidatesReference('a', input, 2).map(item => item.path)).toEqual(expected)
+    }
+  })
+
   it('does not mutate caller-owned candidate records or enumeration order', () => {
     const callerCandidates = candidates.map(candidate => ({ ...candidate }))
     const before = structuredClone(callerCandidates)

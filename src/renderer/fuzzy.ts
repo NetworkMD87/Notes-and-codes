@@ -63,11 +63,16 @@ interface ScoredCandidate extends RankedFile {
   relativeScore: number
 }
 
+function compareCodeUnits(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
 function compareRank(a: ScoredCandidate, b: ScoredCandidate): number {
   return Number(b.filenameMatch) - Number(a.filenameMatch) ||
     b.score - a.score || b.relativeScore - a.relativeScore ||
     a.name.length - b.name.length || a.lowerName.localeCompare(b.lowerName) ||
-    a.lowerRelativePath.localeCompare(b.lowerRelativePath) || a.path.localeCompare(b.path)
+    a.lowerRelativePath.localeCompare(b.lowerRelativePath) || a.path.localeCompare(b.path) ||
+    compareCodeUnits(a.path, b.path)
 }
 
 function scoreCandidate(
