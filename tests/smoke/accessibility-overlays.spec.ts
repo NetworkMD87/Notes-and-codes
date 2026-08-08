@@ -18,6 +18,10 @@ test('Quick Open, Find in Files, and Help are named modal dialogs with trapped f
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   const win = await app.firstWindow(); await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
 
+  await win.keyboard.press('Control+Shift+P')
+  await expectDialog(win, 'Command Palette', win.getByRole('combobox', { name: 'Command Palette' }), win.getByRole('combobox', { name: 'Command Palette' }))
+  await win.keyboard.press('Escape')
+
   await win.keyboard.press('Control+P')
   await expectDialog(win, 'Quick Open', win.getByRole('combobox', { name: 'Quick Open' }), win.getByRole('combobox', { name: 'Quick Open' }))
   await win.keyboard.press('Escape')

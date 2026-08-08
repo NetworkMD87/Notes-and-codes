@@ -842,7 +842,7 @@ function refreshToolbar(): void {
   toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible(), pin: alwaysOnTop })
 }
 
-const palette = new CommandPalette()
+const palette = new CommandPalette(focusActiveEditor)
 const helpOverlay = new HelpOverlay(focusActiveEditor)
 const findInFiles = new FindInFiles(document.getElementById('app')!, {
   root: () => folder.root(),
