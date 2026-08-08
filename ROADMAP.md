@@ -17,20 +17,19 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — Complete dependency security patch (PR #11)
+## ▶ NEXT ACTION — Merge dependency security patch (PR #11), then release v1.18.1
 
-🚧 **Production Markdown dependency patch is implemented and awaiting final integration.** PR #11
+🚧 **Production Markdown dependency patch is integrated and awaiting final CI/merge.** PR #11
 updates DOMPurify to `^3.4.13`, overrides `linkify-it` to `^5.0.2`, and adds a lockfile security
 guard. The production audit is clean (`npm audit --omit=dev`: 0 vulnerabilities); the full audit's
 existing 20 findings are confined to the development/build graph and are not being changed with an
 automatic `npm audit fix`.
 
-**Remaining:** merge current `master` into the published dependency branch, then rerun the dependency
-guard, full unit suite, typecheck/build, focused Markdown smoke, full normally configured smoke suite,
-Windows packaging, both audit commands, and the final diff/review gates. The earlier concurrent smoke
-cleanup blocker was resolved by merged PR #12. If those gates and CI remain green, mark PR #11 ready,
-merge it, remove its branch/worktree, and use the merged security patch as the basis for a `v1.18.1`
-patch release.
+Current `master` (including PR #12's smoke-teardown reliability work) is merged into the branch. The
+dependency guard, all 766 unit tests, typecheck/build, focused Markdown preview smoke test, full
+normally configured 119-test smoke suite, Windows packaging, audit checks, and final diff checks all
+passed locally. **Remaining:** confirm the integrated-head CI run, mark PR #11 ready, merge it, remove
+its branch/worktree, and use the merged security patch as the basis for a `v1.18.1` patch release.
 
 **v1.17.0 shipped 2026-08-07 — Fully offline spell checking + startup readiness fix.** Tagged
 `v1.17.0` and published as a GitHub release (installer + portable). Plain-text and Markdown prose
