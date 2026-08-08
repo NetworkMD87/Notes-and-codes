@@ -164,6 +164,7 @@ export class SettingsPanel {
       const row = document.createElement('button')
       row.type = 'button'; row.className = 'appearance-theme' + (t.id === this.d.currentThemeId() ? ' active' : '')
       row.setAttribute('role', 'radio'); row.setAttribute('aria-checked', String(t.id === this.d.currentThemeId()))
+      row.tabIndex = t.id === this.d.currentThemeId() ? 0 : -1
       const label = document.createElement('span'); label.className = 'theme-label'; label.textContent = t.label
       const dots = document.createElement('div'); dots.className = 'theme-dots'; dots.setAttribute('aria-hidden', 'true')
       for (const c of swatchColours(t.id)) {
@@ -173,6 +174,15 @@ export class SettingsPanel {
       row.append(label, dots)
       row.dataset.settingsFocus = `theme-${t.id}`
       row.onclick = () => { this.d.pickTheme(t.id); this.render(`theme-${t.id}`) }
+      row.onkeydown = event => {
+        const radios = [...grid.querySelectorAll<HTMLButtonElement>('[role="radio"]')]
+        const next = moveRovingIndex(radios.indexOf(row), radios.map(() => true), event.key, 'horizontal')
+        if (next === null) return
+        event.preventDefault()
+        const theme = THEME_LIST[next]
+        this.d.pickTheme(theme.id)
+        this.render(`theme-${theme.id}`)
+      }
       grid.appendChild(row)
     }
 
@@ -346,11 +356,15 @@ export class SettingsPanel {
       }
       this.nav.appendChild(tab)
     }
-    const panel = document.createElement('div')
-    panel.id = `settings-panel-${this.active}`; panel.setAttribute('role', 'tabpanel')
-    panel.setAttribute('aria-labelledby', `settings-tab-${this.active}`)
-    panel.appendChild(this.renderDetail())
-    this.detail.replaceChildren(panel)
+    const panels = CATEGORIES.map(category => {
+      const panel = document.createElement('div')
+      panel.id = `settings-panel-${category.id}`; panel.setAttribute('role', 'tabpanel')
+      panel.setAttribute('aria-labelledby', `settings-tab-${category.id}`)
+      if (category.id === this.active) panel.appendChild(this.renderDetail())
+      else panel.hidden = true
+      return panel
+    })
+    this.detail.replaceChildren(...panels)
     if (focusKey) this.detail.querySelector<HTMLElement>(`[data-settings-focus="${focusKey}"]`)?.focus()
   }
 }
