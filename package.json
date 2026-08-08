@@ -21,6 +21,7 @@
     "screenshots": "node scripts/screenshots.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "benchmark:workspace": "vitest run --config vitest.benchmark.config.ts",
     "test:smoke": "playwright test",
     "make-icon": "node scripts/make-icon.mjs",
     "verify:spell-assets": "node scripts/verifySpellAssets.mjs --app",
