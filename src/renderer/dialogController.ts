@@ -13,9 +13,18 @@ const FOCUSABLE = [
   'textarea:not([disabled])', 'a[href]', '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
+function usable(el: HTMLElement | null | undefined): el is HTMLElement {
+  if (!el?.isConnected || el.matches(':disabled') || el.closest('[hidden],[aria-hidden="true"],[inert]')) return false
+  for (let current: HTMLElement | null = el; current; current = current.parentElement) {
+    const style = getComputedStyle(current)
+    if (style.display === 'none' || style.visibility === 'hidden') return false
+  }
+  return true
+}
+
 export function focusableElements(panel: HTMLElement): HTMLElement[] {
   return [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(el => (
-    el.isConnected && !el.closest('[hidden],[aria-hidden="true"]')
+    usable(el)
   ))
 }
 
@@ -41,7 +50,9 @@ export class DialogController {
     this.panel.addEventListener('keydown', this.onKeyDown)
     this.opened = true
     this.registration.open(options.requestClose)
-    const target = this.usable(options.initialFocus) ? options.initialFocus! : focusableElements(this.panel)[0] ?? this.panel
+    const target = options.initialFocus && this.panel.contains(options.initialFocus) && usable(options.initialFocus)
+      ? options.initialFocus
+      : focusableElements(this.panel)[0] ?? this.panel
     target.focus()
   }
 
@@ -52,20 +63,11 @@ export class DialogController {
     this.panel?.removeEventListener('keydown', this.onKeyDown)
     const opener = this.opener
     this.panel = null; this.opener = null
-    if (this.usable(opener)) opener.focus()
+    if (usable(opener)) opener.focus()
     else this.fallbackFocus()
   }
 
   isOpen(): boolean { return this.opened }
-
-  private usable(el: HTMLElement | null | undefined): el is HTMLElement {
-    if (!el?.isConnected || el.matches(':disabled') || el.closest('[hidden],[aria-hidden="true"],[inert]')) return false
-    for (let current: HTMLElement | null = el; current; current = current.parentElement) {
-      const style = getComputedStyle(current)
-      if (style.display === 'none' || style.visibility === 'hidden') return false
-    }
-    return true
-  }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Tab' || !this.panel) return

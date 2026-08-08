@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DialogController } from '../../src/renderer/dialogController'
+import { DialogController, focusableElements } from '../../src/renderer/dialogController'
 import { handleEscape, openCount } from '../../src/renderer/overlayManager'
 
 const escape = () => handleEscape({ key: 'Escape', preventDefault: vi.fn(), stopPropagation: vi.fn() })
@@ -35,6 +35,23 @@ describe('DialogController', () => {
     expect(document.activeElement).toBe(h.first)
     h.last.focus(); key(h.last, 'Tab'); expect(document.activeElement).toBe(h.first)
     h.first.focus(); key(h.first, 'Tab', true); expect(document.activeElement).toBe(h.last)
+  })
+
+  it('rejects an initial focus target outside the dialog panel', () => {
+    const h = fixture()
+    const external = document.createElement('button'); document.body.appendChild(external)
+    h.controller.open({ panel: h.panel, labelledBy: 'dialog-title', initialFocus: external, requestClose: () => h.controller.close() })
+    expect(document.activeElement).toBe(h.first)
+  })
+
+  it('excludes CSS-hidden and inert controls from focusable candidates', () => {
+    const panel = document.createElement('section')
+    const displayNone = document.createElement('button'); displayNone.style.display = 'none'
+    const visibilityHidden = document.createElement('button'); visibilityHidden.style.visibility = 'hidden'
+    const inert = document.createElement('button'); inert.setAttribute('inert', '')
+    const visible = document.createElement('button')
+    panel.append(displayNone, visibilityHidden, inert, visible); document.body.appendChild(panel)
+    expect(focusableElements(panel)).toEqual([visible])
   })
 
   it('handles one/no focusable controls without allowing focus to escape', () => {
