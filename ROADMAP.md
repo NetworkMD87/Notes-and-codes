@@ -32,7 +32,7 @@ The release also carries PR #12's smoke-teardown reliability work: the Windows h
 closes every Electron process it launches, eliminating the earlier cleanup-only false red; normal app
 usage was never affected. All 766 unit tests, typecheck/build, focused Markdown preview smoke, the
 full normally configured 119-test smoke suite, Windows packaging, audit, diff, independent review,
-PR-head CI, merge-commit CI, and release-commit CI gates passed. The installed 1.18.1 build reported
+PR-head CI, merge-commit CI, and release-preparation CI gates passed. The installed 1.18.1 build reported
 the correct About version, rendered and sanitized Markdown preview, registered the configured global
 hotkey, completed the close-to-tray/show cycle, and persisted launch-on-login across a relaunch before
 restoring its original disabled state. Final installer and portable artifacts were rebuilt from the
