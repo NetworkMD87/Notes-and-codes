@@ -35,6 +35,7 @@ function mount(api: Partial<Api>, filter: () => WorkspaceFilter): FolderMode {
     pickFolder: vi.fn(async () => {}),
     focusEditor: vi.fn(),
     filter,
+    workspaceChanged: vi.fn(),
   })
 }
 
@@ -120,5 +121,105 @@ describe('FolderMode refresh integration', () => {
     expect(readDir).not.toHaveBeenCalled()
     await vi.waitFor(() => expect(document.querySelector('.sb-panel')).not.toBeNull())
     expect(document.body.textContent).not.toContain('late.ts')
+  })
+
+  it('does not reopen or persist a folder when close wins during settings load', async () => {
+    const settings = deferred<typeof DEFAULT_SETTINGS>()
+    const watchDir = vi.fn(async () => {})
+    const updateSettings = vi.fn(async partial => ({ ...DEFAULT_SETTINGS, ...partial }))
+    const addRecentFolder = vi.fn(async (path: string) => [path])
+    const api = baseApi({
+      loadSettings: vi.fn(() => settings.promise),
+      watchDir,
+      updateSettings,
+      addRecentFolder,
+      walkFiles: vi.fn(async () => ({ files: [], truncated: false })),
+      readDir: vi.fn(async () => []),
+    })
+    const mode = mount(api, () => ({ showAll: false, excludePatterns: [] }))
+
+    const opening = mode.openFolder('C:\\late')
+    mode.closeFolder()
+    settings.resolve({ ...DEFAULT_SETTINGS })
+    await opening
+
+    expect(mode.root()).toBeNull()
+    expect(watchDir.mock.calls).toEqual([[null]])
+    expect(updateSettings.mock.calls.map(call => call[0])).toEqual([
+      { lastFolder: null, sidebarVisible: false },
+    ])
+    expect(addRecentFolder).not.toHaveBeenCalled()
+  })
+
+  it('reasserts folder B when folder A watcher registration finishes late', async () => {
+    const aWatch = deferred<void>()
+    let watchedRoot: string | null = null
+    const watchDir = vi.fn(async (root: string | null) => {
+      if (root === 'C:\\A') await aWatch.promise
+      watchedRoot = root
+    })
+    const updateSettings = vi.fn(async partial => ({ ...DEFAULT_SETTINGS, ...partial }))
+    const addRecentFolder = vi.fn(async (path: string) => [path])
+    const api = baseApi({
+      watchDir,
+      updateSettings,
+      addRecentFolder,
+      walkFiles: vi.fn(async root => ({ files: [`${root}\\file.ts`], truncated: false })),
+      readDir: vi.fn(async () => []),
+    })
+    const mode = mount(api, () => ({ showAll: false, excludePatterns: [] }))
+
+    const openingA = mode.openFolder('C:\\A')
+    await vi.waitFor(() => expect(watchDir).toHaveBeenCalledWith('C:\\A'))
+    const openingB = mode.openFolder('C:\\B')
+    await vi.waitFor(() => expect(addRecentFolder).toHaveBeenCalledWith('C:\\B'))
+    aWatch.resolve()
+    await Promise.all([openingA, openingB])
+
+    expect(mode.root()).toBe('C:\\B')
+    expect(watchedRoot).toBe('C:\\B')
+    expect(watchDir.mock.calls.at(-1)).toEqual(['C:\\B'])
+    expect(updateSettings.mock.calls.map(call => call[0])).not.toContainEqual(
+      { lastFolder: 'C:\\A', sidebarVisible: true },
+    )
+    expect(addRecentFolder.mock.calls).toEqual([['C:\\B']])
+  })
+
+  it('repairs folder B persistence when folder A settings update finishes late', async () => {
+    const aUpdate = deferred<typeof DEFAULT_SETTINGS>()
+    const watchDir = vi.fn(async () => {})
+    let persistedRoot: string | null = null
+    const updateSettings = vi.fn(async (
+      partial: { lastFolder?: string | null; sidebarVisible?: boolean },
+    ) => {
+      if (partial.lastFolder === 'C:\\A') await aUpdate.promise
+      persistedRoot = partial.lastFolder ?? persistedRoot
+      return { ...DEFAULT_SETTINGS, ...partial }
+    })
+    const addRecentFolder = vi.fn(async (path: string) => [path])
+    const api = baseApi({
+      watchDir,
+      updateSettings: updateSettings as Api['updateSettings'],
+      addRecentFolder,
+      walkFiles: vi.fn(async root => ({ files: [`${root}\\file.ts`], truncated: false })),
+      readDir: vi.fn(async () => []),
+    })
+    const mode = mount(api, () => ({ showAll: false, excludePatterns: [] }))
+
+    const openingA = mode.openFolder('C:\\A')
+    await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledWith(
+      { lastFolder: 'C:\\A', sidebarVisible: true },
+    ))
+    const openingB = mode.openFolder('C:\\B')
+    await vi.waitFor(() => expect(addRecentFolder).toHaveBeenCalledWith('C:\\B'))
+    aUpdate.resolve({ ...DEFAULT_SETTINGS, lastFolder: 'C:\\A', sidebarVisible: true })
+    await Promise.all([openingA, openingB])
+
+    expect(mode.root()).toBe('C:\\B')
+    expect(persistedRoot).toBe('C:\\B')
+    expect(updateSettings.mock.calls.at(-1)?.[0]).toEqual(
+      { lastFolder: 'C:\\B', sidebarVisible: true },
+    )
+    expect(addRecentFolder.mock.calls).toEqual([['C:\\B']])
   })
 })

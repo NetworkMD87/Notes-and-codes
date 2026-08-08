@@ -35,6 +35,7 @@ export class FindInFiles {
   private searching = false
   private truncated = false
   private searchId = 0
+  private workspaceGeneration = 0
   private timer: number | undefined
 
   constructor(parent: HTMLElement, private d: FindInFilesDeps) {
@@ -73,6 +74,22 @@ export class FindInFiles {
     this.input.select()
   }
 
+  /** Invalidate results captured under an older folder/filter context. If the dialog is open,
+   * immediately replace them with a search against the new context. */
+  workspaceChanged(): void {
+    this.workspaceGeneration++
+    this.searchId++
+    clearTimeout(this.timer)
+    if (this.host.classList.contains('hidden')) return
+    if (this.query.length >= MIN_QUERY_LENGTH) void this.runSearch()
+    else {
+      this.results = []
+      this.truncated = false
+      this.searching = false
+      this.render()
+    }
+  }
+
   private toggle(label: string, key: keyof SearchOptions): HTMLButtonElement {
     const b = document.createElement('button')
     b.className = 'fif-toggle' + (this.opts[key] ? ' on' : '')
@@ -97,6 +114,7 @@ export class FindInFiles {
 
   private async runSearch(): Promise<void> {
     const query = this.query
+    const workspaceGeneration = this.workspaceGeneration
     // Arrow-key position only survives a re-run of the SAME query (reopen with a carried-over
     // query, or toggling case/whole-word). A changed query means a different result set, so row
     // N of the old list has nothing to do with row N of the new one — reset before results even
@@ -121,7 +139,7 @@ export class FindInFiles {
       filter: this.d.filter(),
       searchId: id,
     })
-    if (id !== this.searchId) return // a newer search has started — drop this answer
+    if (id !== this.searchId || workspaceGeneration !== this.workspaceGeneration) return
     this.results = mergeResults(bufferResults, res.files)
     this.truncated = res.truncated
     this.searching = false

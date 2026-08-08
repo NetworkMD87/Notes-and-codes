@@ -246,6 +246,7 @@ const workspaceFilter = (): WorkspaceFilter => ({
   excludePatterns: [...workspaceExcludes],
 })
 let folder!: FolderMode
+let findInFiles!: FindInFiles
 let restoreFolder = true
 let openAtLogin = false
 let globalHotkey = ''
@@ -721,6 +722,7 @@ const settingsDeps: SettingsDeps = {
     const saved = await window.api.updateSettings({ showAllFiles: on })
     showAllFiles = saved.showAllFiles
     workspaceExcludes = [...saved.workspaceExcludes]
+    findInFiles.workspaceChanged()
     await folder.workspaceSettingsChanged()
   },
   workspaceExcludes: () => [...workspaceExcludes],
@@ -729,6 +731,7 @@ const settingsDeps: SettingsDeps = {
       workspaceExcludes: normalizePathGlobs(patterns),
     })
     workspaceExcludes = [...saved.workspaceExcludes]
+    findInFiles.workspaceChanged()
     await folder.workspaceSettingsChanged()
   },
   restoreWorkspaceExcludes: async () => {
@@ -736,6 +739,7 @@ const settingsDeps: SettingsDeps = {
       workspaceExcludes: [...DEFAULT_WORKSPACE_EXCLUDES],
     })
     workspaceExcludes = [...saved.workspaceExcludes]
+    findInFiles.workspaceChanged()
     await folder.workspaceSettingsChanged()
   },
   restoreFolder: () => restoreFolder,
@@ -837,6 +841,7 @@ folder = new FolderMode({
   openFile: (path) => void openPath(path),
   focusEditor: focusActiveEditor,
   filter: workspaceFilter,
+  workspaceChanged: () => findInFiles.workspaceChanged(),
   pickFolder: () => openFolderFromDialog(),
   activePath: () => {
     const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null
@@ -874,7 +879,7 @@ function refreshToolbar(): void {
 
 const palette = new CommandPalette(focusActiveEditor)
 const helpOverlay = new HelpOverlay(focusActiveEditor)
-const findInFiles = new FindInFiles(document.getElementById('app')!, {
+findInFiles = new FindInFiles(document.getElementById('app')!, {
   root: () => folder.root(),
   filter: workspaceFilter,
   buffers: () => manager.list().map(b => ({ filePath: b.filePath, title: b.title, content: b.content })),

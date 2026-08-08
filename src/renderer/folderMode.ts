@@ -19,6 +19,7 @@ export interface FolderModeDeps {
   pickFolder: () => Promise<void>   // the same picker the File menu / palette use
   focusEditor: () => void
   filter: () => WorkspaceFilter
+  workspaceChanged: () => void
 }
 
 interface FolderRefreshSnapshot {
@@ -35,6 +36,9 @@ export class FolderMode {
   private index: QuickOpenCandidate[] = []
   private indexTruncated = false
   private split: ReturnType<typeof Split> | null = null
+  private lifecycleGeneration = 0
+  private desiredRoot: string | null = null
+  private desiredSidebarVisible = false
   private refresh = new RefreshScheduler(
     () => this.refreshSnapshot(),
     run => this.runRefresh(run.snapshot, run.isCurrent),
@@ -67,32 +71,44 @@ export class FolderMode {
   root(): string | null { return this.model.root }
 
   async openFolder(root: string): Promise<void> {
+    const generation = ++this.lifecycleGeneration
+    this.desiredRoot = root
+    this.desiredSidebarVisible = true
     const s = await window.api.loadSettings()
+    if (!this.isCurrent(generation)) return
     this.refresh.invalidate()
     this.model.setRoot(root)
+    this.d.workspaceChanged()
     this.hideSidebar()
     this.showSidebar(s.sidebarWidth)
     this.sidebar.render()
-    await window.api.watchDir(root)
-    await window.api.updateSettings({ lastFolder: root, sidebarVisible: true })
-    void window.api.addRecentFolder(root)
+    await this.syncWatcher(root, generation)
+    if (!this.isCurrent(generation)) return
+    await this.persistFolderState(root, true, generation)
+    if (!this.isCurrent(generation)) return
     await this.refresh.request()
+    if (!this.isCurrent(generation)) return
+    void window.api.addRecentFolder(root)
   }
 
   closeFolder(): void {
+    const generation = ++this.lifecycleGeneration
+    this.desiredRoot = null
+    this.desiredSidebarVisible = this.split !== null
     this.refresh.invalidate()
     this.model.setRoot('')
     this.model.root = null
     this.index = []
     this.indexTruncated = false
-    void window.api.watchDir(null)
+    this.d.workspaceChanged()
+    void this.syncWatcher(null, generation)
     // Spec: "Close Folder returns the panel; the tab stays." The panel replaces the tree in
     // place rather than collapsing the sidebar — hideSidebar() destroys the Split, which would
     // force a second click on the tab just to reach Open Folder…/recents. So the Split (if any)
     // is left exactly as it is; only the sidebar's *content* changes. If the sidebar was already
     // collapsed, it stays collapsed — this only stops an *open* sidebar from closing on you.
     this.renderSidebar()
-    void window.api.updateSettings({ lastFolder: null, sidebarVisible: this.split !== null })
+    void this.persistFolderState(null, this.desiredSidebarVisible, generation)
   }
 
   toggleSidebar(): void {
@@ -177,6 +193,42 @@ export class FolderMode {
   }
 
   // --- internals ---
+
+  private isCurrent(generation: number): boolean {
+    return generation === this.lifecycleGeneration
+  }
+
+  /** A stale watchDir continuation may finish after a newer open/close. Reapply the latest
+   * desired root before returning so the main process cannot be left watching the stale one. */
+  private async syncWatcher(root: string | null, generation: number): Promise<void> {
+    let targetRoot = root
+    let targetGeneration = generation
+    while (true) {
+      await window.api.watchDir(targetRoot)
+      if (this.isCurrent(targetGeneration)) return
+      targetRoot = this.desiredRoot
+      targetGeneration = this.lifecycleGeneration
+    }
+  }
+
+  /** updateSettings writes are asynchronous too. If an older write lands last, follow it with
+   * the current desired state so lastFolder/sidebarVisible converge on the active lifecycle. */
+  private async persistFolderState(
+    root: string | null,
+    sidebarVisible: boolean,
+    generation: number,
+  ): Promise<void> {
+    let targetRoot = root
+    let targetVisible = sidebarVisible
+    let targetGeneration = generation
+    while (true) {
+      await window.api.updateSettings({ lastFolder: targetRoot, sidebarVisible: targetVisible })
+      if (this.isCurrent(targetGeneration)) return
+      targetRoot = this.desiredRoot
+      targetVisible = this.desiredSidebarVisible
+      targetGeneration = this.lifecycleGeneration
+    }
+  }
 
   private async loadChildren(path: string): Promise<void> {
     const root = this.model.root

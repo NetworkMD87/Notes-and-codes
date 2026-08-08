@@ -67,6 +67,7 @@ export class SettingsPanel {
   private recording = false
   private keyHandler?: (e: KeyboardEvent) => void
   private controlId = 0
+  private workspaceExclusionGeneration = 0
 
   constructor(parent: HTMLElement, private d: SettingsDeps) {
     this.host = document.createElement('div')
@@ -295,21 +296,32 @@ export class SettingsPanel {
     editor.dataset.settingsFocus = 'workspace-excludes-editor'
     editor.setAttribute('aria-describedby', help.id)
     editor.onchange = () => {
+      const generation = ++this.workspaceExclusionGeneration
       void this.d.setWorkspaceExcludes(editor.value.split(/\r?\n/)).then(() => {
-        const focusKey = (document.activeElement as HTMLElement | null)?.dataset.settingsFocus
-        this.render(focusKey)
+        this.rerenderWorkspaceExcludes(generation)
       })
     }
     const restore = document.createElement('button'); restore.type = 'button'
     restore.className = 'workspace-excludes-restore'; restore.textContent = 'Restore defaults'
     restore.dataset.settingsFocus = 'workspace-excludes-restore'
-    restore.onclick = () => void this.d.restoreWorkspaceExcludes().then(() => {
-      const focusKey = (document.activeElement as HTMLElement | null)?.dataset.settingsFocus
-      this.render(focusKey)
-    })
+    restore.onclick = () => {
+      const generation = ++this.workspaceExclusionGeneration
+      void this.d.restoreWorkspaceExcludes().then(() => this.rerenderWorkspaceExcludes(generation))
+    }
     group.append(label, help, editor, restore)
     wrap.append(group)
     return wrap
+  }
+
+  private rerenderWorkspaceExcludes(generation: number): void {
+    if (generation !== this.workspaceExclusionGeneration) return
+    const focused = document.activeElement as HTMLElement | null
+    if (!focused || !this.box.contains(focused)) return
+    const focusKey = focused.dataset.settingsFocus
+    // Category tabs and ordinary controls stay mounted while a save that began elsewhere
+    // completes. Only keyed exclusion controls opt into a focused rerender.
+    if (!focusKey) return
+    this.render(focusKey)
   }
 
   private renderStartup(): HTMLElement {

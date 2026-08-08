@@ -21,6 +21,12 @@ function deps(): SettingsDeps {
   }
 }
 
+function deferred(): { promise: Promise<void>; resolve(): void } {
+  let resolve!: () => void
+  const promise = new Promise<void>(done => { resolve = done })
+  return { promise, resolve }
+}
+
 describe('SettingsPanel', () => {
   const baseline = openCount()
   afterEach(() => {
@@ -81,5 +87,42 @@ describe('SettingsPanel', () => {
     await vi.waitFor(() => expect(d.restoreWorkspaceExcludes).toHaveBeenCalledOnce())
     await vi.waitFor(() => expect(document.querySelector<HTMLTextAreaElement>('#workspace-excludes')?.value)
       .toBe('**/.git/**'))
+  })
+
+  it('does not detach a newly focused category or unkeyed control when an older save resolves', async () => {
+    const saves = [deferred(), deferred()]
+    let saveIndex = 0
+    const d = deps()
+    d.setWorkspaceExcludes = vi.fn(() => saves[saveIndex++].promise)
+    const panel = new SettingsPanel(document.body, d)
+    panel.open('folder')
+
+    let editor = document.querySelector<HTMLTextAreaElement>('#workspace-excludes')!
+    editor.value = '**/first/**'; editor.dispatchEvent(new Event('change'))
+    let editorTab = document.querySelector<HTMLButtonElement>('#settings-tab-editor')!
+    editorTab.focus(); editorTab.click()
+    editorTab = document.querySelector<HTMLButtonElement>('#settings-tab-editor')!
+    expect(editorTab).toBe(document.activeElement)
+    saves[0].resolve()
+    await saves[0].promise
+    await Promise.resolve()
+    expect(document.querySelector('#settings-tab-editor')).toBe(editorTab)
+    expect(editorTab).toBe(document.activeElement)
+    expect(editorTab.getAttribute('aria-selected')).toBe('true')
+    expect(document.querySelector('[role="dialog"]')?.contains(document.activeElement)).toBe(true)
+
+    let folderTab = document.querySelector<HTMLButtonElement>('#settings-tab-folder')!
+    folderTab.focus(); folderTab.click()
+    folderTab = document.querySelector<HTMLButtonElement>('#settings-tab-folder')!
+    editor = document.querySelector<HTMLTextAreaElement>('#workspace-excludes')!
+    editor.value = '**/second/**'; editor.dispatchEvent(new Event('change'))
+    const showAll = document.querySelector<HTMLInputElement>('.appearance-row input[type="checkbox"]')!
+    showAll.focus()
+    saves[1].resolve()
+    await saves[1].promise
+    await Promise.resolve()
+    expect(document.querySelector('.appearance-row input[type="checkbox"]')).toBe(showAll)
+    expect(showAll).toBe(document.activeElement)
+    expect(document.querySelector('[role="dialog"]')?.contains(document.activeElement)).toBe(true)
   })
 })
