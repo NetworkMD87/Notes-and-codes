@@ -53,6 +53,7 @@ class FakeApplication {
   readonly child: FakeChild
   private exitsOnClose = false
   private closeFailure?: Error
+  private closeWait?: Promise<void>
 
   constructor(private readonly name: string, pid: number, private readonly log: string[]) {
     this.child = new FakeChild(pid)
@@ -64,9 +65,11 @@ class FakeApplication {
     this.log.push(`close:${this.name}`)
     if (this.closeFailure) throw this.closeFailure
     if (this.exitsOnClose) this.child.exit(0)
+    await this.closeWait
   }
 
   exitOnClose(): void { this.exitsOnClose = true }
+  waitDuringClose(promise: Promise<void>): void { this.closeWait = promise }
   rejectOnClose(error = new Error('close failed')): void { this.closeFailure = error }
 }
 
@@ -230,6 +233,29 @@ describe('SmokeResources', () => {
 
     expect(await smoke.cleanup()).toEqual([])
     expect(log).toEqual(['close:app-a'])
+  })
+
+  it('holds directories for close settlement or the single graceful bound after application exit', async () => {
+    const { smoke, appA, directories, delays, log } = harness()
+    const close = deferred()
+    await smoke.launch({ args: ['app-a'] })
+    directories.returnNext('notes-after-close-123')
+    smoke.tempDir('notes-after-close-')
+    appA.exitOnClose()
+    appA.waitDuringClose(close.promise)
+    delays.hold = true
+
+    let complete = false
+    const cleaning = smoke.cleanup().then(issues => { complete = true; return issues })
+    await flush()
+    expect(appA.child.exitCode).toBe(0)
+    expect(complete).toBe(false)
+    expect(log).toEqual(['close:app-a'])
+
+    delays.releaseNext()
+    expect(await cleaning).toEqual([])
+    expect(log).toEqual(['close:app-a', 'remove:notes-after-close-123'])
+    close.resolve()
   })
 
   it('forces a live application after grace and waits for its real exit', async () => {

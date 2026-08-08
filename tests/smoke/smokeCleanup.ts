@@ -114,15 +114,28 @@ export class SmokeResources {
   private async cleanupProcess(process: TrackedProcess): Promise<CleanupIssue | undefined> {
     if (process.exited.done) return undefined
     let closeError: unknown
+    let closeDone = !process.close
+    let closeSettled = Promise.resolve()
     if (process.close) {
       try {
-        void process.close().catch(error => { closeError = error })
+        closeSettled = process.close().then(
+          () => { closeDone = true },
+          error => { closeError = error; closeDone = true },
+        )
       } catch (error) {
         closeError = error
+        closeDone = true
       }
     }
 
-    if (await this.waitForExit(process.exited)) return undefined
+    await Promise.resolve()
+    const gracefulExit = process.exited.done && closeDone
+      ? true
+      : await Promise.race([
+        Promise.all([process.exited.promise, closeSettled]).then(() => true),
+        this.ops.delay(5_000).then(() => false),
+      ])
+    if (gracefulExit || process.exited.done) return undefined
 
     const pid = process.pid
     if (!isValidPid(pid)) {
