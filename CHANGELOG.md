@@ -4,6 +4,20 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [1.18.1] — 2026-08-08
+
+_Security and release-validation hardening for Markdown preview and export._
+
+### Fixed
+- **Markdown preview and export now use patched sanitizer and linkifier releases.** DOMPurify and
+  linkify-it were raised to their upstream security fixes without changing Markdown rendering,
+  preview, or export behaviour. A lockfile guard prevents either vulnerable resolution returning.
+
+### Changed
+- **Windows release smoke tests now shut down every Electron process they start.** The previous
+  harness could report a teardown failure after application assertions had passed; cleanup now owns
+  the app and helper-process lifecycle with bounded diagnostics. Normal app usage was unaffected.
+
 ## [1.18.0] — 2026-08-07
 
 _Right-click a misspelling for immediate offline corrections, with familiar editing actions kept close at hand._

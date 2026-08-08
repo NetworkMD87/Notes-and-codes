@@ -17,19 +17,23 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — Merge dependency security patch (PR #11), then release v1.18.1
+## ▶ NEXT ACTION — Package and owner-test the v1.18.1 build
 
-🚧 **Production Markdown dependency patch is integrated and awaiting final CI/merge.** PR #11
-updates DOMPurify to `^3.4.13`, overrides `linkify-it` to `^5.0.2`, and adds a lockfile security
-guard. The production audit is clean (`npm audit --omit=dev`: 0 vulnerabilities); the full audit's
-existing 20 findings are confined to the development/build graph and are not being changed with an
-automatic `npm audit fix`.
+🚧 **v1.18.1 local test build — prepared, pending package/install sign-off and release.** PR #11
+shipped the focused Markdown dependency patch to `master`: DOMPurify `3.4.13`, linkify-it `5.0.2`,
+and a lockfile security guard. The npm production graph is audit-clean (`npm audit --omit=dev`: 0
+vulnerabilities). The full audit still reports the existing 20 development/build-graph findings;
+Electron supplies the packaged runtime despite its `devDependencies` classification, so those
+Electron/toolchain advisories remain separate compatibility-tested upgrade work rather than being
+described as closed. No automatic `npm audit fix` was applied.
 
-Current `master` (including PR #12's smoke-teardown reliability work) is merged into the branch. The
-dependency guard, all 766 unit tests, typecheck/build, focused Markdown preview smoke test, full
-normally configured 119-test smoke suite, Windows packaging, audit checks, and final diff checks all
-passed locally. **Remaining:** confirm the integrated-head CI run, mark PR #11 ready, merge it, remove
-its branch/worktree, and use the merged security patch as the basis for a `v1.18.1` patch release.
+The same patch release carries PR #12's smoke-teardown reliability work: the Windows harness now
+owns and closes every Electron process it launches, eliminating the earlier cleanup-only false red;
+normal app usage was never affected. All 766 unit tests, typecheck/build, focused Markdown preview
+smoke, the full normally configured 119-test smoke suite, Windows packaging, audit, diff, independent
+review, PR-head CI, and merge-commit CI gates passed. **Remaining:** package `1.18.1`, install and
+manually validate the real build, mark this entry shipped, tag that exact commit, rebuild final
+artifacts from the tag, publish the GitHub release, and verify it.
 
 **v1.17.0 shipped 2026-08-07 — Fully offline spell checking + startup readiness fix.** Tagged
 `v1.17.0` and published as a GitHub release (installer + portable). Plain-text and Markdown prose
@@ -43,8 +47,8 @@ to five offline replacements, **Ignore for this session**, **Add to personal dic
 Undo/Redo/Cut/Copy/Paste/Select All/Command Palette actions. The clicked word and pane own the
 correction even when the caret was elsewhere; correct words, code, excluded Markdown ranges, editor
 chrome, and keyboard context-menu invocation remain Monaco-owned. `Ctrl+.` stays available. The same
-release also fixes startup file requests being hidden behind a late blank Untitled tab. The dependency
-audit follow-up is now in progress in PR #11, as recorded above.
+release also fixes startup file requests being hidden behind a late blank Untitled tab. Its dependency
+audit follow-up landed in PR #11 and is being released as v1.18.1, as recorded above.
 
 **v1.14.0 shipped 2026-07-24** — tagged `v1.14.0` and published as a GitHub release (installer +
 portable). It carried the first Phase 4 slice (**Settings home + launch-on-login + configurable
