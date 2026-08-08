@@ -17,7 +17,13 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — Design the Microsoft Store / MSIX release
+## ▶ NEXT ACTION — Design the Quality, Scale & Keyboard Access pass
+
+**New ordering (2026-08-08).** The codebase audit found a small group of high-leverage
+responsiveness and accessibility improvements that share UI and workspace-indexing foundations.
+Ship them together before the next platform investment: **① Quality, Scale & Keyboard Access** →
+**② Microsoft Store / MSIX** → **③ Safe Replace in Files** → **④ Snippet placeholders / tabstops**.
+MSIX remains the next platform move; it is intentionally moved one product pass later, not removed.
 
 ✅ **v1.18.1 shipped 2026-08-08 — Markdown dependency security and release-test reliability.**
 Tagged and published as a GitHub release after validation of the installed build. PR #11 raised
@@ -119,8 +125,8 @@ Three follow-ups landed on `master` the same day, all owner-driven from using th
   `contextMenuAction(enabled, isPackaged)` (4 unit cases) so it's covered without any test touching
   `HKCU`.
 
-**Open, none blocking a release** — candidates for the next pass:
-- 🔜 **Microsoft Store release via MSIX** (Phase 4) — the chosen next platform move. A free
+**Open, none blocking a release** — candidates after the next Quality, Scale & Keyboard Access pass:
+- 🔜 **Microsoft Store release via MSIX** (Phase 4) — the chosen next **platform** move. A free
   individual account plus Microsoft's automatic re-signing of MSIX packages kills the SmartScreen
   warning on the Store channel at zero cost, which retires the parked "buy a cert" item. Needs a
   proper design pass first: MSIX virtualises the registry, so the Explorer context menu and
@@ -308,7 +314,8 @@ Neither depends on 3.5 — they can land before, during, or after it._
   cancellation is a main-owned generation counter. Three guards falsified by hand (query escaping,
   UTF-16 decoding, the skip-set). 7 task reviews + a whole-branch review + one fix wave; the reviews
   found **7 defects in the plan itself**, including two tests that could not have failed.
-  _Deferred: regex, replace-across-files, include/exclude globs, streaming results._
+  _Deferred: regex (kept out until its safety/performance model is designed). Include/exclude globs,
+  streaming results, and replace-across-files are sequenced in Phase 4.6 below._
 - ✅ **Sidebar folder panel + recent folders** (**S**, shipped v1.16.0, merged via PR #6;
   eyeballed on the packaged build, tagged and released 2026-07-26) — the
   sidebar edge tab is now always visible, no longer gated on a folder being open. With none open it
@@ -459,7 +466,52 @@ command-registry changes on systems already in place. Shipped as **one release u
   packaged startup** (gated on `app.isPackaged`) so existing users get it without re-toggling the
   setting; the re-apply also self-heals a stale exe path after a reinstall elsewhere._
 
-## 🚧 Phase 4 — Platform & power (3 shipped in v1.14.0 · 1 next up · 3 parked)
+## 🔜 Phase 4.6 — Quality, scale & keyboard access (next product pass)
+
+_A focused product-health pass from the 2026-08-08 audit. The order deliberately fixes the
+shared interaction primitives and large-workspace foundations before adding search scope or bulk
+edits. It is not a redesign: preserve the existing visual system, typed IPC boundary, atomic-save
+semantics, literal-only search safety, and one-owner-per-keybinding rule._
+
+1. **Accessible interaction foundations** (**M**) — make Settings, tabs, custom menus, and overlays
+   fully usable without a mouse or screen. Replace clickable `div` controls with semantic buttons /
+   radio controls; bind every visible label to its input; expose selected state; add a shared dialog
+   primitive with labelling, focus trap, and focus return; and add a semantic tablist with next /
+   previous tab commands and focusable close buttons. Replace the encoding/EOL cycling control with
+   an explicit named picker that explains the next-save effect. Make Command Palette matching fuzzy
+   across labels, command IDs, and shortcut hints. Add keyboard and accessible-name smoke coverage
+   alongside each surface.
+
+2. **Large-workspace responsiveness** (**M**) — keep Quick Open and the folder sidebar instant at
+   the 20k-file cap. Cache normalized quick-open candidates and retain only the best visible results
+   instead of sorting every match; coalesce watcher-driven sidebar/index refreshes into one active
+   pass plus at most one dirty follow-up; and add sensible project excludes beyond `.git` and
+   `node_modules`, with user-visible configuration. Add a 20k-file fixture and before/after latency
+   measurements; do not add broad I/O parallelism without those measurements.
+
+3. **Search, recovery & live-preview efficiency** (**M**) — pass Find in Files cancellation into
+   directory traversal and cancel on overlay close; retain its caps and shared matcher, then measure
+   a bounded file-read pool only if traversal is no longer the bottleneck. Make the open-buffer
+   matcher scan lazily rather than split an entire large buffer. Coalesce session snapshots to one
+   active write plus the newest pending snapshot, flushing the newest state on quit. Debounce visible
+   Markdown preview rendering and load the remaining independent persisted state in parallel.
+   Profile the always-created second Monaco pane before deciding whether lazy creation is worthwhile.
+
+4. **Scoped Find in Files** (**M**, follows 2–3) — add include/exclude globs and a clear scope
+   summary, using the folder-exclude rules from item 2. Preserve literal query matching, encoding
+   detection, stale-buffer de-duplication, cancellation, result caps, and the existing “results
+   truncated” explanation. Streaming results may follow only if the measured search latency still
+   needs it.
+
+5. **Safe Replace in Files** (**L**, after scoped search) — preview a change set; let the user opt
+   files in or out; snapshot history before write; use atomic writes and stale-mtime conflict checks;
+   and make the destructive scope unmistakable. This is deliberately not bundled into scoped search.
+
+**Verification bar:** profile cold start, Quick Open, folder refresh, search cancellation, session
+writes, and visible Markdown preview against representative large-workspace fixtures. Every new
+keyboard path needs a focused smoke assertion that would fail if the binding/semantics disappear.
+
+## 🚧 Phase 4 — Platform & power (3 shipped in v1.14.0 · next platform move after Phase 4.6 · 3 parked)
 
 - 🔜 **Microsoft Store release via MSIX** (**M**) — **replaces the parked "buy a code-signing cert"
   item** (see below). Researched 2026-07-25 against Microsoft's current docs.
@@ -520,7 +572,10 @@ command-registry changes on systems already in place. Shipped as **one release u
   deliberately-cleared hotkey silently reverting to the default on restart (an `||` treating `''`
   as unset), and a malformed `settings.json` hotkey value that could throw during startup instead
   of degrading to a toast.
-- 🧊 **Snippet placeholders / tabstops** (**M–L**) — VS Code-style `$1` + abbreviation expansion.
+- 🧊 **Snippet placeholders / tabstops** (**M–L**, after Phase 4.6 and Safe Replace in Files) —
+  VS Code-style `$1` + abbreviation expansion. Prefer Monaco's snippet support over a bespoke
+  cursor engine; design placeholder syntax, malformed-snippet behaviour, and keyboard navigation
+  before implementation.
 - ✅ **Launch on login** (**S**) — shipped v1.14.0. Opt-in "Launch when Windows starts" in Settings
   ▸ Startup; starts hidden in the system tray so the app is ready to summon instantly. Reconciles
   to the real OS state (`getLoginItemSettings`) on next launch if the entry is disabled behind the
