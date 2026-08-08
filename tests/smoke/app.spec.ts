@@ -1,16 +1,15 @@
-import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import type { Page } from '@playwright/test'
+import { test, expect } from './smokeTest'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
 import { waitForBoot } from './appReady'
 
-test('launches, creates tabs, splits, toggles theme', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({
+test('launches, creates tabs, splits, toggles theme', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({
     args: ['out/main/index.js', `--user-data-dir=${userDataDir}`]
   })
-  try {
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     // clean start = exactly one auto-created tab
@@ -33,16 +32,11 @@ test('launches, creates tabs, splits, toggles theme', async () => {
     await win.locator('#settings .appearance-theme').getByText('Light', { exact: true }).click()
     const theme = await win.evaluate(() => document.body.dataset.theme)
     expect(theme).toBe('light')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('markdown preview toggles and paste-history picker opens', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('markdown preview toggles and paste-history picker opens', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -57,16 +51,11 @@ test('markdown preview toggles and paste-history picker opens', async () => {
     await win.locator('#palette input').fill('Paste from History')
     await win.keyboard.press('Enter')
     await expect(win.locator('.ph-picker')).toBeVisible()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('toolbar split and preview buttons work and show active state', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('toolbar split and preview buttons work and show active state', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#toolbar')).toBeVisible()
 
@@ -81,16 +70,11 @@ test('toolbar split and preview buttons work and show active state', async () =>
     await previewBtn.click()
     await expect(win.locator('#mdpreview')).toBeVisible()
     await expect(previewBtn).toHaveClass(/tb-active/)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('paste-history picker renders above the editor minimap in split mode', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('paste-history picker renders above the editor minimap in split mode', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -117,16 +101,11 @@ test('paste-history picker renders above the editor minimap in split mode', asyn
       return found
     })
     expect(occluders).toEqual([])
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('editor clips to its pane and word-wraps long lines', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('editor clips to its pane and word-wraps long lines', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -140,16 +119,11 @@ test('editor clips to its pane and word-wraps long lines', async () => {
     await win.waitForTimeout(200)
     const visualLines = await win.locator('#paneA .view-line').count()
     expect(visualLines).toBeGreaterThan(1)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('split gutter drag resizes the panes', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('split gutter drag resizes the panes', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -170,16 +144,11 @@ test('split gutter drag resizes the panes', async () => {
     await win.mouse.up()
     const after = (await win.locator('#paneA').boundingBox())!.width
     expect(after).toBeGreaterThan(before + 80)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('snippets save/insert/manage and always-on-top toggle', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('snippets save/insert/manage and always-on-top toggle', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     // Not `#tabbar` — this test toggles always-on-top, which boot() also writes, so it must
     // wait for boot to finish or boot overwrites the toggle. See appReady.ts.
@@ -208,16 +177,11 @@ test('snippets save/insert/manage and always-on-top toggle', async () => {
     await win.waitForTimeout(100)
     const onTop = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isAlwaysOnTop())
     expect(onTop).toBe(true)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('zoom changes font size and the app menu exists', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('zoom changes font size and the app menu exists', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     // Zoom writes fontSize, which boot() also applies (main.ts) — same race as the
     // always-on-top test above, so wait for boot rather than `#tabbar`.
@@ -233,16 +197,11 @@ test('zoom changes font size and the app menu exists', async () => {
     await win.waitForTimeout(150)
     const after = await win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).fontSize)
     expect(parseFloat(after)).toBeGreaterThan(parseFloat(before))
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('settings panel changes theme, accent, and font', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('settings panel changes theme, accent, and font', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win)
@@ -273,18 +232,13 @@ test('settings panel changes theme, accent, and font', async () => {
     await win.waitForTimeout(200)
     const fam2 = await win.locator('#paneA .view-lines').evaluate(el => getComputedStyle(el).fontFamily)
     expect(fam2.toLowerCase()).toContain('plex')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('file history captures versions and restores in-editor', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
+test('file history captures versions and restores in-editor', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
   const filePath = join(userDataDir, 'hist.txt')
   writeFileSync(filePath, 'version-one')
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
-  try {
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await expect(win.locator('#paneA .view-lines')).toContainText('version-one')
@@ -307,15 +261,11 @@ test('file history captures versions and restores in-editor', async () => {
     // restore the oldest (last row, since newest-first) → editor shows version-one
     await win.locator('#file-history .fh-row').last().locator('button', { hasText: 'Restore' }).click()
     await expect(win.locator('#paneA .view-lines')).toContainText('version-one')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('folder mode: restores a folder, shows the tree, quick-open finds a file', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const projectDir = mkdtempSync(join(tmpdir(), 'notes-proj-'))
+test('folder mode: restores a folder, shows the tree, quick-open finds a file', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const projectDir = smoke.tempDir('notes-proj-')
   mkdirSync(join(projectDir, 'src'))
   writeFileSync(join(projectDir, 'src', 'alpha.ts'), '// alpha')
   writeFileSync(join(projectDir, 'readme.md'), '# hi')
@@ -323,8 +273,7 @@ test('folder mode: restores a folder, shows the tree, quick-open finds a file', 
   writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
     restoreFolderOnLaunch: true, lastFolder: projectDir, sidebarVisible: true
   }))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#sidebar')).toBeVisible()
     // top-level entries render (dir 'src' + file 'readme.md')
@@ -337,17 +286,11 @@ test('folder mode: restores a folder, shows the tree, quick-open finds a file', 
     await expect(win.locator('.qo-row', { hasText: 'alpha.ts' })).toBeVisible()
     await win.keyboard.press('Enter')
     await expect(win.locator('.tab', { hasText: 'alpha.ts' })).toBeVisible()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-    rmSync(projectDir, { recursive: true, force: true })
-  }
 })
 
-test('export commands are wired into the File ▸ Export menu', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('export commands are wired into the File ▸ Export menu', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     const labels = await app.evaluate(({ Menu }) => {
@@ -357,18 +300,13 @@ test('export commands are wired into the File ▸ Export menu', async () => {
     })
     expect(labels).toContain('Export to HTML…')
     expect(labels).toContain('Export to PDF…')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Format Document reformats the active buffer via the palette', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fmt-'))
+test('Format Document reformats the active buffer via the palette', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-fmt-')
   const filePath = join(userDataDir, 'ugly.js')
   writeFileSync(filePath, 'const   x=1\nfunction  f( ){return   x}')
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
-  try {
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#paneA .view-lines')).toContainText('const')
 
@@ -382,19 +320,14 @@ test('Format Document reformats the active buffer via the palette', async () => 
     await runCmd('Save')
     await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('const x = 1;')
     await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('function f() {')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('format-on-save reformats on manual Save when enabled', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fos-'))
+test('format-on-save reformats on manual Save when enabled', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-fos-')
   const filePath = join(userDataDir, 'ugly.js')
   writeFileSync(filePath, 'const   y=2')
   writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ formatOnSave: true }))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
-  try {
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#paneA .view-lines')).toContainText('const')
     // Touch the buffer so Save has something to write, then Save via palette.
@@ -405,20 +338,15 @@ test('format-on-save reformats on manual Save when enabled', async () => {
     await win.locator('#palette input').fill('Save')
     await win.keyboard.press('Enter')
     await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('const y = 2;')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('autosave-to-disk writes a named file on blur without a conflict bar', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-as-'))
+test('autosave-to-disk writes a named file on blur without a conflict bar', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-as-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'before')
   // Seed the setting so autosave is on at launch.
   writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ autoSaveToDisk: true }))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
-  try {
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#paneA .view-lines')).toContainText('before')
 
@@ -434,16 +362,11 @@ test('autosave-to-disk writes a named file on blur without a conflict bar', asyn
     // Self-write suppression: the watcher must NOT raise a "changed on disk" bar.
     await win.waitForTimeout(1500)
     await expect(win.locator('#change-bar')).toBeHidden()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings has a Format on save toggle that persists', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-fosui-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings has a Format on save toggle that persists', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-fosui-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()   // renderer ready (keydown listener attached)
     await openSettings(win, 'Editor')
@@ -454,22 +377,17 @@ test('Settings has a Format on save toggle that persists', async () => {
       () => JSON.parse(readFileSync(join(userDataDir, 'settings.json'), 'utf8')).formatOnSave,
       { timeout: 5000 }
     ).toBe(true)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('drag reorders tabs and the new order persists across relaunch', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-reorder-'))
+test('drag reorders tabs and the new order persists across relaunch', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-reorder-')
   // Read the `.tab-title` span specifically, not the whole `.tab` — a tab now also carries a
   // leading `.badge` chip (Task 2: tab language badges), so `.tab`'s raw textContent would
   // include the badge label (e.g. 'txt') concatenated onto the title.
-  const titlesOf = (w: Awaited<ReturnType<Awaited<ReturnType<typeof electron.launch>>['firstWindow']>>) =>
+  const titlesOf = (w: Page) =>
     w.locator('.tab .tab-title').evaluateAll(els => els.map(e => (e.textContent ?? '').replace('×', '').trim()))
 
-  const app1 = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+  const app1 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app1.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -498,12 +416,9 @@ test('drag reorders tabs and the new order persists across relaunch', async () =
 
     await expect.poll(() => titlesOf(win)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
     await win.waitForTimeout(800) // let the debounced session save flush
-  } finally {
     await app1.close()
-  }
 
-  const app2 = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+  const app2 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win2 = await app2.firstWindow()
     await expect(win2.locator('#tabbar')).toBeVisible()
     await expect.poll(() => titlesOf(win2)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
@@ -513,16 +428,11 @@ test('drag reorders tabs and the new order persists across relaunch', async () =
     await expect(win2.locator('.tab')).toHaveCount(2)
     await win2.locator('.tab-add').click()
     await expect(win2.locator('.tab')).toHaveCount(3)
-  } finally {
-    await app2.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('command palette is one stacked box and still runs commands', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('command palette is one stacked box and still runs commands', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
@@ -534,16 +444,11 @@ test('command palette is one stacked box and still runs commands', async () => {
     await win.locator('#palette .palette-box input').fill('New Tab')
     await win.keyboard.press('Enter')
     await expect(win.locator('.tab')).toHaveCount(2)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('status bar sits a half-step below the header, not an accent slab', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('status bar sits a half-step below the header, not an accent slab', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#statusbar')).toBeVisible()
     // The tonal ladder deliberately steps --statusbar-bg away from --bar (one step
@@ -574,16 +479,11 @@ test('status bar sits a half-step below the header, not an accent slab', async (
     //    instead of as a cryptic sum comparison.
     expect(theme, 'this guard assumes the default dark theme').toBe('dark')
     expect(sr + sg + sb).toBeLessThan(hr + hg + hb)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('floating chrome carries an accent border', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('floating chrome carries an accent border', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
@@ -600,16 +500,11 @@ test('floating chrome carries an accent border', async () => {
       return [box, accent]
     })
     expect(border).toBe(accent)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('accent: light preset auto-contrasts text to dark', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-accent-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('accent: light preset auto-contrasts text to dark', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-accent-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win)
@@ -622,30 +517,22 @@ test('accent: light preset auto-contrasts text to dark', async () => {
     const accentText = await win.evaluate(() =>
       getComputedStyle(document.body).getPropertyValue('--accent-text').trim())
     expect(accentText).toBe('#111111')
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('empty states show an inline-SVG glyph', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-empty-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('empty states show an inline-SVG glyph', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-empty-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
     await win.locator('#palette .palette-box input').fill('Manage Snippets')
     await win.keyboard.press('Enter')
     await expect(win.locator('.snip-mgr-empty .empty-glyph svg')).toBeVisible()
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('chrome polish: themed checkbox', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-chrome-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('chrome polish: themed checkbox', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-chrome-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     // a checkbox resolves accent-color to --accent. Appearance has no checkbox at all, so
@@ -658,15 +545,11 @@ test('chrome polish: themed checkbox', async () => {
       return [getComputedStyle(cb).accentColor, accent]
     })
     expect(accentColor).toBe(accent)
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('overlays use the micro-motion entry animation', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('overlays use the micro-motion entry animation', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
@@ -674,16 +557,11 @@ test('overlays use the micro-motion entry animation', async () => {
     const anim = await win.locator('#palette .palette-box')
       .evaluate((el) => getComputedStyle(el).animationName)
     expect(anim).toContain('overlayIn')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('toolbar File History button opens the panel and the regroup keeps all buttons', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('toolbar File History button opens the panel and the regroup keeps all buttons', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#toolbar')).toBeVisible()
 
@@ -700,18 +578,13 @@ test('toolbar File History button opens the panel and the regroup keeps all butt
     await expect(histBtn).toHaveCount(1)
     await histBtn.click()
     await expect(win.locator('#file-history')).toBeVisible()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('opening a diff keeps the current theme (does not flip editors to light)', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-diff-theme-'))
+test('opening a diff keeps the current theme (does not flip editors to light)', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-diff-theme-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'left content')
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
-  try {
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#paneA .view-lines')).toContainText('left content')
 
@@ -738,16 +611,11 @@ test('opening a diff keeps the current theme (does not flip editors to light)', 
         .evaluate(el => getComputedStyle(el).backgroundColor),
       { timeout: 5000 }
     ).toBe('rgb(39, 40, 34)')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('tabs have rounded top corners and square bottoms', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('tabs have rounded top corners and square bottoms', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('.tab')).toHaveCount(1) // the auto-created Untitled-1 tab
 
@@ -759,18 +627,13 @@ test('tabs have rounded top corners and square bottoms', async () => {
     expect(topLeft).not.toBe('0px')
     expect(topRight).not.toBe('0px')
     expect(bottomLeft).toBe('0px')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Revert File discards unsaved edits and reloads from disk', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-revert-'))
+test('Revert File discards unsaved edits and reloads from disk', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-revert-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'original disk content')
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
-  try {
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#paneA .view-lines')).toContainText('original disk content')
 
@@ -790,16 +653,11 @@ test('Revert File discards unsaved edits and reloads from disk', async () => {
     // Editor is back to the on-disk content; the edit is gone.
     await expect(win.locator('#paneA .view-lines')).toContainText('original disk content')
     await expect(win.locator('#paneA .view-lines')).not.toContainText('my unsaved edit')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Revert File is wired into the File menu', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-revertmenu-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Revert File is wired into the File menu', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-revertmenu-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     const labels = await app.evaluate(({ Menu }) => {
@@ -807,9 +665,4 @@ test('Revert File is wired into the File menu', async () => {
       return file.submenu!.items.map(i => i.label)
     })
     expect(labels).toContain('Revert File')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
-

@@ -1,16 +1,17 @@
-import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { type ElectronApplication, type Page } from '@playwright/test'
+import { test, expect } from './smokeTest'
+import type { SmokeResources } from './smokeCleanup'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { tmpdir } from 'node:os'
 import { openSettings } from './settingsHelper'
 
-async function launch(userDataDir: string, filePath?: string): Promise<{
+async function launch(smoke: SmokeResources, userDataDir: string, filePath?: string): Promise<{
   app: ElectronApplication
   win: Page
 }> {
   const args = ['out/main/index.js', `--user-data-dir=${userDataDir}`]
   if (filePath) args.push(filePath)
-  const app = await electron.launch({ args })
+  const app = await smoke.launch({ args })
   const win = await app.firstWindow()
   await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
   if (filePath) {
@@ -22,22 +23,22 @@ async function launch(userDataDir: string, filePath?: string): Promise<{
   return { app, win }
 }
 
-async function launchWithHungSpellWorker(userDataDir: string): Promise<{
+async function launchWithHungSpellWorker(smoke: SmokeResources, userDataDir: string): Promise<{
   app: ElectronApplication
   win: Page
 }> {
-  const app = await electron.launch({
+  const app = await smoke.launch({
     args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
     env: { ...process.env, NC_HEADLESS: '1', NC_TEST_HANG_SPELL_WORKER: '1' } as Record<string, string>,
   })
   return { app, win: await app.firstWindow() }
 }
 
-async function launchWithFailedSpellWorkerConstruction(userDataDir: string, filePath: string): Promise<{
+async function launchWithFailedSpellWorkerConstruction(smoke: SmokeResources, userDataDir: string, filePath: string): Promise<{
   app: ElectronApplication
   win: Page
 }> {
-  const app = await electron.launch({
+  const app = await smoke.launch({
     args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath],
     env: {
       ...process.env,
@@ -53,11 +54,11 @@ async function launchWithFailedSpellWorkerConstruction(userDataDir: string, file
   return { app, win }
 }
 
-async function launchWithNetworkBlock(userDataDir: string, filePath: string): Promise<{
+async function launchWithNetworkBlock(smoke: SmokeResources, userDataDir: string, filePath: string): Promise<{
   app: ElectronApplication
   win: Page
 }> {
-  const app = await electron.launch({
+  const app = await smoke.launch({
     args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath],
     env: {
       ...process.env,
@@ -70,13 +71,13 @@ async function launchWithNetworkBlock(userDataDir: string, filePath: string): Pr
   return { app, win }
 }
 
-async function launchHeadless(userDataDir: string, filePath?: string): Promise<{
+async function launchHeadless(smoke: SmokeResources, userDataDir: string, filePath?: string): Promise<{
   app: ElectronApplication
   win: Page
 }> {
   const args = ['out/main/index.js', `--user-data-dir=${userDataDir}`]
   if (filePath) args.push(filePath)
-  const app = await electron.launch({
+  const app = await smoke.launch({
     args,
     env: { ...process.env, NC_HEADLESS: '1' } as Record<string, string>,
   })
@@ -172,28 +173,22 @@ async function useReplacement(win: Page, replacement: string, pane = '#paneA'): 
   await win.keyboard.press('Enter')
 }
 
-test('a non-responsive spell worker does not block app boot', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-hung-'))
-  const { app, win } = await launchWithHungSpellWorker(userDataDir)
-  try {
+test('a non-responsive spell worker does not block app boot', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-hung-')
+  const { app, win } = await launchWithHungSpellWorker(smoke, userDataDir)
     expect(new URL(win.url()).searchParams.get('nc-spell-worker')).toBe('hang')
     await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
     await replaceEditorText(win, 'speling remains editable')
     await expect(win.locator('#paneA .view-lines')).toContainText('speling remains editable')
     await win.waitForTimeout(700)
     await expect(spellErrors(win)).toHaveCount(0)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('a spell worker constructor failure cannot become a session restore failure or block editing', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-constructor-'))
+test('a spell worker constructor failure cannot become a session restore failure or block editing', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-constructor-')
   const filePath = join(userDataDir, 'constructor.txt')
   writeFileSync(filePath, 'ordinary text')
-  const { app, win } = await launchWithFailedSpellWorkerConstruction(userDataDir, filePath)
-  try {
+  const { app, win } = await launchWithFailedSpellWorkerConstruction(smoke, userDataDir, filePath)
     await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
     await expect(win.locator('.toast--warning')).toHaveCount(1)
     await expect(win.locator('.toast--warning')).not.toContainText('ordinary text')
@@ -203,18 +198,13 @@ test('a spell worker constructor failure cannot become a session restore failure
     await win.locator('#palette input').fill('Save')
     await win.keyboard.press('Enter')
     await expect.poll(() => readFileSync(filePath, 'utf8')).toBe('editing and saving still work')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('a first worker crash warns once, recovers, and never blocks editing or saving', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-recover-'))
+test('a first worker crash warns once, recovers, and never blocks editing or saving', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-recover-')
   const filePath = join(userDataDir, 'recover.txt')
   writeFileSync(filePath, 'ordinary text')
-  const { app, win } = await launchHeadless(userDataDir, filePath)
-  try {
+  const { app, win } = await launchHeadless(smoke, userDataDir, filePath)
     expect(new URL(win.url()).searchParams.get('nc-headless')).toBe('1')
     await win.waitForTimeout(700)
     await win.evaluate(() => window.__ncSpellTest!.failNextWorkerRequest())
@@ -229,14 +219,10 @@ test('a first worker crash warns once, recovers, and never blocks editing or sav
     await win.locator('#palette input').fill('Save')
     await win.keyboard.press('Enter')
     await expect.poll(() => readFileSync(filePath, 'utf8')).toBe('ordinary text saves successfully')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('a held stale response from model A cannot decorate replacement model B', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-stale-'))
+test('a held stale response from model A cannot decorate replacement model B', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-stale-')
   const firstPath = join(userDataDir, 'first.txt')
   const secondPath = join(userDataDir, 'second.txt')
   writeFileSync(firstPath, 'ordinary first')
@@ -249,8 +235,7 @@ test('a held stale response from model A cannot decorate replacement model B', a
     ],
     activeId: 'first',
   }))
-  const { app, win } = await launchHeadless(userDataDir)
-  try {
+  const { app, win } = await launchHeadless(smoke, userDataDir)
     await win.waitForTimeout(700)
     await win.evaluate(() => window.__ncSpellTest!.delayNextChecks(2))
     await replaceEditorText(win, 'speling in model A')
@@ -264,18 +249,13 @@ test('a held stale response from model A cannot decorate replacement model B', a
     await expect(spellErrors(win), 'replacement model B has zero stale decorations before its held response is released').toHaveCount(0)
     await win.evaluate(() => window.__ncSpellTest!.releaseNextCheck())
     await expect(spellErrors(win)).toHaveCount(0)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('UK and US correction workflow succeeds while every external request is actively blocked', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-offline-'))
+test('UK and US correction workflow succeeds while every external request is actively blocked', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-offline-')
   const filePath = join(userDataDir, 'offline.txt')
   writeFileSync(filePath, 'ordinary')
-  const { app, win } = await launchWithNetworkBlock(userDataDir, filePath)
-  try {
+  const { app, win } = await launchWithNetworkBlock(smoke, userDataDir, filePath)
     await openSettings(win, 'Editor')
     await win.getByLabel('Spell check language').selectOption('en-US')
     await win.keyboard.press('Escape')
@@ -296,18 +276,14 @@ test('UK and US correction workflow succeeds while every external request is act
       globalThis as typeof globalThis & { __ncSpellExternalRequests?: string[] }
     ).__ncSpellExternalRequests)
     expect(external).toEqual([])
-  } finally {
     await quitDirtyApp(app, win)
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('decorates exactly one plain-text misspelling after the edit debounce', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-plain-'))
+test('decorates exactly one plain-text misspelling after the edit debounce', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-plain-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'placeholder')
-  const { app, win } = await launch(userDataDir, filePath)
-  try {
+  const { app, win } = await launch(smoke, userDataDir, filePath)
     expect(await app.evaluate(() => (
       globalThis as typeof globalThis & { __ncSpellExternalRequests?: string[] }
     ).__ncSpellExternalRequests)).toBeUndefined()
@@ -315,19 +291,15 @@ test('decorates exactly one plain-text misspelling after the edit debounce', asy
     await replaceEditorText(win, 'This is a speling mistake.')
     await expect(spellErrors(win)).toHaveCount(1)
     await expect(spellErrors(win)).toHaveText('speling')
-  } finally {
     // Bypass the user-facing unsaved-changes prompt during test cleanup.
     await quitDirtyApp(app, win)
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('correct text and keyboard context-menu invocations remain Monaco-owned', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-correct-menu-'))
+test('correct text and keyboard context-menu invocations remain Monaco-owned', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-correct-menu-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'ordinary speling')
-  const { app, win } = await launch(userDataDir, filePath)
-  try {
+  const { app, win } = await launch(smoke, userDataDir, filePath)
     await expect(win.locator('#paneA .view-lines')).toContainText('ordinary speling')
     await expect(
       spellErrors(win),
@@ -344,14 +316,10 @@ test('correct text and keyboard context-menu invocations remain Monaco-owned', a
     await win.keyboard.press('Shift+F10')
     await expect(spellMenu).toBeHidden()
     await expectMonacoContextMenu(win)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('does not decorate the identical word in a TypeScript buffer', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-ts-'))
+test('does not decorate the identical word in a TypeScript buffer', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-ts-')
   const controlPath = join(userDataDir, 'control.txt')
   const typeScriptPath = join(userDataDir, 'note.ts')
   writeFileSync(controlPath, 'speling control')
@@ -364,8 +332,7 @@ test('does not decorate the identical word in a TypeScript buffer', async () => 
     ],
     activeId: 'control',
   }))
-  const { app, win } = await launch(userDataDir)
-  try {
+  const { app, win } = await launch(smoke, userDataDir)
     await win.locator('.tb-btn[title="Toggle split pane"]').click()
     await expect(win.locator('#paneB')).toBeVisible()
     await win.locator('#paneB .monaco-editor').click()
@@ -384,18 +351,13 @@ test('does not decorate the identical word in a TypeScript buffer', async () => 
     ).toHaveCount(0)
     await rightClickRenderedText(win, 'speling', 0, '#paneB')
     await expectMonacoContextMenu(win)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('checks Markdown prose but excludes inline and fenced code', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-md-'))
+test('checks Markdown prose but excludes inline and fenced code', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-md-')
   const filePath = join(userDataDir, 'note.md')
   writeFileSync(filePath, 'speling prose\n\n`speling`\n\n```ts\nspeling\n```')
-  const { app, win } = await launch(userDataDir, filePath)
-  try {
+  const { app, win } = await launch(smoke, userDataDir, filePath)
     await expect(win.locator('#paneA .view-lines')).toContainText('speling')
 
     await expect(
@@ -407,18 +369,13 @@ test('checks Markdown prose but excludes inline and fenced code', async () => {
     // tokenizes the earlier inline-code line into nested spans.
     await rightClickRenderedText(win, 'speling', -1)
     await expectMonacoContextMenu(win)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Quick Fix replaces one occurrence as one undoable edit', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-fix-'))
+test('Quick Fix replaces one occurrence as one undoable edit', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-fix-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'speling and speling')
-  const { app, win } = await launch(userDataDir, filePath)
-  try {
+  const { app, win } = await launch(smoke, userDataDir, filePath)
     await expect(spellErrors(win)).toHaveCount(2)
     await win.locator('#paneA .monaco-editor').click()
     await win.keyboard.press('Control+Home')
@@ -437,19 +394,15 @@ test('Quick Fix replaces one occurrence as one undoable edit', async () => {
     await win.keyboard.press('Control+Z')
     await expect(win.locator('#paneA .view-lines')).toContainText('speling and speling')
     await expect(spellErrors(win)).toHaveCount(2)
-  } finally {
     // Undo restores the bytes but the buffer remains dirty until saved.
     await quitDirtyApp(app, win)
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('right-clicking an underline replaces the clicked occurrence as one undoable edit', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-pointer-fix-'))
+test('right-clicking an underline replaces the clicked occurrence as one undoable edit', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-pointer-fix-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'speling and speling')
-  const { app, win } = await launch(userDataDir, filePath)
-  try {
+  const { app, win } = await launch(smoke, userDataDir, filePath)
     await expect(spellErrors(win)).toHaveCount(2)
     await win.locator('#paneA .monaco-editor').click()
     await win.keyboard.press('Control+End')
@@ -495,18 +448,14 @@ test('right-clicking an underline replaces the clicked occurrence as one undoabl
     await win.keyboard.press('Control+Z')
     await expect(win.locator('#paneA .view-lines')).toContainText('speling and speling')
     await expect(spellErrors(win)).toHaveCount(2)
-  } finally {
     await quitDirtyApp(app, win)
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('spell-aware Cut removes the selected misspelling and writes it to the system clipboard', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-cut-'))
+test('spell-aware Cut removes the selected misspelling and writes it to the system clipboard', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-cut-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'speling and speling')
-  const { app, win } = await launch(userDataDir, filePath)
-  try {
+  const { app, win } = await launch(smoke, userDataDir, filePath)
     await expect(spellErrors(win)).toHaveCount(2)
     await selectFirstMisspelling(win)
     await useRightClickSpellAction(win, 'Cut')
@@ -518,18 +467,14 @@ test('spell-aware Cut removes the selected misspelling and writes it to the syst
     await expect(spellErrors(win)).toHaveCount(1)
     await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText()))
       .toBe('speling')
-  } finally {
     await quitDirtyApp(app, win)
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('spell-aware Paste replaces the selected misspelling from the system clipboard', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-paste-'))
+test('spell-aware Paste replaces the selected misspelling from the system clipboard', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-paste-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'speling and speling')
-  const { app, win } = await launch(userDataDir, filePath)
-  try {
+  const { app, win } = await launch(smoke, userDataDir, filePath)
     await expect(spellErrors(win)).toHaveCount(2)
     await app.evaluate(({ clipboard }) => clipboard.writeText('corrected'))
     await selectFirstMisspelling(win)
@@ -540,14 +485,11 @@ test('spell-aware Paste replaces the selected misspelling from the system clipbo
       'Paste replaces the selected first misspelling in the real buffer',
     ).toHaveText('corrected and speling')
     await expect(spellErrors(win)).toHaveCount(1)
-  } finally {
     await quitDirtyApp(app, win)
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('both visible split panes hold independent spell decorations', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-split-'))
+test('both visible split panes hold independent spell decorations', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-split-')
   const firstPath = join(userDataDir, 'first.txt')
   const secondPath = join(userDataDir, 'second.txt')
   writeFileSync(firstPath, 'speling one')
@@ -560,8 +502,7 @@ test('both visible split panes hold independent spell decorations', async () => 
     ],
     activeId: 'first',
   }))
-  const { app, win } = await launch(userDataDir)
-  try {
+  const { app, win } = await launch(smoke, userDataDir)
     await expect(spellErrors(win, '#paneA')).toHaveCount(1)
     await win.locator('.tb-btn[title="Toggle split pane"]').click()
     await expect(win.locator('#paneB')).toBeVisible()
@@ -581,18 +522,14 @@ test('both visible split panes hold independent spell decorations', async () => 
     await expect(win.locator('#paneB .view-lines')).toContainText('spelling two')
     await expect(spellErrors(win, '#paneA')).toHaveCount(1)
     await expect(spellErrors(win, '#paneB')).toHaveCount(0)
-  } finally {
     await quitDirtyApp(app, win)
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('disabling clears spell decorations immediately and enabling restores them', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-toggle-'))
+test('disabling clears spell decorations immediately and enabling restores them', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-toggle-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'speling')
-  const { app, win } = await launch(userDataDir, filePath)
-  try {
+  const { app, win } = await launch(smoke, userDataDir, filePath)
     await expect(spellErrors(win)).toHaveCount(1)
     await openSettings(win, 'Editor')
     const toggle = win.locator('.appearance-row', {
@@ -603,14 +540,10 @@ test('disabling clears spell decorations immediately and enabling restores them'
     await expect(spellErrors(win)).toHaveCount(0)
     await toggle.check()
     await expect(spellErrors(win)).toHaveCount(1)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('a personal word clears case variants, persists, and removal rechecks the document', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-personal-'))
+test('a personal word clears case variants, persists, and removal rechecks the document', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-personal-')
   const filePath = join(userDataDir, 'note.txt')
   // `zzzxqv` is a deliberately unfiltered non-word absent from both bundled dictionaries. It
   // stays misspelled after saving Openaiish, so its positive decoration after relaunch is the
@@ -618,8 +551,7 @@ test('a personal word clears case variants, persists, and removal rechecks the d
   writeFileSync(filePath, 'Openaiish openaiish zzzxqv')
   let app: ElectronApplication
   let win: Page
-  ;({ app, win } = await launch(userDataDir, filePath))
-  try {
+  ;({ app, win } = await launch(smoke, userDataDir, filePath))
     const personalErrors = () => spellErrors(win).filter({ hasText: /^openaiish$/i })
     const controlError = () => spellErrors(win).filter({ hasText: 'zzzxqv' })
     await expect(personalErrors()).toHaveCount(2)
@@ -629,7 +561,7 @@ test('a personal word clears case variants, persists, and removal rechecks the d
     await expect(controlError()).toHaveCount(1)
     await app.close()
 
-    ;({ app, win } = await launch(userDataDir, filePath))
+    ;({ app, win } = await launch(smoke, userDataDir, filePath))
     // Do not use a fixed delay plus zero decorations: boot can finish before async dictionary
     // initialization, making "nothing yet" pass for the wrong reason. The control word must
     // decorate first; only then is absence of the two persisted variants meaningful.
@@ -644,35 +576,26 @@ test('a personal word clears case variants, persists, and removal rechecks the d
     await expect(row).toHaveCount(0)
     await expect(personalErrors()).toHaveCount(2)
     await expect(controlError()).toHaveCount(1)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Ignore for this session clears case variants but does not survive relaunch', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-ignore-'))
+test('Ignore for this session clears case variants but does not survive relaunch', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-ignore-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'Openaiish openaiish')
   let app: ElectronApplication
   let win: Page
-  ;({ app, win } = await launch(userDataDir, filePath))
-  try {
+  ;({ app, win } = await launch(smoke, userDataDir, filePath))
     await expect(spellErrors(win)).toHaveCount(2)
     await useRightClickSpellAction(win, 'Ignore for this session')
     await expect(spellErrors(win)).toHaveCount(0)
     await app.close()
 
-    ;({ app, win } = await launch(userDataDir, filePath))
+    ;({ app, win } = await launch(smoke, userDataDir, filePath))
     await expect(spellErrors(win)).toHaveCount(2)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('switching UK and US rechecks both visible split panes', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-spell-locale-split-'))
+test('switching UK and US rechecks both visible split panes', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-spell-locale-split-')
   const firstPath = join(userDataDir, 'british.txt')
   const secondPath = join(userDataDir, 'american.txt')
   writeFileSync(firstPath, 'colour')
@@ -685,8 +608,7 @@ test('switching UK and US rechecks both visible split panes', async () => {
     ],
     activeId: 'british',
   }))
-  const { app, win } = await launch(userDataDir)
-  try {
+  const { app, win } = await launch(smoke, userDataDir)
     await win.locator('.tb-btn[title="Toggle split pane"]').click()
     await win.locator('#paneB .monaco-editor').click()
     await win.locator('.tab', { hasText: 'american.txt' }).click()
@@ -699,8 +621,4 @@ test('switching UK and US rechecks both visible split panes', async () => {
     await language.selectOption('en-US')
     await expect(spellErrors(win, '#paneA')).toHaveCount(1)
     await expect(spellErrors(win, '#paneB')).toHaveCount(0)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
