@@ -58,6 +58,8 @@ test('the keyboard-owned folder switcher menu navigates and restores focus', asy
     }) as typeof window.addEventListener
   })
   const opener = win.getByRole('button', { name: /switch folder/i })
+  const originalOpener = await opener.elementHandle()
+  expect(originalOpener).not.toBeNull()
   const menu = win.getByRole('menu')
   const openMenuFromKeyboard = async () => {
     await expect.poll(async () => {
@@ -75,7 +77,7 @@ test('the keyboard-owned folder switcher menu navigates and restores focus', asy
   await menu.getByRole('menuitem').first().press('End')
   const closeItem = menu.getByRole('menuitem', { name: 'Close Folder' })
   await expect(closeItem).toBeFocused()
-  await expect(opener).toBeAttached()
+  expect(await originalOpener!.evaluate(element => element.isConnected)).toBe(true)
   await closeItem.press('Escape')
   await expect(opener).toBeFocused()
   await openMenuFromKeyboard()
