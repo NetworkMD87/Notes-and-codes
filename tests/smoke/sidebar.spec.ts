@@ -43,6 +43,27 @@ test('the sidebar header switches folders from the recent list', async ({ smoke 
     await expect(win.locator('#sidebar .sb-header .sb-label')).toHaveText(basename(other))
 })
 
+test('the keyboard-owned folder switcher menu navigates and restores focus', async ({ smoke }) => {
+  const { userDataDir } = seededFolder(smoke)
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  const opener = win.getByRole('button', { name: /switch folder/i })
+  await opener.focus(); await opener.press('Enter')
+  const menu = win.getByRole('menu')
+  await expect(menu).toBeVisible()
+  await expect(menu.getByRole('menuitem').first()).toBeFocused()
+  await win.keyboard.press('ArrowDown')
+  await expect(menu.getByRole('menuitem', { name: 'Close Folder' })).toBeFocused()
+  await win.keyboard.press('Home')
+  await expect(menu.getByRole('menuitem').first()).toBeFocused()
+  await win.keyboard.press('End')
+  await expect(menu.getByRole('menuitem', { name: 'Close Folder' })).toBeFocused()
+  await win.keyboard.press('Escape')
+  await expect(opener).toBeFocused()
+  await opener.press('Enter'); await win.keyboard.press('End'); await win.keyboard.press('Enter')
+  await expect(win.getByRole('button', { name: /open folder/i })).toBeVisible()
+})
+
 test('nested sidebar rows carry a --depth for indent guides', async ({ smoke }) => {
   const { userDataDir, projectDir } = seededFolder(smoke)
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })

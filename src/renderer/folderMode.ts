@@ -34,7 +34,7 @@ export class FolderMode {
       loadChildren: (p) => this.loadChildren(p),
       openFile: d.openFile,
       onContext: (entry, x, y) => this.contextMenu(entry, x, y),
-      onHeaderClick: (x, y) => void this.folderMenu(x, y)
+      onHeaderClick: (x, y, keyboardOpener) => void this.folderMenu(x, y, keyboardOpener)
     })
     this.quick = new QuickOpen(document.getElementById('app')!, {
       files: () => this.index,
@@ -115,7 +115,7 @@ export class FolderMode {
   /** The sidebar header doubles as a folder switcher: recents (minus the open one), then the
    *  same two actions the File menu offers. Reuses showContextMenu rather than adding a new
    *  overlay component. */
-  private async folderMenu(x: number, y: number): Promise<void> {
+  private async folderMenu(x: number, y: number, keyboardOpener?: HTMLElement): Promise<void> {
     const recents = menuEntries(await window.api.loadRecentFolders(), this.model.root)
     const items: ContextMenuEntry[] = recents.map(p => ({
       label: splitPath(p).name,
@@ -124,7 +124,7 @@ export class FolderMode {
     if (items.length) items.push({ separator: true })
     items.push({ label: 'Open Folder…', run: () => void this.d.pickFolder() })
     items.push({ label: 'Close Folder', run: () => this.closeFolder() })
-    showContextMenu(x, y, items)
+    showContextMenu(x, y, items, keyboardOpener ? { opener: keyboardOpener, focusFirst: true } : undefined)
   }
 
   /** Reflect the active editor file in the sidebar (highlights its row). No-op with no folder open. */
