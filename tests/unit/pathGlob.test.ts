@@ -24,6 +24,7 @@ describe('compilePathGlobs', () => {
   it('keeps star and question mark inside one path segment', () => {
     const glob = compilePathGlobs(['src/*.ts', 'notes/file?.md'])
     expect(glob.matches('src/a.ts')).toBe(true)
+    expect(glob.matches('src/.ts')).toBe(true)
     expect(glob.matches('src/deep/a.ts')).toBe(false)
     expect(glob.matches('notes/file1.md')).toBe(true)
     expect(glob.matches('notes/file10.md')).toBe(false)
@@ -50,6 +51,8 @@ describe('compilePathGlobs', () => {
     const glob = compilePathGlobs(['{src,test}/**', '[ab].ts', '!secret/**', 'literal\\*.ts'])
     expect(glob.matches('src/a.ts')).toBe(false)
     expect(glob.matches('a.ts')).toBe(false)
+    expect(glob.matches('{src,test}/a.ts')).toBe(true)
+    expect(glob.matches('[ab].ts')).toBe(true)
     expect(glob.matches('secret/a.ts')).toBe(false)
     expect(glob.matches('!secret/a.ts')).toBe(true)
     expect(glob.matches('literal/name.ts')).toBe(true) // backslash normalized as a separator
