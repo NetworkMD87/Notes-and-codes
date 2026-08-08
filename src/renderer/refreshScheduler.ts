@@ -42,11 +42,17 @@ export class RefreshScheduler<T> {
       while (this.dirty) {
         this.dirty = false
         const generation = this.generation
-        const snapshot = this.snapshot()
+        let snapshot: T
+        try {
+          snapshot = this.snapshot()
+        } catch (error) {
+          this.report(error)
+          continue
+        }
         try {
           await this.run({ snapshot, isCurrent: () => generation === this.generation })
         } catch (error) {
-          this.onError(error)
+          this.report(error)
         }
       }
     } finally {
@@ -59,5 +65,13 @@ export class RefreshScheduler<T> {
   private resolveWaiters(): void {
     const waiters = this.waiters.splice(0)
     for (const resolve of waiters) resolve()
+  }
+
+  private report(error: unknown): void {
+    try {
+      this.onError(error)
+    } catch {
+      // Error reporting is best-effort and must not wedge the scheduler.
+    }
   }
 }
