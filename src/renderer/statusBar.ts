@@ -31,7 +31,7 @@ export class StatusBar {
     encoding.setAttribute('aria-describedby', note.id)
     for (const [value, label] of ENCODING_OPTIONS) encoding.add(new Option(label, value))
     encoding.value = info.encoding
-    encoding.onchange = () => this.handlers.onEncoding(encoding.value as Encoding)
+    encoding.onchange = () => this.runChangeAndRestoreFocus(encoding, () => this.handlers.onEncoding(encoding.value as Encoding))
     this.el.appendChild(encoding)
 
     const eol = document.createElement('select')
@@ -40,7 +40,7 @@ export class StatusBar {
     eol.setAttribute('aria-describedby', note.id)
     for (const value of ['LF', 'CRLF'] as const) eol.add(new Option(value, value))
     eol.value = info.eol
-    eol.onchange = () => this.handlers.onEol(eol.value as EolMode)
+    eol.onchange = () => this.runChangeAndRestoreFocus(eol, () => this.handlers.onEol(eol.value as EolMode))
     this.el.appendChild(eol)
 
     this.el.appendChild(note)
@@ -49,5 +49,14 @@ export class StatusBar {
     const state = span(info.dirty ? '● unsaved' : '● saved')
     state.className = 'sb-state' + (info.dirty ? ' sb-dirty' : '')
     this.el.appendChild(state)
+  }
+
+  private runChangeAndRestoreFocus(select: HTMLSelectElement, change: () => void): void {
+    const restoreFocus = document.activeElement === select
+    change()
+    if (!restoreFocus) return
+    const label = select.getAttribute('aria-label')
+    Array.from(this.el.querySelectorAll<HTMLSelectElement>('select'))
+      .find(candidate => candidate.getAttribute('aria-label') === label)?.focus()
   }
 }

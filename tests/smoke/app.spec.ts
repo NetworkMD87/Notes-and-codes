@@ -496,8 +496,15 @@ test('file format selectors update status and rewrite bytes on save', async ({ s
   await expect(encoding).toHaveValue('utf8')
   await expect(eol).toHaveValue('LF')
 
+  await encoding.focus()
+  await win.keyboard.press('ArrowDown')
+  await expect(encoding).toBeFocused()
+  await expect(encoding).toHaveValue('utf8bom')
   await encoding.selectOption('utf16le')
-  await eol.selectOption('CRLF')
+  await eol.focus()
+  await win.keyboard.press('ArrowDown')
+  await expect(eol).toBeFocused()
+  await expect(eol).toHaveValue('CRLF')
 
   await expect(win.locator('#statusbar .sb-dirty')).toContainText('unsaved')
   await expect(win.locator('.tab .tab-title')).toContainText('●')
