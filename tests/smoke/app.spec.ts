@@ -388,6 +388,7 @@ test('drag reorders tabs and the new order persists across relaunch', async ({ s
     w.locator('.tab .tab-title').evaluateAll(els => els.map(e => (e.textContent ?? '').replace('×', '').trim()))
 
   const app1 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  try {
     const win = await app1.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -416,7 +417,9 @@ test('drag reorders tabs and the new order persists across relaunch', async ({ s
 
     await expect.poll(() => titlesOf(win)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
     await win.waitForTimeout(800) // let the debounced session save flush
+  } finally {
     await app1.close()
+  }
 
   const app2 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win2 = await app2.firstWindow()

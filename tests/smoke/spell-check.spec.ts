@@ -256,6 +256,7 @@ test('UK and US correction workflow succeeds while every external request is act
   const filePath = join(userDataDir, 'offline.txt')
   writeFileSync(filePath, 'ordinary')
   const { app, win } = await launchWithNetworkBlock(smoke, userDataDir, filePath)
+  try {
     await openSettings(win, 'Editor')
     await win.getByLabel('Spell check language').selectOption('en-US')
     await win.keyboard.press('Escape')
@@ -276,7 +277,9 @@ test('UK and US correction workflow succeeds while every external request is act
       globalThis as typeof globalThis & { __ncSpellExternalRequests?: string[] }
     ).__ncSpellExternalRequests)
     expect(external).toEqual([])
+  } finally {
     await quitDirtyApp(app, win)
+  }
 })
 
 test('decorates exactly one plain-text misspelling after the edit debounce', async ({ smoke }) => {
@@ -284,6 +287,7 @@ test('decorates exactly one plain-text misspelling after the edit debounce', asy
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'placeholder')
   const { app, win } = await launch(smoke, userDataDir, filePath)
+  try {
     expect(await app.evaluate(() => (
       globalThis as typeof globalThis & { __ncSpellExternalRequests?: string[] }
     ).__ncSpellExternalRequests)).toBeUndefined()
@@ -291,8 +295,10 @@ test('decorates exactly one plain-text misspelling after the edit debounce', asy
     await replaceEditorText(win, 'This is a speling mistake.')
     await expect(spellErrors(win)).toHaveCount(1)
     await expect(spellErrors(win)).toHaveText('speling')
+  } finally {
     // Bypass the user-facing unsaved-changes prompt during test cleanup.
     await quitDirtyApp(app, win)
+  }
 })
 
 test('correct text and keyboard context-menu invocations remain Monaco-owned', async ({ smoke }) => {
@@ -376,6 +382,7 @@ test('Quick Fix replaces one occurrence as one undoable edit', async ({ smoke })
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'speling and speling')
   const { app, win } = await launch(smoke, userDataDir, filePath)
+  try {
     await expect(spellErrors(win)).toHaveCount(2)
     await win.locator('#paneA .monaco-editor').click()
     await win.keyboard.press('Control+Home')
@@ -394,8 +401,10 @@ test('Quick Fix replaces one occurrence as one undoable edit', async ({ smoke })
     await win.keyboard.press('Control+Z')
     await expect(win.locator('#paneA .view-lines')).toContainText('speling and speling')
     await expect(spellErrors(win)).toHaveCount(2)
+  } finally {
     // Undo restores the bytes but the buffer remains dirty until saved.
     await quitDirtyApp(app, win)
+  }
 })
 
 test('right-clicking an underline replaces the clicked occurrence as one undoable edit', async ({ smoke }) => {
@@ -403,6 +412,7 @@ test('right-clicking an underline replaces the clicked occurrence as one undoabl
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'speling and speling')
   const { app, win } = await launch(smoke, userDataDir, filePath)
+  try {
     await expect(spellErrors(win)).toHaveCount(2)
     await win.locator('#paneA .monaco-editor').click()
     await win.keyboard.press('Control+End')
@@ -448,7 +458,9 @@ test('right-clicking an underline replaces the clicked occurrence as one undoabl
     await win.keyboard.press('Control+Z')
     await expect(win.locator('#paneA .view-lines')).toContainText('speling and speling')
     await expect(spellErrors(win)).toHaveCount(2)
+  } finally {
     await quitDirtyApp(app, win)
+  }
 })
 
 test('spell-aware Cut removes the selected misspelling and writes it to the system clipboard', async ({ smoke }) => {
@@ -456,6 +468,7 @@ test('spell-aware Cut removes the selected misspelling and writes it to the syst
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'speling and speling')
   const { app, win } = await launch(smoke, userDataDir, filePath)
+  try {
     await expect(spellErrors(win)).toHaveCount(2)
     await selectFirstMisspelling(win)
     await useRightClickSpellAction(win, 'Cut')
@@ -467,7 +480,9 @@ test('spell-aware Cut removes the selected misspelling and writes it to the syst
     await expect(spellErrors(win)).toHaveCount(1)
     await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText()))
       .toBe('speling')
+  } finally {
     await quitDirtyApp(app, win)
+  }
 })
 
 test('spell-aware Paste replaces the selected misspelling from the system clipboard', async ({ smoke }) => {
@@ -475,6 +490,7 @@ test('spell-aware Paste replaces the selected misspelling from the system clipbo
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'speling and speling')
   const { app, win } = await launch(smoke, userDataDir, filePath)
+  try {
     await expect(spellErrors(win)).toHaveCount(2)
     await app.evaluate(({ clipboard }) => clipboard.writeText('corrected'))
     await selectFirstMisspelling(win)
@@ -485,7 +501,9 @@ test('spell-aware Paste replaces the selected misspelling from the system clipbo
       'Paste replaces the selected first misspelling in the real buffer',
     ).toHaveText('corrected and speling')
     await expect(spellErrors(win)).toHaveCount(1)
+  } finally {
     await quitDirtyApp(app, win)
+  }
 })
 
 test('both visible split panes hold independent spell decorations', async ({ smoke }) => {
@@ -503,6 +521,7 @@ test('both visible split panes hold independent spell decorations', async ({ smo
     activeId: 'first',
   }))
   const { app, win } = await launch(smoke, userDataDir)
+  try {
     await expect(spellErrors(win, '#paneA')).toHaveCount(1)
     await win.locator('.tb-btn[title="Toggle split pane"]').click()
     await expect(win.locator('#paneB')).toBeVisible()
@@ -522,7 +541,9 @@ test('both visible split panes hold independent spell decorations', async ({ smo
     await expect(win.locator('#paneB .view-lines')).toContainText('spelling two')
     await expect(spellErrors(win, '#paneA')).toHaveCount(1)
     await expect(spellErrors(win, '#paneB')).toHaveCount(0)
+  } finally {
     await quitDirtyApp(app, win)
+  }
 })
 
 test('disabling clears spell decorations immediately and enabling restores them', async ({ smoke }) => {
