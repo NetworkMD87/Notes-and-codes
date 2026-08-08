@@ -48,6 +48,7 @@ import { PersonalDictionaryPanel } from './personalDictionaryPanel'
 import { resolveSpellLocale } from '../shared/spellText'
 import type { ResolvedSpellLocale } from '../shared/spell'
 import { StartupOpenQueue } from './startupOpenQueue'
+import { hasOpenDialog } from './dialogController'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -892,7 +893,8 @@ registerCommands({
 
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'PageUp' || e.key === 'PageDown')) {
-    e.preventDefault(); switchRelativeTab(e.key === 'PageUp' ? -1 : 1)
+    e.preventDefault()
+    if (!hasOpenDialog()) switchRelativeTab(e.key === 'PageUp' ? -1 : 1)
   }
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }

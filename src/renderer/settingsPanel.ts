@@ -290,7 +290,8 @@ export class SettingsPanel {
     const heading = document.createElement('h3'); heading.textContent = 'Startup'
     const login = this.checkboxRow('Launch when Windows starts (opens hidden in the tray)', this.d.openAtLogin(), on => this.d.setOpenAtLogin(on))
     const hotkey = document.createElement('div'); hotkey.className = 'appearance-row'
-    const hotkeyLabel = document.createElement('span'); hotkeyLabel.textContent = 'Summon hotkey'
+    const hotkeyLabel = document.createElement('span'); hotkeyLabel.id = 'summon-hotkey-label'; hotkeyLabel.textContent = 'Summon hotkey'
+    hotkey.setAttribute('role', 'group'); hotkey.setAttribute('aria-labelledby', hotkeyLabel.id)
     const chips = document.createElement('div'); chips.className = 'hk-chips'
     const parts = formatAccel(this.d.globalHotkey())
     if (parts.length === 0) {

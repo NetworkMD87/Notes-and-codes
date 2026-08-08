@@ -28,6 +28,15 @@ export function focusableElements(panel: HTMLElement): HTMLElement[] {
   ))
 }
 
+const dialogStack: DialogController[] = []
+
+function removeFromStack(dialog: DialogController): void {
+  const index = dialogStack.indexOf(dialog)
+  if (index >= 0) dialogStack.splice(index, 1)
+}
+
+export function hasOpenDialog(): boolean { return dialogStack.length > 0 }
+
 export class DialogController {
   private readonly registration = new OverlayRegistration()
   private panel: HTMLElement | null = null
@@ -38,7 +47,6 @@ export class DialogController {
 
   open(options: DialogOpenOptions): void {
     if (!this.opened) this.opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    if (this.panel !== options.panel) this.panel?.removeEventListener('keydown', this.onKeyDown)
     this.panel = options.panel
     this.panel.setAttribute('role', 'dialog')
     this.panel.setAttribute('aria-modal', 'true')
@@ -46,9 +54,9 @@ export class DialogController {
     if (options.describedBy) this.panel.setAttribute('aria-describedby', options.describedBy)
     else this.panel.removeAttribute('aria-describedby')
     this.panel.tabIndex = -1
-    this.panel.removeEventListener('keydown', this.onKeyDown)
-    this.panel.addEventListener('keydown', this.onKeyDown)
     this.opened = true
+    removeFromStack(this)
+    dialogStack.push(this)
     this.registration.open(options.requestClose)
     const target = options.initialFocus && this.panel.contains(options.initialFocus) && usable(options.initialFocus)
       ? options.initialFocus
@@ -59,8 +67,8 @@ export class DialogController {
   close(): void {
     if (!this.opened) return
     this.opened = false
+    removeFromStack(this)
     this.registration.release()
-    this.panel?.removeEventListener('keydown', this.onKeyDown)
     const opener = this.opener
     this.panel = null; this.opener = null
     if (usable(opener)) opener.focus()
@@ -69,7 +77,7 @@ export class DialogController {
 
   isOpen(): boolean { return this.opened }
 
-  private readonly onKeyDown = (event: KeyboardEvent): void => {
+  containTab(event: KeyboardEvent): void {
     if (event.key !== 'Tab' || !this.panel) return
     const items = focusableElements(this.panel)
     if (!items.length) { event.preventDefault(); this.panel.focus(); return }
@@ -81,3 +89,11 @@ export class DialogController {
     }
   }
 }
+
+// One capture-phase Tab owner keeps containment alive even when a rerender removes the focused
+// control and the browser falls back to <body>. Only the topmost nested dialog may react.
+function handleDialogTab(event: KeyboardEvent): void {
+  if (event.key === 'Tab') dialogStack[dialogStack.length - 1]?.containTab(event)
+}
+
+if (typeof window !== 'undefined') window.addEventListener('keydown', handleDialogTab, true)

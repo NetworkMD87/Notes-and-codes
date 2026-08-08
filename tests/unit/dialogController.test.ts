@@ -61,6 +61,37 @@ describe('DialogController', () => {
     h.first.remove(); key(h.panel, 'Tab'); expect(document.activeElement).toBe(h.panel)
   })
 
+  it('recovers Tab containment after the focused dialog control is removed', () => {
+    const h = fixture()
+    h.controller.open({ panel: h.panel, labelledBy: 'dialog-title', initialFocus: h.first, requestClose: () => h.controller.close() })
+
+    h.first.remove()
+    expect(document.activeElement).toBe(document.body)
+    key(document.body, 'Tab')
+
+    expect(document.activeElement).toBe(h.last)
+  })
+
+  it('routes a body-origin Tab only to the topmost nested dialog', () => {
+    const outer = fixture()
+    outer.controller.open({ panel: outer.panel, labelledBy: 'dialog-title', requestClose: () => outer.controller.close() })
+
+    const innerPanel = document.createElement('section')
+    const innerTitle = document.createElement('h2'); innerTitle.id = 'inner-dialog-title'; innerTitle.textContent = 'Inner'
+    const innerFirst = document.createElement('button'); innerFirst.textContent = 'Inner first'
+    const innerLast = document.createElement('button'); innerLast.textContent = 'Inner last'
+    innerPanel.append(innerTitle, innerFirst, innerLast); document.body.appendChild(innerPanel)
+    const inner = new DialogController(vi.fn())
+    inner.open({ panel: innerPanel, labelledBy: innerTitle.id, initialFocus: innerFirst, requestClose: () => inner.close() })
+
+    innerFirst.remove()
+    expect(document.activeElement).toBe(document.body)
+    key(document.body, 'Tab')
+
+    expect(document.activeElement).toBe(innerLast)
+    expect(document.activeElement).not.toBe(outer.first)
+  })
+
   it('restores a usable opener and falls back when it is detached or hidden', () => {
     const h = fixture()
     h.controller.open({ panel: h.panel, labelledBy: 'dialog-title', requestClose: () => h.controller.close() })

@@ -1,5 +1,5 @@
 import { test, expect } from './smokeTest'
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
 
@@ -53,6 +53,35 @@ test('Settings: dialog semantics, vertical tabs, focus trap, labels, and focus r
   await expect(close).toBeFocused()
   await close.click()
   await expect(opener).toBeFocused()
+})
+
+test('Settings: modal suppresses app-wide tab cycling', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-tab-cycle-')
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [
+      { id: 'a', title: 'a.txt', filePath: null, content: 'tab a content', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'b', title: 'b.txt', filePath: null, content: 'tab b content', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+    ], activeId: 'a',
+  }))
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  const tablist = win.getByRole('tablist', { name: 'Open files' })
+  const firstTab = tablist.getByRole('tab', { name: 'a.txt' })
+  const secondTab = tablist.getByRole('tab', { name: 'b.txt' })
+  await expect(firstTab).toHaveAttribute('aria-selected', 'true')
+
+  await openSettings(win, 'Startup')
+  const dialog = win.getByRole('dialog', { name: 'Settings' })
+  const category = dialog.getByRole('tab', { name: 'Startup' })
+  await category.focus()
+  await win.keyboard.press('Control+PageDown')
+
+  await expect(dialog).toBeVisible()
+  await expect(category).toBeFocused()
+  await expect(firstTab).toHaveAttribute('aria-selected', 'true')
+  await expect(secondTab).toHaveAttribute('aria-selected', 'false')
 })
 
 test('Settings: nav lists categories, detail shows the active one', async ({ smoke }) => {
@@ -391,7 +420,11 @@ test('Settings: recording a hotkey updates the chips and persists', async ({ smo
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
 
-    await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Shift', 'Space'])
+    const hotkeyGroup = win.getByRole('group', { name: 'Summon hotkey' })
+    await expect(hotkeyGroup).toBeVisible()
+    await expect(hotkeyGroup.getByRole('button', { name: 'Record' })).toBeVisible()
+    await expect(hotkeyGroup.getByRole('button', { name: 'Clear' })).toBeVisible()
+    await expect(hotkeyGroup.locator('.hk-chip')).toHaveText(['Ctrl', 'Shift', 'Space'])
 
     await win.locator('.hk-record').click()
     await expect(win.locator('.hk-record')).toHaveText('Press keys…')
