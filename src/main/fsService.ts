@@ -55,9 +55,11 @@ export async function walkFiles(
       const absolutePath = join(path, entry.name)
       const relativePath = workspacePath(root, absolutePath)
       if (matcher.matches(relativePath) || (entry.isDirectory() && matcher.prunes(relativePath))) continue
-      if (files.length >= maxFiles) { truncated = true; return }
       if (entry.isDirectory()) await walk(absolutePath)
-      else files.push(absolutePath)
+      else {
+        if (files.length >= maxFiles) { truncated = true; return }
+        files.push(absolutePath)
+      }
       if (truncated) return
     }
   }

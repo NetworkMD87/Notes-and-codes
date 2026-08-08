@@ -16,11 +16,13 @@ afterEach(() => { rmSync(dir, { recursive: true, force: true }) })
 
 describe('workspace filtering', () => {
   it('filters a lazy directory read relative to the workspace root', async () => {
-    mkdirSync(join(dir, 'src')); mkdirSync(join(dir, 'dist'))
-    writeFileSync(join(dir, 'keep.txt'), ''); writeFileSync(join(dir, 'drop.log'), '')
-    const filter = { ...DEFAULT_FILTER, excludePatterns: ['dist/**', '*.log'] }
-    expect((await readDir(dir, dir, filter)).map(entry => entry.name))
-      .toEqual(['src', 'keep.txt'])
+    const current = join(dir, 'packages', 'app')
+    mkdirSync(join(current, 'dist'), { recursive: true })
+    writeFileSync(join(current, 'dist', 'drop.js'), '')
+    writeFileSync(join(current, 'keep.txt'), '')
+    const filter = { ...DEFAULT_FILTER, excludePatterns: ['packages/*/dist/**'] }
+    expect((await readDir(dir, current, filter)).map(entry => entry.name))
+      .toEqual(['keep.txt'])
   })
 
   it('prunes excluded directory nodes before descending', async () => {
@@ -46,6 +48,23 @@ describe('workspace filtering', () => {
     const result = await walkFiles(dir, DEFAULT_FILTER, { maxFiles: 2 })
     expect(result.files).toHaveLength(2)
     expect(result.truncated).toBe(true)
+  })
+
+  it('does not report truncation for an empty directory after the file cap', async () => {
+    writeFileSync(join(dir, 'a.txt'), '')
+    mkdirSync(join(dir, 'z-empty'))
+    const result = await walkFiles(dir, DEFAULT_FILTER, { maxFiles: 1 })
+    expect(result.files).toEqual([join(dir, 'a.txt')])
+    expect(result.truncated).toBe(false)
+  })
+
+  it('does not report truncation when a directory after the cap contains only excluded files', async () => {
+    writeFileSync(join(dir, 'a.txt'), '')
+    mkdirSync(join(dir, 'z-container', 'dist'), { recursive: true })
+    writeFileSync(join(dir, 'z-container', 'dist', 'ignored.js'), '')
+    const result = await walkFiles(dir, DEFAULT_FILTER, { maxFiles: 1 })
+    expect(result.files).toEqual([join(dir, 'a.txt')])
+    expect(result.truncated).toBe(false)
   })
 
   it('returns an empty lazy read for a missing path', async () => {
