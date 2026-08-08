@@ -27,6 +27,23 @@ test('Escape closes overlays that previously had no Esc handler', async ({ smoke
     await expect(win.locator('#settings')).toBeHidden()
 })
 
+test('Settings recorder consumes its first Escape, then closes and restores toolbar focus', async ({ smoke }) => {
+  const { app } = await launch(smoke)
+  const win = await app.firstWindow()
+  await expect(win.locator('#tabbar')).toBeVisible()
+  const opener = win.getByRole('button', { name: 'Settings' })
+  await opener.focus()
+  await openSettings(win, 'Startup')
+  await win.locator('.hk-record').click()
+  await expect(win.locator('.hk-record')).toHaveText(/^Press keys/)
+  await win.keyboard.press('Escape')
+  await expect(win.getByRole('dialog', { name: 'Settings' })).toBeVisible()
+  await expect(win.locator('.hk-record')).toHaveText('Record')
+  await win.keyboard.press('Escape')
+  await expect(win.getByRole('dialog', { name: 'Settings' })).toBeHidden()
+  await expect(opener).toBeFocused()
+})
+
 test('Escape closes the command palette from any focus', async ({ smoke }) => {
   const { app } = await launch(smoke)
     const win = await app.firstWindow()

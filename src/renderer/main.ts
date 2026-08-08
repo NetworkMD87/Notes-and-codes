@@ -79,6 +79,7 @@ const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) =>
 })
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
+function focusActiveEditor(): void { paneFor(view.focusedPane()).focus() }
 
 function applyHighlightsToPanes(bufferId: string, hs: Highlight[]): void {
   for (const which of ['A', 'B'] as const) {
@@ -691,6 +692,7 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
 document.body.style.setProperty('--hl-cursor', penCursor(highlights.colour()))
 
 const settingsDeps: SettingsDeps = {
+  focusEditor: focusActiveEditor,
   currentThemeId: () => theme.currentId(), currentAccent: () => theme.currentAccent(),
   pickTheme: (id) => theme.pick(id), setAccent: (a) => theme.setAccent(a),
   fontFamily: () => fontFamily, setFontFamily: setFontFamilyState,
