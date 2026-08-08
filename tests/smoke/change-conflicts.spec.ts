@@ -1,17 +1,15 @@
-import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { test, expect } from './smokeTest'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 // Audit Phase 4 — M7: two files changing on disk while dirty must both stay resolvable.
 // Before, the second conflict's bar replaced the first with no way back to it.
 
-test('two on-disk conflicts queue in the change bar, one resolvable at a time', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-conflict-'))
+test('two on-disk conflicts queue in the change bar, one resolvable at a time', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-conflict-')
   const fileA = join(userDataDir, 'a.txt'); writeFileSync(fileA, 'alpha')
   const fileB = join(userDataDir, 'b.txt'); writeFileSync(fileB, 'beta')
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -46,7 +44,4 @@ test('two on-disk conflicts queue in the change bar, one resolvable at a time', 
     // Resolve the second → the bar hides.
     await bar.locator('button', { hasText: 'Keep mine' }).click()
     await expect(bar).toBeHidden()
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })

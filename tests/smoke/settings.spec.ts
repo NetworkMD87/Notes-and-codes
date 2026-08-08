@@ -1,6 +1,5 @@
-import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { test, expect } from './smokeTest'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
 
@@ -10,10 +9,9 @@ const spellToggle = (win: import('@playwright/test').Page) => win.locator(
 
 const spellLanguage = (win: import('@playwright/test').Page) => win.getByLabel('Spell check language')
 
-test('Settings: nav lists categories, detail shows the active one', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-nav-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: nav lists categories, detail shows the active one', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-nav-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win)
@@ -23,16 +21,11 @@ test('Settings: nav lists categories, detail shows the active one', async () => 
     // Appearance is the default category and owns the theme grid
     await expect(win.locator('.settings-detail .appearance-themes')).toBeVisible()
     await expect(win.locator('.settings-detail .appearance-sw')).toBeVisible()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: spell controls show offline defaults and persist enablement and language', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-spell-'))
-  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: spell controls show offline defaults and persist enablement and language', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-spell-')
+  let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     let win = await app.firstWindow()
     await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
     await openSettings(win, 'Editor')
@@ -50,7 +43,7 @@ test('Settings: spell controls show offline defaults and persist enablement and 
     await win.keyboard.press('Escape')
     await app.close()
 
-    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
     await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
     await openSettings(win, 'Editor')
@@ -63,40 +56,30 @@ test('Settings: spell controls show offline defaults and persist enablement and 
     await win.keyboard.press('Escape')
     await app.close()
 
-    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
     await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
     await openSettings(win, 'Editor')
     await expect(spellToggle(win)).toBeChecked()
     await expect(spellLanguage(win)).toHaveValue('en-US')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: Follow Windows resolves a non-English app locale to English (UK)', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-spell-locale-'))
-  const app = await electron.launch({
+test('Settings: Follow Windows resolves a non-English app locale to English (UK)', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-spell-locale-')
+  const app = await smoke.launch({
     args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, '--lang=fr-FR'],
   })
-  try {
     const win = await app.firstWindow()
     await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
     await openSettings(win, 'Editor')
 
     await expect(spellLanguage(win)).toHaveValue('system')
     await expect(win.locator('.spell-settings-resolved')).toHaveText('Currently using English (UK).')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: Interface font sets --ui-font; Editor font is relabeled', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: Interface font sets --ui-font; Editor font is relabeled', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-appear-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Font')
@@ -111,16 +94,11 @@ test('Settings: Interface font sets --ui-font; Editor font is relabeled', async 
     await expect
       .poll(() => win.evaluate(() => getComputedStyle(document.body).getPropertyValue('--ui-font')), { timeout: 3000 })
       .toContain('Fira Code')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: renders landscape — category nav left, detail right', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-cols-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: renders landscape — category nav left, detail right', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-cols-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Appearance')
@@ -133,10 +111,6 @@ test('Settings: renders landscape — category nav left, detail right', async ()
 
     await win.locator('.settings-cat', { hasText: 'Font' }).click()
     await expect(win.locator('.settings-detail .appearance-row', { hasText: 'Interface font' })).toBeVisible()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
 // The hover live-preview is gone (2026-07-26): painting an uncommitted theme meant a
@@ -149,10 +123,9 @@ test('Settings: renders landscape — category nav left, detail right', async ()
 // reinstated preview lands well inside the window. Verified by falsification — restoring
 // `row.onmouseenter = () => this.schedulePreview(t.id)` turns this red on the first
 // assertion.
-test('Settings: hovering a theme row does not change the theme', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-hover-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: hovering a theme row does not change the theme', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-appear-hover-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Appearance')
@@ -172,16 +145,11 @@ test('Settings: hovering a theme row does not change the theme', async () => {
 
     // the active-row highlight never moved off the committed theme either
     await expect(win.locator('.appearance-theme.active')).not.toContainText('Monokai')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: clicking a theme commits it and it survives relaunch', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-commit-'))
-  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: clicking a theme commits it and it survives relaunch', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-appear-commit-')
+  let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     let win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Appearance')
@@ -190,20 +158,15 @@ test('Settings: clicking a theme commits it and it survives relaunch', async () 
     await win.keyboard.press('Escape')
     await app.close()
 
-    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 5000 }).toBe('nord')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: every theme row shows four palette swatches', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-sw-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: every theme row shows four palette swatches', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-appear-sw-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Appearance')
@@ -222,20 +185,15 @@ test('Settings: every theme row shows four palette swatches', async () => {
       'rgb(248, 248, 242)', // #f8f8f2 bar text
       'rgb(249, 38, 114)'   // #f92672 accent
     ])
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
 // The accent swatches are laid out as two EQUAL rows, which is a relationship between two
 // numbers that live apart: the column count in index.html's .appearance-sw rule and the
 // length of ACCENT_PALETTE. Adding a 19th colour would silently produce a ragged last row,
 // so this asserts the division comes out exact rather than asserting either number alone.
-test('Settings: accent swatches fill two equal rows', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-appear-swgrid-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: accent swatches fill two equal rows', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-appear-swgrid-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Appearance')
@@ -253,10 +211,6 @@ test('Settings: accent swatches fill two equal rows', async () => {
     expect(swatches).toBeGreaterThan(0)
     expect(swatches % columns).toBe(0)   // no ragged last row
     expect(swatches / columns).toBe(2)   // and exactly two rows, not one or three
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
 // The old #appearance overlay is gone (Task 3), and the header's ◐ theme button is gone too
@@ -265,10 +219,9 @@ test('Settings: accent swatches fill two equal rows', async () => {
 // Appearance… menu item, both go through the same `openAppearance` alias; these two tests
 // are what keep that alias from silently breaking now that no button exercises it.
 
-test('Settings: palette "Appearance…" command opens Settings on the Appearance category', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-palette-appear-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: palette "Appearance…" command opens Settings on the Appearance category', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-palette-appear-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
@@ -276,16 +229,11 @@ test('Settings: palette "Appearance…" command opens Settings on the Appearance
     await win.keyboard.press('Enter')
     await expect(win.locator('#settings')).toBeVisible()
     await expect(win.locator('.settings-cat.active')).toContainText('Appearance')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: View ▸ Appearance… menu item opens Settings on the Appearance category', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-menu-appear-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: View ▸ Appearance… menu item opens Settings on the Appearance category', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-menu-appear-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     // Real menu click, invoked from the main process the same way clean-quit.spec.ts and
@@ -299,16 +247,11 @@ test('Settings: View ▸ Appearance… menu item opens Settings on the Appearanc
     })
     await expect(win.locator('#settings')).toBeVisible()
     await expect(win.locator('.settings-cat.active')).toContainText('Appearance')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: Integration category holds the "Open with" toggle', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-integration-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: Integration category holds the "Open with" toggle', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-integration-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Integration')
@@ -318,16 +261,11 @@ test('Settings: Integration category holds the "Open with" toggle', async () => 
     const cb = win.locator('.appearance-row', { hasText: 'Open with' }).locator('input[type=checkbox]')
     await expect(cb).toBeVisible()
     await expect(cb).not.toBeChecked()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: gear button and Ctrl+, both open the panel', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-doors-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: gear button and Ctrl+, both open the panel', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-doors-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -338,16 +276,11 @@ test('Settings: gear button and Ctrl+, both open the panel', async () => {
 
     await win.keyboard.press('Control+Comma')
     await expect(win.locator('#settings')).toBeVisible()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: File ▸ Preferences… menu item opens the Settings panel', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-menu-prefs-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: File ▸ Preferences… menu item opens the Settings panel', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-menu-prefs-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     // Real menu click — same technique as the View ▸ Appearance… menu test above.
@@ -358,14 +291,10 @@ test('Settings: File ▸ Preferences… menu item opens the Settings panel', asy
       prefs.click()
     })
     await expect(win.locator('#settings')).toBeVisible()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: Integration checkbox reflects a stored true value', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-integration-true-'))
+test('Settings: Integration checkbox reflects a stored true value', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-integration-true-')
   // Seed the setting directly rather than clicking the checkbox — clicking would fire the
   // real registry write and mutate the developer's own HKCU shell-integration key. This is
   // registry-safe: the startup re-apply (src/main/index.ts:170) is gated on app.isPackaged,
@@ -374,8 +303,7 @@ test('Settings: Integration checkbox reflects a stored true value', async () => 
   // above only proves the default-`false` case, which can't distinguish "reflects the
   // stored setting" from "always renders unchecked").
   writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ contextMenuEnabled: true }))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Integration')
@@ -383,16 +311,11 @@ test('Settings: Integration checkbox reflects a stored true value', async () => 
     const cb = win.locator('.appearance-row', { hasText: 'Open with' }).locator('input[type=checkbox]')
     await expect(cb).toBeVisible()
     await expect(cb).toBeChecked()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: launch-on-login toggle persists across relaunch', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-login-'))
-  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: launch-on-login toggle persists across relaunch', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-login-')
+  let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     let win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
@@ -407,22 +330,17 @@ test('Settings: launch-on-login toggle persists across relaunch', async () => {
     await win.keyboard.press('Escape')
     await app.close()
 
-    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
     await expect(win.locator('.appearance-row', { hasText: 'Launch when Windows starts' })
       .locator('input[type=checkbox]')).toBeChecked()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: recording a hotkey updates the chips and persists', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hotkey-'))
-  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: recording a hotkey updates the chips and persists', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-hotkey-')
+  let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     let win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
@@ -437,21 +355,16 @@ test('Settings: recording a hotkey updates the chips and persists', async () => 
     await win.keyboard.press('Escape')     // closes the panel (not recording any more)
     await app.close()
 
-    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
     await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Alt', 'J'])
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: Escape cancels recording without closing the panel', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hkesc-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: Escape cancels recording without closing the panel', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-hkesc-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
@@ -468,16 +381,11 @@ test('Settings: Escape cancels recording without closing the panel', async () =>
     // Second Escape closes the panel, as normal.
     await win.keyboard.press('Escape')
     await expect(win.locator('#settings')).toBeHidden()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: switching category mid-recording tears down the listener (typing elsewhere still works)', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hknav-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: switching category mid-recording tears down the listener (typing elsewhere still works)', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-hknav-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
@@ -505,16 +413,11 @@ test('Settings: switching category mid-recording tears down the listener (typing
     // And the abandoned recording didn't silently rebind the hotkey from the Font tab either.
     await win.locator('.settings-cat', { hasText: 'Startup' }).click()
     await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Shift', 'Space'])
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: Clear mid-recording tears down the listener too (typing elsewhere still works)', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hkclearmid-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: Clear mid-recording tears down the listener too (typing elsewhere still works)', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-hkclearmid-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
@@ -535,16 +438,11 @@ test('Settings: Clear mid-recording tears down the listener too (typing elsewher
     await loginBox.focus()
     await win.keyboard.press('Space')
     await expect(loginBox).toBeChecked()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: hiding and reshowing the window mid-recording tears down the listener (typing elsewhere still works)', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hkhide-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: hiding and reshowing the window mid-recording tears down the listener (typing elsewhere still works)', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-hkhide-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
@@ -579,16 +477,11 @@ test('Settings: hiding and reshowing the window mid-recording tears down the lis
     await loginBox.focus()
     await win.keyboard.press('Space')
     await expect(loginBox).toBeChecked()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: Clear removes the hotkey entirely and it stays cleared', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-hkclear-'))
-  let app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: Clear removes the hotkey entirely and it stays cleared', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-hkclear-')
+  let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     let win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
@@ -601,21 +494,16 @@ test('Settings: Clear removes the hotkey entirely and it stays cleared', async (
     await app.close()
 
     // Guards the `??` fix from Task 10: a `||` fallback would silently re-bind the default.
-    app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
     await expect(win.locator('.hk-chip')).toHaveCount(0)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Settings: re-entrant open() does not leak an overlayManager registration (Escape keeps working afterwards)', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-settings-reentrant-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Settings: re-entrant open() does not leak an overlayManager registration (Escape keeps working afterwards)', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-reentrant-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -657,8 +545,4 @@ test('Settings: re-entrant open() does not leak an overlayManager registration (
     // overlay ever having been opened.
     await win.keyboard.press('Escape')
     await expect(win.locator('#paneA .cursor')).toHaveCount(1)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })

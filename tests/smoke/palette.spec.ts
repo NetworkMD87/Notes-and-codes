@@ -1,12 +1,8 @@
-import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { test, expect } from './smokeTest'
 
-test('palette shortcut hints render as one kbd chip per key', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-smoke-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('palette shortcut hints render as one kbd chip per key', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-smoke-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
@@ -15,8 +11,4 @@ test('palette shortcut hints render as one kbd chip per key', async () => {
     await expect(chips).toHaveCount(3)
     await expect(chips.nth(0)).toHaveText('Ctrl')
     await expect(chips.nth(2)).toHaveText('S')
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
