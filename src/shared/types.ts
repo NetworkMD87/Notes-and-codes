@@ -250,8 +250,8 @@ export interface Api {
   loadHighlights(path: string): Promise<Highlight[]>
   saveHighlights(path: string, highlights: Highlight[]): Promise<void>
   openFolderDialog(): Promise<string | null>
-  readDir(path: string, showAll: boolean): Promise<DirEntry[]>
-  walkFiles(path: string, showAll: boolean): Promise<WalkResult>
+  readDir(root: string, path: string, filter: WorkspaceFilter): Promise<DirEntry[]>
+  walkFiles(root: string, filter: WorkspaceFilter): Promise<WalkResult>
   searchFiles(req: SearchRequest): Promise<SearchResponse>
   createFile(path: string): Promise<boolean>
   createFolder(path: string): Promise<boolean>

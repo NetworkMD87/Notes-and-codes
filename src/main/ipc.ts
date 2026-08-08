@@ -15,7 +15,7 @@ import { FileHistoryStore } from './fileHistoryStore'
 import { HighlightStore } from './highlightStore'
 import { SpellDictionaryStore } from './spellDictionaryStore'
 import { saveHtml, savePdf } from './exportService'
-import type { SessionData, Settings, EolMode, Encoding, HotkeyResult, SearchRequest } from '../shared/types'
+import type { SessionData, Settings, EolMode, Encoding, HotkeyResult, SearchRequest, WorkspaceFilter } from '../shared/types'
 
 export interface IpcDeps {
   baseDir: string
@@ -127,10 +127,9 @@ export function registerIpc(deps: IpcDeps): void {
     const r = await dialog.showOpenDialog({ properties: ['openDirectory'] })
     return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]
   })
-  handle('dir:read', (_e, path: string, showAll: boolean) =>
-    readDir(path, path, { showAll, excludePatterns: [] }))
-  handle('dir:walk', (_e, root: string, showAll: boolean) =>
-    walkFiles(root, { showAll, excludePatterns: [] }))
+  handle('dir:read', (_e, root: string, path: string, filter: WorkspaceFilter) =>
+    readDir(root, path, filter))
+  handle('dir:walk', (_e, root: string, filter: WorkspaceFilter) => walkFiles(root, filter))
 
   // Cancellation is keyed on a counter OWNED here, not on the renderer-supplied req.searchId.
   // The renderer's own counter restarts at 0 every time the renderer reloads (electron-vite HMR

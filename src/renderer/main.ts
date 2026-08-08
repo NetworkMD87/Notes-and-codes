@@ -5,7 +5,8 @@ import '@fontsource/fira-code/400.css'
 import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/700.css'
 import { installMenuCommands } from './menuCommands'
-import type { Api, Encoding, Settings } from '../shared/types'
+import type { Api, Encoding, Settings, WorkspaceFilter } from '../shared/types'
+import { DEFAULT_WORKSPACE_EXCLUDES, normalizePathGlobs } from '../shared/pathGlob'
 import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
 import { TabBar } from './tabBar'
@@ -239,6 +240,12 @@ function zoomReset(): void { fontSize = 14; applyFontSize(); persistFontSize() }
 let fontFamily = 'JetBrains Mono'
 let fontLigatures = true
 let showAllFiles = false
+let workspaceExcludes: string[] = [...DEFAULT_WORKSPACE_EXCLUDES]
+const workspaceFilter = (): WorkspaceFilter => ({
+  showAll: showAllFiles,
+  excludePatterns: [...workspaceExcludes],
+})
+let folder!: FolderMode
 let restoreFolder = true
 let openAtLogin = false
 let globalHotkey = ''
@@ -314,6 +321,7 @@ async function boot(): Promise<void> {
   uiFontFamily = settings.uiFontFamily ?? 'System'
   fontLigatures = settings.fontLigatures ?? true
   showAllFiles = settings.showAllFiles
+  workspaceExcludes = [...settings.workspaceExcludes]
   restoreFolder = settings.restoreFolderOnLaunch
   openAtLogin = settings.openAtLogin
   globalHotkey = settings.globalHotkey
@@ -709,7 +717,27 @@ const settingsDeps: SettingsDeps = {
   uiFontFamily: () => uiFontFamily, setUiFontFamily: setUiFontFamilyState,
   fontSize: () => fontSize, setFontSize: setFontSizeState,
   showAllFiles: () => showAllFiles,
-  setShowAllFiles: (on) => { showAllFiles = on; void window.api.updateSettings({ showAllFiles: on }) },
+  setShowAllFiles: async (on) => {
+    const saved = await window.api.updateSettings({ showAllFiles: on })
+    showAllFiles = saved.showAllFiles
+    workspaceExcludes = [...saved.workspaceExcludes]
+    await folder.workspaceSettingsChanged()
+  },
+  workspaceExcludes: () => [...workspaceExcludes],
+  setWorkspaceExcludes: async (patterns) => {
+    const saved = await window.api.updateSettings({
+      workspaceExcludes: normalizePathGlobs(patterns),
+    })
+    workspaceExcludes = [...saved.workspaceExcludes]
+    await folder.workspaceSettingsChanged()
+  },
+  restoreWorkspaceExcludes: async () => {
+    const saved = await window.api.updateSettings({
+      workspaceExcludes: [...DEFAULT_WORKSPACE_EXCLUDES],
+    })
+    workspaceExcludes = [...saved.workspaceExcludes]
+    await folder.workspaceSettingsChanged()
+  },
   restoreFolder: () => restoreFolder,
   setRestoreFolder: (on) => { restoreFolder = on; void window.api.updateSettings({ restoreFolderOnLaunch: on }) },
   autoSaveToDisk: () => autoSaveToDisk,
@@ -803,11 +831,12 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
 }, focusActiveEditor)
 const openHistory = () => void fileHistory.open()
 
-const folder = new FolderMode({
+folder = new FolderMode({
   sidebarEl: document.getElementById('sidebar')!,
   mainEl: document.getElementById('main')!,
   openFile: (path) => void openPath(path),
   focusEditor: focusActiveEditor,
+  filter: workspaceFilter,
   pickFolder: () => openFolderFromDialog(),
   activePath: () => {
     const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null
@@ -847,7 +876,7 @@ const palette = new CommandPalette(focusActiveEditor)
 const helpOverlay = new HelpOverlay(focusActiveEditor)
 const findInFiles = new FindInFiles(document.getElementById('app')!, {
   root: () => folder.root(),
-  filter: () => ({ showAll: showAllFiles, excludePatterns: [] }),
+  filter: workspaceFilter,
   buffers: () => manager.list().map(b => ({ filePath: b.filePath, title: b.title, content: b.content })),
   openMatch: (path, title, line, column, length) => {
     void (async () => {

@@ -21,6 +21,9 @@ export interface SettingsDeps {
   setFontSize: (px: number) => void
   showAllFiles: () => boolean
   setShowAllFiles: (on: boolean) => void
+  workspaceExcludes: () => string[]
+  setWorkspaceExcludes: (patterns: string[]) => Promise<void>
+  restoreWorkspaceExcludes: () => Promise<void>
   restoreFolder: () => boolean
   setRestoreFolder: (on: boolean) => void
   autoSaveToDisk: () => boolean
@@ -282,6 +285,30 @@ export class SettingsPanel {
     const wrap = document.createElement('div')
     const heading = document.createElement('h3'); heading.textContent = 'Folder'
     wrap.append(heading, this.checkboxRow('Show all files (incl. node_modules / .git)', this.d.showAllFiles(), on => this.d.setShowAllFiles(on)), this.checkboxRow('Reopen last folder on launch', this.d.restoreFolder(), on => this.d.setRestoreFolder(on)))
+    const group = document.createElement('div'); group.className = 'settings-group workspace-excludes'
+    const label = document.createElement('label'); label.htmlFor = 'workspace-excludes'
+    label.textContent = 'Exclude from workspace'
+    const help = document.createElement('p'); help.id = 'workspace-excludes-help'
+    help.textContent = 'One workspace-relative pattern per line. * and ? stay within a folder; ** spans folders. Braces, character classes, !, and escapes are literal.'
+    const editor = document.createElement('textarea'); editor.id = 'workspace-excludes'; editor.rows = 8
+    editor.value = this.d.workspaceExcludes().join('\n')
+    editor.dataset.settingsFocus = 'workspace-excludes-editor'
+    editor.setAttribute('aria-describedby', help.id)
+    editor.onchange = () => {
+      void this.d.setWorkspaceExcludes(editor.value.split(/\r?\n/)).then(() => {
+        const focusKey = (document.activeElement as HTMLElement | null)?.dataset.settingsFocus
+        this.render(focusKey)
+      })
+    }
+    const restore = document.createElement('button'); restore.type = 'button'
+    restore.className = 'workspace-excludes-restore'; restore.textContent = 'Restore defaults'
+    restore.dataset.settingsFocus = 'workspace-excludes-restore'
+    restore.onclick = () => void this.d.restoreWorkspaceExcludes().then(() => {
+      const focusKey = (document.activeElement as HTMLElement | null)?.dataset.settingsFocus
+      this.render(focusKey)
+    })
+    group.append(label, help, editor, restore)
+    wrap.append(group)
     return wrap
   }
 

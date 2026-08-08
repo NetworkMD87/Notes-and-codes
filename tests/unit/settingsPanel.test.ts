@@ -10,6 +10,8 @@ function deps(): SettingsDeps {
     fontFamily: () => 'JetBrains Mono', setFontFamily: vi.fn(), fontLigatures: () => true, setLigatures: vi.fn(),
     uiFontFamily: () => 'System', setUiFontFamily: vi.fn(), fontSize: () => 14, setFontSize: vi.fn(),
     showAllFiles: () => false, setShowAllFiles: vi.fn(), restoreFolder: () => true, setRestoreFolder: vi.fn(),
+    workspaceExcludes: () => ['**/dist/**'], setWorkspaceExcludes: vi.fn(async () => {}),
+    restoreWorkspaceExcludes: vi.fn(async () => {}),
     autoSaveToDisk: () => false, setAutoSaveToDisk: vi.fn(), formatOnSave: () => false, setFormatOnSave: vi.fn(),
     spellCheckEnabled: () => true, setSpellCheckEnabled: vi.fn(async () => {}),
     spellCheckLanguage: () => 'system', setSpellCheckLanguage: vi.fn(async () => {}), resolvedSpellLocale: () => 'en-GB',
@@ -37,5 +39,47 @@ describe('SettingsPanel', () => {
     expect(document.getElementById(labelId!)?.textContent).toBe('Summon hotkey')
     expect(group?.querySelector('.hk-chips')?.textContent).toBe('CtrlShiftSpace')
     expect([...group!.querySelectorAll('button')].map(button => button.textContent)).toEqual(['Record', 'Clear'])
+  })
+
+  it('labels and explains the workspace exclusion editor', () => {
+    const panel = new SettingsPanel(document.body, deps())
+    panel.open('folder')
+
+    const editor = document.querySelector<HTMLTextAreaElement>('#workspace-excludes')
+    expect(editor).not.toBeNull()
+    expect(document.querySelector<HTMLLabelElement>('label[for="workspace-excludes"]')?.textContent)
+      .toBe('Exclude from workspace')
+    expect(editor?.value).toBe('**/dist/**')
+    const helpId = editor?.getAttribute('aria-describedby')
+    expect(helpId).toBe('workspace-excludes-help')
+    expect(document.getElementById(helpId!)?.textContent).toContain('** spans folders')
+    expect(document.querySelector<HTMLButtonElement>('.workspace-excludes-restore')?.textContent)
+      .toBe('Restore defaults')
+  })
+
+  it('saves newline patterns and restores defaults before rerendering', async () => {
+    let patterns = ['**/dist/**']
+    const d = deps()
+    d.workspaceExcludes = () => [...patterns]
+    d.setWorkspaceExcludes = vi.fn(async next => { patterns = next })
+    d.restoreWorkspaceExcludes = vi.fn(async () => { patterns = ['**/.git/**'] })
+    const panel = new SettingsPanel(document.body, d)
+    panel.open('folder')
+
+    const editor = document.querySelector<HTMLTextAreaElement>('#workspace-excludes')!
+    const restore = document.querySelector<HTMLButtonElement>('.workspace-excludes-restore')!
+    editor.value = 'src/**\n\ncache/?'
+    editor.focus()
+    editor.dispatchEvent(new Event('change'))
+    restore.focus()
+    await vi.waitFor(() => expect(d.setWorkspaceExcludes).toHaveBeenCalledWith(['src/**', '', 'cache/?']))
+    await vi.waitFor(() => expect(document.querySelector<HTMLTextAreaElement>('#workspace-excludes')?.value)
+      .toBe('src/**\n\ncache/?'))
+    expect(document.querySelector<HTMLButtonElement>('.workspace-excludes-restore')).toBe(document.activeElement)
+
+    document.querySelector<HTMLButtonElement>('.workspace-excludes-restore')!.click()
+    await vi.waitFor(() => expect(d.restoreWorkspaceExcludes).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(document.querySelector<HTMLTextAreaElement>('#workspace-excludes')?.value)
+      .toBe('**/.git/**'))
   })
 })

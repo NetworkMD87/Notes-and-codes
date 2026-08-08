@@ -2,6 +2,7 @@ import { test, expect } from './smokeTest'
 import type { SmokeResources } from './smokeCleanup'
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { join, basename } from 'node:path'
+import { openSettings } from './settingsHelper'
 
 function seededFolder(smoke: SmokeResources) {
   const userDataDir = smoke.tempDir('notes-smoke-')
@@ -45,8 +46,8 @@ test('the sidebar header switches folders from the recent list', async ({ smoke 
 
 test('the keyboard-owned folder switcher menu navigates and restores focus', async ({ smoke }) => {
   const { userDataDir } = seededFolder(smoke)
-  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  const win = await app.firstWindow()
+  let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  let win = await app.firstWindow()
   // Concurrent Electron workers own separate visible BrowserWindows. Keep this renderer's
   // document focus emulated so another worker cannot invalidate its keyboard/focus contract.
   const cdp = await win.context().newCDPSession(win)
@@ -97,6 +98,54 @@ test('nested sidebar rows carry a --depth for indent guides', async ({ smoke }) 
     await expect(child).toBeVisible()
     const depth = await child.evaluate((el) => (el as HTMLElement).style.getPropertyValue('--depth'))
     expect(Number(depth)).toBeGreaterThanOrEqual(1)
+})
+
+test('workspace exclusions persist and refresh the folder tree and Quick Open immediately', async ({ smoke }) => {
+  const { userDataDir, projectDir } = seededFolder(smoke)
+  mkdirSync(join(projectDir, 'dist'))
+  writeFileSync(join(projectDir, 'dist', 'hidden.ts'), '// hidden')
+  let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  let win = await app.firstWindow()
+  await expect(win.locator('.sb-row', { hasText: 'src' })).toBeVisible()
+  await expect(win.locator('.sb-row', { hasText: 'dist' })).toHaveCount(0)
+
+  await openSettings(win, 'Folder')
+  const editor = win.getByLabel('Exclude from workspace')
+  await expect(editor).toHaveAttribute('aria-describedby', 'workspace-excludes-help')
+  await expect(editor).toHaveValue('**/.git/**\n**/node_modules/**\n**/dist/**\n**/out/**\n**/build/**\n**/coverage/**')
+  await editor.fill('**/src/**')
+  await editor.press('Tab')
+  await expect(win.getByRole('button', { name: 'Restore defaults' })).toBeFocused()
+  await expect(win.locator('.sb-row', { hasText: 'dist' })).toBeVisible()
+  await expect(win.locator('.sb-row', { hasText: 'src' })).toHaveCount(0)
+
+  const showAll = win.getByLabel('Show all files (incl. node_modules / .git)')
+  await showAll.check()
+  await expect(win.locator('.sb-row', { hasText: 'src' })).toBeVisible()
+  await expect(editor).toHaveValue('**/src/**')
+  await showAll.uncheck()
+  await expect(win.locator('.sb-row', { hasText: 'src' })).toHaveCount(0)
+
+  await win.getByRole('button', { name: 'Close Settings' }).click()
+  await win.keyboard.press('Control+p')
+  const quick = win.getByRole('combobox', { name: 'Quick Open' })
+  await quick.fill('hidden')
+  await expect(win.locator('.qo-row', { hasText: 'hidden.ts' })).toBeVisible()
+  await quick.press('Escape')
+
+  await app.close()
+  app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  win = await app.firstWindow()
+  await expect(win.locator('.sb-row', { hasText: 'dist' })).toBeVisible()
+  await expect(win.locator('.sb-row', { hasText: 'src' })).toHaveCount(0)
+
+  await openSettings(win, 'Folder')
+  await expect(win.getByLabel('Exclude from workspace')).toHaveValue('**/src/**')
+  const restore = win.getByRole('button', { name: 'Restore defaults' })
+  await restore.click()
+  await expect(restore).toBeFocused()
+  await expect(win.locator('.sb-row', { hasText: 'src' })).toBeVisible()
+  await expect(win.locator('.sb-row', { hasText: 'dist' })).toHaveCount(0)
 })
 
 test('sidebar file rows show a tinted extension badge; dirs show a folder glyph', async ({ smoke }) => {

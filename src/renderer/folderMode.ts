@@ -1,5 +1,5 @@
 import Split from 'split.js'
-import type { DirEntry } from '../shared/types'
+import type { DirEntry, WorkspaceFilter } from '../shared/types'
 import { TreeModel } from './treeModel'
 import { Sidebar } from './sidebar'
 import { FolderPanel } from './folderPanel'
@@ -9,6 +9,7 @@ import { promptInput, confirmDialog } from './inputOverlay'
 import { toast } from './notify'
 import { menuEntries, splitPath } from './recentFolders'
 import { buildQuickOpenCandidates, type QuickOpenCandidate } from './fuzzy'
+import { RefreshScheduler } from './refreshScheduler'
 
 export interface FolderModeDeps {
   sidebarEl: HTMLElement
@@ -17,6 +18,13 @@ export interface FolderModeDeps {
   activePath: () => string | null
   pickFolder: () => Promise<void>   // the same picker the File menu / palette use
   focusEditor: () => void
+  filter: () => WorkspaceFilter
+}
+
+interface FolderRefreshSnapshot {
+  root: string | null
+  filter: WorkspaceFilter
+  directories: string[]
 }
 
 export class FolderMode {
@@ -27,7 +35,10 @@ export class FolderMode {
   private index: QuickOpenCandidate[] = []
   private indexTruncated = false
   private split: ReturnType<typeof Split> | null = null
-  private showAll = false
+  private refresh = new RefreshScheduler(
+    () => this.refreshSnapshot(),
+    run => this.runRefresh(run.snapshot, run.isCurrent),
+  )
 
   constructor(private d: FolderModeDeps) {
     this.sidebar = new Sidebar(d.sidebarEl, {
@@ -57,19 +68,19 @@ export class FolderMode {
 
   async openFolder(root: string): Promise<void> {
     const s = await window.api.loadSettings()
-    this.showAll = s.showAllFiles
+    this.refresh.invalidate()
     this.model.setRoot(root)
-    await this.loadChildren(root)
     this.hideSidebar()
     this.showSidebar(s.sidebarWidth)
     this.sidebar.render()
     await window.api.watchDir(root)
     await window.api.updateSettings({ lastFolder: root, sidebarVisible: true })
     void window.api.addRecentFolder(root)
-    void this.reindex()
+    await this.refresh.request()
   }
 
   closeFolder(): void {
+    this.refresh.invalidate()
     this.model.setRoot('')
     this.model.root = null
     this.index = []
@@ -168,28 +179,47 @@ export class FolderMode {
   // --- internals ---
 
   private async loadChildren(path: string): Promise<void> {
-    this.model.setChildren(path, await window.api.readDir(path, this.showAll))
-  }
-
-  private async reindex(): Promise<void> {
     const root = this.model.root
     if (!root) return
-    const r = await window.api.walkFiles(root, this.showAll)
-    // A folder switch while the walk was in flight makes this answer stale — dropping it is what
-    // stops folder A's index from overwriting folder B's (Quick Open would list the wrong folder).
-    if (this.model.root !== root) return
-    this.index = buildQuickOpenCandidates(root, r.files)
-    this.indexTruncated = r.truncated
+    const filter = this.d.filter()
+    const children = await window.api.readDir(root, path, filter)
+    const current = this.d.filter()
+    if (this.model.root !== root || current.showAll !== filter.showAll ||
+      current.excludePatterns.join('\n') !== filter.excludePatterns.join('\n')) return
+    this.model.setChildren(path, children)
   }
 
-  private async onDiskChange(): Promise<void> {
-    if (!this.model.root) return
-    for (const p of [this.model.root, ...this.model.expandedPaths()]) {
-      if (this.model.hasChildren(p)) this.model.setChildren(p, await window.api.readDir(p, this.showAll))
+  private refreshSnapshot(): FolderRefreshSnapshot {
+    const root = this.model.root
+    const filter = this.d.filter()
+    return {
+      root,
+      filter: { showAll: filter.showAll, excludePatterns: [...filter.excludePatterns] },
+      directories: root ? [root, ...this.model.expandedPaths()] : [],
     }
-    this.sidebar.render()
-    await this.reindex()
   }
+
+  private async runRefresh(
+    snapshot: FolderRefreshSnapshot,
+    isCurrent: () => boolean,
+  ): Promise<void> {
+    if (!snapshot.root) return
+    const walk = await window.api.walkFiles(snapshot.root, snapshot.filter)
+    const children: DirEntry[][] = []
+    for (const path of snapshot.directories) {
+      if (!isCurrent()) return
+      children.push(await window.api.readDir(snapshot.root, path, snapshot.filter))
+    }
+    if (!isCurrent() || this.model.root !== snapshot.root) return
+    snapshot.directories.forEach((path, index) => this.model.setChildren(path, children[index]))
+    this.index = buildQuickOpenCandidates(snapshot.root, walk.files)
+    this.indexTruncated = walk.truncated
+    this.sidebar.render()
+  }
+
+  workspaceSettingsChanged(): Promise<void> { return this.refresh.request() }
+
+  private onDiskChange(): Promise<void> { return this.refresh.request() }
 
   private showSidebar(width: number): void {
     this.d.sidebarEl.classList.remove('hidden')
@@ -258,10 +288,5 @@ export class FolderMode {
     else toast('Could not delete.', 'error')
   }
 
-  private async refreshDir(dir: string): Promise<void> {
-    this.model.setChildren(dir, await window.api.readDir(dir, this.showAll))
-    this.model.setExpanded(dir, true)
-    this.sidebar.render()
-    await this.reindex()
-  }
+  private refreshDir(_dir: string): Promise<void> { return this.refresh.request() }
 }

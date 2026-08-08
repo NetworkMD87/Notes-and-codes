@@ -213,6 +213,12 @@
       .appearance-row + .appearance-row{margin-top:8px}
       .appearance-row label{flex:1}
       .settings-group{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+      .workspace-excludes{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+      .workspace-excludes label{font-size:13px}
+      .workspace-excludes p{margin:0;color:var(--muted);font-size:12px;line-height:1.4}
+      .workspace-excludes textarea{box-sizing:border-box;width:100%;min-height:128px;resize:vertical;font:12px/1.45 var(--editor-font,monospace)}
+      .workspace-excludes-restore{font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bar);color:var(--panel-text);cursor:pointer}
+      .workspace-excludes-restore:hover{background:var(--bar-hover)}
       .spell-settings-note,.spell-settings-resolved{margin:8px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
       .spell-settings-resolved{margin-top:3px}
       .personal-dictionary-open{margin-top:10px}
@@ -283,14 +289,14 @@
       .about-logo .wm-brace{fill:var(--accent)}
       .about-rule{width:44px;height:3px;border-radius:2px;background:var(--accent);margin-bottom:6px}
       /* Keyboard-only focus rings on chrome controls (never on mouse click; scoped off Monaco). */
-      .tb-btn:focus-visible,.tab-select:focus-visible,.tab-close:focus-visible,.tab-add:focus-visible,.about-link:focus-visible,.help-close:focus-visible,.diff-close:focus-visible,.tb-hl-clear:focus-visible,.tb-swatch:focus-visible,.accent-default-btn:focus-visible,.hk-record:focus-visible,.hk-clear:focus-visible,.fif-toggle:focus-visible,.settings-close:focus-visible,.settings-cat:focus-visible,.appearance-theme:focus-visible,.swatch:focus-visible,.ph-picker-head button:focus-visible,.snip-picker-head button:focus-visible,.ph-row:focus-visible,.snip-row:focus-visible,.snip-mgr-head button:focus-visible,.personal-dictionary-head button:focus-visible,.personal-word button:focus-visible,.fh-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+      .tb-btn:focus-visible,.tab-select:focus-visible,.tab-close:focus-visible,.tab-add:focus-visible,.about-link:focus-visible,.help-close:focus-visible,.diff-close:focus-visible,.tb-hl-clear:focus-visible,.tb-swatch:focus-visible,.accent-default-btn:focus-visible,.hk-record:focus-visible,.hk-clear:focus-visible,.fif-toggle:focus-visible,.settings-close:focus-visible,.settings-cat:focus-visible,.appearance-theme:focus-visible,.swatch:focus-visible,.ph-picker-head button:focus-visible,.snip-picker-head button:focus-visible,.ph-row:focus-visible,.snip-row:focus-visible,.snip-mgr-head button:focus-visible,.personal-dictionary-head button:focus-visible,.personal-word button:focus-visible,.workspace-excludes-restore:focus-visible,.fh-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       .about-version{color:var(--muted);font-size:13px}
       .about-tagline{opacity:.85;font-size:14px;margin-bottom:8px}
       .about-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
       .about-link{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;cursor:pointer;font-size:13px}
       .about-link:hover{background:var(--accent);color:var(--accent-text)}
       /* --- micro-motion layer (Phase 3.5 P1) --- */
-      .tab,.tb-btn,.tab-add,.tab-close,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.fh-close,.help-close,.diff-close,.help-toggle,.swatch,.appearance-theme,.tb-swatch,.ph-picker-head button,.snip-picker-head button,.ph-row,.snip-row,.snip-mgr-head button,.snip-mgr-row button,.personal-dictionary-head button,.personal-word button,.personal-dictionary-open,.accent-default-btn,.settings-cat,.hk-record,.hk-clear{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
+      .tab,.tb-btn,.tab-add,.tab-close,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.fh-close,.help-close,.diff-close,.help-toggle,.swatch,.appearance-theme,.tb-swatch,.ph-picker-head button,.snip-picker-head button,.ph-row,.snip-row,.snip-mgr-head button,.snip-mgr-row button,.personal-dictionary-head button,.personal-word button,.personal-dictionary-open,.accent-default-btn,.settings-cat,.hk-record,.hk-clear,.workspace-excludes-restore{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
       @keyframes overlayIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
       .palette-box,.qo-box,.settings-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.personal-dictionary-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast,.fif-box{animation:overlayIn var(--motion) var(--ease)}
       @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
