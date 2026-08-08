@@ -9,6 +9,7 @@ import {
   type CleanupIssue,
   type ElectronLaunchOptions,
 } from '../smoke/smokeCleanup'
+import { reportCleanup } from '../smoke/smokeTest'
 
 class FakeChild {
   pid: number | undefined
@@ -396,5 +397,58 @@ describe('cleanup classification', () => {
     expect(formatCleanupIssues([issue('child', 'second-instance')])).toBe(
       'Smoke cleanup issues:\n- child second-instance: Could not clean second-instance',
     )
+  })
+})
+
+describe('cleanup reporting', () => {
+  it('fails a clean body after attaching and reporting cleanup issues', async () => {
+    const attachments: Array<{ name: string; body: string }> = []
+    const diagnostics: string[] = []
+
+    await expect(reportCleanup(
+      [issue('directory', 'notes-a')],
+      undefined,
+      async (name, body) => { attachments.push({ name, body }) },
+      message => { diagnostics.push(message) },
+    )).rejects.toBeInstanceOf(AggregateError)
+
+    expect(attachments).toEqual([{
+      name: 'smoke-cleanup.txt',
+      body: 'Smoke cleanup issues:\n- directory notes-a: Could not clean notes-a',
+    }])
+    expect(diagnostics).toEqual(['Smoke cleanup issues:\n- directory notes-a: Could not clean notes-a'])
+  })
+
+  it('preserves a body failure after attaching and reporting cleanup issues', async () => {
+    const attachments: Array<{ name: string; body: string }> = []
+    const diagnostics: string[] = []
+
+    await expect(reportCleanup(
+      [issue('child', 'second-instance')],
+      new Error('body failed'),
+      async (name, body) => { attachments.push({ name, body }) },
+      message => { diagnostics.push(message) },
+    )).resolves.toBeUndefined()
+
+    expect(attachments).toEqual([{
+      name: 'smoke-cleanup.txt',
+      body: 'Smoke cleanup issues:\n- child second-instance: Could not clean second-instance',
+    }])
+    expect(diagnostics).toEqual(['Smoke cleanup issues:\n- child second-instance: Could not clean second-instance'])
+  })
+
+  it('does nothing when cleanup has no issues', async () => {
+    const attachments: Array<{ name: string; body: string }> = []
+    const diagnostics: string[] = []
+
+    await expect(reportCleanup(
+      [],
+      undefined,
+      async (name, body) => { attachments.push({ name, body }) },
+      message => { diagnostics.push(message) },
+    )).resolves.toBeUndefined()
+
+    expect(attachments).toEqual([])
+    expect(diagnostics).toEqual([])
   })
 })
