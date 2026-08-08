@@ -60,7 +60,7 @@ export class CommandPalette {
     // Escape is handled centrally by overlayManager (capture-phase, topmost-first).
     if (e.key === 'ArrowDown') { if (this.filtered.length === 0) return; this.cursor = Math.min(this.cursor + 1, this.filtered.length - 1); this.paint() }
     if (e.key === 'ArrowUp') { if (this.filtered.length === 0) return; this.cursor = Math.max(this.cursor - 1, 0); this.paint() }
-    if (e.key === 'Enter') { const c = this.filtered[this.cursor]; if (c) { this.exec(c) } }
+    if (e.key === 'Enter') { const c = this.filtered[this.cursor]; if (c) { e.preventDefault(); this.exec(c) } }
   }
   private exec(c: Command): void {
     void Promise.resolve(c.run()).catch(err => console.error('command failed:', err))

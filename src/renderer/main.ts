@@ -67,8 +67,8 @@ const statusBar = new StatusBar(document.getElementById('statusbar')!, {
   onEncoding: (enc) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.encoding = enc; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave(); toast('Encoding: ' + ENC_LABEL[enc]) } }
 })
 const diff = new DiffView(document.getElementById('diff')!)
-const diffPicker = new DiffPicker(document.getElementById('app')!)
-const phPicker = new PasteHistoryPicker(document.getElementById('app')!)
+const diffPicker = new DiffPicker(document.getElementById('app')!, focusActiveEditor)
+const phPicker = new PasteHistoryPicker(document.getElementById('app')!, focusActiveEditor)
 const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, () => { view.paneA.layout(); view.paneB.layout() })
 
 function previewContent(): string { return paneFor(view.focusedPane()).getContent() }
@@ -649,7 +649,7 @@ function clearHighlights(): void {
 }
 
 const snippets = new SnippetList(() => crypto.randomUUID())
-const snipPicker = new SnippetPicker(document.getElementById('app')!)
+const snipPicker = new SnippetPicker(document.getElementById('app')!, focusActiveEditor)
 function persistSnippets(): void { window.api.saveSnippets(snippets.list()) }
 const snipManager = new SnippetManager(document.getElementById('app')!, {
   list: () => snippets.list(),
@@ -658,7 +658,7 @@ const snipManager = new SnippetManager(document.getElementById('app')!, {
   updateBody: (id, body) => snippets.updateBody(id, body),
   remove: (id) => snippets.remove(id),
   persist: () => persistSnippets()
-})
+}, focusActiveEditor)
 const manageSnippets = () => snipManager.open()
 
 async function saveSelectionAsSnippet(): Promise<void> {
@@ -765,7 +765,7 @@ const personalDictionary = new PersonalDictionaryPanel(document.getElementById('
   remove: word => window.api.removePersonalWord(word),
   changed: words => { void spell?.personalWordsChanged(words) },
   notify: (message, level) => toast(message, level),
-})
+}, focusActiveEditor)
 const openSettings = (category: SettingsCategory = 'appearance') => settings.open(category)
 // Deep-link alias into Settings ▸ Appearance. No button owns it — its consumers are the
 // palette's `Appearance…` command and the View ▸ Appearance… menu item.
@@ -791,7 +791,7 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
     tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
     toast('Restored an earlier version — unsaved, Save to keep it.', 'success')
   }
-})
+}, focusActiveEditor)
 const openHistory = () => void fileHistory.open()
 
 const folder = new FolderMode({

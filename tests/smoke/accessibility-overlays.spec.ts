@@ -30,6 +30,48 @@ test('Quick Open, Find in Files, and Help are named modal dialogs with trapped f
   await expectDialog(win, 'Shortcuts & Commands', win.getByRole('searchbox', { name: 'Search commands' }), win.getByRole('button', { name: 'Close Shortcuts & Commands' }))
 })
 
+test('remaining modal pickers, managers, history, and dictionary are named dialogs with trapped focus', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-remaining-overlay-a11y-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow(); await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+
+  const openCommand = async (query: string) => {
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill(query)
+    await win.keyboard.press('Enter')
+  }
+
+  await openCommand('Paste from History')
+  await expectDialog(win, 'Paste from History', win.getByRole('button', { name: 'Close Paste from History' }), win.getByRole('button', { name: 'Close Paste from History' }))
+  await win.keyboard.press('Escape')
+
+  await openCommand('Insert Snippet')
+  await expectDialog(win, 'Insert Snippet', win.getByRole('button', { name: 'Close Insert Snippet' }), win.getByRole('button', { name: 'Close Insert Snippet' }))
+  await win.keyboard.press('Escape')
+
+  await openCommand('Manage Snippets')
+  await expectDialog(win, 'Snippets', win.getByRole('button', { name: 'Add snippet' }), win.getByRole('button', { name: 'Close Snippets' }))
+  await win.keyboard.press('Escape')
+
+  await openCommand('File History')
+  await expectDialog(win, 'File History', win.getByRole('button', { name: 'Close File History' }), win.getByRole('button', { name: 'Close File History' }))
+  await win.keyboard.press('Escape')
+
+  await openCommand('New Tab')
+  await openCommand('Start Diff (tab vs tab)')
+  await expectDialog(win, 'Compare tabs', win.getByLabel('Left'), win.getByRole('button', { name: 'Cancel' }))
+  await win.keyboard.press('Escape')
+
+  await openCommand('Settings')
+  await win.getByRole('tab', { name: 'Editor' }).click()
+  await win.getByRole('button', { name: 'Personal dictionary…' }).click()
+  await expectDialog(win, 'Personal dictionary', win.getByRole('button', { name: 'Close Personal dictionary' }), win.getByRole('button', { name: 'Close Personal dictionary' }))
+  await win.keyboard.press('Escape')
+  await expect(win.getByRole('dialog', { name: 'Personal dictionary' })).toBeHidden()
+  await expect(win.getByRole('dialog', { name: 'Settings' })).toBeVisible()
+  await win.keyboard.press('Escape')
+})
+
 test('dirty-tab discard confirmation is a named modal dialog that restores its opener', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-confirm-a11y-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })

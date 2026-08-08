@@ -1,5 +1,5 @@
 import type { FileVersion } from '../shared/types'
-import { OverlayRegistration } from './overlayManager'
+import { DialogController } from './dialogController'
 import { emptyState, EMPTY_ICONS } from './emptyState'
 
 export interface FileHistoryDeps {
@@ -17,48 +17,72 @@ function relativeTime(ts: number): string {
 }
 
 export class FileHistoryPanel {
-  private host: HTMLElement
-  private reg = new OverlayRegistration()
-  constructor(parent: HTMLElement, private d: FileHistoryDeps) {
+  private readonly host: HTMLDivElement
+  private readonly box: HTMLDivElement
+  private readonly body: HTMLDivElement
+  private readonly closeButton: HTMLButtonElement
+  private readonly dialog: DialogController
+  private openEpoch = 0
+
+  constructor(parent: HTMLElement, private readonly d: FileHistoryDeps, focusEditor: () => void) {
+    this.dialog = new DialogController(focusEditor)
     this.host = document.createElement('div')
     this.host.className = 'file-history hidden'; this.host.id = 'file-history'
     this.host.addEventListener('mousedown', (e) => { if (e.target === this.host) this.close() })
+    this.box = document.createElement('div'); this.box.className = 'fh-box'
+    const heading = document.createElement('h2'); heading.id = 'file-history-title'; heading.textContent = 'File History'
+    this.closeButton = document.createElement('button'); this.closeButton.type = 'button'; this.closeButton.className = 'fh-close'; this.closeButton.textContent = 'Close'; this.closeButton.setAttribute('aria-label', 'Close File History'); this.closeButton.onclick = () => this.close()
+    this.body = document.createElement('div'); this.body.className = 'fh-body'
+    this.box.append(heading, this.closeButton, this.body)
+    this.host.appendChild(this.box)
     parent.appendChild(this.host)
   }
 
   async open(): Promise<void> {
     const cur = this.d.current()
-    const box = document.createElement('div'); box.className = 'fh-box'
-    const h = document.createElement('h3'); h.textContent = 'File History'; box.appendChild(h)
-
-    if (!cur) {
-      box.appendChild(emptyState('fh-empty', EMPTY_ICONS.history, 'Save this file first to start its history.'))
-    } else {
-      const list = await window.api.listHistory(cur.path)
-      if (!list.length) {
-        box.appendChild(emptyState('fh-empty', EMPTY_ICONS.history, 'No versions yet — save or wait for an auto-snapshot.'))
-      } else {
-        const ul = document.createElement('div'); ul.className = 'fh-list'
-        for (const { ts } of list) {
-          const row = document.createElement('div'); row.className = 'fh-row'
-          const when = document.createElement('span'); when.className = 'fh-when'
-          when.textContent = relativeTime(ts); when.title = new Date(ts).toLocaleString()
-          const diffBtn = document.createElement('button'); diffBtn.textContent = 'Diff'
-          diffBtn.onclick = async () => {
-            const v = await window.api.getHistory(cur.path, ts); if (v) { this.d.openDiff(v, cur); this.close() }
-          }
-          const restoreBtn = document.createElement('button'); restoreBtn.textContent = 'Restore'
-          restoreBtn.onclick = async () => {
-            const v = await window.api.getHistory(cur.path, ts); if (v) { this.d.restore(v); this.close() }
-          }
-          row.append(when, diffBtn, restoreBtn); ul.appendChild(row)
-        }
-        box.appendChild(ul)
-      }
-    }
-    this.host.replaceChildren(box); this.host.classList.remove('hidden')
-    this.reg.open(() => this.close())
+    const epoch = ++this.openEpoch
+    this.body.textContent = 'Loading history…'
+    this.host.classList.remove('hidden')
+    this.dialog.open({ panel: this.box, labelledBy: 'file-history-title', initialFocus: this.closeButton, requestClose: () => this.close() })
+    const list = cur ? await window.api.listHistory(cur.path) : []
+    if (epoch !== this.openEpoch || this.host.classList.contains('hidden')) return
+    this.renderHistory(cur, list)
   }
 
-  private close(): void { this.reg.release(); this.host.classList.add('hidden') }
+  private close(): void {
+    this.openEpoch++
+    this.host.classList.add('hidden')
+    this.dialog.close()
+  }
+
+  private renderHistory(cur: ReturnType<FileHistoryDeps['current']>, list: Pick<FileVersion, 'ts'>[]): void {
+    this.body.replaceChildren()
+    if (!cur) {
+      this.body.appendChild(emptyState('fh-empty', EMPTY_ICONS.history, 'Save this file first to start its history.'))
+      return
+    }
+    if (!list.length) {
+      this.body.appendChild(emptyState('fh-empty', EMPTY_ICONS.history, 'No versions yet — save or wait for an auto-snapshot.'))
+      return
+    }
+    const ul = document.createElement('div'); ul.className = 'fh-list'
+    for (const { ts } of list) {
+      const row = document.createElement('div'); row.className = 'fh-row'
+      const when = document.createElement('span'); when.className = 'fh-when'
+      const relative = relativeTime(ts)
+      when.textContent = relative; when.title = new Date(ts).toLocaleString()
+      const diffBtn = document.createElement('button'); diffBtn.type = 'button'; diffBtn.textContent = 'Diff'; diffBtn.setAttribute('aria-label', `Diff version from ${relative}`)
+      diffBtn.onclick = async () => {
+        const v = await window.api.getHistory(cur.path, ts)
+        if (v) { this.close(); this.d.openDiff(v, cur) }
+      }
+      const restoreBtn = document.createElement('button'); restoreBtn.type = 'button'; restoreBtn.textContent = 'Restore'; restoreBtn.setAttribute('aria-label', `Restore version from ${relative}`)
+      restoreBtn.onclick = async () => {
+        const v = await window.api.getHistory(cur.path, ts)
+        if (v) { this.close(); this.d.restore(v) }
+      }
+      row.append(when, diffBtn, restoreBtn); ul.appendChild(row)
+    }
+    this.body.appendChild(ul)
+  }
 }

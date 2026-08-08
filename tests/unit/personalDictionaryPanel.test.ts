@@ -23,7 +23,7 @@ function harness(
     remove,
     changed,
     notify,
-  })
+  }, vi.fn())
   return { panel, changed, notify }
 }
 
@@ -40,6 +40,18 @@ describe('PersonalDictionaryPanel', () => {
 
     expect([...document.querySelectorAll('.personal-word-text')].map(el => el.textContent))
       .toEqual(['Apple', 'banana', 'zebra'])
+  })
+
+  it('names word removal controls without changing sorted order', async () => {
+    const { panel } = harness(['Zulu', 'alpha'])
+
+    await panel.open()
+
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>('.personal-word button')]
+    expect(buttons.map(button => button.getAttribute('aria-label'))).toEqual([
+      'Remove alpha from personal dictionary',
+      'Remove Zulu from personal dictionary',
+    ])
   })
 
   it('renders the empty state', async () => {
