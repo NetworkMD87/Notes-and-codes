@@ -37,9 +37,10 @@ export class Sidebar {
 
   render(): void {
     const root = this.d.model.root
+    const existingHeader = this.host.querySelector<HTMLButtonElement>(':scope > .sb-header-btn')
     this.host.replaceChildren()
     if (!root) return
-    const header = document.createElement('button')
+    const header = existingHeader ?? document.createElement('button')
     header.className = 'sb-header sb-header-btn'
     header.title = 'Switch folder'
     header.setAttribute('aria-label', 'Switch folder')
@@ -47,7 +48,7 @@ export class Sidebar {
     // basename without a node import (renderer is sandboxed): strip trailing slashes, take the last segment.
     label.textContent = root.split(/[\\/]/).filter(Boolean).pop() ?? root
     const chev = document.createElement('span'); chev.className = 'sb-header-chev'; chev.textContent = '▾'
-    header.append(label, chev)
+    header.replaceChildren(label, chev)
     header.onclick = event => {
       const r = header.getBoundingClientRect()
       this.d.onHeaderClick(r.left, r.bottom, event.detail === 0 ? header : undefined)

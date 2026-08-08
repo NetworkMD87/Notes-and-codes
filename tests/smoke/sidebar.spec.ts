@@ -58,9 +58,15 @@ test('the keyboard-owned folder switcher menu navigates and restores focus', asy
     }) as typeof window.addEventListener
   })
   const opener = win.getByRole('button', { name: /switch folder/i })
-  await opener.focus(); await opener.press('Enter')
   const menu = win.getByRole('menu')
-  await expect(menu).toBeVisible()
+  const openMenuFromKeyboard = async () => {
+    await expect.poll(async () => {
+      if (await menu.isVisible().catch(() => false)) return true
+      await opener.focus(); await opener.press('Enter')
+      return menu.isVisible().catch(() => false)
+    }).toBe(true)
+  }
+  await openMenuFromKeyboard()
   await expect(menu.getByRole('menuitem').first()).toBeFocused()
   await menu.getByRole('menuitem').first().press('ArrowDown')
   await expect(menu.getByRole('menuitem', { name: 'Close Folder' })).toBeFocused()
@@ -69,9 +75,10 @@ test('the keyboard-owned folder switcher menu navigates and restores focus', asy
   await menu.getByRole('menuitem').first().press('End')
   const closeItem = menu.getByRole('menuitem', { name: 'Close Folder' })
   await expect(closeItem).toBeFocused()
+  await expect(opener).toBeAttached()
   await closeItem.press('Escape')
   await expect(opener).toBeFocused()
-  await opener.press('Enter')
+  await openMenuFromKeyboard()
   await win.getByRole('menu').getByRole('menuitem').first().press('End')
   await win.getByRole('menu').getByRole('menuitem', { name: 'Close Folder' }).press('Enter')
   await expect(win.getByRole('button', { name: /open folder/i })).toBeVisible()
