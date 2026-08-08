@@ -1,4 +1,5 @@
 import type { SpellCheckLanguage } from './spell'
+import { DEFAULT_WORKSPACE_EXCLUDES } from './pathGlob'
 
 export type EolMode = 'LF' | 'CRLF'
 export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
@@ -49,6 +50,11 @@ export interface DirEntry { name: string; path: string; isDir: boolean }
 /** Quick-open file index. `truncated` is true when the walk hit its file cap, so the UI
  *  can hint that some files may not appear. */
 export interface WalkResult { files: string[]; truncated: boolean }
+
+export interface WorkspaceFilter {
+  showAll: boolean
+  excludePatterns: string[]
+}
 
 export interface Snippet { id: string; name: string; body: string }
 
@@ -113,6 +119,7 @@ export interface Settings {
   uiFontFamily: string
   fontLigatures: boolean
   showAllFiles: boolean
+  workspaceExcludes: string[]
   restoreFolderOnLaunch: boolean
   autoSaveToDisk: boolean
   formatOnSave: boolean
@@ -138,6 +145,7 @@ export const DEFAULT_SETTINGS: Settings = {
   uiFontFamily: 'System',
   fontLigatures: true,
   showAllFiles: false,
+  workspaceExcludes: [...DEFAULT_WORKSPACE_EXCLUDES],
   restoreFolderOnLaunch: true,
   autoSaveToDisk: false,
   formatOnSave: false,

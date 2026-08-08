@@ -85,4 +85,25 @@ describe('SettingsStore', () => {
     expect(settings.spellCheckEnabled).toBe(false)
     expect(settings.spellCheckLanguage).toBe('en-US')
   })
+
+  it('defaults workspace exclusions for a settings file written before the field existed', async () => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ themeId: 'nord' }))
+    const settings = await new SettingsStore(dir).load()
+    expect(settings.workspaceExcludes).toEqual(DEFAULT_SETTINGS.workspaceExcludes)
+    expect(settings.workspaceExcludes).not.toBe(DEFAULT_SETTINGS.workspaceExcludes)
+  })
+
+  it('normalizes persisted workspace exclusions and permits an empty list', async () => {
+    const store = new SettingsStore(dir)
+    await store.update({ workspaceExcludes: [' /SRC\\** ', 'src/**', '', '/dist/**'] })
+    expect((await store.load()).workspaceExcludes).toEqual(['SRC/**', 'dist/**'])
+    await store.update({ workspaceExcludes: [] })
+    expect((await store.load()).workspaceExcludes).toEqual([])
+  })
+
+  it('falls back to defaults when workspaceExcludes has the wrong persisted type', async () => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ workspaceExcludes: 'dist/**' }))
+    expect((await new SettingsStore(dir).load()).workspaceExcludes)
+      .toEqual(DEFAULT_SETTINGS.workspaceExcludes)
+  })
 })
