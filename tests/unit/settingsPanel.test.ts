@@ -160,4 +160,37 @@ describe('SettingsPanel', () => {
     expect(document.querySelector<HTMLTextAreaElement>('#workspace-excludes')?.value)
       .toBe('**/draft-b/**')
   })
+
+  it('does not replace a newer focused draft when Restore defaults resolves', async () => {
+    const restore = deferred()
+    let patterns = ['**/dist/**']
+    const d = deps()
+    d.workspaceExcludes = () => [...patterns]
+    d.restoreWorkspaceExcludes = vi.fn(async () => {
+      await restore.promise
+      patterns = ['**/.git/**']
+    })
+    d.setWorkspaceExcludes = vi.fn(async next => { patterns = next })
+    const panel = new SettingsPanel(document.body, d)
+    panel.open('folder')
+
+    const editor = document.querySelector<HTMLTextAreaElement>('#workspace-excludes')!
+    const restoreButton = document.querySelector<HTMLButtonElement>('.workspace-excludes-restore')!
+    restoreButton.focus()
+    restoreButton.click()
+    editor.focus()
+    editor.value = '**/draft-b/**'
+    editor.dispatchEvent(new Event('input'))
+
+    restore.resolve()
+    await restore.promise
+    await Promise.resolve()
+    expect(document.querySelector('#workspace-excludes')).toBe(editor)
+    expect(editor.value).toBe('**/draft-b/**')
+    expect(editor).toBe(document.activeElement)
+
+    editor.dispatchEvent(new Event('change'))
+    await vi.waitFor(() => expect(d.setWorkspaceExcludes).toHaveBeenCalledWith(['**/draft-b/**']))
+    await vi.waitFor(() => expect(patterns).toEqual(['**/draft-b/**']))
+  })
 })

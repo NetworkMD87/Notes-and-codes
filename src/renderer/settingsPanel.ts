@@ -57,6 +57,11 @@ const CATEGORIES: { id: SettingsCategory; label: string }[] = [
   { id: 'integration', label: 'Integration' },
 ]
 
+interface WorkspaceExclusionOwner {
+  editor: HTMLTextAreaElement
+  draftGeneration: number
+}
+
 export class SettingsPanel {
   private readonly host: HTMLElement
   private readonly box: HTMLElement
@@ -299,9 +304,9 @@ export class SettingsPanel {
     editor.oninput = () => { this.workspaceExclusionDraftGeneration++ }
     editor.onchange = () => {
       const generation = ++this.workspaceExclusionGeneration
-      const draftGeneration = this.workspaceExclusionDraftGeneration
+      const owner = this.workspaceExclusionOwner(editor)
       void this.d.setWorkspaceExcludes(editor.value.split(/\r?\n/)).then(() => {
-        this.rerenderWorkspaceExcludes(generation, editor, draftGeneration)
+        this.rerenderWorkspaceExcludes(generation, owner)
       })
     }
     const restore = document.createElement('button'); restore.type = 'button'
@@ -309,20 +314,26 @@ export class SettingsPanel {
     restore.dataset.settingsFocus = 'workspace-excludes-restore'
     restore.onclick = () => {
       const generation = ++this.workspaceExclusionGeneration
-      void this.d.restoreWorkspaceExcludes().then(() => this.rerenderWorkspaceExcludes(generation))
+      const owner = this.workspaceExclusionOwner(editor)
+      void this.d.restoreWorkspaceExcludes().then(() => {
+        this.rerenderWorkspaceExcludes(generation, owner)
+      })
     }
     group.append(label, help, editor, restore)
     wrap.append(group)
     return wrap
   }
 
+  private workspaceExclusionOwner(editor: HTMLTextAreaElement): WorkspaceExclusionOwner {
+    return { editor, draftGeneration: this.workspaceExclusionDraftGeneration }
+  }
+
   private rerenderWorkspaceExcludes(
     generation: number,
-    owner?: HTMLTextAreaElement,
-    draftGeneration?: number,
+    owner: WorkspaceExclusionOwner,
   ): void {
     if (generation !== this.workspaceExclusionGeneration) return
-    if (owner && (!owner.isConnected || draftGeneration !== this.workspaceExclusionDraftGeneration)) return
+    if (!owner.editor.isConnected || owner.draftGeneration !== this.workspaceExclusionDraftGeneration) return
     const focused = document.activeElement as HTMLElement | null
     if (!focused || !this.box.contains(focused)) return
     const focusKey = focused.dataset.settingsFocus
