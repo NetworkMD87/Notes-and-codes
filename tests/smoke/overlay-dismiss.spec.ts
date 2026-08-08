@@ -1,16 +1,15 @@
-import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { test, expect } from './smokeTest'
+import type { Page } from '@playwright/test'
+import type { SmokeResources } from './smokeCleanup'
 import { openSettings } from './settingsHelper'
 
-async function launch() {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-esc-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  return { app, userDataDir }
+async function launch(smoke: SmokeResources) {
+  const userDataDir = smoke.tempDir('notes-esc-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  return { app }
 }
 
-type Win = Awaited<ReturnType<Awaited<ReturnType<typeof electron.launch>>['firstWindow']>>
+type Win = Page
 
 async function runCmd(win: Win, label: string) {
   await win.keyboard.press('Control+Shift+P')
@@ -18,32 +17,24 @@ async function runCmd(win: Win, label: string) {
   await win.keyboard.press('Enter')
 }
 
-test('Escape closes overlays that previously had no Esc handler', async () => {
-  const { app, userDataDir } = await launch()
-  try {
+test('Escape closes overlays that previously had no Esc handler', async ({ smoke }) => {
+  const { app } = await launch(smoke)
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     // Settings panel — gained Esc-close this slice (ported from the old Appearance panel)
     await openSettings(win)
     await win.keyboard.press('Escape')
     await expect(win.locator('#settings')).toBeHidden()
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Escape closes the command palette from any focus', async () => {
-  const { app, userDataDir } = await launch()
-  try {
+test('Escape closes the command palette from any focus', async ({ smoke }) => {
+  const { app } = await launch(smoke)
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()   // renderer ready (keydown listener attached)
     await win.keyboard.press('Control+Shift+P')
     await expect(win.locator('#palette .palette-box')).toBeVisible()
     await win.keyboard.press('Escape')
     await expect(win.locator('#palette')).toBeHidden()
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
 // Re-opening an already-open overlay used to push a SECOND close callback onto the overlay
@@ -52,9 +43,8 @@ test('Escape closes the command palette from any focus', async () => {
 // orphan could never be removed: it sat on top of the stack for the rest of the session, and
 // handleEscape() preventDefault+stopPropagation's whatever it finds there. Every subsequent
 // Escape was eaten before Monaco could see it.
-test('a re-entrant overlay open leaves no ghost entry to swallow later Escapes', async () => {
-  const { app, userDataDir } = await launch()
-  try {
+test('a re-entrant overlay open leaves no ghost entry to swallow later Escapes', async ({ smoke }) => {
+  const { app } = await launch(smoke)
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -75,14 +65,10 @@ test('a re-entrant overlay open leaves no ghost entry to swallow later Escapes',
     await expect(win.locator('.find-widget.visible')).toBeVisible()
     await win.keyboard.press('Escape')
     await expect(win.locator('.find-widget.visible')).toHaveCount(0)
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Escape closes only the topmost of two stacked overlays', async () => {
-  const { app, userDataDir } = await launch()
-  try {
+test('Escape closes only the topmost of two stacked overlays', async ({ smoke }) => {
+  const { app } = await launch(smoke)
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()   // renderer ready (keydown listener attached)
     await openSettings(win)
@@ -93,7 +79,4 @@ test('Escape closes only the topmost of two stacked overlays', async () => {
     await expect(win.locator('#settings')).toBeVisible()
     await win.keyboard.press('Escape')                   // then settings
     await expect(win.locator('#settings')).toBeHidden()
-  } finally {
-    await app.close(); rmSync(userDataDir, { recursive: true, force: true })
-  }
 })

@@ -1,18 +1,15 @@
-import { test, expect, _electron as electron } from '@playwright/test'
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { test, expect } from './smokeTest'
+import type { Page } from '@playwright/test'
 
-async function runCmd(win: Awaited<ReturnType<Awaited<ReturnType<typeof electron.launch>>['firstWindow']>>, label: string) {
+async function runCmd(win: Page, label: string) {
   await win.keyboard.press('Control+Shift+P')
   await win.locator('#palette input').fill(label)
   await win.keyboard.press('Enter')
 }
 
-test('Help: Keyboard Shortcuts overlay renders, filters, and closes on Esc', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-help-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Help: Keyboard Shortcuts overlay renders, filters, and closes on Esc', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-help-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -40,16 +37,11 @@ test('Help: Keyboard Shortcuts overlay renders, filters, and closes on Esc', asy
     // Esc closes
     await win.locator('.help-search').press('Escape')
     await expect(win.locator('.help-overlay')).toBeHidden()
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
 
-test('Help: About shows the live version and link buttons', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'notes-help-about-'))
-  const app = await electron.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
+test('Help: About shows the live version and link buttons', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-help-about-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
 
@@ -63,8 +55,4 @@ test('Help: About shows the live version and link buttons', async () => {
     const reported = await win.evaluate(() => (window as any).api.getAppVersion())
     await expect(win.locator('.about-version')).toHaveText('v' + reported, { timeout: 3000 })
     await expect(win.locator('.about-link')).toHaveCount(3)
-  } finally {
-    await app.close()
-    rmSync(userDataDir, { recursive: true, force: true })
-  }
 })
