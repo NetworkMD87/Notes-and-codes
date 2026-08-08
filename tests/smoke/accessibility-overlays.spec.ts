@@ -32,6 +32,7 @@ test('Quick Open, Find in Files, and Help are named modal dialogs with trapped f
 
 test('remaining modal pickers, managers, history, and dictionary are named dialogs with trapped focus', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-remaining-overlay-a11y-')
+  writeFileSync(join(userDataDir, 'clipboard-history.json'), JSON.stringify(['keyboard paste payload']))
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   const win = await app.firstWindow(); await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
 
@@ -42,8 +43,10 @@ test('remaining modal pickers, managers, history, and dictionary are named dialo
   }
 
   await openCommand('Paste from History')
-  await expectDialog(win, 'Paste from History', win.getByRole('button', { name: 'Close Paste from History' }), win.getByRole('button', { name: 'Close Paste from History' }))
-  await win.keyboard.press('Escape')
+  const pasteRow = win.getByRole('button', { name: 'Paste keyboard paste payload' })
+  await expectDialog(win, 'Paste from History', pasteRow, win.getByRole('button', { name: 'Close Paste from History' }))
+  await win.keyboard.press('Enter')
+  await expect(win.getByRole('dialog', { name: 'Paste from History' })).toBeHidden()
 
   await openCommand('Insert Snippet')
   await expectDialog(win, 'Insert Snippet', win.getByRole('button', { name: 'Close Insert Snippet' }), win.getByRole('button', { name: 'Close Insert Snippet' }))
