@@ -6,6 +6,10 @@ export interface InputOverlayOptions {
   focusFallback: () => void
 }
 
+export type ConfirmArmScheduler = (callback: () => void) => void
+
+const afterAnimationFrame: ConfirmArmScheduler = callback => { requestAnimationFrame(callback) }
+
 export function promptInput(title: string, options: InputOverlayOptions): Promise<string | null> {
   return new Promise((resolve) => {
     const overlay = document.createElement('div')
@@ -44,7 +48,11 @@ export function promptInput(title: string, options: InputOverlayOptions): Promis
 
 // Themed yes/cancel confirmation (no native confirm()). Resolves true on confirm, false on
 // cancel/Escape/click-out. Reuses the .input-overlay/.input-box chrome.
-export function confirmDialog(message: string, options: InputOverlayOptions): Promise<boolean> {
+export function confirmDialog(
+  message: string,
+  options: InputOverlayOptions,
+  scheduleArm: ConfirmArmScheduler = afterAnimationFrame,
+): Promise<boolean> {
   return new Promise((resolve) => {
     const overlay = document.createElement('div')
     overlay.className = 'input-overlay'
@@ -77,7 +85,7 @@ export function confirmDialog(message: string, options: InputOverlayOptions): Pr
     dialog.open({ panel: box, labelledBy: label.id, initialFocus: box, requestClose: () => done(false) })
     // Arm Enter-to-confirm + focus only AFTER the current keystroke completes.
     // An Enter that opened this dialog must not confirm it before the user sees it.
-    requestAnimationFrame(() => {
+    scheduleArm(() => {
       if (settled) return
       document.addEventListener('keydown', onKey, true)
       ok.focus()
