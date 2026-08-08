@@ -1,7 +1,7 @@
 import type { ChildProcess } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   classifyCleanup,
   formatCleanupIssues,
@@ -10,6 +10,22 @@ import {
   type ElectronLaunchOptions,
 } from '../smoke/smokeCleanup'
 import { reportCleanup } from '../smoke/smokeTest'
+
+const playwrightDouble = vi.hoisted(() => {
+  const state: { application?: unknown } = {}
+  const electron = {
+    async launch(this: unknown): Promise<unknown> {
+      if (this !== electron) throw new TypeError('Playwright launch receiver was lost')
+      return state.application
+    },
+  }
+  return { electron, state }
+})
+
+vi.mock('@playwright/test', async importOriginal => ({
+  ...await importOriginal<typeof import('@playwright/test')>(),
+  _electron: playwrightDouble.electron,
+}))
 
 class FakeChild {
   pid: number | undefined
@@ -149,6 +165,16 @@ function issue(kind: CleanupIssue['kind'], label: string): CleanupIssue {
 }
 
 describe('SmokeResources', () => {
+  it('preserves the Playwright receiver when using the default launcher', async () => {
+    const log: string[] = []
+    const app = new FakeApplication('default-launch', 100, log)
+    playwrightDouble.state.application = app
+    const smoke = new SmokeResources()
+
+    await expect(smoke.launch({ args: ['app'] })).resolves.toBe(app)
+    app.child.exit(0)
+  })
+
   it('cleans processes before directories in reverse registration order', async () => {
     const { smoke, log, appA, appB, child, directories } = harness()
     smoke.trackChild(child as unknown as ChildProcess, 'second-instance')

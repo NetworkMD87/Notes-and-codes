@@ -52,7 +52,7 @@ export class SmokeResources {
 
   constructor(ops: Partial<SmokeCleanupOps> = {}) {
     this.ops = {
-      launchElectron: electron.launch,
+      launchElectron: options => electron.launch(options),
       makeTempDir: mkdtempSync,
       removeDir: path => rmSync(path, { recursive: true, force: true }),
       forceTerminate: defaultForceTerminate,
