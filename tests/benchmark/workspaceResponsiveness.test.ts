@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { performance } from 'node:perf_hooks'
@@ -36,7 +36,9 @@ function checksum(paths: string[]): number {
 
 function percentile(values: number[], fraction: number): number {
   const sorted = [...values].sort((a, b) => a - b)
-  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))]
+  const boundedFraction = Math.max(0, Math.min(1, fraction))
+  const nearestRankIndex = Math.ceil(boundedFraction * sorted.length) - 1
+  return sorted[Math.max(0, Math.min(sorted.length - 1, nearestRankIndex))]
 }
 
 beforeAll(() => {
@@ -46,7 +48,22 @@ beforeAll(() => {
 afterAll(() => rmSync(root, { recursive: true, force: true }))
 
 describe('20,000-file workspace benchmark', () => {
+  it('uses the conventional nearest-rank percentile', () => {
+    expect(percentile([1, 2, 3, 4], 0.75)).toBe(3)
+    expect(percentile([4, 3, 2, 1], -1)).toBe(1)
+    expect(percentile([4, 3, 2, 1], 2)).toBe(4)
+  })
+
   it('records walk/index, watcher-style refresh, and correct bounded-query p95', async () => {
+    expect(
+      existsSync(join(root, 'packages', 'pkg-000', 'dist', 'excluded-target.ts')),
+      'excluded fixture must exist before traversal',
+    ).toBe(true)
+    expect(
+      existsSync(join(root, 'packages', 'pkg-123', 'src', 'workspace-target.ts')),
+      'workspace target fixture must exist before traversal',
+    ).toBe(true)
+
     const coldStart = performance.now()
     const coldWalk = await walkFiles(root, FILTER)
     const candidates = buildQuickOpenCandidates(root, coldWalk.files)
