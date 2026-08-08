@@ -44,6 +44,10 @@ interface TrackedProcess {
 
 const execFileAsync = promisify(execFile)
 
+export async function execFileWithTimeout(file: string, args: string[], timeoutMs: number): Promise<void> {
+  await execFileAsync(file, args, { timeout: timeoutMs, windowsHide: true })
+}
+
 export class SmokeResources {
   private readonly ops: SmokeCleanupOps
   private readonly processes: TrackedProcess[] = []
@@ -212,7 +216,7 @@ function cleanupIssue(kind: CleanupKind, label: string, error: unknown): Cleanup
 async function defaultForceTerminate(child: ChildProcess, pid: number): Promise<void> {
   if (!isValidPid(pid)) throw new Error('Invalid process identifier')
   if (process.platform === 'win32') {
-    await execFileAsync('taskkill.exe', ['/PID', String(pid), '/T', '/F'])
+    await execFileWithTimeout('taskkill.exe', ['/PID', String(pid), '/T', '/F'], 5_000)
     return
   }
   if (!child.kill('SIGKILL') && child.exitCode === null) throw new Error('Could not terminate process')

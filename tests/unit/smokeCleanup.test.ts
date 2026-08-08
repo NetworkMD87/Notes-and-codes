@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
   classifyCleanup,
+  execFileWithTimeout,
   formatCleanupIssues,
   SmokeResources,
   type CleanupIssue,
@@ -169,6 +170,20 @@ function issue(kind: CleanupIssue['kind'], label: string): CleanupIssue {
 }
 
 describe('SmokeResources', () => {
+  it('kills and rejects a helper subprocess that exceeds the exec bound', async () => {
+    const startedAt = Date.now()
+    let failure: unknown
+
+    try {
+      await execFileWithTimeout(process.execPath, ['-e', 'setInterval(() => undefined, 1_000)'], 100)
+    } catch (error) {
+      failure = error
+    }
+
+    expect(failure).toMatchObject({ killed: true, signal: 'SIGTERM' })
+    expect(Date.now() - startedAt).toBeLessThan(2_000)
+  })
+
   it('registers the real second-instance process at creation', () => {
     const source = readFileSync(
       join(process.cwd(), 'tests/smoke/startup-window.spec.ts'),
@@ -497,6 +512,47 @@ describe('cleanup reporting', () => {
       body: 'Smoke cleanup issues:\n- child second-instance: Could not clean second-instance',
     }])
     expect(diagnostics).toEqual(['Smoke cleanup issues:\n- child second-instance: Could not clean second-instance'])
+  })
+
+  it('preserves a body failure and reports diagnostics when attachment fails', async () => {
+    const diagnostics: string[] = []
+
+    await expect(reportCleanup(
+      [issue('child', 'second-instance')],
+      new Error('body failed'),
+      async () => { throw new Error('attachment unavailable') },
+      message => { diagnostics.push(message) },
+    )).resolves.toBeUndefined()
+
+    expect(diagnostics).toEqual([
+      'Smoke cleanup issues:\n- child second-instance: Could not clean second-instance\n' +
+      'Smoke cleanup attachment failed: attachment unavailable',
+    ])
+  })
+
+  it('includes attachment failure with cleanup causes when the body is clean', async () => {
+    const cleanup = issue('directory', 'notes-a')
+    const attachmentFailure = new Error('attachment unavailable')
+    const diagnostics: string[] = []
+    let thrown: unknown
+
+    try {
+      await reportCleanup(
+        [cleanup],
+        undefined,
+        async () => { throw attachmentFailure },
+        message => { diagnostics.push(message) },
+      )
+    } catch (error) {
+      thrown = error
+    }
+
+    expect(thrown).toBeInstanceOf(AggregateError)
+    expect((thrown as AggregateError).errors).toEqual([cleanup.error, attachmentFailure])
+    expect(diagnostics).toEqual([
+      'Smoke cleanup issues:\n- directory notes-a: Could not clean notes-a\n' +
+      'Smoke cleanup attachment failed: attachment unavailable',
+    ])
   })
 
   it('does nothing when cleanup has no issues', async () => {
