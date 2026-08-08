@@ -3,11 +3,11 @@ import { emptyState, EMPTY_ICONS } from './emptyState'
 import { searchBuffers, mergeResults, type SearchableBuffer } from './findInFilesModel'
 import { MIN_QUERY_LENGTH } from '../shared/searchText'
 import { fileType } from './fileType'
-import { HL_HEX, type SearchFileResult, type SearchOptions } from '../shared/types'
+import { HL_HEX, type SearchFileResult, type SearchOptions, type WorkspaceFilter } from '../shared/types'
 
 export interface FindInFilesDeps {
   root: () => string | null
-  showAll: () => boolean
+  filter: () => WorkspaceFilter
   buffers: () => SearchableBuffer[]
   openMatch: (path: string, title: string, line: number, column: number, length: number) => void
   focusEditor: () => void
@@ -118,7 +118,7 @@ export class FindInFiles {
     const res = await window.api.searchFiles({
       root, query, opts: this.opts,
       skipPaths: buffers.map(b => b.filePath).filter((p): p is string => !!p),
-      showAll: this.d.showAll(),
+      filter: this.d.filter(),
       searchId: id,
     })
     if (id !== this.searchId) return // a newer search has started — drop this answer

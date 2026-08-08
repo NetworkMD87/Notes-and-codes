@@ -37,7 +37,7 @@ export async function searchFiles(req: SearchRequest, superseded: () => boolean 
   const empty: SearchResponse = { files: [], totalMatches: 0, truncated: false, searchId: req.searchId }
   if (!req.root || req.query.length < MIN_QUERY_LENGTH) return empty
 
-  const walk = await walkFiles(req.root, req.showAll)
+  const walk = await walkFiles(req.root, req.filter)
   if (superseded()) return empty // don't spend a single stat/read on a search that's already stale
 
   const skip = new Set(req.skipPaths.map(pathKey))

@@ -847,7 +847,7 @@ const palette = new CommandPalette(focusActiveEditor)
 const helpOverlay = new HelpOverlay(focusActiveEditor)
 const findInFiles = new FindInFiles(document.getElementById('app')!, {
   root: () => folder.root(),
-  showAll: () => showAllFiles,
+  filter: () => ({ showAll: showAllFiles, excludePatterns: [] }),
   buffers: () => manager.list().map(b => ({ filePath: b.filePath, title: b.title, content: b.content })),
   openMatch: (path, title, line, column, length) => {
     void (async () => {

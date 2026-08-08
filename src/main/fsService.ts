@@ -1,45 +1,68 @@
 import { promises as fs } from 'node:fs'
-import { join } from 'node:path'
-import type { DirEntry, WalkResult } from '../shared/types'
+import { join, relative } from 'node:path'
+import { compilePathGlobs } from '../shared/pathGlob'
+import type { DirEntry, WalkResult, WorkspaceFilter } from '../shared/types'
 
-const IGNORE = new Set(['.git', 'node_modules'])
 const MAX_INDEX_FILES = 20000
+export interface WalkFilesOptions { maxFiles?: number }
 
-export function shouldIgnore(name: string, showAll: boolean): boolean {
-  return !showAll && IGNORE.has(name)
+function matcherFor(filter: WorkspaceFilter): ReturnType<typeof compilePathGlobs> {
+  return compilePathGlobs(filter.showAll ? [] : filter.excludePatterns)
 }
 
-export async function readDir(path: string, showAll: boolean): Promise<DirEntry[]> {
+function workspacePath(root: string, path: string): string {
+  return relative(root, path).replace(/\\/g, '/')
+}
+
+export async function readDir(
+  root: string,
+  path: string,
+  filter: WorkspaceFilter,
+): Promise<DirEntry[]> {
   try {
-    const ents = await fs.readdir(path, { withFileTypes: true })
+    const matcher = matcherFor(filter)
+    const entries = await fs.readdir(path, { withFileTypes: true })
     const out: DirEntry[] = []
-    for (const e of ents) {
-      if (shouldIgnore(e.name, showAll)) continue
-      out.push({ name: e.name, path: join(path, e.name), isDir: e.isDirectory() })
+    for (const entry of entries) {
+      const absolutePath = join(path, entry.name)
+      const relativePath = workspacePath(root, absolutePath)
+      if (matcher.matches(relativePath) || (entry.isDirectory() && matcher.prunes(relativePath))) continue
+      out.push({ name: entry.name, path: absolutePath, isDir: entry.isDirectory() })
     }
-    out.sort((a, b) => (a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1))
+    out.sort((a, b) => a.isDir === b.isDir
+      ? a.name.localeCompare(b.name)
+      : a.isDir ? -1 : 1)
     return out
   } catch {
     return []
   }
 }
 
-export async function walkFiles(root: string, showAll: boolean, max = MAX_INDEX_FILES): Promise<WalkResult> {
-  const out: string[] = []
+export async function walkFiles(
+  root: string,
+  filter: WorkspaceFilter,
+  internalOptions: WalkFilesOptions = {},
+): Promise<WalkResult> {
+  const matcher = matcherFor(filter)
+  const maxFiles = internalOptions.maxFiles ?? MAX_INDEX_FILES
+  const files: string[] = []
   let truncated = false
-  async function walk(dir: string): Promise<void> {
-    let ents
-    try { ents = await fs.readdir(dir, { withFileTypes: true }) } catch { return }
-    for (const e of ents) {
-      if (shouldIgnore(e.name, showAll)) continue // ignored entries aren't "truncation"
-      if (out.length >= max) { truncated = true; return } // a real entry we can't index → stop + flag
-      const p = join(dir, e.name)
-      if (e.isDirectory()) await walk(p)
-      else out.push(p)
+  async function walk(path: string): Promise<void> {
+    let entries
+    try { entries = await fs.readdir(path, { withFileTypes: true }) } catch { return }
+    entries.sort((a, b) => a.name.localeCompare(b.name))
+    for (const entry of entries) {
+      const absolutePath = join(path, entry.name)
+      const relativePath = workspacePath(root, absolutePath)
+      if (matcher.matches(relativePath) || (entry.isDirectory() && matcher.prunes(relativePath))) continue
+      if (files.length >= maxFiles) { truncated = true; return }
+      if (entry.isDirectory()) await walk(absolutePath)
+      else files.push(absolutePath)
+      if (truncated) return
     }
   }
   await walk(root)
-  return { files: out, truncated }
+  return { files, truncated }
 }
 
 export async function createFile(path: string): Promise<boolean> {

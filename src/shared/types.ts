@@ -33,7 +33,7 @@ export interface SearchRequest {
   query: string
   opts: SearchOptions
   skipPaths: string[]
-  showAll: boolean
+  filter: WorkspaceFilter
   searchId: number
 }
 

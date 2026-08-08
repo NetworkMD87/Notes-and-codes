@@ -127,8 +127,10 @@ export function registerIpc(deps: IpcDeps): void {
     const r = await dialog.showOpenDialog({ properties: ['openDirectory'] })
     return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]
   })
-  handle('dir:read', (_e, path: string, showAll: boolean) => readDir(path, showAll))
-  handle('dir:walk', (_e, path: string, showAll: boolean) => walkFiles(path, showAll))
+  handle('dir:read', (_e, path: string, showAll: boolean) =>
+    readDir(path, path, { showAll, excludePatterns: [] }))
+  handle('dir:walk', (_e, root: string, showAll: boolean) =>
+    walkFiles(root, { showAll, excludePatterns: [] }))
 
   // Cancellation is keyed on a counter OWNED here, not on the renderer-supplied req.searchId.
   // The renderer's own counter restarts at 0 every time the renderer reloads (electron-vite HMR

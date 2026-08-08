@@ -14,7 +14,7 @@ const req = (over: Partial<SearchRequest> = {}): SearchRequest => ({
   query: 'needle',
   opts: { caseSensitive: false, wholeWord: false },
   skipPaths: [],
-  showAll: false,
+  filter: { showAll: false, excludePatterns: ['**/dist/**'] },
   searchId: 1,
   ...over,
 })
@@ -42,6 +42,15 @@ describe('searchFiles', () => {
     const r = await searchFiles(req())
     expect(r.totalMatches).toBe(3)
     expect(r.files).toHaveLength(2)
+  })
+
+  it('applies workspace exclusions unless Show All bypasses them', async () => {
+    mkdirSync(join(dir, 'dist'))
+    writeFileSync(join(dir, 'dist', 'hidden.txt'), 'needle')
+    expect((await searchFiles(req())).totalMatches).toBe(0)
+    expect((await searchFiles(req({
+      filter: { showAll: true, excludePatterns: ['**/dist/**'] },
+    }))).totalMatches).toBe(1)
   })
 
   it('skips paths in skipPaths', async () => {

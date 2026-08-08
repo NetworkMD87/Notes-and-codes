@@ -2,55 +2,54 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { shouldIgnore, readDir, walkFiles, createFile, createFolder, renamePath } from '../../src/main/fsService'
+import { readDir, walkFiles, createFile, createFolder, renamePath } from '../../src/main/fsService'
+import type { WorkspaceFilter } from '../../src/shared/types'
+
+const DEFAULT_FILTER: WorkspaceFilter = {
+  showAll: false,
+  excludePatterns: ['**/.git/**', '**/node_modules/**', '**/dist/**'],
+}
 
 let dir: string
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'nc-fs-')) })
 afterEach(() => { rmSync(dir, { recursive: true, force: true }) })
 
-describe('shouldIgnore', () => {
-  it('hides .git and node_modules unless showAll', () => {
-    expect(shouldIgnore('.git', false)).toBe(true)
-    expect(shouldIgnore('node_modules', false)).toBe(true)
-    expect(shouldIgnore('.env', false)).toBe(false)
-    expect(shouldIgnore('node_modules', true)).toBe(false)
+describe('workspace filtering', () => {
+  it('filters a lazy directory read relative to the workspace root', async () => {
+    mkdirSync(join(dir, 'src')); mkdirSync(join(dir, 'dist'))
+    writeFileSync(join(dir, 'keep.txt'), ''); writeFileSync(join(dir, 'drop.log'), '')
+    const filter = { ...DEFAULT_FILTER, excludePatterns: ['dist/**', '*.log'] }
+    expect((await readDir(dir, dir, filter)).map(entry => entry.name))
+      .toEqual(['src', 'keep.txt'])
   })
-})
 
-describe('readDir', () => {
-  it('returns dirs first then files, alphabetical, ignore-filtered', async () => {
-    mkdirSync(join(dir, 'src')); mkdirSync(join(dir, '.git')); mkdirSync(join(dir, 'node_modules'))
-    writeFileSync(join(dir, 'b.txt'), ''); writeFileSync(join(dir, 'a.txt'), '')
-    const entries = await readDir(dir, false)
-    expect(entries.map(e => e.name)).toEqual(['src', 'a.txt', 'b.txt'])
-    expect(entries[0]).toMatchObject({ name: 'src', isDir: true, path: join(dir, 'src') })
+  it('prunes excluded directory nodes before descending', async () => {
+    mkdirSync(join(dir, 'packages', 'app', 'node_modules'), { recursive: true })
+    mkdirSync(join(dir, 'packages', 'app', 'src'), { recursive: true })
+    writeFileSync(join(dir, 'packages', 'app', 'node_modules', 'drop.js'), '')
+    writeFileSync(join(dir, 'packages', 'app', 'src', 'keep.ts'), '')
+    const result = await walkFiles(dir, DEFAULT_FILTER)
+    expect(result.files).toEqual([join(dir, 'packages', 'app', 'src', 'keep.ts')])
+    expect(result.truncated).toBe(false)
   })
-  it('showAll includes node_modules', async () => {
-    mkdirSync(join(dir, 'node_modules'))
-    expect((await readDir(dir, true)).map(e => e.name)).toContain('node_modules')
-  })
-  it('missing path → []', async () => {
-    expect(await readDir(join(dir, 'nope'), false)).toEqual([])
-  })
-})
 
-describe('walkFiles', () => {
-  it('returns all files recursively, skipping ignored dirs; truncated=false under the cap', async () => {
-    mkdirSync(join(dir, 'src')); mkdirSync(join(dir, 'node_modules'))
-    writeFileSync(join(dir, 'root.txt'), '')
-    writeFileSync(join(dir, 'src', 'a.ts'), '')
-    writeFileSync(join(dir, 'node_modules', 'x.js'), '')
-    const r = await walkFiles(dir, false)
-    expect(r.truncated).toBe(false)
-    expect(r.files).toContain(join(dir, 'root.txt'))
-    expect(r.files).toContain(join(dir, 'src', 'a.ts'))
-    expect(r.files).not.toContain(join(dir, 'node_modules', 'x.js'))
+  it('Show All bypasses the complete exclusion list', async () => {
+    mkdirSync(join(dir, 'dist')); writeFileSync(join(dir, 'dist', 'visible.js'), '')
+    const filter = { ...DEFAULT_FILTER, showAll: true }
+    expect((await readDir(dir, dir, filter)).map(entry => entry.name)).toContain('dist')
+    expect((await walkFiles(dir, filter)).files).toContain(join(dir, 'dist', 'visible.js'))
   })
-  it('caps the list and flags truncated=true when the file count exceeds max', async () => {
-    for (const n of ['a', 'b', 'c']) writeFileSync(join(dir, n + '.txt'), '')
-    const r = await walkFiles(dir, false, 2)
-    expect(r.files).toHaveLength(2)
-    expect(r.truncated).toBe(true)
+
+  it('caps files without counting excluded entries as truncation', async () => {
+    mkdirSync(join(dir, 'dist')); writeFileSync(join(dir, 'dist', 'ignored.js'), '')
+    for (const name of ['a.txt', 'b.txt', 'c.txt']) writeFileSync(join(dir, name), '')
+    const result = await walkFiles(dir, DEFAULT_FILTER, { maxFiles: 2 })
+    expect(result.files).toHaveLength(2)
+    expect(result.truncated).toBe(true)
+  })
+
+  it('returns an empty lazy read for a missing path', async () => {
+    expect(await readDir(dir, join(dir, 'nope'), DEFAULT_FILTER)).toEqual([])
   })
 })
 
