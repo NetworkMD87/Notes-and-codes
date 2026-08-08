@@ -8,6 +8,7 @@ import { showContextMenu, type ContextMenuEntry } from './contextMenu'
 import { promptInput, confirmDialog } from './inputOverlay'
 import { toast } from './notify'
 import { menuEntries, splitPath } from './recentFolders'
+import { buildQuickOpenCandidates, type QuickOpenCandidate } from './fuzzy'
 
 export interface FolderModeDeps {
   sidebarEl: HTMLElement
@@ -23,7 +24,7 @@ export class FolderMode {
   private sidebar: Sidebar
   private panel: FolderPanel
   private quick: QuickOpen
-  private index: string[] = []
+  private index: QuickOpenCandidate[] = []
   private indexTruncated = false
   private split: ReturnType<typeof Split> | null = null
   private showAll = false
@@ -37,7 +38,7 @@ export class FolderMode {
       onHeaderClick: (x, y, keyboardOpener) => void this.folderMenu(x, y, keyboardOpener)
     })
     this.quick = new QuickOpen(document.getElementById('app')!, {
-      files: () => this.index,
+      candidates: () => this.index,
       truncated: () => this.indexTruncated,
       openFile: d.openFile,
       focusEditor: d.focusEditor
@@ -177,7 +178,7 @@ export class FolderMode {
     // A folder switch while the walk was in flight makes this answer stale — dropping it is what
     // stops folder A's index from overwriting folder B's (Quick Open would list the wrong folder).
     if (this.model.root !== root) return
-    this.index = r.files
+    this.index = buildQuickOpenCandidates(root, r.files)
     this.indexTruncated = r.truncated
   }
 

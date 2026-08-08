@@ -1,8 +1,8 @@
-import { rankFiles } from './fuzzy'
+import { rankFileCandidates, type QuickOpenCandidate } from './fuzzy'
 import { DialogController } from './dialogController'
 
 export interface QuickOpenDeps {
-  files: () => string[]
+  candidates: () => readonly QuickOpenCandidate[]
   truncated: () => boolean
   openFile: (path: string) => void
   focusEditor: () => void
@@ -47,7 +47,8 @@ export class QuickOpen {
   }
 
   private refresh(): void {
-    this.results = rankFiles(this.input.value, this.d.files(), 50).map(r => r.path)
+    this.results = rankFileCandidates(this.input.value, this.d.candidates(), 50)
+      .map(result => result.path)
     this.active = 0
     this.renderList()
   }
