@@ -17,23 +17,26 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — Package and owner-test the v1.18.1 build
+## ▶ NEXT ACTION — Design the Microsoft Store / MSIX release
 
-🚧 **v1.18.1 local test build — prepared, pending package/install sign-off and release.** PR #11
-shipped the focused Markdown dependency patch to `master`: DOMPurify `3.4.13`, linkify-it `5.0.2`,
-and a lockfile security guard. The npm production graph is audit-clean (`npm audit --omit=dev`: 0
-vulnerabilities). The full audit still reports the existing 20 development/build-graph findings;
-Electron supplies the packaged runtime despite its `devDependencies` classification, so those
-Electron/toolchain advisories remain separate compatibility-tested upgrade work rather than being
-described as closed. No automatic `npm audit fix` was applied.
+✅ **v1.18.1 shipped 2026-08-08 — Markdown dependency security and release-test reliability.**
+Tagged and published as a GitHub release after validation of the installed build. PR #11 raised
+DOMPurify to `3.4.13`, overrode linkify-it to `5.0.2`, and added a lockfile security guard. The npm
+production graph remains audit-clean (`npm audit --omit=dev`: 0 vulnerabilities). The full audit
+still reports the existing 20 development/build-graph findings; Electron supplies the packaged
+runtime despite its `devDependencies` classification, so those Electron/toolchain advisories remain
+separate compatibility-tested upgrade work rather than being described as closed. No automatic
+`npm audit fix` was applied.
 
-The same patch release carries PR #12's smoke-teardown reliability work: the Windows harness now
-owns and closes every Electron process it launches, eliminating the earlier cleanup-only false red;
-normal app usage was never affected. All 766 unit tests, typecheck/build, focused Markdown preview
-smoke, the full normally configured 119-test smoke suite, Windows packaging, audit, diff, independent
-review, PR-head CI, and merge-commit CI gates passed. **Remaining:** package `1.18.1`, install and
-manually validate the real build, mark this entry shipped, tag that exact commit, rebuild final
-artifacts from the tag, publish the GitHub release, and verify it.
+The release also carries PR #12's smoke-teardown reliability work: the Windows harness now owns and
+closes every Electron process it launches, eliminating the earlier cleanup-only false red; normal app
+usage was never affected. All 766 unit tests, typecheck/build, focused Markdown preview smoke, the
+full normally configured 119-test smoke suite, Windows packaging, audit, diff, independent review,
+PR-head CI, merge-commit CI, and release-commit CI gates passed. The installed 1.18.1 build reported
+the correct About version, rendered and sanitized Markdown preview, registered the configured global
+hotkey, completed the close-to-tray/show cycle, and persisted launch-on-login across a relaunch before
+restoring its original disabled state. Final installer and portable artifacts were rebuilt from the
+tagged commit.
 
 **v1.17.0 shipped 2026-08-07 — Fully offline spell checking + startup readiness fix.** Tagged
 `v1.17.0` and published as a GitHub release (installer + portable). Plain-text and Markdown prose
