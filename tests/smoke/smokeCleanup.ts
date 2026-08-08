@@ -37,6 +37,7 @@ interface TrackedProcess {
   kind: 'application' | 'child'
   label: string
   child: ChildProcess
+  pid?: number
   close?: () => Promise<void>
   exited: ExitObservation
 }
@@ -74,18 +75,21 @@ export class SmokeResources {
   async launch(options: ElectronLaunchOptions): Promise<ElectronApplication> {
     const app = await this.ops.launchElectron(options)
     const child = app.process()
+    const pid = registeredPid(child.pid)
     this.processes.push({
       kind: 'application',
-      label: applicationLabel(child.pid),
+      label: applicationLabel(pid),
       child,
+      pid,
       close: () => app.close(),
       exited: observeExit(child),
     })
     return app
   }
 
-  trackChild<T extends ChildProcess>(child: T, label = childLabel(child.pid)): T {
-    this.processes.push({ kind: 'child', label, child, exited: observeExit(child) })
+  trackChild<T extends ChildProcess>(child: T, label?: string): T {
+    const pid = registeredPid(child.pid)
+    this.processes.push({ kind: 'child', label: label ?? childLabel(pid), child, pid, exited: observeExit(child) })
     return child
   }
 
@@ -120,17 +124,14 @@ export class SmokeResources {
 
     if (await this.waitForExit(process.exited)) return undefined
 
-    const pid = process.child.pid
+    const pid = process.pid
     if (!isValidPid(pid)) {
       return cleanupIssue(process.kind, process.label, shutdownFailure(process, 'forced', closeError ?? new Error('Invalid process identifier')))
     }
 
     let forceError: unknown
-    try {
-      await this.ops.forceTerminate(process.child, pid)
-    } catch (error) {
-      forceError = error
-    }
+    const force = Promise.resolve().then(() => this.ops.forceTerminate(process.child, pid))
+    void force.catch(error => { forceError = error })
     if (await this.waitForExit(process.exited)) return undefined
 
     return cleanupIssue(process.kind, process.label, shutdownFailure(process, 'forced', forceError ?? closeError))
@@ -208,8 +209,12 @@ function isValidPid(pid: number | undefined): pid is number {
   return Number.isSafeInteger(pid) && pid > 0
 }
 
+function registeredPid(pid: number | undefined): number | undefined {
+  return isValidPid(pid) ? pid : undefined
+}
+
 function shutdownFailure(process: TrackedProcess, phase: 'graceful' | 'forced', cause: unknown): Error {
-  const pid = isValidPid(process.child.pid) ? ` (PID ${process.child.pid})` : ''
+  const pid = process.pid === undefined ? '' : ` (PID ${process.pid})`
   return new Error(
     `Smoke cleanup could not confirm ${process.label}${pid} exited during ${phase} shutdown within 5000 ms`,
     { cause },

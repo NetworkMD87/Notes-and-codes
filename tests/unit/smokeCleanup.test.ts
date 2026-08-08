@@ -243,6 +243,52 @@ describe('SmokeResources', () => {
     expect(await cleaning).toMatchObject([{ kind: 'child', label: 'second-instance' }])
   })
 
+  it('bounds a hung force attempt and continues with directories', async () => {
+    const log: string[] = []
+    const child = new FakeChild(201)
+    const delays = new DeferredDelays()
+    delays.hold = true
+    const directory = join(tmpdir(), 'notes-after-force-123')
+    const smoke = new SmokeResources({
+      makeTempDir: () => directory,
+      removeDir: path => { log.push(`remove:${path.split(/[\\/]/).pop()}`) },
+      forceTerminate: async () => {
+        log.push('force:hung-child')
+        await new Promise<void>(() => undefined)
+      },
+      delay: ms => delays.delay(ms),
+    })
+    smoke.trackChild(child as unknown as ChildProcess, 'hung-child')
+    smoke.tempDir('notes-after-force-')
+
+    const cleaning = smoke.cleanup()
+    await flush()
+    delays.releaseNext()
+    await flush()
+    expect(log).toEqual(['force:hung-child'])
+    delays.releaseNext()
+
+    expect(await cleaning).toMatchObject([{ kind: 'child', label: 'hung-child' }])
+    expect(log).toEqual(['force:hung-child', 'remove:notes-after-force-123'])
+  })
+
+  it('uses the PID captured at child registration for force and diagnostics', async () => {
+    const { delays } = harness()
+    const child = new FakeChild(301)
+    const forcedPids: number[] = []
+    const resources = new SmokeResources({
+      forceTerminate: async (_child, pid) => { forcedPids.push(pid) },
+      delay: ms => delays.delay(ms),
+    })
+    resources.trackChild(child as unknown as ChildProcess, 'pid-snapshot')
+    child.pid = 999
+
+    const issues = await resources.cleanup()
+    expect(forcedPids).toEqual([301])
+    expect(issues[0].error.message).toContain('PID 301')
+    expect(issues[0].error.message).not.toContain('999')
+  })
+
   it('continues cleanup after a process failure', async () => {
     const { smoke, appA, appB, directories, log } = harness()
     await smoke.launch({ args: ['app-a'] })
@@ -273,7 +319,7 @@ describe('SmokeResources', () => {
 
   it.each([
     tmpdir(),
-    join(tmpdir(), '..', 'outside-notes'),
+    join(tmpdir(), '..', 'notes-outside-123'),
     join(tmpdir(), 'scratch-123'),
   ])('rejects unsafe temp directory result %s without recording it', unsafePath => {
     const { smoke, directories, log } = harness()
