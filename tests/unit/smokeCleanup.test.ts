@@ -1,4 +1,5 @@
 import type { ChildProcess } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
@@ -165,6 +166,15 @@ function issue(kind: CleanupIssue['kind'], label: string): CleanupIssue {
 }
 
 describe('SmokeResources', () => {
+  it('registers the real second-instance process at creation', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'tests/smoke/startup-window.spec.ts'),
+      'utf8',
+    )
+    expect(source.match(/\bspawn\(/g)).toHaveLength(1)
+    expect(source).toMatch(/smoke\.trackChild\(\s*spawn\(/)
+  })
+
   it('preserves the Playwright receiver when using the default launcher', async () => {
     const log: string[] = []
     const app = new FakeApplication('default-launch', 100, log)
