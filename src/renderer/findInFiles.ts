@@ -1,4 +1,4 @@
-import { OverlayRegistration } from './overlayManager'
+import { DialogController } from './dialogController'
 import { emptyState, EMPTY_ICONS } from './emptyState'
 import { searchBuffers, mergeResults, type SearchableBuffer } from './findInFilesModel'
 import { MIN_QUERY_LENGTH } from '../shared/searchText'
@@ -10,6 +10,7 @@ export interface FindInFilesDeps {
   showAll: () => boolean
   buffers: () => SearchableBuffer[]
   openMatch: (path: string, title: string, line: number, column: number, length: number) => void
+  focusEditor: () => void
 }
 
 interface Row { file: SearchFileResult; matchIndex: number }
@@ -21,7 +22,7 @@ export class FindInFiles {
   private input!: HTMLInputElement
   private listEl!: HTMLElement
   private footEl!: HTMLElement
-  private reg = new OverlayRegistration()
+  private dialog: DialogController
   private opts: SearchOptions = { caseSensitive: false, wholeWord: false }
   private results: SearchFileResult[] = []
   private rows: Row[] = []
@@ -37,6 +38,7 @@ export class FindInFiles {
   private timer: number | undefined
 
   constructor(parent: HTMLElement, private d: FindInFilesDeps) {
+    this.dialog = new DialogController(d.focusEditor)
     this.host = document.createElement('div')
     this.host.id = 'find-in-files'; this.host.className = 'hidden'
     this.host.addEventListener('mousedown', (e) => { if (e.target === this.host) this.close() })
@@ -47,17 +49,20 @@ export class FindInFiles {
   // overlay is shut (folder opened/closed, buffers edited) must be re-read on every open.
   open(): void {
     const box = document.createElement('div'); box.className = 'fif-box'
+    const title = document.createElement('h2')
+    title.id = 'find-in-files-title'; title.textContent = 'Find in Files'; title.className = 'sr-only'
     const head = document.createElement('div'); head.className = 'fif-head'
     this.input = document.createElement('input')
+    this.input.type = 'search'; this.input.setAttribute('aria-label', 'Find in Files')
     this.input.placeholder = 'Find in files…'
     this.input.value = this.query
     head.append(this.input, this.toggle('Aa', 'caseSensitive'), this.toggle('W', 'wholeWord'))
     this.listEl = document.createElement('div'); this.listEl.className = 'fif-list'
     this.footEl = document.createElement('div'); this.footEl.className = 'fif-note'
-    box.append(head, this.listEl, this.footEl)
+    box.append(title, head, this.listEl, this.footEl)
     this.host.replaceChildren(box)
     this.host.classList.remove('hidden')
-    this.reg.open(() => this.close())
+    this.dialog.open({ panel: box, labelledBy: title.id, initialFocus: this.input, requestClose: () => this.close() })
     this.input.addEventListener('input', () => { this.query = this.input.value; this.schedule() })
     this.input.addEventListener('keydown', (e) => this.onKey(e))
     // Re-run rather than just redisplay: root()/buffers() may have changed while shut
@@ -65,7 +70,6 @@ export class FindInFiles {
     // the stale ones left over from before the overlay closed.
     if (this.query.length >= MIN_QUERY_LENGTH) void this.runSearch()
     else this.render()
-    this.input.focus()
     this.input.select()
   }
 
@@ -73,10 +77,12 @@ export class FindInFiles {
     const b = document.createElement('button')
     b.className = 'fif-toggle' + (this.opts[key] ? ' on' : '')
     b.textContent = label
-    b.title = key === 'caseSensitive' ? 'Match case' : 'Whole word'
+    b.setAttribute('aria-label', key === 'caseSensitive' ? 'Match case' : 'Whole word')
+    b.setAttribute('aria-pressed', String(this.opts[key]))
     b.onclick = () => {
       this.opts = { ...this.opts, [key]: !this.opts[key] }
       b.classList.toggle('on', this.opts[key])
+      b.setAttribute('aria-pressed', String(this.opts[key]))
       clearTimeout(this.timer)
       this.runSearch()
       this.input.focus()
@@ -205,7 +211,7 @@ export class FindInFiles {
   private close(): void {
     clearTimeout(this.timer)
     this.searchId++ // invalidate any in-flight search: its response must land as stale, not overwrite the next session
-    this.reg.release()
     this.host.classList.add('hidden')
+    this.dialog.close()
   }
 }

@@ -2,6 +2,8 @@ import { test, expect } from './smokeTest'
 import type { Page } from '@playwright/test'
 import type { SmokeResources } from './smokeCleanup'
 import { openSettings } from './settingsHelper'
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 async function launch(smoke: SmokeResources) {
   const userDataDir = smoke.tempDir('notes-esc-')
@@ -82,6 +84,33 @@ test('a re-entrant overlay open leaves no ghost entry to swallow later Escapes',
     await expect(win.locator('.find-widget.visible')).toBeVisible()
     await win.keyboard.press('Escape')
     await expect(win.locator('.find-widget.visible')).toHaveCount(0)
+})
+
+test('re-opening Quick Open and Help leaves one effective Escape close', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-reentrant-core-')
+  const root = smoke.tempDir('notes-reentrant-root-')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ lastFolder: root, restoreFolderOnLaunch: true }))
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+
+  await win.keyboard.press('Control+P')
+  await win.keyboard.press('Control+P')
+  await expect(win.locator('#quick-open')).toBeVisible()
+  await win.keyboard.press('Escape')
+  await expect(win.locator('#quick-open')).toBeHidden()
+
+  await runCmd(win, 'Help: Shortcuts & Commands')
+  await runCmd(win, 'Help: Shortcuts & Commands')
+  await expect(win.locator('.help-overlay')).toBeVisible()
+  await win.keyboard.press('Escape')
+  await expect(win.locator('.help-overlay')).toBeHidden()
+
+  await win.locator('.view-lines').first().click()
+  await win.keyboard.press('Control+F')
+  await expect(win.locator('.find-widget.visible')).toBeVisible()
+  await win.keyboard.press('Escape')
+  await expect(win.locator('.find-widget.visible')).toHaveCount(0)
 })
 
 test('Escape closes only the topmost of two stacked overlays', async ({ smoke }) => {

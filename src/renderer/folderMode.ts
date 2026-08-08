@@ -15,6 +15,7 @@ export interface FolderModeDeps {
   openFile: (path: string) => void
   activePath: () => string | null
   pickFolder: () => Promise<void>   // the same picker the File menu / palette use
+  focusEditor: () => void
 }
 
 export class FolderMode {
@@ -38,7 +39,8 @@ export class FolderMode {
     this.quick = new QuickOpen(document.getElementById('app')!, {
       files: () => this.index,
       truncated: () => this.indexTruncated,
-      openFile: d.openFile
+      openFile: d.openFile,
+      focusEditor: d.focusEditor
     })
     this.panel = new FolderPanel(d.sidebarEl, {
       pickFolder: () => d.pickFolder(),
@@ -233,23 +235,23 @@ export class FolderMode {
   }
 
   private async newFile(dir: string): Promise<void> {
-    const name = await promptInput('New file name'); if (!name) return
+    const name = await promptInput('New file name', { focusFallback: this.d.focusEditor }); if (!name) return
     if (await window.api.createFile(dir.replace(/[\\/]$/, '') + '/' + name)) await this.refreshDir(dir)
     else toast('Could not create file (already exists?).', 'error')
   }
   private async newFolder(dir: string): Promise<void> {
-    const name = await promptInput('New folder name'); if (!name) return
+    const name = await promptInput('New folder name', { focusFallback: this.d.focusEditor }); if (!name) return
     if (await window.api.createFolder(dir.replace(/[\\/]$/, '') + '/' + name)) await this.refreshDir(dir)
     else toast('Could not create folder (already exists?).', 'error')
   }
   private async rename(entry: DirEntry): Promise<void> {
-    const name = await promptInput('Rename', entry.name); if (!name || name === entry.name) return
+    const name = await promptInput('Rename', { initial: entry.name, focusFallback: this.d.focusEditor }); if (!name || name === entry.name) return
     const parent = entry.path.replace(/[\\/][^\\/]+$/, '')
     if (await window.api.renamePath(entry.path, parent + '/' + name)) await this.refreshDir(parent)
     else toast('Could not rename (name in use?).', 'error')
   }
   private async remove(entry: DirEntry): Promise<void> {
-    if (!await confirmDialog(`Delete "${entry.name}"? It will be moved to the Recycle Bin.`)) return
+    if (!await confirmDialog(`Delete "${entry.name}"? It will be moved to the Recycle Bin.`, { focusFallback: this.d.focusEditor })) return
     const parent = entry.path.replace(/[\\/][^\\/]+$/, '')
     if (await window.api.trashPath(entry.path)) { await this.refreshDir(parent); toast(`Moved "${entry.name}" to Recycle Bin.`, 'success') }
     else toast('Could not delete.', 'error')

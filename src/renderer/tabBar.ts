@@ -36,8 +36,9 @@ export class TabBar {
       tab.append(badge, title)
       tab.onclick = (e) => { if ((e.target as HTMLElement).dataset.close !== '1') this.handlers.onSelect(b.id) }
       tab.onauxclick = (e) => { if (e.button === 1) this.handlers.onClose(b.id) } // middle-click
-      const x = document.createElement('span')
-      x.textContent = '×'; x.dataset.close = '1'; x.className = 'tab-close'
+      const x = document.createElement('button')
+      x.type = 'button'; x.textContent = '×'; x.dataset.close = '1'; x.className = 'tab-close'
+      x.setAttribute('aria-label', `Close ${b.title}`)
       x.onclick = () => this.handlers.onClose(b.id)
       tab.appendChild(x)
       this.container.appendChild(tab)

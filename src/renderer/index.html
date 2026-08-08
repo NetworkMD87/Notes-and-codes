@@ -28,7 +28,7 @@
       .tab.drop-before{box-shadow:inset 2px 0 0 var(--accent)}
       .tab.drop-after{box-shadow:inset -2px 0 0 var(--accent)}
       .tab-title{overflow:hidden;text-overflow:ellipsis}
-      .tab-close{opacity:.6}.tab-close:hover{opacity:1}
+      .tab-close{opacity:.6;background:none;border:0;color:inherit;cursor:pointer;font:inherit;padding:0}.tab-close:hover{opacity:1}
       .tab-add{background:none;border:none;color:var(--bartext);font-size:16px;cursor:pointer;padding:0 10px}
       .gutter{background:var(--border);cursor:col-resize}
       .gutter.gutter-horizontal{width:6px}
@@ -237,7 +237,7 @@
       .help-overlay.hidden{display:none}
       .help-box{position:relative;width:560px;max-height:84vh;display:flex;flex-direction:column;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden}
       .help-titlebar{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;background:var(--bar);border-bottom:1px solid var(--border)}
-      .help-title{flex:1;font-size:14px;font-weight:600;color:var(--panel-text)}
+      .help-title{flex:1;margin:0;font-size:14px;font-weight:600;color:var(--panel-text)}
       .help-close{flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:none;border-radius:var(--radius);background:transparent;color:var(--panel-text);opacity:.7;cursor:pointer;font-size:13px;line-height:1}
       .help-close:hover{background:var(--accent);color:var(--accent-text);opacity:1}
       .help-toggle{flex:none;font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--panel-text);opacity:.8;cursor:pointer;line-height:1.4}

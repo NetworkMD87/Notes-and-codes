@@ -145,7 +145,7 @@ async function closeTab(id: string): Promise<void> {
   if (b && b.dirty && (b.filePath || /\S/.test(b.content))) {
     // Unsaved edits — a named file (drops from disk) or an untitled scratch buffer
     // (never hits file history, so it's unrecoverable). Warn before discarding either.
-    const ok = await confirmDialog(`"${b.title}" has unsaved changes. Discard and close?`, 'Discard')
+    const ok = await confirmDialog(`"${b.title}" has unsaved changes. Discard and close?`, { confirmLabel: 'Discard', focusFallback: focusActiveEditor })
     if (!ok) return
   }
   const wasLast = manager.list().length === 1
@@ -431,7 +431,7 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
     // that is where "Reload (discard mine)" lives, and it is the third outcome of this prompt.
     conflicts.add(id); refreshChangeBar()
     if (!opts.allowDialog) return false // autosave: never modal. Buffer stays dirty; the bar tells the story.
-    const ok = await confirmDialog(`"${b.title}" changed on disk since you opened it. Overwrite those changes?`, 'Overwrite')
+    const ok = await confirmDialog(`"${b.title}" changed on disk since you opened it. Overwrite those changes?`, { confirmLabel: 'Overwrite', focusFallback: focusActiveEditor })
     if (!ok) return false
     r = await window.api.writeFile(path, content, b.eol, b.encoding) // unchecked — the user chose to overwrite
   }
@@ -456,7 +456,7 @@ async function revertActive(): Promise<void> {
   const b = manager.get(id); if (!b) return
   if (!b.filePath) { toast('Nothing to revert — save the file first.', 'warning'); return }
   if (!b.dirty) { toast('No unsaved changes to revert.', 'warning'); return }
-  const ok = await confirmDialog(`Discard unsaved changes to "${b.title}" and reload the saved version?`, 'Revert')
+  const ok = await confirmDialog(`Discard unsaved changes to "${b.title}" and reload the saved version?`, { confirmLabel: 'Revert', focusFallback: focusActiveEditor })
   if (!ok) return
   await reloadBuffer(id)
   toast('Reverted to the saved version.', 'success')
@@ -664,7 +664,7 @@ const manageSnippets = () => snipManager.open()
 async function saveSelectionAsSnippet(): Promise<void> {
   const body = paneFor(view.focusedPane()).getSelectionText()
   if (!body) { toast('Select some text first.', 'warning'); return }
-  const name = await promptInput('Snippet name')
+  const name = await promptInput('Snippet name', { focusFallback: focusActiveEditor })
   if (!name) return
   snippets.add(name, body); persistSnippets(); toast(`Saved snippet "${name}".`, 'success')
 }
@@ -798,6 +798,7 @@ const folder = new FolderMode({
   sidebarEl: document.getElementById('sidebar')!,
   mainEl: document.getElementById('main')!,
   openFile: (path) => void openPath(path),
+  focusEditor: focusActiveEditor,
   pickFolder: () => openFolderFromDialog(),
   activePath: () => {
     const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null
@@ -834,7 +835,7 @@ function refreshToolbar(): void {
 }
 
 const palette = new CommandPalette()
-const helpOverlay = new HelpOverlay()
+const helpOverlay = new HelpOverlay(focusActiveEditor)
 const findInFiles = new FindInFiles(document.getElementById('app')!, {
   root: () => folder.root(),
   showAll: () => showAllFiles,
@@ -849,6 +850,7 @@ const findInFiles = new FindInFiles(document.getElementById('app')!, {
       paneFor(view.focusedPane()).revealMatch(line, column, length)
     })()
   },
+  focusEditor: focusActiveEditor,
 })
 registerCommands({
   palette, manager, view, diff, paneFor, showActive, scheduleSessionSave, closeTab,
