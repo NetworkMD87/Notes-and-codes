@@ -484,6 +484,38 @@ test('status bar sits a half-step below the header, not an accent slab', async (
     expect(sr + sg + sb).toBeLessThan(hr + hg + hb)
 })
 
+test('file format selectors update status and rewrite bytes on save', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-file-format-')
+  const filePath = join(userDataDir, 'format.txt')
+  writeFileSync(filePath, 'a\nb')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  const win = await app.firstWindow()
+
+  const encoding = win.getByLabel('File encoding')
+  const eol = win.getByLabel('Line endings')
+  await expect(encoding).toHaveValue('utf8')
+  await expect(eol).toHaveValue('LF')
+
+  await encoding.selectOption('utf16le')
+  await eol.selectOption('CRLF')
+
+  await expect(win.locator('#statusbar .sb-dirty')).toContainText('unsaved')
+  await expect(win.locator('.tab .tab-title')).toContainText('●')
+  await expect(win.getByLabel('File encoding')).toHaveAttribute('aria-describedby', 'status-format-note')
+  await expect(win.locator('#status-format-note')).toContainText('next save')
+
+  // Playwright cannot trigger Electron's native-menu Ctrl+S accelerator; run the same Save command via the palette.
+  await win.keyboard.press('Control+Shift+P')
+  await win.locator('#palette input').fill('Save')
+  await win.keyboard.press('Enter')
+  await expect.poll(() => [...readFileSync(filePath).subarray(0, 2)], { timeout: 5000 }).toEqual([0xff, 0xfe])
+  expect(readFileSync(filePath).subarray(2).toString('utf16le')).toBe('a\r\nb')
+  await expect(win.getByLabel('File encoding')).toHaveValue('utf16le')
+  await expect(win.getByLabel('Line endings')).toHaveValue('CRLF')
+  await expect(win.locator('#toast-host')).toContainText('Encoding: UTF-16 LE')
+  await expect(win.locator('#toast-host')).toContainText('Line endings: CRLF')
+})
+
 test('floating chrome carries an accent border', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })

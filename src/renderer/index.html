@@ -20,6 +20,8 @@
       #statusbar{height:22px;background:var(--statusbar-bg);color:var(--muted);border-top:1px solid var(--border);font-size:12px;display:flex;align-items:center;gap:12px;padding:0 8px}
       .sb-state{color:var(--muted)}
       .sb-dirty{color:var(--accent)}
+      .sb-select{box-sizing:border-box;min-height:20px;max-width:112px;padding:0 2px;border:1px solid transparent;border-radius:2px;background:transparent;color:inherit;font:inherit}
+      .sb-select:focus-visible{outline:1px solid var(--accent);outline-offset:1px}
       .spell-error{text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:var(--danger);text-decoration-thickness:1px;text-underline-offset:2px}
       .tab{box-sizing:border-box;display:flex;align-items:center;height:100%;color:var(--tab-inactive-text);border-right:1px solid var(--border);border-top:2px solid transparent;cursor:pointer;white-space:nowrap;border-top-left-radius:6px;border-top-right-radius:6px}
       .tab:hover{background:var(--bar-hover)}
@@ -143,8 +145,6 @@
       .toast--success{--toast-accent:var(--success)}
       .toast--warning{--toast-accent:var(--warning)}
       .toast--error{--toast-accent:var(--danger)}
-      .sb-click{cursor:pointer;color:var(--bartext);text-decoration:underline dotted;text-underline-offset:2px}
-      .sb-click:hover{color:var(--accent)}
       #mdpreview{flex:1;min-width:0;overflow:auto;padding:0 16px;background:var(--editorbg);color:var(--bartext)}
       #mdpreview.hidden{display:none}
       #mdpreview pre{background:var(--bar-hover);padding:8px;border-radius:var(--radius);overflow:auto}
@@ -289,7 +289,7 @@
       .about-link{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;cursor:pointer;font-size:13px}
       .about-link:hover{background:var(--accent);color:var(--accent-text)}
       /* --- micro-motion layer (Phase 3.5 P1) --- */
-      .tab,.tb-btn,.tab-add,.tab-close,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.fh-close,.help-close,.diff-close,.help-toggle,.sb-click,.swatch,.appearance-theme,.tb-swatch,.ph-picker-head button,.snip-picker-head button,.ph-row,.snip-row,.snip-mgr-head button,.snip-mgr-row button,.personal-dictionary-head button,.personal-word button,.personal-dictionary-open,.accent-default-btn,.settings-cat,.hk-record,.hk-clear{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
+      .tab,.tb-btn,.tab-add,.tab-close,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.fh-close,.help-close,.diff-close,.help-toggle,.swatch,.appearance-theme,.tb-swatch,.ph-picker-head button,.snip-picker-head button,.ph-row,.snip-row,.snip-mgr-head button,.snip-mgr-row button,.personal-dictionary-head button,.personal-word button,.personal-dictionary-open,.accent-default-btn,.settings-cat,.hk-record,.hk-clear{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
       @keyframes overlayIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
       .palette-box,.qo-box,.settings-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.personal-dictionary-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast,.fif-box{animation:overlayIn var(--motion) var(--ease)}
       @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
