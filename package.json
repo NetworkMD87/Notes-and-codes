@@ -44,12 +44,15 @@
     "@fontsource/jetbrains-mono": "^5.2.8",
     "dictionary-en": "^4.0.0",
     "dictionary-en-gb": "^3.0.0",
-    "dompurify": "^3.4.10",
+    "dompurify": "^3.4.13",
     "markdown-it": "^14.2.0",
     "monaco-editor": "^0.50.0",
     "nspell": "^2.1.5",
     "prettier": "^3.8.4",
     "split.js": "^1.6.5"
+  },
+  "overrides": {
+    "linkify-it": "^5.0.2"
   },
   "allowScripts": {
     "electron@31.7.7": true
