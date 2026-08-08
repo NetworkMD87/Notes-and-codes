@@ -47,8 +47,9 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
-- **[v1.18.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.18.1):** patched
-  Markdown preview/export dependencies and more reliable Windows release smoke validation.
+- **[v1.18.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.18.1):** patched the
+  Markdown preview/export sanitizer and linkifier dependencies, kept the production audit clean,
+  and made Windows release smoke validation more reliable.
 - **[v1.18.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.18.0):** right-click a
   misspelling for local suggestions, Ignore, Add to Dictionary, and familiar editing actions.
 - **[v1.17.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.17.0):** private,
