@@ -49,7 +49,14 @@ export class SnippetManager {
     this.listEl.replaceChildren(...this.deps.list().map(s => {
       const row = document.createElement('div'); row.className = 'snip-mgr-row'
       const name = document.createElement('input'); name.value = s.name; name.className = 'snip-mgr-name'; name.setAttribute('aria-label', `Snippet name: ${s.name}`)
-      name.onchange = () => { this.deps.rename(s.id, name.value.trim() || 'Untitled'); this.deps.persist() }
+      name.onchange = () => {
+        const currentName = name.value.trim() || 'Untitled'
+        this.deps.rename(s.id, currentName)
+        this.deps.persist()
+        name.setAttribute('aria-label', `Snippet name: ${currentName}`)
+        body.setAttribute('aria-label', `Snippet body: ${currentName}`)
+        del.setAttribute('aria-label', `Delete snippet ${currentName}`)
+      }
       const body = document.createElement('textarea'); body.value = s.body; body.className = 'snip-mgr-body'; body.setAttribute('aria-label', `Snippet body: ${s.name}`)
       body.onchange = () => { this.deps.updateBody(s.id, body.value); this.deps.persist() }
       const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Delete'; del.setAttribute('aria-label', `Delete snippet ${s.name}`)
