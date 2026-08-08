@@ -68,6 +68,7 @@ export class SettingsPanel {
   private keyHandler?: (e: KeyboardEvent) => void
   private controlId = 0
   private workspaceExclusionGeneration = 0
+  private workspaceExclusionDraftGeneration = 0
 
   constructor(parent: HTMLElement, private d: SettingsDeps) {
     this.host = document.createElement('div')
@@ -295,10 +296,12 @@ export class SettingsPanel {
     editor.value = this.d.workspaceExcludes().join('\n')
     editor.dataset.settingsFocus = 'workspace-excludes-editor'
     editor.setAttribute('aria-describedby', help.id)
+    editor.oninput = () => { this.workspaceExclusionDraftGeneration++ }
     editor.onchange = () => {
       const generation = ++this.workspaceExclusionGeneration
+      const draftGeneration = this.workspaceExclusionDraftGeneration
       void this.d.setWorkspaceExcludes(editor.value.split(/\r?\n/)).then(() => {
-        this.rerenderWorkspaceExcludes(generation)
+        this.rerenderWorkspaceExcludes(generation, editor, draftGeneration)
       })
     }
     const restore = document.createElement('button'); restore.type = 'button'
@@ -313,8 +316,13 @@ export class SettingsPanel {
     return wrap
   }
 
-  private rerenderWorkspaceExcludes(generation: number): void {
+  private rerenderWorkspaceExcludes(
+    generation: number,
+    owner?: HTMLTextAreaElement,
+    draftGeneration?: number,
+  ): void {
     if (generation !== this.workspaceExclusionGeneration) return
+    if (owner && (!owner.isConnected || draftGeneration !== this.workspaceExclusionDraftGeneration)) return
     const focused = document.activeElement as HTMLElement | null
     if (!focused || !this.box.contains(focused)) return
     const focusKey = focused.dataset.settingsFocus

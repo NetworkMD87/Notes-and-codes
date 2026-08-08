@@ -123,6 +123,67 @@ describe('FolderMode refresh integration', () => {
     expect(document.body.textContent).not.toContain('late.ts')
   })
 
+  it('clears folder A candidates and truncation synchronously while folder B opens', async () => {
+    const bSettings = deferred<typeof DEFAULT_SETTINGS>()
+    const staleAWalk = deferred<WalkResult>()
+    const bWatch = deferred<void>()
+    const bUpdate = deferred<typeof DEFAULT_SETTINGS>()
+    const loadSettings = vi.fn()
+      .mockResolvedValueOnce({ ...DEFAULT_SETTINGS })
+      .mockImplementationOnce(() => bSettings.promise)
+    const walkFiles = vi.fn()
+      .mockResolvedValueOnce({ files: ['C:\\A\\seeded-a.ts'], truncated: true })
+      .mockImplementationOnce(() => staleAWalk.promise)
+      .mockResolvedValueOnce({ files: ['C:\\B\\fresh-b.ts'], truncated: false })
+    const watchDir = vi.fn((root: string | null) =>
+      root === 'C:\\B' ? bWatch.promise : Promise.resolve())
+    const updateSettings = vi.fn((partial: { lastFolder?: string | null }) =>
+      partial.lastFolder === 'C:\\B'
+        ? bUpdate.promise
+        : Promise.resolve({ ...DEFAULT_SETTINGS, ...partial }))
+    const mode = mount(baseApi({
+      loadSettings,
+      walkFiles,
+      watchDir,
+      updateSettings: updateSettings as Api['updateSettings'],
+      readDir: vi.fn(async () => []),
+    }), () => ({ showAll: false, excludePatterns: [] }))
+
+    await mode.openFolder('C:\\A')
+    const staleRefresh = mode.workspaceSettingsChanged()
+    await vi.waitFor(() => expect(walkFiles).toHaveBeenCalledTimes(2))
+
+    const openingB = mode.openFolder('C:\\B')
+    mode.openQuickOpen()
+    const input = document.querySelector<HTMLInputElement>('#quick-open input')!
+    expect(document.body.textContent).not.toContain('seeded-a.ts')
+    expect(document.querySelector('.qo-note')).toBeNull()
+
+    staleAWalk.resolve({ files: ['C:\\A\\late-a.ts'], truncated: true })
+    await staleRefresh
+    input.dispatchEvent(new Event('input'))
+    expect(document.body.textContent).not.toContain('late-a.ts')
+    expect(document.querySelector('.qo-note')).toBeNull()
+
+    bSettings.resolve({ ...DEFAULT_SETTINGS })
+    await vi.waitFor(() => expect(watchDir).toHaveBeenCalledWith('C:\\B'))
+    input.dispatchEvent(new Event('input'))
+    expect(document.querySelector('.qo-row')).toBeNull()
+    bWatch.resolve()
+    await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledWith(
+      { lastFolder: 'C:\\B', sidebarVisible: true },
+    ))
+    input.dispatchEvent(new Event('input'))
+    expect(document.querySelector('.qo-row')).toBeNull()
+
+    bUpdate.resolve({ ...DEFAULT_SETTINGS, lastFolder: 'C:\\B', sidebarVisible: true })
+    await openingB
+    input.dispatchEvent(new Event('input'))
+    expect(document.querySelector('.qo-row')?.textContent).toContain('fresh-b.ts')
+    expect(document.body.textContent).not.toContain('seeded-a.ts')
+    document.getElementById('quick-open')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+  })
+
   it('does not reopen or persist a folder when close wins during settings load', async () => {
     const settings = deferred<typeof DEFAULT_SETTINGS>()
     const watchDir = vi.fn(async () => {})

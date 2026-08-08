@@ -125,4 +125,39 @@ describe('SettingsPanel', () => {
     expect(showAll).toBe(document.activeElement)
     expect(document.querySelector('[role="dialog"]')?.contains(document.activeElement)).toBe(true)
   })
+
+  it('does not replace a newer focused draft when an older exclusion save resolves', async () => {
+    const firstSave = deferred()
+    let patterns = ['**/dist/**']
+    let saveCount = 0
+    const d = deps()
+    d.workspaceExcludes = () => [...patterns]
+    d.setWorkspaceExcludes = vi.fn(async next => {
+      if (saveCount++ === 0) await firstSave.promise
+      patterns = next
+    })
+    const panel = new SettingsPanel(document.body, d)
+    panel.open('folder')
+
+    const editor = document.querySelector<HTMLTextAreaElement>('#workspace-excludes')!
+    editor.focus()
+    editor.value = '**/draft-a/**'
+    editor.dispatchEvent(new Event('input'))
+    editor.dispatchEvent(new Event('change'))
+    editor.value = '**/draft-b/**'
+    editor.dispatchEvent(new Event('input'))
+
+    firstSave.resolve()
+    await firstSave.promise
+    await Promise.resolve()
+    expect(document.querySelector('#workspace-excludes')).toBe(editor)
+    expect(editor.value).toBe('**/draft-b/**')
+    expect(editor).toBe(document.activeElement)
+
+    editor.dispatchEvent(new Event('change'))
+    await vi.waitFor(() => expect(d.setWorkspaceExcludes).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(patterns).toEqual(['**/draft-b/**']))
+    expect(document.querySelector<HTMLTextAreaElement>('#workspace-excludes')?.value)
+      .toBe('**/draft-b/**')
+  })
 })

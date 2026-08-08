@@ -74,9 +74,11 @@ export class FolderMode {
     const generation = ++this.lifecycleGeneration
     this.desiredRoot = root
     this.desiredSidebarVisible = true
+    this.refresh.invalidate()
+    this.index = []
+    this.indexTruncated = false
     const s = await window.api.loadSettings()
     if (!this.isCurrent(generation)) return
-    this.refresh.invalidate()
     this.model.setRoot(root)
     this.d.workspaceChanged()
     this.hideSidebar()
