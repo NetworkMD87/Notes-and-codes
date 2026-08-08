@@ -4,6 +4,15 @@ import { test, expect } from './smokeTest'
 import { openSettings } from './settingsHelper'
 import { createLargeWorkspace } from '../helpers/largeWorkspace'
 
+const DEFAULT_WORKSPACE_EXCLUDES_TEXT = [
+  '**/.git/**',
+  '**/node_modules/**',
+  '**/dist/**',
+  '**/out/**',
+  '**/build/**',
+  '**/coverage/**',
+].join('\n')
+
 function seedFolder(
   userDataDir: string,
   projectDir: string,
@@ -47,10 +56,10 @@ test('workspace exclusions refresh the tree/index and Show All bypasses the save
   await expect(editor).toHaveAttribute('aria-describedby', 'workspace-excludes-help')
   await editor.fill('**/src/**')
   await editor.press('Tab')
-  await expect(win.getByRole('button', { name: 'Restore defaults' })).toBeFocused()
   // The sidebar changes only when runRefresh has published both tree children and candidates.
   await expect(win.locator('.sb-row', { hasText: 'dist' })).toBeVisible()
   await expect(win.locator('.sb-row', { hasText: 'src' })).toHaveCount(0)
+  await expect(win.getByRole('button', { name: 'Restore defaults' })).toBeFocused()
   await win.getByRole('button', { name: 'Close Settings' }).click()
   await win.keyboard.press('Control+p')
   quick = win.getByRole('combobox', { name: 'Quick Open' })
@@ -94,9 +103,10 @@ test('workspace exclusions refresh the tree/index and Show All bypasses the save
   await expect(win.getByLabel('Exclude from workspace')).toHaveValue('**/src/**')
   const restore = win.getByRole('button', { name: 'Restore defaults' })
   await restore.click()
-  await expect(restore).toBeFocused()
   await expect(win.locator('.sb-row', { hasText: 'src' })).toBeVisible()
   await expect(win.locator('.sb-row', { hasText: 'dist' })).toHaveCount(0)
+  await expect(win.getByLabel('Exclude from workspace')).toHaveValue(DEFAULT_WORKSPACE_EXCLUDES_TEXT)
+  await expect(restore).toBeFocused()
 })
 
 test('Quick Open returns the deterministic bounded result in a 20,000-file workspace', async ({ smoke }) => {
