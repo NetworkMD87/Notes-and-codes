@@ -101,6 +101,7 @@ test('visible Markdown preview follows split-pane focus without an edit or tab a
   })
   const win = await app.firstWindow()
   await waitForBoot(win)
+  const initialTabCount = await win.locator('.tab').count()
 
   await win.locator('.tb-btn[title="Toggle markdown preview"]').click()
   await expect(win.locator('#mdpreview h1')).toHaveText('pane a')
@@ -110,7 +111,7 @@ test('visible Markdown preview follows split-pane focus without an edit or tab a
   await win.keyboard.press('Control+Shift+P')
   await win.locator('#palette input').fill('New Tab')
   await win.keyboard.press('Enter')
-  await expect(win.locator('.tab')).toHaveCount(2)
+  await expect(win.locator('.tab')).toHaveCount(initialTabCount + 1)
   await win.locator('#paneB .monaco-editor').click()
   await win.keyboard.type('# pane b')
 
@@ -578,7 +579,7 @@ test('file format selectors update status and rewrite bytes on save', async ({ s
   await expect(eol).toHaveValue('CRLF')
 
   await expect(win.locator('#statusbar .sb-dirty')).toContainText('unsaved')
-  await expect(win.locator('.tab .tab-title')).toContainText('●')
+  await expect(win.locator('[role="tab"][aria-selected="true"] .tab-title')).toContainText('●')
   await expect(win.getByLabel('File encoding')).toHaveAttribute('aria-describedby', 'status-format-note')
   await expect(win.locator('#status-format-note')).toContainText('next save')
 
