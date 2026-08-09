@@ -82,6 +82,48 @@ test('with no folder open, a dirty buffer is searched from its live content, not
     await expect(win.locator('.fif-row')).toHaveCount(0)      // (b) the old content is NOT (buffer-only guard)
 })
 
+test('scope uses a loose tab basename and excludes untitled until includes are cleared', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-searchloose-scope-')
+  const folder = smoke.tempDir('notes-searchloose-scope-dir-')
+  const file = join(folder, 'loose-note.md')
+  const marker = 'loose scope marker'
+  writeFileSync(file, marker)
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [
+      { id: 'loose', title: 'loose-note.md', filePath: file, content: marker, language: 'markdown', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'untitled', title: 'Untitled-1', filePath: null, content: marker, language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: true },
+    ],
+    activeId: 'untitled',
+  }))
+
+  const app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+  })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  await expect(win.locator('.tab')).toHaveCount(2)
+  await expect(win.locator('.tab', { hasText: 'loose-note.md' })).toHaveCount(1)
+  await expect(win.locator('.tab', { hasText: 'Untitled-1' })).toHaveCount(1)
+
+  await win.keyboard.press('Control+Shift+F')
+  await win.getByRole('button', { name: 'Search scope' }).click()
+  await win.getByLabel('Files to include').fill('*.md')
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill(marker)
+
+  const summary = win.getByRole('status', { name: 'Effective search scope' })
+  await expect(summary).toHaveText('*.md · excluding 6 workspace patterns')
+  await expect(win.locator('.fif-file')).toHaveCount(1)
+  await expect(win.locator('.fif-file')).toContainText(['loose-note.md'])
+  await expect(win.locator('.fif-file', { hasText: 'Untitled-1' })).toHaveCount(0)
+
+  await win.getByLabel('Files to include').fill('')
+  await expect(summary).toHaveText('All files · excluding 6 workspace patterns')
+  await expect(win.locator('.fif-file')).toHaveCount(2)
+  await expect(win.locator('.fif-file', { hasText: 'loose-note.md' })).toHaveCount(1)
+  await expect(win.locator('.fif-file', { hasText: 'Untitled-1' })).toHaveCount(1)
+})
+
 // THIS is the test that actually exercises skipPaths. A folder must be open AND the dirtied file
 // must live inside it — only then does runSearch() have a non-null root() and reach the
 // window.api.searchFiles() call skipPaths feeds into. Without a folder (the test above), that

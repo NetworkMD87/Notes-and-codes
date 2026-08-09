@@ -27,7 +27,7 @@ test('Quick Open, Find in Files, and Help are named modal dialogs with trapped f
   await win.keyboard.press('Escape')
 
   await win.keyboard.press('Control+Shift+F')
-  await expectDialog(win, 'Find in Files', win.getByRole('searchbox', { name: 'Find in Files' }), win.getByRole('button', { name: 'Whole word' }))
+  await expectDialog(win, 'Find in Files', win.getByRole('searchbox', { name: 'Find in Files' }), win.getByRole('button', { name: 'Search scope' }))
   await win.keyboard.press('Escape')
 
   await win.keyboard.press('Control+Shift+P'); await win.locator('#palette input').fill('Help: Shortcuts'); await win.keyboard.press('Enter')

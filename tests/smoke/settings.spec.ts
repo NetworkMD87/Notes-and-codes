@@ -84,6 +84,87 @@ test('Settings: modal suppresses app-wide tab cycling', async ({ smoke }) => {
   await expect(secondTab).toHaveAttribute('aria-selected', 'false')
 })
 
+test('Settings: workspace exclusion invalidates active Find and Show All bypasses it', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-search-scope-')
+  const projectDir = smoke.tempDir('notes-settings-search-project-')
+  mkdirSync(join(projectDir, 'generated'))
+  writeFileSync(join(projectDir, 'generated', 'hidden.txt'), 'workspace exclusion marker')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true,
+    lastFolder: projectDir,
+    sidebarVisible: true,
+    showAllFiles: false,
+    workspaceExcludes: [],
+  }))
+
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+
+  await win.keyboard.press('Control+p')
+  const quick = win.getByRole('combobox', { name: 'Quick Open' })
+  await quick.fill('hidden')
+  await expect(win.locator('.qo-row').first()).toContainText('hidden.txt')
+  await quick.press('Escape')
+
+  await win.keyboard.press('Control+Shift+F')
+  const find = win.getByRole('dialog', { name: 'Find in Files' })
+  await win.getByRole('button', { name: 'Search scope' }).click()
+  await win.getByLabel('Files to include').fill('**/*.txt')
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill('workspace exclusion marker')
+  const summary = win.getByRole('status', { name: 'Effective search scope' })
+  await expect(summary).toHaveText('**/*.txt')
+  await expect(win.locator('.fif-file', { hasText: 'generated\\hidden.txt' })).toHaveCount(1)
+
+  // Settings opens above Find in Files. Keeping the completed search session mounted makes the
+  // workspace-change callback independently observable: reopening Find would rerun anyway and
+  // would let a missing callback pass for the wrong reason.
+  await win.keyboard.press('Control+,')
+  let settings = win.getByRole('dialog', { name: 'Settings' })
+  await expect(settings).toBeVisible()
+  const folderTab = settings.getByRole('tab', { name: 'Folder' })
+  await folderTab.focus()
+  await folderTab.press('Enter')
+  const excludes = win.getByLabel('Exclude from workspace')
+  await excludes.fill('**/generated/**')
+  await excludes.press('Tab')
+  await expect(excludes).toHaveValue('**/generated/**')
+  await expect(win.locator('.sb-row', { hasText: 'generated' })).toHaveCount(0)
+  const closeSettings = settings.getByRole('button', { name: 'Close Settings' })
+  await closeSettings.focus()
+  await closeSettings.press('Enter')
+
+  await expect(find).toBeVisible()
+  await expect(win.getByLabel('Files to include')).toHaveValue('**/*.txt')
+  await expect(summary).toHaveText('**/*.txt · excluding 1 workspace pattern')
+  await expect(win.locator('.fif-empty')).toContainText('No matches for')
+  await expect(win.locator('.fif-file')).toHaveCount(0)
+
+  await win.keyboard.press('Control+,')
+  settings = win.getByRole('dialog', { name: 'Settings' })
+  await expect(settings).toBeVisible()
+  const reopenedFolderTab = settings.getByRole('tab', { name: 'Folder' })
+  await reopenedFolderTab.focus()
+  await reopenedFolderTab.press('Enter')
+  const showAll = win.getByLabel('Show all files (incl. node_modules / .git)')
+  await showAll.focus()
+  await showAll.press('Space')
+  await expect(win.locator('.sb-row', { hasText: 'generated' })).toBeVisible()
+  const closeReopenedSettings = settings.getByRole('button', { name: 'Close Settings' })
+  await closeReopenedSettings.focus()
+  await closeReopenedSettings.press('Enter')
+
+  await expect(find).toBeVisible()
+  await expect(win.getByLabel('Files to include')).toHaveValue('**/*.txt')
+  await expect(summary).toHaveText('**/*.txt')
+  await expect(win.locator('.fif-file', { hasText: 'generated\\hidden.txt' })).toHaveCount(1)
+
+  await win.keyboard.press('Escape')
+  await win.keyboard.press('Control+p')
+  await quick.fill('hidden')
+  await expect(win.locator('.qo-row').first()).toContainText('hidden.txt')
+})
+
 test('Settings: nav lists categories, detail shows the active one', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-settings-nav-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })

@@ -173,6 +173,7 @@ describe('FolderMode refresh integration', () => {
     find = new FindInFiles(document.getElementById('app')!, {
       root: () => mode.root(),
       filter: () => filter,
+      workspaceExcludes: () => [...filter.excludePatterns],
       buffers: () => [],
       openMatch: vi.fn(),
       focusEditor: vi.fn(),

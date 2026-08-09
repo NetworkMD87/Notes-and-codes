@@ -47,6 +47,7 @@ describe('FindInFiles workspace context', () => {
     const find = new FindInFiles(document.getElementById('app')!, {
       root: () => 'C:\\workspace',
       filter: () => ({ showAll: filter.showAll, excludePatterns: [...filter.excludePatterns] }),
+      workspaceExcludes: () => [...filter.excludePatterns],
       buffers: () => [],
       openMatch: vi.fn(),
       focusEditor: vi.fn(),
