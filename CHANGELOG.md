@@ -4,6 +4,38 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [1.19.0] — 2026-08-09
+
+_Faster large workspaces, accessible keyboard-first controls, and precise Find in Files scope._
+
+### Added
+- **Scoped Find in Files.** Include and exclude path patterns narrow disk files, open files, and
+  untitled tabs through one visible scope summary, while workspace exclusions and Show All remain
+  consistent with the sidebar and Quick Open.
+- **Configurable workspace exclusions.** The Folder settings page now exposes the saved project
+  patterns used by the sidebar, Quick Open, and Find in Files, with safe defaults for common build
+  and coverage output.
+- **Accessible keyboard controls.** Dialogs, Settings categories, editor tabs, custom menus,
+  Command Palette results, encoding, and line-ending controls now expose their roles, names, state,
+  focus containment, and keyboard behavior explicitly.
+
+### Changed
+- Quick Open uses cached normalized candidates and bounded ranking, while folder refreshes coalesce
+  overlapping watcher/settings work. A deterministic 20,000-file benchmark guards responsiveness.
+- Find in Files cancels superseded and closed searches during traversal, scans open buffers without
+  splitting whole documents, and keeps scope changes session-local.
+- Session snapshots retain only the newest pending write and flush on quit; visible Markdown preview
+  updates are debounced and stale-safe; independent startup state is loaded concurrently.
+- Command Palette matching is fuzzy across command labels, IDs, and shortcut hints.
+
+### Fixed
+- Folder switches, exclusion changes, and delayed searches can no longer publish stale workspace
+  results or restore stale watchers/settings.
+- Dialog focus remains contained after focused controls are removed, modal shortcuts cannot move
+  focus behind the dialog, and tab/menu focus survives the relevant asynchronous rerenders.
+- Rapid save and session continuations preserve the newest recoverable state across failures and
+  relaunch; Markdown preview updates remain fresh during in-process edits and content replacement.
+
 ## [1.18.1] — 2026-08-08
 
 _Security and release-validation hardening for Markdown preview and export._
