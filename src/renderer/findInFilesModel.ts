@@ -1,20 +1,27 @@
 // Pure half of Find in Files: searching OPEN buffers and merging with the disk results.
 // No DOM, no node — unit-tested. The DOM half is findInFiles.ts.
-import { searchText, MAX_MATCHES_PER_FILE, pathKey } from '../shared/searchText'
-import type { SearchFileResult, SearchOptions } from '../shared/types'
+import { visitSearchMatches, MAX_MATCHES_PER_FILE, pathKey } from '../shared/searchText'
+import type { SearchFileResult, SearchMatch, SearchOptions } from '../shared/types'
 
 export interface SearchableBuffer { filePath: string | null; title: string; content: string }
 
 export function searchBuffers(buffers: SearchableBuffer[], query: string, opts: SearchOptions): SearchFileResult[] {
   const out: SearchFileResult[] = []
   for (const b of buffers) {
-    const found = searchText(b.content, query, opts, MAX_MATCHES_PER_FILE + 1)
-    if (!found.length) continue
-    const truncated = found.length > MAX_MATCHES_PER_FILE
+    const matches: SearchMatch[] = []
+    let truncated = false
+    visitSearchMatches(b.content, query, opts, MAX_MATCHES_PER_FILE + 1, match => {
+      if (matches.length === MAX_MATCHES_PER_FILE) {
+        truncated = true
+        return false
+      }
+      matches.push(match)
+    })
+    if (!matches.length) continue
     out.push({
       path: b.filePath ?? '',
       ...(b.filePath ? {} : { title: b.title }),
-      matches: truncated ? found.slice(0, MAX_MATCHES_PER_FILE) : found,
+      matches,
       truncated,
     })
   }

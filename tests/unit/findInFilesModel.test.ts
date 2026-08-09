@@ -27,6 +27,14 @@ describe('searchBuffers', () => {
     expect(r[0].matches).toHaveLength(20)
     expect(r[0].truncated).toBe(true)
   })
+
+  it('stops the open-buffer visitor on the 21st match and retains only 20', () => {
+    const content = Array(21).fill('needle').join('\n') + '\nnot visited'
+    const result = searchBuffers([{ filePath: null, title: 'x', content }], 'needle', PLAIN)[0]
+    expect(result.matches).toHaveLength(20)
+    expect(result.matches.at(-1)?.line).toBe(20)
+    expect(result.truncated).toBe(true)
+  })
 })
 
 describe('mergeResults', () => {
