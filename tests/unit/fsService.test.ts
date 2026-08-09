@@ -1,5 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import {
+  promises as fs,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  type Dirent,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { readDir, walkFiles, createFile, createFolder, renamePath } from '../../src/main/fsService'
@@ -65,6 +73,43 @@ describe('workspace filtering', () => {
     const result = await walkFiles(dir, DEFAULT_FILTER, { maxFiles: 1 })
     expect(result.files).toEqual([join(dir, 'a.txt')])
     expect(result.truncated).toBe(false)
+  })
+
+  it('keeps the same strict Unicode path at the 20,000-file cap for either input order', async () => {
+    const earlier = Array.from({ length: 19_999 }, (_, index) =>
+      `file-${String(index).padStart(5, '0')}.ts`)
+    const decomposed = 'z-cafe\u0301.ts'
+    const composed = 'z-caf\u00e9.ts'
+    const names = [...earlier, composed, decomposed]
+    const fileEntry = (name: string): Dirent => ({
+      name,
+      parentPath: dir,
+      path: dir,
+      isFile: () => true,
+      isDirectory: () => false,
+      isBlockDevice: () => false,
+      isCharacterDevice: () => false,
+      isSymbolicLink: () => false,
+      isFIFO: () => false,
+      isSocket: () => false,
+    })
+    const readdir = vi.spyOn(fs, 'readdir')
+      .mockResolvedValueOnce(names.map(fileEntry))
+      .mockResolvedValueOnce([...names].reverse().map(fileEntry))
+
+    try {
+      const forward = await walkFiles(dir, DEFAULT_FILTER)
+      const reverse = await walkFiles(dir, DEFAULT_FILTER)
+      const expectedBoundary = join(dir, decomposed)
+      expect(forward.files).toHaveLength(20_000)
+      expect(reverse.files).toHaveLength(20_000)
+      expect(forward.truncated).toBe(true)
+      expect(reverse.truncated).toBe(true)
+      expect(forward.files.at(-1)).toBe(expectedBoundary)
+      expect(reverse.files.at(-1)).toBe(expectedBoundary)
+    } finally {
+      readdir.mockRestore()
+    }
   })
 
   it('returns an empty lazy read for a missing path', async () => {

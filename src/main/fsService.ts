@@ -14,6 +14,10 @@ function workspacePath(root: string, path: string): string {
   return relative(root, path).replace(/\\/g, '/')
 }
 
+function compareNames(a: string, b: string): number {
+  return a.localeCompare(b) || (a < b ? -1 : a > b ? 1 : 0)
+}
+
 export async function readDir(
   root: string,
   path: string,
@@ -30,7 +34,7 @@ export async function readDir(
       out.push({ name: entry.name, path: absolutePath, isDir: entry.isDirectory() })
     }
     out.sort((a, b) => a.isDir === b.isDir
-      ? a.name.localeCompare(b.name)
+      ? compareNames(a.name, b.name)
       : a.isDir ? -1 : 1)
     return out
   } catch {
@@ -50,7 +54,7 @@ export async function walkFiles(
   async function walk(path: string): Promise<void> {
     let entries
     try { entries = await fs.readdir(path, { withFileTypes: true }) } catch { return }
-    entries.sort((a, b) => a.name.localeCompare(b.name))
+    entries.sort((a, b) => compareNames(a.name, b.name))
     for (const entry of entries) {
       const absolutePath = join(path, entry.name)
       const relativePath = workspacePath(root, absolutePath)

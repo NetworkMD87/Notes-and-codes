@@ -69,12 +69,24 @@ describe('20,000-file workspace benchmark', () => {
     const candidates = buildQuickOpenCandidates(root, coldWalk.files)
     const coldWalkIndexMs = performance.now() - coldStart
     expect(candidates).toHaveLength(LARGE_WORKSPACE_FILES)
+    expect(coldWalk.truncated).toBe(false)
     expect(coldWalk.files.some(path => path.includes('excluded-target.ts'))).toBe(false)
+    const coldCandidatePaths = candidates.map(candidate => candidate.path)
+    const coldCandidateChecksum = checksum(coldCandidatePaths.map(path =>
+      relative(root, path).replace(/\\/g, '/')))
 
     const refreshStart = performance.now()
     const refreshWalk = await walkFiles(root, FILTER)
-    buildQuickOpenCandidates(root, refreshWalk.files)
+    const refreshCandidates = buildQuickOpenCandidates(root, refreshWalk.files)
     const refreshMs = performance.now() - refreshStart
+    const refreshCandidatePaths = refreshCandidates.map(candidate => candidate.path)
+    const refreshCandidateChecksum = checksum(refreshCandidatePaths.map(path =>
+      relative(root, path).replace(/\\/g, '/')))
+    expect(refreshCandidates).toHaveLength(LARGE_WORKSPACE_FILES)
+    expect(refreshWalk.truncated).toBe(false)
+    expect(refreshWalk.files.some(path => path.includes('excluded-target.ts'))).toBe(false)
+    expect(refreshCandidatePaths).toEqual(coldCandidatePaths)
+    expect(refreshCandidateChecksum).toBe(coldCandidateChecksum)
 
     const queryTimes: number[] = []
     const queryChecksums: Record<string, number> = {}
@@ -99,6 +111,10 @@ describe('20,000-file workspace benchmark', () => {
       coldWalkIndexMs: Number(coldWalkIndexMs.toFixed(2)),
       refreshMs: Number(refreshMs.toFixed(2)),
       p95QueryMs: Number(p95QueryMs.toFixed(2)),
+      candidateChecksums: {
+        cold: coldCandidateChecksum,
+        refresh: refreshCandidateChecksum,
+      },
       queryChecksums,
     }, null, 2))
     expect(queryChecksums).toEqual(EXPECTED_QUERY_CHECKSUMS)
