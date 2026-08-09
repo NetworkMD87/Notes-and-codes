@@ -314,8 +314,15 @@ test('editing scope cancels the active traversal before debounce and resets resu
   const activeSearchId = await win.locator('#find-in-files').getAttribute('data-last-search-id')
   expect(activeSearchId).toMatch(/^\d+$/)
 
-  await win.getByLabel('Files to exclude').fill('d000/**')
-  expect(await win.locator('#find-in-files').getAttribute('data-last-cancelled-search-id')).toBe(activeSearchId)
+  const cancelledSearchId = await win.getByLabel('Files to exclude').evaluate((element) => {
+    const input = element as HTMLInputElement
+    const host = input.closest<HTMLElement>('#find-in-files')!
+    delete host.dataset.lastCancelledSearchId
+    input.value = 'd000/**'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    return host.dataset.lastCancelledSearchId ?? null
+  })
+  expect(cancelledSearchId).toBe(activeSearchId)
 
   await expect(win.locator('.fif-note')).toHaveText('399 matches in 399 files')
   await expect(win.locator('.fif-row').first()).toHaveClass(/active/)
