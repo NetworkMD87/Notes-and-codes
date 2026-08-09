@@ -99,11 +99,13 @@ export class FindInFiles {
 
     const scopeHelp = document.createElement('p')
     scopeHelp.id = 'find-in-files-scope-help'; scopeHelp.className = 'fif-scope-help'
-    scopeHelp.textContent = 'Comma-separated patterns. Empty includes all files. Supports *, ?, and **; braces, character classes, leading !, and escapes are literal.'
+    scopeHelp.textContent = 'Comma-separated patterns. Empty includes all files. Supports *, ?, and **. Backslashes are path separators; wildcard escaping is not supported. Braces, character classes, and leading ! are literal.'
     scopeEl.append(includeField, excludeField, scopeHelp)
 
     this.scopeSummaryEl = document.createElement('div')
     this.scopeSummaryEl.className = 'fif-scope-summary'
+    this.scopeSummaryEl.setAttribute('role', 'status')
+    this.scopeSummaryEl.setAttribute('aria-label', 'Effective search scope')
     this.scopeSummaryEl.setAttribute('aria-live', 'polite')
     this.scopeSummaryEl.setAttribute('aria-atomic', 'true')
     this.updateScopeSummary()
