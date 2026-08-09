@@ -74,10 +74,15 @@ const statusBar = new StatusBar(document.getElementById('statusbar')!, {
 const diff = new DiffView(document.getElementById('diff')!)
 const diffPicker = new DiffPicker(document.getElementById('app')!, focusActiveEditor)
 const phPicker = new PasteHistoryPicker(document.getElementById('app')!, focusActiveEditor)
-const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, () => { view.paneA.layout(); view.paneB.layout() })
+const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, {
+  onLayout: () => { view.paneA.layout(); view.paneB.layout() },
+})
 
-function previewContent(): string { return paneFor(view.focusedPane()).getContent() }
-function refreshPreview(): void { mdPreview.update(previewContent()) }
+function previewSnapshot(): { bufferId: string; content: string } {
+  const pane = paneFor(view.focusedPane())
+  const bufferId = pane.currentBufferId() ?? manager.activeId!
+  return { bufferId, content: pane.getContent() }
+}
 
 const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) => {
   void window.api.updateSettings({ themeId, accent })
@@ -178,7 +183,7 @@ function showActive(): void {
   void loadHighlightsFor(active)
   tabBar.render(manager.list(), manager.activeId)
   refreshStatus()
-  refreshPreview()
+  mdPreview.switchBuffer(active.id, active.content)
   refreshToolbar()
   folder.setActiveFile(active.filePath ?? null) // highlight the open file's row in the sidebar
   syncWatch()
@@ -218,7 +223,7 @@ for (const which of ['A', 'B'] as const) {
     refreshStatus()
     scheduleSessionSave()
     autosave.noteEdit()
-    refreshPreview()
+    mdPreview.update(id, manager.get(id)?.content ?? c)
     spell?.schedule()
   })
 }
@@ -627,7 +632,11 @@ function startDiff(): void {
   })
 }
 
-const togglePreview = () => { mdPreview.toggle(); refreshPreview(); refreshToolbar() }
+const togglePreview = () => {
+  const snapshot = previewSnapshot()
+  mdPreview.toggle(snapshot.bufferId, snapshot.content)
+  refreshToolbar()
+}
 
 async function exportActive(format: ExportFormat): Promise<void> {
   const content = paneFor(view.focusedPane()).getContent()

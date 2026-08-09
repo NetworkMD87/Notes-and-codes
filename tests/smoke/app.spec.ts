@@ -53,6 +53,45 @@ test('markdown preview toggles and paste-history picker opens', async ({ smoke }
     await expect(win.locator('.ph-picker')).toBeVisible()
 })
 
+test('visible Markdown preview renders only the newest rapid edit', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-previewlatest-')
+  const markdownPath = join(userDataDir, 'preview.md')
+  writeFileSync(markdownPath, '# prior preview')
+  const app = await smoke.launch({
+    args: ['out/main/index.js', markdownPath, `--user-data-dir=${userDataDir}`]
+  })
+  const win = await app.firstWindow()
+  await waitForBoot(win)
+
+  await win.locator('.tb-btn[title="Toggle markdown preview"]').click()
+  await expect(win.locator('#mdpreview h1')).toHaveText('prior preview')
+  await win.locator('#mdpreview').evaluate((panel) => {
+    const seen: string[] = []
+    const observer = new MutationObserver(() => {
+      const heading = panel.querySelector('h1')?.textContent
+      if (heading) seen.push(heading)
+    })
+    observer.observe(panel, { childList: true, subtree: true, characterData: true })
+    ;(window as typeof window & { __previewHeadings?: string[]; __previewObserver?: MutationObserver }).__previewHeadings = seen
+    ;(window as typeof window & { __previewHeadings?: string[]; __previewObserver?: MutationObserver }).__previewObserver = observer
+  })
+
+  const editor = win.locator('#paneA .monaco-editor')
+  await editor.click()
+  await win.keyboard.press('Control+A')
+  await win.keyboard.type('# intermediate')
+  await win.keyboard.press('Control+A')
+  await win.keyboard.type('# newest preview')
+
+  await expect(win.locator('#mdpreview h1')).toHaveText('newest preview')
+  const renderedHeadings = await win.evaluate(() => {
+    const state = window as typeof window & { __previewHeadings?: string[]; __previewObserver?: MutationObserver }
+    state.__previewObserver?.disconnect()
+    return state.__previewHeadings ?? []
+  })
+  expect(renderedHeadings).toEqual(['newest preview'])
+})
+
 test('toolbar split and preview buttons work and show active state', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
