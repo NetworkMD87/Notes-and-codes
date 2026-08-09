@@ -928,6 +928,7 @@ const helpOverlay = new HelpOverlay(focusActiveEditor)
 findInFiles = new FindInFiles(document.getElementById('app')!, {
   root: () => folder.root(),
   filter: workspaceFilter,
+  workspaceExcludes: () => [...workspaceExcludes],
   buffers: () => manager.list().map(b => ({ filePath: b.filePath, title: b.title, content: b.content })),
   openMatch: (path, title, line, column, length) => {
     void (async () => {

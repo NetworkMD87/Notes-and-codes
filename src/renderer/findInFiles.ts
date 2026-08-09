@@ -2,13 +2,14 @@ import { DialogController } from './dialogController'
 import { emptyState, EMPTY_ICONS } from './emptyState'
 import { searchBuffers, mergeResults, type SearchableBuffer } from './findInFilesModel'
 import { MIN_QUERY_LENGTH } from '../shared/searchText'
-import { EMPTY_SEARCH_SCOPE } from '../shared/searchScope'
+import { describeSearchScope, parseScopeField } from '../shared/searchScope'
 import { fileType } from './fileType'
-import { HL_HEX, type SearchFileResult, type SearchOptions, type WorkspaceFilter } from '../shared/types'
+import { HL_HEX, type SearchFileResult, type SearchOptions, type SearchScope, type WorkspaceFilter } from '../shared/types'
 
 export interface FindInFilesDeps {
   root: () => string | null
   filter: () => WorkspaceFilter
+  workspaceExcludes: () => string[]
   buffers: () => SearchableBuffer[]
   openMatch: (path: string, title: string, line: number, column: number, length: number) => void
   focusEditor: () => void
@@ -23,6 +24,7 @@ export class FindInFiles {
   private input!: HTMLInputElement
   private listEl!: HTMLElement
   private footEl!: HTMLElement
+  private scopeSummaryEl!: HTMLElement
   private dialog: DialogController
   private opts: SearchOptions = { caseSensitive: false, wholeWord: false }
   private results: SearchFileResult[] = []
@@ -33,6 +35,9 @@ export class FindInFiles {
   // query", and reset the selection only for the latter.
   private resultsQuery = ''
   private query = ''
+  private scopeExpanded = false
+  private includeText = ''
+  private excludeText = ''
   private searching = false
   private truncated = false
   private searchId = 0
@@ -61,9 +66,65 @@ export class FindInFiles {
     this.input.placeholder = 'Find in files…'
     this.input.value = this.query
     head.append(this.input, this.toggle('Aa', 'caseSensitive'), this.toggle('W', 'wholeWord'))
+
+    const scopeToggle = document.createElement('button')
+    scopeToggle.type = 'button'
+    scopeToggle.className = 'fif-scope-toggle'
+    scopeToggle.textContent = 'Search scope'
+    scopeToggle.setAttribute('aria-controls', 'find-in-files-scope')
+    scopeToggle.setAttribute('aria-expanded', String(this.scopeExpanded))
+
+    const scopeEl = document.createElement('div')
+    scopeEl.id = 'find-in-files-scope'
+    scopeEl.className = 'fif-scope'
+    scopeEl.hidden = !this.scopeExpanded
+    scopeEl.setAttribute('role', 'group')
+    scopeEl.setAttribute('aria-label', 'Search scope filters')
+
+    const includeField = document.createElement('div'); includeField.className = 'fif-scope-field'
+    const includeLabel = document.createElement('label')
+    includeLabel.htmlFor = 'find-in-files-include'; includeLabel.textContent = 'Files to include'
+    const includeInput = document.createElement('input')
+    includeInput.id = includeLabel.htmlFor; includeInput.type = 'text'; includeInput.value = this.includeText
+    includeInput.setAttribute('aria-describedby', 'find-in-files-scope-help')
+    includeField.append(includeLabel, includeInput)
+
+    const excludeField = document.createElement('div'); excludeField.className = 'fif-scope-field'
+    const excludeLabel = document.createElement('label')
+    excludeLabel.htmlFor = 'find-in-files-exclude'; excludeLabel.textContent = 'Files to exclude'
+    const excludeInput = document.createElement('input')
+    excludeInput.id = excludeLabel.htmlFor; excludeInput.type = 'text'; excludeInput.value = this.excludeText
+    excludeInput.setAttribute('aria-describedby', 'find-in-files-scope-help')
+    excludeField.append(excludeLabel, excludeInput)
+
+    const scopeHelp = document.createElement('p')
+    scopeHelp.id = 'find-in-files-scope-help'; scopeHelp.className = 'fif-scope-help'
+    scopeHelp.textContent = 'Comma-separated patterns. Empty includes all files. Supports *, ?, and **; braces, character classes, leading !, and escapes are literal.'
+    scopeEl.append(includeField, excludeField, scopeHelp)
+
+    this.scopeSummaryEl = document.createElement('div')
+    this.scopeSummaryEl.className = 'fif-scope-summary'
+    this.scopeSummaryEl.setAttribute('aria-live', 'polite')
+    this.scopeSummaryEl.setAttribute('aria-atomic', 'true')
+    this.updateScopeSummary()
+
+    scopeToggle.onclick = () => {
+      this.scopeExpanded = !this.scopeExpanded
+      scopeToggle.setAttribute('aria-expanded', String(this.scopeExpanded))
+      scopeEl.hidden = !this.scopeExpanded
+    }
+    includeInput.addEventListener('input', () => {
+      this.includeText = includeInput.value
+      this.scopeChanged()
+    })
+    excludeInput.addEventListener('input', () => {
+      this.excludeText = excludeInput.value
+      this.scopeChanged()
+    })
+
     this.listEl = document.createElement('div'); this.listEl.className = 'fif-list'
     this.footEl = document.createElement('div'); this.footEl.className = 'fif-note'
-    box.append(title, head, this.listEl, this.footEl)
+    box.append(title, head, scopeToggle, scopeEl, this.scopeSummaryEl, this.listEl, this.footEl)
     this.host.replaceChildren(box)
     this.host.classList.remove('hidden')
     this.dialog.open({ panel: box, labelledBy: title.id, initialFocus: this.input, requestClose: () => this.close() })
@@ -81,6 +142,35 @@ export class FindInFiles {
     this.input.select()
   }
 
+  private scope(): SearchScope {
+    return {
+      includePatterns: parseScopeField(this.includeText),
+      excludePatterns: parseScopeField(this.excludeText),
+    }
+  }
+
+  private updateScopeSummary(): void {
+    const filter = this.d.filter()
+    this.scopeSummaryEl.textContent = describeSearchScope(
+      this.scope(),
+      this.d.workspaceExcludes().length,
+      filter.showAll,
+    )
+  }
+
+  private scopeChanged(): void {
+    this.cancelActiveSearch()
+    this.active = 0
+    this.updateScopeSummary()
+    if (this.query.length >= MIN_QUERY_LENGTH) this.schedule()
+    else {
+      this.results = []
+      this.truncated = false
+      this.searching = false
+      this.render()
+    }
+  }
+
   /** Invalidate results captured under an older folder/filter context. `rerun=false` is the
    * synchronous pre-change phase; the commit phase calls again with the new root and reruns. */
   workspaceChanged(rerun = true): void {
@@ -88,6 +178,7 @@ export class FindInFiles {
     this.workspaceGeneration++
     this.cancelActiveSearch()
     clearTimeout(this.timer)
+    if (!this.host.classList.contains('hidden')) this.updateScopeSummary()
     if (!rerun || this.host.classList.contains('hidden')) return
     if (this.query.length >= MIN_QUERY_LENGTH) this.schedule()
     else {
@@ -147,7 +238,8 @@ export class FindInFiles {
     const buffers = this.d.buffers()
     const root = this.d.root()
     const filter = this.d.filter()
-    const bufferResults = searchBuffers(buffers, query, this.opts, root, EMPTY_SEARCH_SCOPE, filter)
+    const scope = this.scope()
+    const bufferResults = searchBuffers(buffers, query, this.opts, root, scope, filter)
     if (!root) {
       this.results = bufferResults; this.truncated = false; this.searching = false; this.render(); return
     }
@@ -160,7 +252,7 @@ export class FindInFiles {
       root, query, opts: this.opts,
       skipPaths: buffers.map(b => b.filePath).filter((p): p is string => !!p),
       filter,
-      scope: EMPTY_SEARCH_SCOPE,
+      scope,
       searchId: id,
     })
     if (this.activeSearchId === id) this.activeSearchId = null

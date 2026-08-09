@@ -119,6 +119,76 @@ test('a dirty buffer for a file inside an open folder is searched live, not from
     await expect(win.locator('.fif-row')).toHaveCount(0)      // (b) the stale on-disk copy is NOT — proves skipPaths
 })
 
+test('scopes disk and live results with accessible session-local controls', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-searchscope-')
+  const projectDir = smoke.tempDir('notes-searchscopeproj-')
+  mkdirSync(join(projectDir, 'src'))
+  mkdirSync(join(projectDir, 'docs'))
+  writeFileSync(join(projectDir, 'src', 'dirty.ts'), 'stale disk text')
+  writeFileSync(join(projectDir, 'src', 'clean.ts'), 'scoped needle')
+  writeFileSync(join(projectDir, 'src', 'disk-only.ts'), 'scoped needle')
+  writeFileSync(join(projectDir, 'src', 'drop.test.ts'), 'scoped needle')
+  writeFileSync(join(projectDir, 'docs', 'drop.md'), 'scoped needle')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true,
+    lastFolder: projectDir,
+    sidebarVisible: true,
+  }))
+
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
+
+  // The startup untitled buffer supplies the pathless/live category.
+  await win.locator('#paneA .monaco-editor').click()
+  await win.keyboard.type('scoped needle')
+
+  await win.locator('.sb-row', { hasText: 'src' }).click()
+  await win.locator('.sb-row', { hasText: 'dirty.ts' }).click()
+  await expect(win.locator('#paneA .view-lines')).toContainText('stale disk text')
+  await win.locator('#paneA .monaco-editor').click()
+  await win.keyboard.press('Control+A')
+  await win.keyboard.type('scoped needle')
+  await win.locator('.sb-row', { hasText: 'clean.ts' }).click()
+  await expect(win.locator('#paneA .view-lines')).toContainText('scoped needle')
+
+  await win.keyboard.press('Control+Shift+F')
+  const dialog = win.getByRole('dialog', { name: 'Find in Files' })
+  await expect(dialog).toBeVisible()
+
+  // The dirty live buffer shadows its stale disk copy before scope is applied.
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill('stale disk text')
+  await expect(win.locator('.fif-empty')).toContainText('No matches for')
+  await expect(win.locator('.fif-file')).toHaveCount(0)
+
+  const scopeButton = win.getByRole('button', { name: 'Search scope' })
+  await expect(win.getByText('All files · excluding 6 workspace patterns')).toBeVisible()
+  await expect(scopeButton).toHaveAttribute('aria-controls', 'find-in-files-scope')
+  await expect(scopeButton).toHaveAttribute('aria-expanded', 'false')
+  await scopeButton.click()
+  await expect(scopeButton).toHaveAttribute('aria-expanded', 'true')
+  await expect(win.getByRole('group', { name: 'Search scope filters' })).toBeVisible()
+  await win.getByLabel('Files to include').fill('src/**/*.ts')
+  await win.getByLabel('Files to exclude').fill('**/*.test.ts')
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill('scoped needle')
+
+  await expect(win.getByText('src/**/*.ts · excluding 6 workspace patterns + 1 search pattern')).toBeVisible()
+  await expect(win.locator('.fif-file')).toHaveCount(3)
+  await expect(win.locator('.fif-file')).toContainText(['src\\dirty.ts', 'src\\clean.ts', 'src\\disk-only.ts'])
+  await expect(win.locator('.fif-file')).not.toContainText(['src\\drop.test.ts', 'docs\\drop.md', 'Untitled-1'])
+
+  await win.getByLabel('Files to include').fill('')
+  await expect(win.locator('.fif-file', { hasText: 'Untitled-1' })).toHaveCount(1)
+
+  // Retained for this app session, but not persisted through Settings.
+  await win.getByLabel('Files to include').fill('src/**/*.ts')
+  await win.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await win.keyboard.press('Control+Shift+F')
+  await expect(win.getByLabel('Files to include')).toHaveValue('src/**/*.ts')
+  await expect(win.getByLabel('Files to exclude')).toHaveValue('**/*.test.ts')
+})
+
 test('Escape closes the overlay', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-searchesc-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
