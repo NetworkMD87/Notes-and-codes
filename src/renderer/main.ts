@@ -52,6 +52,7 @@ import { StartupOpenQueue } from './startupOpenQueue'
 import { hasOpenDialog } from './dialogController'
 import { LatestWriteScheduler } from './latestWriteScheduler'
 import { settleQuitWrites } from './settleQuitWrites'
+import { snapshotSession } from './sessionSnapshot'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -231,8 +232,10 @@ const selfWrites = new Map<string, number>()
 const autosaveFailed = new Set<string>()
 const SELF_WRITE_WINDOW_MS = 2500
 let sessionSaveFailed = false
+const exposeSessionWriteState = new URLSearchParams(window.location.search).get('nc-headless') === '1'
 const sessionWrites = new LatestWriteScheduler<SessionData>({
   debounceMs: 500,
+  snapshot: snapshotSession,
   write: snapshot => window.api.saveSession(snapshot),
   onSuccess: () => { sessionSaveFailed = false },
   onFailure: error => {
@@ -240,6 +243,13 @@ const sessionWrites = new LatestWriteScheduler<SessionData>({
     if (sessionSaveFailed) return
     sessionSaveFailed = true
     toast('Session save failed — check disk space / permissions.', 'error')
+  },
+  onStateChange: state => {
+    if (!exposeSessionWriteState) return
+    document.body.dataset.sessionWriteState = state.active
+      ? (state.pending ? 'active-pending' : 'active')
+      : (state.pending ? 'pending' : 'idle')
+    document.body.dataset.sessionWriteRevision = String(state.revision)
   },
 })
 let alwaysOnTop = false
@@ -461,6 +471,7 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   await window.api.saveHighlights(path, highlights.get(id))
   manager.get(id)!.highlights = undefined
   conflicts.delete(id)
+  scheduleSessionSave()
   refreshChangeBar() // a conflict we just resolved by overwriting must not leave its bar behind
   if (opts.recent) window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) {
@@ -575,7 +586,7 @@ async function openFromDisk(): Promise<void> {
   const path = await window.api.openDialog(); if (!path) return
   const r = await window.api.readFile(path)
   if (!r.ok) { toast(r.reason, 'error'); return }
-  manager.open(r.file); showActive()
+  manager.open(r.file); showActive(); scheduleSessionSave()
   await window.api.addRecentFile(path)
 }
 
@@ -887,7 +898,7 @@ findInFiles = new FindInFiles(document.getElementById('app')!, {
       // must not run then — it would move the cursor and seed the find widget in whatever
       // buffer happens to be active, which has nothing to do with this match.
       if (path) { if (!(await openPath(path))) return }
-      else { const b = manager.list().find(x => x.title === title); if (!b) return; manager.setActive(b.id); showActive() }
+      else { const b = manager.list().find(x => x.title === title); if (!b) return; manager.setActive(b.id); showActive(); scheduleSessionSave() }
       paneFor(view.focusedPane()).revealMatch(line, column, length)
     })()
   },
@@ -973,6 +984,7 @@ async function reloadBuffer(id: string): Promise<void> {
     spell?.refreshNow()
   }
   refreshStatus(); tabBar.render(manager.list(), manager.activeId)
+  scheduleSessionSave()
   refreshChangeBar() // surface the next queued conflict (or hide the bar)
 }
 const changeBar = document.getElementById('change-bar')!

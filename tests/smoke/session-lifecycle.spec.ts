@@ -6,7 +6,7 @@ test('overlapping session saves restore only the newest snapshot', async ({ smok
   const userDataDir = smoke.tempDir('notes-sessionlatest-')
   const filePath = join(userDataDir, 'session-note.txt')
   writeFileSync(filePath, '')
-  const env = { ...process.env, NC_TEST_SESSION_SAVE_DELAY_MS: '300' }
+  const env = { ...process.env, NC_TEST_SESSION_SAVE_DELAY_MS: '1000' }
   const app1 = await smoke.launch({
     args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath],
     env,
@@ -16,13 +16,17 @@ test('overlapping session saves restore only the newest snapshot', async ({ smok
   const editor = win1.locator('#paneA .monaco-editor')
   await editor.click()
   await win1.keyboard.type('old')
-  await win1.waitForTimeout(550)
-  await win1.keyboard.type('-newest')
+  await expect(win1.locator('body')).toHaveAttribute('data-session-write-state', 'active')
+  await win1.keyboard.insertText('-newest')
+  await expect(win1.locator('body')).toHaveAttribute('data-session-write-state', 'active-pending')
+  const editRevision = Number(await win1.locator('body').getAttribute('data-session-write-revision'))
   await win1.keyboard.press('Control+Shift+P')
   await win1.locator('#palette input').fill('Save')
   await win1.keyboard.press('Enter')
   await expect.poll(() => readFileSync(filePath, 'utf8')).toBe('old-newest')
   await expect(win1.locator('.sb-state')).toHaveText('● saved')
+  await expect.poll(async () => Number(await win1.locator('body').getAttribute('data-session-write-revision')))
+    .toBeGreaterThan(editRevision)
   const closed = app1.waitForEvent('close')
   await app1.evaluate(({ Menu }) => {
     const file = Menu.getApplicationMenu()!.items.find(item => item.label === 'File')!

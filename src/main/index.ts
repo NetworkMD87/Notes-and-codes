@@ -13,14 +13,13 @@ import { RecentFoldersStore } from './recentFoldersStore'
 import { SettingsStore } from './settingsStore'
 import type { HotkeyResult } from '../shared/types'
 import { installHeadlessNetworkBlock } from './headlessNetworkBlock'
+import { MAX_SESSION_SAVE_TEST_DELAY_MS, startQuitFlushWatchdog } from './quitFlushWatchdog'
 
 let mainWindow: BrowserWindow | null = null
 let pendingFile: string | null = null
 let tray: Tray | null = null
 let isQuitting = false
 let unsavedCount = 0
-// Force the exit if the renderer never replies app:quitNow to a clean-quit flush.
-const FLUSH_QUIT_FALLBACK_MS = 2000
 let recentStore: RecentFilesStore | null = null
 let settingsStore: SettingsStore | null = null
 // Tracks whatever accelerator is actually bound right now (or '' if none), so applyHotkey()
@@ -59,9 +58,9 @@ function requestQuit(): void {
   if (unsavedCount === 0) {
     // Clean quit: nothing to save, but the renderer may still hold debounced
     // clipboard/session writes (≤500ms). Ask it to flush them, then it replies
-    // app:quitNow. A short fallback still guarantees the exit if the renderer wedges.
+    // app:quitNow. A bounded fallback still guarantees the exit if the renderer wedges.
     mainWindow.webContents.send('app:flushAndQuit')
-    setTimeout(() => { isQuitting = true; app.quit() }, FLUSH_QUIT_FALLBACK_MS)
+    startQuitFlushWatchdog(() => { isQuitting = true; app.quit() })
     return
   }
   const choice = dialog.showMessageBoxSync(mainWindow, {
@@ -256,7 +255,7 @@ if (!gotLock) {
       ? Math.min(25, Math.max(0, Number.parseInt(process.env.NC_TEST_SLOW_SEARCH_MS ?? '0', 10) || 0))
       : 0
     const sessionSaveTestDelayMs = process.env.NC_HEADLESS === '1'
-      ? Math.min(1000, Math.max(0, Number.parseInt(process.env.NC_TEST_SESSION_SAVE_DELAY_MS ?? '0', 10) || 0))
+      ? Math.min(MAX_SESSION_SAVE_TEST_DELAY_MS, Math.max(0, Number.parseInt(process.env.NC_TEST_SESSION_SAVE_DELAY_MS ?? '0', 10) || 0))
       : 0
     registerIpc({
       baseDir: app.getPath('userData'),

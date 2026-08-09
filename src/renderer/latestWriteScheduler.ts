@@ -1,10 +1,18 @@
 export interface LatestWriteSchedulerDeps<T> {
   write: (value: T) => Promise<void>
+  snapshot?: (value: T) => T
   onSuccess?: () => void
   onFailure?: (error: unknown) => void
+  onStateChange?: (state: LatestWriteSchedulerState) => void
   debounceMs: number
   setTimer?: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
   clearTimer?: (timer: ReturnType<typeof setTimeout>) => void
+}
+
+export interface LatestWriteSchedulerState {
+  active: boolean
+  pending: boolean
+  revision: number
 }
 
 export class LatestWriteScheduler<T> {
@@ -12,6 +20,7 @@ export class LatestWriteScheduler<T> {
   private active: Promise<void> | null = null
   private pending: T | null = null
   private idleWaiters: Array<() => void> = []
+  private revision = 0
   private readonly setTimer
   private readonly clearTimer
 
@@ -21,16 +30,19 @@ export class LatestWriteScheduler<T> {
   }
 
   schedule(value: T): void {
-    this.pending = value
+    this.pending = this.deps.snapshot?.(value) ?? value
+    this.revision += 1
     this.cancelTimer()
     this.timer = this.setTimer(() => {
       this.timer = null
       this.startPending()
     }, this.deps.debounceMs)
+    this.emitState()
   }
 
   async flush(value: T): Promise<void> {
-    this.pending = value
+    this.pending = this.deps.snapshot?.(value) ?? value
+    this.revision += 1
     this.cancelTimer()
     this.startPending()
     await this.whenIdle()
@@ -51,8 +63,12 @@ export class LatestWriteScheduler<T> {
       .finally(() => {
         this.active = null
         if (this.pending !== null && this.timer === null) this.startPending()
-        else this.resolveIdle()
+        else {
+          this.emitState()
+          this.resolveIdle()
+        }
       })
+    this.emitState()
   }
 
   private cancelTimer(): void {
@@ -65,5 +81,13 @@ export class LatestWriteScheduler<T> {
     if (this.active || this.pending !== null || this.timer !== null) return
     const waiters = this.idleWaiters.splice(0)
     waiters.forEach(resolve => resolve())
+  }
+
+  private emitState(): void {
+    this.deps.onStateChange?.({
+      active: this.active !== null,
+      pending: this.pending !== null,
+      revision: this.revision,
+    })
   }
 }
