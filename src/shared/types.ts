@@ -253,6 +253,7 @@ export interface Api {
   readDir(root: string, path: string, filter: WorkspaceFilter): Promise<DirEntry[]>
   walkFiles(root: string, filter: WorkspaceFilter): Promise<WalkResult>
   searchFiles(req: SearchRequest): Promise<SearchResponse>
+  cancelSearch(searchId: number): void
   createFile(path: string): Promise<boolean>
   createFolder(path: string): Promise<boolean>
   renamePath(from: string, to: string): Promise<boolean>

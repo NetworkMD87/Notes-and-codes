@@ -3,6 +3,7 @@ import { isTrustedSender } from './senderGuard'
 import { readFileForEditor, writeFile } from './fileService'
 import { readDir, walkFiles, createFile, createFolder, renamePath, dirExists } from './fsService'
 import { searchFiles } from './searchService'
+import { SearchGeneration } from './searchGeneration'
 import { DirWatcher } from './dirWatcher'
 import { SessionStore } from './sessionStore'
 import { SettingsStore } from './settingsStore'
@@ -31,6 +32,7 @@ export interface IpcDeps {
   onDirtyCount: (n: number) => void
   onQuitNow: () => void
   onRecentChanged?: () => void
+  searchTestDelayMs: number
 }
 
 export function registerIpc(deps: IpcDeps): void {
@@ -49,6 +51,10 @@ export function registerIpc(deps: IpcDeps): void {
   void highlights.sweep()
   const watcher = new FileWatcher((path) => deps.getWindow()?.webContents.send('file:changed', path))
   const dirWatcher = new DirWatcher(() => deps.getWindow()?.webContents.send('dir:changed'))
+  const searchGeneration = new SearchGeneration()
+  const afterDirectoryRead = deps.searchTestDelayMs > 0
+    ? () => new Promise<void>(resolve => setTimeout(resolve, deps.searchTestDelayMs))
+    : undefined
 
   // Every handler is registered through `handle`/`on`, which reject any sender that is not
   // the app window's own main frame (L2 hardening). fs-capable channels (file:read/write,
@@ -131,20 +137,12 @@ export function registerIpc(deps: IpcDeps): void {
     readDir(root, path, filter))
   handle('dir:walk', (_e, root: string, filter: WorkspaceFilter) => walkFiles(root, filter))
 
-  // Cancellation is keyed on a counter OWNED here, not on the renderer-supplied req.searchId.
-  // The renderer's own counter restarts at 0 every time the renderer reloads (electron-vite HMR
-  // does this on every save in `npm run dev`), but this closure lives for the whole main-process
-  // session — trusting req.searchId as a high-water mark would make every post-reload request
-  // look "behind" the pre-reload mark forever, so disk search would silently return nothing for
-  // the rest of the session. Bumping our own generation on every request sidesteps that: typing
-  // fast still lets each stale request bail as soon as a newer one has arrived, and a renderer
-  // reload can't wedge it. The response still echoes back req.searchId so the renderer can match
-  // an answer to the request that asked for it.
-  let generation = 0
-  handle('search:files', (_e, req: SearchRequest) => {
-    const mine = ++generation
-    return searchFiles(req, () => mine < generation)
-  })
+  // SearchGeneration owns monotonic main-process generations while searchId remains the
+  // renderer's correlation/cancellation id. A reload may restart renderer ids without wedging
+  // future work; the sender-guarded one-way cancel can stop only the matching active request.
+  handle('search:files', (_e, req: SearchRequest) =>
+    searchFiles(req, searchGeneration.begin(req.searchId), undefined, { afterDirectoryRead }))
+  on('search:cancel', (_e, searchId: number) => searchGeneration.cancel(searchId))
 
   handle('fs:createFile', (_e, path: string) => createFile(path))
   handle('fs:createFolder', (_e, path: string) => createFolder(path))

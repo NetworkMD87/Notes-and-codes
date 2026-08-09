@@ -55,6 +55,7 @@ const api: Api = {
   readDir: (root, path, filter) => ipcRenderer.invoke('dir:read', root, path, filter),
   walkFiles: (root, filter) => ipcRenderer.invoke('dir:walk', root, filter),
   searchFiles: (req) => ipcRenderer.invoke('search:files', req),
+  cancelSearch: (searchId) => ipcRenderer.send('search:cancel', searchId),
   createFile: (path) => ipcRenderer.invoke('fs:createFile', path),
   createFolder: (path) => ipcRenderer.invoke('fs:createFolder', path),
   renamePath: (from, to) => ipcRenderer.invoke('fs:rename', from, to),

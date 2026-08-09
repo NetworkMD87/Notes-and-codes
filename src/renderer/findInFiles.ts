@@ -35,6 +35,7 @@ export class FindInFiles {
   private searching = false
   private truncated = false
   private searchId = 0
+  private activeSearchId: number | null = null
   private workspaceGeneration = 0
   private timer: number | undefined
 
@@ -64,7 +65,11 @@ export class FindInFiles {
     this.host.replaceChildren(box)
     this.host.classList.remove('hidden')
     this.dialog.open({ panel: box, labelledBy: title.id, initialFocus: this.input, requestClose: () => this.close() })
-    this.input.addEventListener('input', () => { this.query = this.input.value; this.schedule() })
+    this.input.addEventListener('input', () => {
+      this.query = this.input.value
+      if (this.query.length < MIN_QUERY_LENGTH) void this.runSearch()
+      else this.schedule()
+    })
     this.input.addEventListener('keydown', (e) => this.onKey(e))
     // Re-run rather than just redisplay: root()/buffers() may have changed while shut
     // (folder switched, buffer edited), so a carried-over query needs fresh results, not
@@ -78,10 +83,10 @@ export class FindInFiles {
    * immediately replace them with a search against the new context. */
   workspaceChanged(): void {
     this.workspaceGeneration++
-    this.searchId++
+    this.cancelActiveSearch()
     clearTimeout(this.timer)
     if (this.host.classList.contains('hidden')) return
-    if (this.query.length >= MIN_QUERY_LENGTH) void this.runSearch()
+    if (this.query.length >= MIN_QUERY_LENGTH) this.schedule()
     else {
       this.results = []
       this.truncated = false
@@ -112,6 +117,13 @@ export class FindInFiles {
     this.timer = window.setTimeout(() => void this.runSearch(), DEBOUNCE_MS)
   }
 
+  private cancelActiveSearch(): void {
+    if (this.activeSearchId === null) return
+    window.api.cancelSearch(this.activeSearchId)
+    this.activeSearchId = null
+    this.searchId++
+  }
+
   private async runSearch(): Promise<void> {
     const query = this.query
     const workspaceGeneration = this.workspaceGeneration
@@ -122,8 +134,10 @@ export class FindInFiles {
     if (query !== this.resultsQuery) this.active = 0
     this.resultsQuery = query
     if (query.length < MIN_QUERY_LENGTH) {
+      this.cancelActiveSearch()
       this.results = []; this.truncated = false; this.searching = false; this.render(); return
     }
+    this.cancelActiveSearch()
     const id = ++this.searchId
     const buffers = this.d.buffers()
     const bufferResults = searchBuffers(buffers, query, this.opts)
@@ -133,13 +147,20 @@ export class FindInFiles {
     }
     this.searching = true
     this.render()
+    this.activeSearchId = id
+    const headless = new URLSearchParams(window.location.search).get('nc-headless') === '1'
+    if (headless) this.host.dataset.lastSearchState = 'started'
     const res = await window.api.searchFiles({
       root, query, opts: this.opts,
       skipPaths: buffers.map(b => b.filePath).filter((p): p is string => !!p),
       filter: this.d.filter(),
       searchId: id,
     })
-    if (id !== this.searchId || workspaceGeneration !== this.workspaceGeneration) return
+    if (this.activeSearchId === id) this.activeSearchId = null
+    if (id !== this.searchId || workspaceGeneration !== this.workspaceGeneration) {
+      if (headless) this.host.dataset.lastSearchState = 'cancelled'
+      return
+    }
     this.results = mergeResults(bufferResults, res.files)
     this.truncated = res.truncated
     this.searching = false
@@ -228,7 +249,7 @@ export class FindInFiles {
 
   private close(): void {
     clearTimeout(this.timer)
-    this.searchId++ // invalidate any in-flight search: its response must land as stale, not overwrite the next session
+    this.cancelActiveSearch()
     this.host.classList.add('hidden')
     this.dialog.close()
   }

@@ -252,6 +252,9 @@ if (!gotLock) {
     // single serialized write chain each, instead of two racing copies.
     recentStore = new RecentFilesStore(app.getPath('userData'))
     settingsStore = new SettingsStore(app.getPath('userData'))
+    const searchTestDelayMs = process.env.NC_HEADLESS === '1'
+      ? Math.min(25, Math.max(0, Number.parseInt(process.env.NC_TEST_SLOW_SEARCH_MS ?? '0', 10) || 0))
+      : 0
     registerIpc({
       baseDir: app.getPath('userData'),
       settings: settingsStore,
@@ -263,7 +266,8 @@ if (!gotLock) {
       setGlobalHotkey: (accel) => applyHotkey(accel),
       onDirtyCount: (n) => { unsavedCount = n },
       onQuitNow: () => { isQuitting = true; app.quit() },
-      onRecentChanged: () => { void rebuildMenu() }
+      onRecentChanged: () => { void rebuildMenu() },
+      searchTestDelayMs,
     })
     pendingFile = fileArgFrom(process.argv)
 

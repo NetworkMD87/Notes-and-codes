@@ -128,3 +128,37 @@ test('Escape closes the overlay', async ({ smoke }) => {
     await win.keyboard.press('Escape')
     await expect(win.locator('.fif-box')).toBeHidden()
 })
+
+test('closing Find in Files cancels main traversal and never repaints', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-searchcancel-')
+  const projectDir = smoke.tempDir('notes-searchcancelproj-')
+  for (let i = 0; i < 400; i++) {
+    const nested = join(projectDir, `d${String(i).padStart(3, '0')}`)
+    mkdirSync(nested)
+    writeFileSync(join(nested, 'file.txt'), 'needle')
+  }
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true,
+    lastFolder: projectDir,
+    sidebarVisible: true,
+  }))
+
+  const app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+    env: { ...process.env, NC_TEST_SLOW_SEARCH_MS: '5' },
+  })
+  const win = await app.firstWindow()
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
+  await win.keyboard.press('Control+Shift+F')
+  await win.locator('.fif-head input').fill('needle')
+  await expect(win.locator('.fif-note')).toContainText('Searching')
+  await win.keyboard.press('Escape')
+  await expect(win.locator('.fif-box')).toBeHidden()
+  await expect.poll(
+    () => win.locator('#find-in-files').getAttribute('data-last-search-state'),
+    { timeout: 1000 },
+  ).toBe('cancelled')
+  await win.waitForTimeout(250)
+  await expect(win.locator('.fif-box')).toBeHidden()
+  await expect(win.locator('.fif-row')).toHaveCount(0)
+})

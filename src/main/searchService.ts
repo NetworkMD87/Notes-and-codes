@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs'
-import { walkFiles } from './fsService'
+import { walkFiles, type WalkFilesOptions } from './fsService'
 import { detectEncoding, decode } from './encoding'
 import { searchText, MIN_QUERY_LENGTH, MAX_MATCHES_PER_FILE, pathKey } from '../shared/searchText'
 import type { SearchFileResult, SearchRequest, SearchResponse } from '../shared/types'
@@ -47,11 +47,12 @@ export async function searchFiles(
   req: SearchRequest,
   shouldCancel: () => boolean = () => false,
   io: SearchIo = DEFAULT_IO,
+  walkOptions: Pick<WalkFilesOptions, 'afterDirectoryRead'> = {},
 ): Promise<SearchResponse> {
   const empty: SearchResponse = { files: [], totalMatches: 0, truncated: false, searchId: req.searchId }
   if (!req.root || req.query.length < MIN_QUERY_LENGTH || shouldCancel()) return empty
 
-  const walk = await walkFiles(req.root, req.filter, { shouldCancel })
+  const walk = await walkFiles(req.root, req.filter, { shouldCancel, ...walkOptions })
   if (shouldCancel()) return empty // don't spend a single stat/read on a search that's already stale
 
   const skip = new Set(req.skipPaths.map(pathKey))

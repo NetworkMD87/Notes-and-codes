@@ -19,7 +19,7 @@ export interface FolderModeDeps {
   pickFolder: () => Promise<void>   // the same picker the File menu / palette use
   focusEditor: () => void
   filter: () => WorkspaceFilter
-  workspaceChanged: () => void
+  onWorkspaceChanged: () => void
 }
 
 interface FolderRefreshSnapshot {
@@ -71,6 +71,7 @@ export class FolderMode {
   root(): string | null { return this.model.root }
 
   async openFolder(root: string): Promise<void> {
+    this.d.onWorkspaceChanged()
     const generation = ++this.lifecycleGeneration
     this.desiredRoot = root
     this.desiredSidebarVisible = true
@@ -80,7 +81,6 @@ export class FolderMode {
     const s = await window.api.loadSettings()
     if (!this.isCurrent(generation)) return
     this.model.setRoot(root)
-    this.d.workspaceChanged()
     this.hideSidebar()
     this.showSidebar(s.sidebarWidth)
     this.sidebar.render()
@@ -94,6 +94,7 @@ export class FolderMode {
   }
 
   closeFolder(): void {
+    this.d.onWorkspaceChanged()
     const generation = ++this.lifecycleGeneration
     this.desiredRoot = null
     this.desiredSidebarVisible = this.split !== null
@@ -102,7 +103,6 @@ export class FolderMode {
     this.model.root = null
     this.index = []
     this.indexTruncated = false
-    this.d.workspaceChanged()
     void this.syncWatcher(null, generation)
     // Spec: "Close Folder returns the panel; the tab stays." The panel replaces the tree in
     // place rather than collapsing the sidebar — hideSidebar() destroys the Split, which would
@@ -271,7 +271,10 @@ export class FolderMode {
     this.sidebar.render()
   }
 
-  workspaceSettingsChanged(): Promise<void> { return this.refresh.request() }
+  workspaceSettingsChanged(): Promise<void> {
+    this.d.onWorkspaceChanged()
+    return this.refresh.request()
+  }
 
   private onDiskChange(): Promise<void> { return this.refresh.request() }
 
