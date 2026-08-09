@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, promises as fs, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { performance } from 'node:perf_hooks'
@@ -17,6 +17,7 @@ const FILTER: WorkspaceFilter = {
   excludePatterns: ['**/dist/**'],
 }
 const QUERIES = ['', 'workspace-target.ts', 'file-000', 'f199']
+const EXPECTED_SERIAL_READ_BYTES = 617_780
 const EXPECTED_QUERY_CHECKSUMS = {
   '<empty>': 3928438448,
   'workspace-target.ts': 2838739514,
@@ -75,6 +76,24 @@ describe('20,000-file workspace benchmark', () => {
     const coldCandidateChecksum = checksum(coldCandidatePaths.map(path =>
       relative(root, path).replace(/\\/g, '/')))
 
+    const serialReadStart = performance.now()
+    let filesRead = 0
+    let bytesRead = 0
+    for (const file of coldWalk.files) {
+      const stat = await fs.stat(file)
+      if (!stat.isFile() || stat.size > 1024 * 1024) continue
+      const bytes = await fs.readFile(file)
+      filesRead++
+      bytesRead += bytes.length
+    }
+    const serialRead = {
+      totalMs: performance.now() - serialReadStart,
+      filesRead,
+      bytesRead,
+    }
+    expect(serialRead.filesRead).toBe(LARGE_WORKSPACE_FILES)
+    expect(serialRead.bytesRead).toBe(EXPECTED_SERIAL_READ_BYTES)
+
     const refreshStart = performance.now()
     const refreshWalk = await walkFiles(root, FILTER)
     const refreshCandidates = buildQuickOpenCandidates(root, refreshWalk.files)
@@ -111,6 +130,7 @@ describe('20,000-file workspace benchmark', () => {
       coldWalkIndexMs: Number(coldWalkIndexMs.toFixed(2)),
       refreshMs: Number(refreshMs.toFixed(2)),
       p95QueryMs: Number(p95QueryMs.toFixed(2)),
+      serialRead,
       candidateChecksums: {
         cold: coldCandidateChecksum,
         refresh: refreshCandidateChecksum,
