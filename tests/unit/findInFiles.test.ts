@@ -34,13 +34,14 @@ describe('FindInFiles workspace context', () => {
 
   it('cannot publish an old result after the workspace filter changes', async () => {
     const old = deferred<SearchResponse>()
+    const cancelSearch = vi.fn()
     const searchFiles = vi.fn()
       .mockImplementationOnce(() => old.promise)
       .mockImplementationOnce((req: { searchId: number }) =>
         Promise.resolve(response(req.searchId, 'C:\\workspace\\fresh.txt', 'fresh result')))
     Object.defineProperty(window, 'api', {
       configurable: true,
-      value: { searchFiles } as Partial<Api> as Api,
+      value: { searchFiles, cancelSearch } as Partial<Api> as Api,
     })
     let filter: WorkspaceFilter = { showAll: false, excludePatterns: ['old/**'] }
     const find = new FindInFiles(document.getElementById('app')!, {
@@ -57,12 +58,16 @@ describe('FindInFiles workspace context', () => {
     expect(searchFiles).toHaveBeenCalledTimes(1)
 
     filter = { showAll: true, excludePatterns: ['fresh/**'] }
+    const oldId = searchFiles.mock.calls[0][0].searchId
     find.workspaceChanged()
-    await Promise.resolve(); await Promise.resolve()
+    expect(cancelSearch).toHaveBeenCalledWith(oldId)
+    expect(searchFiles).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(151)
     expect(searchFiles).toHaveBeenCalledTimes(2)
+    expect(searchFiles.mock.calls[1][0].searchId).not.toBe(oldId)
+    expect(cancelSearch.mock.invocationCallOrder[0]).toBeLessThan(searchFiles.mock.invocationCallOrder[1])
     expect(document.body.textContent).toContain('fresh result')
 
-    const oldId = searchFiles.mock.calls[0][0].searchId
     old.resolve(response(oldId, 'C:\\workspace\\old.txt', 'old result'))
     await Promise.resolve(); await Promise.resolve()
     expect(document.body.textContent).toContain('fresh result')

@@ -79,13 +79,13 @@ export class FindInFiles {
     this.input.select()
   }
 
-  /** Invalidate results captured under an older folder/filter context. If the dialog is open,
-   * immediately replace them with a search against the new context. */
-  workspaceChanged(): void {
+  /** Invalidate results captured under an older folder/filter context. `rerun=false` is the
+   * synchronous pre-change phase; the commit phase calls again with the new root and reruns. */
+  workspaceChanged(rerun = true): void {
     this.workspaceGeneration++
     this.cancelActiveSearch()
     clearTimeout(this.timer)
-    if (this.host.classList.contains('hidden')) return
+    if (!rerun || this.host.classList.contains('hidden')) return
     if (this.query.length >= MIN_QUERY_LENGTH) this.schedule()
     else {
       this.results = []

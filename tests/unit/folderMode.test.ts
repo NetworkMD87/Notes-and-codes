@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Api, DirEntry, WalkResult, WorkspaceFilter } from '../../src/shared/types'
+import type { Api, DirEntry, SearchResponse, WalkResult, WorkspaceFilter } from '../../src/shared/types'
 import { DEFAULT_SETTINGS } from '../../src/shared/types'
 
 vi.mock('split.js', () => ({
@@ -8,6 +8,8 @@ vi.mock('split.js', () => ({
 }))
 
 import { FolderMode } from '../../src/renderer/folderMode'
+import { FindInFiles } from '../../src/renderer/findInFiles'
+import { handleEscape } from '../../src/renderer/overlayManager'
 
 interface Deferred<T> {
   promise: Promise<T>
@@ -24,7 +26,11 @@ function entry(name: string, root = 'C:\\workspace'): DirEntry {
   return { name, path: `${root}\\${name}`, isDir: false }
 }
 
-function mount(api: Partial<Api>, filter: () => WorkspaceFilter): FolderMode {
+function mount(
+  api: Partial<Api>,
+  filter: () => WorkspaceFilter,
+  onWorkspaceChanged: (rerun: boolean) => void = vi.fn(),
+): FolderMode {
   document.body.innerHTML = '<div id="app"><div id="shell"><div id="sidebar"></div><div id="main"></div></div></div>'
   Object.defineProperty(window, 'api', { configurable: true, writable: true, value: api as Api })
   return new FolderMode({
@@ -35,8 +41,17 @@ function mount(api: Partial<Api>, filter: () => WorkspaceFilter): FolderMode {
     pickFolder: vi.fn(async () => {}),
     focusEditor: vi.fn(),
     filter,
-    workspaceChanged: vi.fn(),
+    onWorkspaceChanged,
   })
+}
+
+function response(searchId: number, path: string, preview: string): SearchResponse {
+  return {
+    searchId,
+    totalMatches: 1,
+    truncated: false,
+    files: [{ path, matches: [{ line: 1, column: 1, length: 3, preview }], truncated: false }],
+  }
 }
 
 function baseApi(overrides: Partial<Api>): Partial<Api> {
@@ -53,7 +68,10 @@ function baseApi(overrides: Partial<Api>): Partial<Api> {
 }
 
 describe('FolderMode refresh integration', () => {
-  beforeEach(() => document.body.replaceChildren())
+  beforeEach(() => {
+    document.body.replaceChildren()
+    HTMLElement.prototype.scrollIntoView = vi.fn()
+  })
   afterEach(() => document.body.replaceChildren())
 
   it('drops stale work and publishes candidates and tree rows from the newest filter snapshot', async () => {
@@ -68,7 +86,8 @@ describe('FolderMode refresh integration', () => {
     })
     const api = baseApi({ walkFiles, readDir })
     let filter: WorkspaceFilter = { showAll: false, excludePatterns: ['old/**'] }
-    const mode = mount(api, () => filter)
+    const onWorkspaceChanged = vi.fn()
+    const mode = mount(api, () => filter, onWorkspaceChanged)
 
     const opening = mode.openFolder('C:\\workspace')
     await vi.waitFor(() => expect(walkFiles).toHaveBeenCalledTimes(1))
@@ -97,6 +116,7 @@ describe('FolderMode refresh integration', () => {
     mode.openQuickOpen()
     expect(document.querySelector('.qo-row')?.textContent).toContain('fresh.ts')
     expect(document.querySelector('.qo-note')?.textContent).toContain('Index truncated')
+    expect(onWorkspaceChanged.mock.calls).toEqual([[false], [true], [true]])
   })
 
   it('invalidates an active refresh when the folder closes', async () => {
@@ -104,7 +124,8 @@ describe('FolderMode refresh integration', () => {
     const walkFiles = vi.fn(() => walk.promise)
     const readDir = vi.fn(async () => [entry('late.ts')])
     const api = baseApi({ walkFiles, readDir })
-    const mode = mount(api, () => ({ showAll: false, excludePatterns: [] }))
+    const onWorkspaceChanged = vi.fn()
+    const mode = mount(api, () => ({ showAll: false, excludePatterns: [] }), onWorkspaceChanged)
 
     const opening = mode.openFolder('C:\\workspace')
     await vi.waitFor(() => expect(walkFiles).toHaveBeenCalledOnce())
@@ -121,6 +142,70 @@ describe('FolderMode refresh integration', () => {
     expect(readDir).not.toHaveBeenCalled()
     await vi.waitFor(() => expect(document.querySelector('.sb-panel')).not.toBeNull())
     expect(document.body.textContent).not.toContain('late.ts')
+    expect(onWorkspaceChanged.mock.calls).toEqual([[false], [true], [false], [true]])
+  })
+
+  it('waits for the committed folder root before rerunning a visible Find in Files query', async () => {
+    vi.useFakeTimers()
+    const bSettings = deferred<typeof DEFAULT_SETTINGS>()
+    const oldA = deferred<SearchResponse>()
+    const cancelSearch = vi.fn()
+    const searchFiles = vi.fn((req: { root: string; searchId: number }) =>
+      req.root === 'C:\\A'
+        ? oldA.promise
+        : Promise.resolve(response(req.searchId, 'C:\\B\\fresh.txt', 'fresh B result')))
+    const api = baseApi({
+      loadSettings: vi.fn()
+        .mockResolvedValueOnce({ ...DEFAULT_SETTINGS })
+        .mockImplementationOnce(() => bSettings.promise),
+      walkFiles: vi.fn(async () => ({ files: [], truncated: false })),
+      readDir: vi.fn(async () => []),
+      searchFiles: searchFiles as Api['searchFiles'],
+      cancelSearch,
+    })
+    let find!: FindInFiles
+    const mode = mount(
+      api,
+      () => ({ showAll: false, excludePatterns: [] }),
+      rerun => find.workspaceChanged(rerun),
+    )
+    find = new FindInFiles(document.getElementById('app')!, {
+      root: () => mode.root(),
+      filter: () => ({ showAll: false, excludePatterns: [] }),
+      buffers: () => [],
+      openMatch: vi.fn(),
+      focusEditor: vi.fn(),
+    })
+
+    try {
+      await mode.openFolder('C:\\A')
+      find.open()
+      const input = document.querySelector<HTMLInputElement>('[aria-label="Find in Files"]')!
+      input.value = 'needle'; input.dispatchEvent(new Event('input'))
+      await vi.advanceTimersByTimeAsync(151)
+      expect(searchFiles.mock.calls.map(call => call[0].root)).toEqual(['C:\\A'])
+      const aId = searchFiles.mock.calls[0][0].searchId
+
+      const openingB = mode.openFolder('C:\\B')
+      expect(cancelSearch).toHaveBeenCalledWith(aId)
+      await vi.advanceTimersByTimeAsync(500)
+      expect(searchFiles.mock.calls.map(call => call[0].root)).toEqual(['C:\\A'])
+
+      oldA.resolve(response(aId, 'C:\\A\\old.txt', 'old A result'))
+      await Promise.resolve(); await Promise.resolve()
+      expect(document.body.textContent).not.toContain('old A result')
+
+      bSettings.resolve({ ...DEFAULT_SETTINGS })
+      await openingB
+      expect(mode.root()).toBe('C:\\B')
+      await vi.advanceTimersByTimeAsync(151)
+      expect(searchFiles.mock.calls.map(call => call[0].root)).toEqual(['C:\\A', 'C:\\B'])
+      expect(document.body.textContent).toContain('fresh B result')
+      expect(document.body.textContent).not.toContain('old A result')
+    } finally {
+      handleEscape({ key: 'Escape', preventDefault: vi.fn(), stopPropagation: vi.fn() })
+      vi.useRealTimers()
+    }
   })
 
   it('clears folder A candidates and truncation synchronously while folder B opens', async () => {

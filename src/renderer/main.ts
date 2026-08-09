@@ -838,7 +838,7 @@ folder = new FolderMode({
   openFile: (path) => void openPath(path),
   focusEditor: focusActiveEditor,
   filter: workspaceFilter,
-  onWorkspaceChanged: () => findInFiles.workspaceChanged(),
+  onWorkspaceChanged: (rerun) => findInFiles.workspaceChanged(rerun),
   pickFolder: () => openFolderFromDialog(),
   activePath: () => {
     const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null

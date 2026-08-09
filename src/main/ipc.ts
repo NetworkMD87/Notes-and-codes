@@ -140,8 +140,14 @@ export function registerIpc(deps: IpcDeps): void {
   // SearchGeneration owns monotonic main-process generations while searchId remains the
   // renderer's correlation/cancellation id. A reload may restart renderer ids without wedging
   // future work; the sender-guarded one-way cancel can stop only the matching active request.
-  handle('search:files', (_e, req: SearchRequest) =>
-    searchFiles(req, searchGeneration.begin(req.searchId), undefined, { afterDirectoryRead }))
+  handle('search:files', async (_e, req: SearchRequest) => {
+    const lease = searchGeneration.begin(req.searchId)
+    try {
+      return await searchFiles(req, lease.shouldCancel, undefined, { afterDirectoryRead })
+    } finally {
+      lease.complete()
+    }
+  })
   on('search:cancel', (_e, searchId: number) => searchGeneration.cancel(searchId))
 
   handle('fs:createFile', (_e, path: string) => createFile(path))

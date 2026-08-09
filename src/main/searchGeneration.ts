@@ -1,11 +1,21 @@
+export interface SearchLease {
+  shouldCancel: () => boolean
+  complete: () => void
+}
+
 export class SearchGeneration {
   private generation = 0
   private active: { searchId: number; generation: number } | null = null
 
-  begin(searchId: number): () => boolean {
+  begin(searchId: number): SearchLease {
     const current = ++this.generation
     this.active = { searchId, generation: current }
-    return () => current !== this.generation
+    return {
+      shouldCancel: () => current !== this.generation,
+      complete: () => {
+        if (this.active?.generation === current) this.active = null
+      },
+    }
   }
 
   cancel(searchId: number): void {
