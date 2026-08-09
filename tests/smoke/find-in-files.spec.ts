@@ -15,7 +15,8 @@ test('the search:files channel returns matches from the folder', async ({ smoke 
     const res = await win.evaluate((root) => window.api.searchFiles({
       root, query: 'needle',
       opts: { caseSensitive: false, wholeWord: false },
-      skipPaths: [], filter: { showAll: false, excludePatterns: [] }, searchId: 1,
+      skipPaths: [], filter: { showAll: false, excludePatterns: [] },
+      scope: { includePatterns: [], excludePatterns: [] }, searchId: 1,
     }), folder) as SearchResponse
     expect(res.totalMatches).toBe(2)
     expect(res.files).toHaveLength(2)

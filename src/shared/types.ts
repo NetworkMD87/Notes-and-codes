@@ -39,6 +39,7 @@ export interface SearchRequest {
   opts: SearchOptions
   skipPaths: string[]
   filter: WorkspaceFilter
+  scope: SearchScope
   searchId: number
 }
 

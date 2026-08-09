@@ -35,6 +35,38 @@ describe('searchBuffers', () => {
     expect(result.matches.at(-1)?.line).toBe(20)
     expect(result.truncated).toBe(true)
   })
+
+  it('uses relative, basename, and untitled scope paths consistently', () => {
+    const buffers = [
+      { filePath: 'C:/work/src/a.ts', title: 'a.ts', content: 'needle' },
+      { filePath: 'D:/loose/note.md', title: 'note.md', content: 'needle' },
+      { filePath: null, title: 'Untitled-1', content: 'needle' },
+    ]
+    const result = searchBuffers(
+      buffers,
+      'needle',
+      PLAIN,
+      'C:/work',
+      { includePatterns: ['**/*.md'], excludePatterns: [] },
+      { showAll: false, excludePatterns: [] },
+    )
+
+    expect(result.map(item => item.title ?? item.path)).toEqual(['D:/loose/note.md'])
+  })
+
+  it('keeps untitled buffers eligible when includes are empty', () => {
+    const result = searchBuffers(
+      [{ filePath: null, title: 'Untitled-1', content: 'needle' }],
+      'needle',
+      PLAIN,
+      'C:/work',
+      { includePatterns: [], excludePatterns: ['**/*.test.ts'] },
+      { showAll: false, excludePatterns: [] },
+    )
+
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ path: '', title: 'Untitled-1' })
+  })
 })
 
 describe('mergeResults', () => {

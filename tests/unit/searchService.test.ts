@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
+import { promises as fs, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { searchFiles, isBinary, type SearchIo } from '../../src/main/searchService'
 import type { SearchRequest } from '../../src/shared/types'
 
@@ -15,6 +15,7 @@ const req = (over: Partial<SearchRequest> = {}): SearchRequest => ({
   opts: { caseSensitive: false, wholeWord: false },
   skipPaths: [],
   filter: { showAll: false, excludePatterns: ['**/dist/**'] },
+  scope: { includePatterns: [], excludePatterns: [] },
   searchId: 1,
   ...over,
 })
@@ -159,6 +160,56 @@ describe('searchFiles', () => {
     expect((await searchFiles(req({
       filter: { showAll: true, excludePatterns: ['**/dist/**'] },
     }))).totalMatches).toBe(1)
+  })
+
+  it('applies includes before file reads and prunes explicit excludes', async () => {
+    mkdirSync(join(dir, 'src'))
+    mkdirSync(join(dir, 'dist'))
+    for (const path of [
+      join(dir, 'src', 'a.ts'),
+      join(dir, 'src', 'a.md'),
+      join(dir, 'src', 'a.test.ts'),
+      join(dir, 'dist', 'hidden.ts'),
+    ]) writeFileSync(path, 'needle')
+
+    const reads: string[] = []
+    const io: SearchIo = {
+      stat: path => fs.stat(path),
+      readFile: async path => {
+        reads.push(relative(dir, path).replace(/\\/g, '/'))
+        return fs.readFile(path)
+      },
+    }
+    const result = await searchFiles(req({
+      filter: { showAll: true, excludePatterns: ['**/dist/**'] },
+      scope: {
+        includePatterns: ['src/**/*.ts'],
+        excludePatterns: ['**/*.test.ts', 'dist/**'],
+      },
+    }), () => false, io)
+
+    expect(result.files.map(file => relative(dir, file.path).replace(/\\/g, '/')))
+      .toEqual(['src/a.ts'])
+    expect(reads).toEqual(['src/a.ts'])
+  })
+
+  it('prunes explicit search excludes even when Show All bypasses workspace exclusions', async () => {
+    mkdirSync(join(dir, 'src'))
+    mkdirSync(join(dir, 'dist'))
+    writeFileSync(join(dir, 'src', 'visible.ts'), 'needle')
+    writeFileSync(join(dir, 'dist', 'hidden.ts'), 'needle')
+    let directoryReads = 0
+
+    const result = await searchFiles(req({
+      filter: { showAll: true, excludePatterns: ['**/src/**'] },
+      scope: { includePatterns: [], excludePatterns: ['dist/**'] },
+    }), () => false, undefined, {
+      afterDirectoryRead: async () => { directoryReads++ },
+    })
+
+    expect(directoryReads).toBe(2)
+    expect(result.files.map(file => relative(dir, file.path).replace(/\\/g, '/')))
+      .toEqual(['src/visible.ts'])
   })
 
   it('skips paths in skipPaths', async () => {

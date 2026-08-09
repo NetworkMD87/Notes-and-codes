@@ -2,6 +2,7 @@ import { DialogController } from './dialogController'
 import { emptyState, EMPTY_ICONS } from './emptyState'
 import { searchBuffers, mergeResults, type SearchableBuffer } from './findInFilesModel'
 import { MIN_QUERY_LENGTH } from '../shared/searchText'
+import { EMPTY_SEARCH_SCOPE } from '../shared/searchScope'
 import { fileType } from './fileType'
 import { HL_HEX, type SearchFileResult, type SearchOptions, type WorkspaceFilter } from '../shared/types'
 
@@ -144,8 +145,9 @@ export class FindInFiles {
     this.cancelActiveSearch()
     const id = ++this.searchId
     const buffers = this.d.buffers()
-    const bufferResults = searchBuffers(buffers, query, this.opts)
     const root = this.d.root()
+    const filter = this.d.filter()
+    const bufferResults = searchBuffers(buffers, query, this.opts, root, EMPTY_SEARCH_SCOPE, filter)
     if (!root) {
       this.results = bufferResults; this.truncated = false; this.searching = false; this.render(); return
     }
@@ -157,7 +159,8 @@ export class FindInFiles {
     const res = await window.api.searchFiles({
       root, query, opts: this.opts,
       skipPaths: buffers.map(b => b.filePath).filter((p): p is string => !!p),
-      filter: this.d.filter(),
+      filter,
+      scope: EMPTY_SEARCH_SCOPE,
       searchId: id,
     })
     if (this.activeSearchId === id) this.activeSearchId = null

@@ -1,6 +1,8 @@
 import { promises as fs } from 'node:fs'
+import { relative } from 'node:path'
 import { walkFiles, type WalkFilesOptions } from './fsService'
 import { detectEncoding, decode } from './encoding'
+import { compileSearchScope } from '../shared/searchScope'
 import { searchText, MIN_QUERY_LENGTH, MAX_MATCHES_PER_FILE, pathKey } from '../shared/searchText'
 import type { SearchFileResult, SearchRequest, SearchResponse } from '../shared/types'
 
@@ -52,7 +54,11 @@ export async function searchFiles(
   const empty: SearchResponse = { files: [], totalMatches: 0, truncated: false, searchId: req.searchId }
   if (!req.root || req.query.length < MIN_QUERY_LENGTH || shouldCancel()) return empty
 
-  const walk = await walkFiles(req.root, req.filter, { shouldCancel, ...walkOptions })
+  const scope = compileSearchScope(req.scope, req.filter.excludePatterns, req.filter.showAll)
+  const walk = await walkFiles(req.root, {
+    showAll: false,
+    excludePatterns: scope.traversalExcludes,
+  }, { shouldCancel, ...walkOptions })
   if (shouldCancel()) return empty // don't spend a single stat/read on a search that's already stale
 
   const skip = new Set(req.skipPaths.map(pathKey))
@@ -64,6 +70,8 @@ export async function searchFiles(
     if (shouldCancel()) return empty
     if (total >= MAX_MATCHES_TOTAL) { truncated = true; break }
     if (skip.has(pathKey(path))) continue
+    const relativePath = relative(req.root, path).replace(/\\/g, '/')
+    if (!scope.includes(relativePath)) continue
 
     let buf: Buffer
     try {
