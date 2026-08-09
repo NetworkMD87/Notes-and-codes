@@ -55,7 +55,9 @@ test('one rejected startup read preserves other state and reaches booted', async
   await expect(win.locator('body[data-booted="true"]')).toBeVisible()
   await expect(win.locator('body')).toHaveAttribute('data-theme', 'light')
   await expect(win.locator('#paneA .view-lines')).toContainText('other reads survived')
-  await expect(win.locator('.toast')).toContainText('Some saved state could not be loaded')
+  const startupWarnings = win.locator('.toast--warning')
+  await expect(startupWarnings).toHaveCount(1)
+  await expect(startupWarnings).toHaveText('Some saved state could not be loaded. Defaults were used.')
 
   await win.keyboard.press('Control+Shift+P')
   await win.locator('#palette input').fill('Paste from History')
