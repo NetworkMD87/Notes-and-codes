@@ -1,5 +1,5 @@
 import type { SpellDictionaryResult } from '../shared/types'
-import { OverlayRegistration } from './overlayManager'
+import { DialogController } from './dialogController'
 
 export interface PersonalDictionaryDeps {
   list: () => Promise<string[]>
@@ -14,24 +14,27 @@ const sortWords = (words: string[]): string[] => [...words].sort((a, b) => (
 
 export class PersonalDictionaryPanel {
   private readonly overlay: HTMLDivElement
+  private readonly box: HTMLDivElement
   private readonly listEl: HTMLDivElement
-  private readonly reg = new OverlayRegistration()
+  private readonly closeButton: HTMLButtonElement
+  private readonly dialog: DialogController
   private openEpoch = 0
 
-  constructor(host: HTMLElement, private readonly deps: PersonalDictionaryDeps) {
+  constructor(host: HTMLElement, private readonly deps: PersonalDictionaryDeps, focusEditor: () => void) {
+    this.dialog = new DialogController(focusEditor)
     this.overlay = document.createElement('div')
     this.overlay.className = 'personal-dictionary hidden'
 
-    const box = document.createElement('div'); box.className = 'personal-dictionary-box'
+    this.box = document.createElement('div'); this.box.className = 'personal-dictionary-box'
     const head = document.createElement('div'); head.className = 'personal-dictionary-head'
-    const title = document.createElement('span'); title.textContent = 'Personal dictionary'
-    const close = document.createElement('button'); close.textContent = 'Close'; close.onclick = () => this.close()
-    head.append(title, close)
+    const title = document.createElement('h2'); title.id = 'personal-dictionary-title'; title.textContent = 'Personal dictionary'
+    this.closeButton = document.createElement('button'); this.closeButton.type = 'button'; this.closeButton.textContent = 'Close'; this.closeButton.setAttribute('aria-label', 'Close Personal dictionary'); this.closeButton.onclick = () => this.close()
+    head.append(title, this.closeButton)
 
     this.listEl = document.createElement('div')
     this.listEl.className = 'personal-dictionary-list'
-    box.append(head, this.listEl)
-    this.overlay.appendChild(box)
+    this.box.append(head, this.listEl)
+    this.overlay.appendChild(this.box)
     this.overlay.addEventListener('mousedown', event => {
       if (event.target === this.overlay) this.close()
     })
@@ -43,9 +46,7 @@ export class PersonalDictionaryPanel {
     this.listEl.textContent = 'Loading…'
     this.listEl.classList.add('personal-dictionary-loading')
     this.overlay.classList.remove('hidden')
-    this.overlay.tabIndex = -1
-    this.overlay.focus()
-    this.reg.open(() => this.close())
+    this.dialog.open({ panel: this.box, labelledBy: 'personal-dictionary-title', initialFocus: this.closeButton, requestClose: () => this.close() })
 
     try {
       const words = await this.deps.list()
@@ -60,8 +61,8 @@ export class PersonalDictionaryPanel {
 
   private close(): void {
     this.openEpoch++
-    this.reg.release()
     this.overlay.classList.add('hidden')
+    this.dialog.close()
   }
 
   private render(words: string[]): void {
@@ -70,7 +71,7 @@ export class PersonalDictionaryPanel {
     const rows = sorted.map(word => {
       const row = document.createElement('div'); row.className = 'personal-word'
       const text = document.createElement('span'); text.className = 'personal-word-text'; text.textContent = word
-      const remove = document.createElement('button'); remove.textContent = 'Remove'
+      const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove'; remove.setAttribute('aria-label', `Remove ${word} from personal dictionary`)
       remove.onclick = () => void this.remove(word, remove)
       row.append(text, remove)
       return row

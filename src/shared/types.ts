@@ -1,9 +1,15 @@
 import type { SpellCheckLanguage } from './spell'
+import { DEFAULT_WORKSPACE_EXCLUDES } from './pathGlob'
 
 export type EolMode = 'LF' | 'CRLF'
 export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 
 export interface SearchOptions { caseSensitive: boolean; wholeWord: boolean }
+
+export interface SearchScope {
+  includePatterns: string[]
+  excludePatterns: string[]
+}
 
 export interface SearchMatch {
   /** 1-based line number — Monaco's own convention, so `editorPane.ts` can hand this straight
@@ -32,7 +38,8 @@ export interface SearchRequest {
   query: string
   opts: SearchOptions
   skipPaths: string[]
-  showAll: boolean
+  filter: WorkspaceFilter
+  scope: SearchScope
   searchId: number
 }
 
@@ -49,6 +56,11 @@ export interface DirEntry { name: string; path: string; isDir: boolean }
 /** Quick-open file index. `truncated` is true when the walk hit its file cap, so the UI
  *  can hint that some files may not appear. */
 export interface WalkResult { files: string[]; truncated: boolean }
+
+export interface WorkspaceFilter {
+  showAll: boolean
+  excludePatterns: string[]
+}
 
 export interface Snippet { id: string; name: string; body: string }
 
@@ -113,6 +125,7 @@ export interface Settings {
   uiFontFamily: string
   fontLigatures: boolean
   showAllFiles: boolean
+  workspaceExcludes: string[]
   restoreFolderOnLaunch: boolean
   autoSaveToDisk: boolean
   formatOnSave: boolean
@@ -138,6 +151,7 @@ export const DEFAULT_SETTINGS: Settings = {
   uiFontFamily: 'System',
   fontLigatures: true,
   showAllFiles: false,
+  workspaceExcludes: [...DEFAULT_WORKSPACE_EXCLUDES],
   restoreFolderOnLaunch: true,
   autoSaveToDisk: false,
   formatOnSave: false,
@@ -242,9 +256,10 @@ export interface Api {
   loadHighlights(path: string): Promise<Highlight[]>
   saveHighlights(path: string, highlights: Highlight[]): Promise<void>
   openFolderDialog(): Promise<string | null>
-  readDir(path: string, showAll: boolean): Promise<DirEntry[]>
-  walkFiles(path: string, showAll: boolean): Promise<WalkResult>
+  readDir(root: string, path: string, filter: WorkspaceFilter): Promise<DirEntry[]>
+  walkFiles(root: string, filter: WorkspaceFilter): Promise<WalkResult>
   searchFiles(req: SearchRequest): Promise<SearchResponse>
+  cancelSearch(searchId: number): void
   createFile(path: string): Promise<boolean>
   createFolder(path: string): Promise<boolean>
   renamePath(from: string, to: string): Promise<boolean>

@@ -40,3 +40,33 @@ test('clean quit flushes a pending debounced session save', async ({ smoke }) =>
   await expect(win2.locator('#tabbar')).toBeVisible()
   await expect(win2.locator('.tab')).toHaveCount(2)
 })
+
+test('clean quit watchdog allows two maximum delayed session writes to settle', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-cleanquit-maxdelay-')
+  const env = { ...process.env, NC_TEST_SESSION_SAVE_DELAY_MS: '1000' }
+  const app1 = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+    env,
+  })
+  const win = await app1.firstWindow()
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
+
+  await win.keyboard.press('Control+Shift+P')
+  await win.locator('#palette input').fill('New Tab')
+  await win.keyboard.press('Enter')
+  await expect(win.locator('body')).toHaveAttribute('data-session-write-state', 'active')
+
+  await win.keyboard.press('Control+Shift+P')
+  await win.locator('#palette input').fill('New Tab')
+  await win.keyboard.press('Enter')
+  await expect(win.locator('body')).toHaveAttribute('data-session-write-state', 'active-pending')
+
+  const closed = app1.waitForEvent('close')
+  await cleanQuitViaMenu(app1)
+  await closed
+
+  const app2 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win2 = await app2.firstWindow()
+  await expect(win2.locator('body[data-booted="true"]')).toBeVisible()
+  await expect(win2.locator('.tab')).toHaveCount(3)
+})

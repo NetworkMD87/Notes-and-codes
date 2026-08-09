@@ -19,6 +19,12 @@ describe('helpContent', () => {
     }
   })
 
+  it('documents unique previous and next tab shortcuts', () => {
+    const entries = HELP_SECTIONS.flatMap(category => category.entries)
+    expect(entries.filter(entry => entry.label === 'Previous tab' && entry.keys === 'Ctrl+PageUp')).toHaveLength(1)
+    expect(entries.filter(entry => entry.label === 'Next tab' && entry.keys === 'Ctrl+PageDown')).toHaveLength(1)
+  })
+
   it('descriptions, where present, are non-empty', () => {
     for (const cat of HELP_SECTIONS) {
       for (const e of cat.entries) {

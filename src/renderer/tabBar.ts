@@ -1,10 +1,11 @@
 import type { BufferState } from '../shared/types'
 import { HL_HEX } from '../shared/types'
 import { langBadge } from './fileType'
+import { moveRovingIndex } from './rovingIndex'
 
 export interface TabHandlers {
   onSelect: (id: string) => void
-  onClose: (id: string) => void
+  onClose: (id: string) => void | Promise<void>
   onNew: () => void
   onReorder: (id: string, toIndex: number) => void
 }
@@ -13,6 +14,8 @@ export class TabBar {
   private draggedId: string | null = null
 
   constructor(private container: HTMLElement, private handlers: TabHandlers) {
+    this.container.setAttribute('role', 'tablist')
+    this.container.setAttribute('aria-label', 'Open files')
     // Delegated on the container so the listeners survive render()'s replaceChildren().
     this.container.addEventListener('dragstart', (e) => this.onDragStart(e as DragEvent))
     this.container.addEventListener('dragover', (e) => this.onDragOver(e as DragEvent))
@@ -26,26 +29,73 @@ export class TabBar {
       const tab = document.createElement('div')
       tab.className = 'tab' + (b.id === activeId ? ' active' : '')
       tab.dataset.id = b.id
+      tab.setAttribute('role', 'presentation')
       tab.draggable = true
+
+      const select = document.createElement('button')
+      select.type = 'button'; select.className = 'tab-select'; select.id = `tab-${b.id}`
+      select.dataset.id = b.id
+      select.setAttribute('role', 'tab')
+      select.setAttribute('aria-selected', String(b.id === activeId))
+      select.setAttribute('aria-controls', 'panes')
+      select.tabIndex = b.id === activeId ? 0 : -1
       const badge = document.createElement('span'); badge.className = 'badge'
       const lb = langBadge(b.language); badge.textContent = lb.label
       if (lb.colour) { const hex = HL_HEX[lb.colour]; badge.style.color = hex; badge.style.background = hex + '22' }
       else badge.style.color = 'var(--muted)'
       const title = document.createElement('span'); title.className = 'tab-title'
       title.textContent = (b.dirty ? '● ' : '') + b.title
-      tab.append(badge, title)
-      tab.onclick = (e) => { if ((e.target as HTMLElement).dataset.close !== '1') this.handlers.onSelect(b.id) }
+      select.append(badge, title)
+      select.onclick = () => this.handlers.onSelect(b.id)
+      select.onkeydown = (event) => this.onTabKeydown(event, select)
       tab.onauxclick = (e) => { if (e.button === 1) this.handlers.onClose(b.id) } // middle-click
-      const x = document.createElement('span')
-      x.textContent = '×'; x.dataset.close = '1'; x.className = 'tab-close'
-      x.onclick = () => this.handlers.onClose(b.id)
-      tab.appendChild(x)
+
+      const close = document.createElement('button')
+      close.type = 'button'; close.textContent = '×'; close.className = 'tab-close'
+      close.setAttribute('aria-label', `Close ${b.title}`)
+      close.tabIndex = b.id === activeId ? 0 : -1
+      close.onclick = (event) => {
+        if (event.detail === 0) void this.closeFromKeyboard(b.id, buffers.findIndex(buffer => buffer.id === b.id))
+        else void this.handlers.onClose(b.id)
+      }
+      tab.append(select, close)
       this.container.appendChild(tab)
     }
     const add = document.createElement('button')
     add.textContent = '+'; add.className = 'tab-add'
     add.onclick = () => this.handlers.onNew()
     this.container.appendChild(add)
+  }
+
+  focusTab(id: string): boolean {
+    const tab = this.tabSelects().find(select => select.dataset.id === id)
+    if (!tab) return false
+    tab.focus()
+    return true
+  }
+
+  private tabSelects(): HTMLButtonElement[] {
+    return Array.from(this.container.querySelectorAll<HTMLButtonElement>('.tab-select[role="tab"]'))
+  }
+
+  private onTabKeydown(event: KeyboardEvent, current: HTMLButtonElement): void {
+    const tabs = this.tabSelects()
+    const next = moveRovingIndex(tabs.indexOf(current), tabs.map(() => true), event.key, 'horizontal')
+    if (next === null) return
+    event.preventDefault()
+    const destination = tabs[next]
+    const id = destination.dataset.id
+    if (!id) return
+    this.handlers.onSelect(id)
+    queueMicrotask(() => this.focusTab(id))
+  }
+
+  private async closeFromKeyboard(id: string, oldIndex: number): Promise<void> {
+    await this.handlers.onClose(id)
+    if (this.tabEls().some(row => row.dataset.id === id)) return
+    const selected = this.container.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+    const tabs = this.tabSelects()
+    ;(selected ?? tabs[Math.min(oldIndex, tabs.length - 1)])?.focus()
   }
 
   private tabEls(): HTMLElement[] {

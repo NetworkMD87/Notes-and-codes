@@ -246,6 +246,7 @@ export class EditorPane {
 
   currentBufferId(): string | null { return this.bufferId }
 
+  focus(): void { this.editor.focus() }
   getContent(): string { return this.editor.getValue() }
   onChange(cb: (content: string) => void): void { this.changeCb = cb }
   setLineNumbers(on: boolean): void {

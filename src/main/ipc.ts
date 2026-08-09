@@ -3,6 +3,7 @@ import { isTrustedSender } from './senderGuard'
 import { readFileForEditor, writeFile } from './fileService'
 import { readDir, walkFiles, createFile, createFolder, renamePath, dirExists } from './fsService'
 import { searchFiles } from './searchService'
+import { SearchGeneration } from './searchGeneration'
 import { DirWatcher } from './dirWatcher'
 import { SessionStore } from './sessionStore'
 import { SettingsStore } from './settingsStore'
@@ -15,7 +16,7 @@ import { FileHistoryStore } from './fileHistoryStore'
 import { HighlightStore } from './highlightStore'
 import { SpellDictionaryStore } from './spellDictionaryStore'
 import { saveHtml, savePdf } from './exportService'
-import type { SessionData, Settings, EolMode, Encoding, HotkeyResult, SearchRequest } from '../shared/types'
+import type { SessionData, Settings, EolMode, Encoding, HotkeyResult, SearchRequest, WorkspaceFilter } from '../shared/types'
 
 export interface IpcDeps {
   baseDir: string
@@ -31,6 +32,11 @@ export interface IpcDeps {
   onDirtyCount: (n: number) => void
   onQuitNow: () => void
   onRecentChanged?: () => void
+  searchTestDelayMs: number
+  sessionSaveTestDelayMs: number
+  startupReadFailure: 'snippets' | null
+  fileWriteFailure: boolean
+  highlightSaveFailure: boolean
 }
 
 export function registerIpc(deps: IpcDeps): void {
@@ -49,6 +55,10 @@ export function registerIpc(deps: IpcDeps): void {
   void highlights.sweep()
   const watcher = new FileWatcher((path) => deps.getWindow()?.webContents.send('file:changed', path))
   const dirWatcher = new DirWatcher(() => deps.getWindow()?.webContents.send('dir:changed'))
+  const searchGeneration = new SearchGeneration()
+  const afterDirectoryRead = deps.searchTestDelayMs > 0
+    ? () => new Promise<void>(resolve => setTimeout(resolve, deps.searchTestDelayMs))
+    : undefined
 
   // Every handler is registered through `handle`/`on`, which reject any sender that is not
   // the app window's own main frame (L2 hardening). fs-capable channels (file:read/write,
@@ -75,10 +85,17 @@ export function registerIpc(deps: IpcDeps): void {
   handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))
 
   handle('file:read', (_e, path: string) => readFileForEditor(path))
-  handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number) =>
-    writeFile(path, content, eol, encoding, expectedMtime))
+  handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number) => {
+    if (deps.fileWriteFailure) throw new Error('injected file write failure')
+    return writeFile(path, content, eol, encoding, expectedMtime)
+  })
   handle('session:load', () => session.load())
-  handle('session:save', (_e, data: SessionData) => session.save(data))
+  handle('session:save', async (_e, data: SessionData) => {
+    if (deps.sessionSaveTestDelayMs > 0) {
+      await new Promise<void>(resolve => setTimeout(resolve, deps.sessionSaveTestDelayMs))
+    }
+    await session.save(data)
+  })
   handle('settings:load', () => settings.load())
   handle('settings:save', (_e, s: Settings) => settings.save(s))
   handle('settings:update', (_e, partial: Partial<Settings>) => settings.update(partial))
@@ -106,7 +123,10 @@ export function registerIpc(deps: IpcDeps): void {
   handle('clipboard:read', () => clipboard.readText())
   handle('clipboard-history:load', () => clip.load())
   handle('clipboard-history:save', (_e, entries: string[]) => clip.save(entries))
-  handle('snippets:load', () => snippets.load())
+  handle('snippets:load', () => {
+    if (deps.startupReadFailure === 'snippets') throw new Error('injected startup read failure')
+    return snippets.load()
+  })
   handle('snippets:save', (_e, list) => snippets.save(list))
   handle('window:setAlwaysOnTop', (_e, enabled: boolean) => { deps.getWindow()?.setAlwaysOnTop(enabled) })
   handle('recent:load', () => recent.load())
@@ -121,29 +141,30 @@ export function registerIpc(deps: IpcDeps): void {
   handle('history:list', (_e, path: string) => history.list(path))
   handle('history:get', (_e, path: string, ts: number) => history.get(path, ts))
   handle('highlights:load', (_e, path: string) => highlights.load(path))
-  handle('highlights:save', (_e, path: string, hs: import('../shared/types').Highlight[]) =>
-    highlights.save(path, hs))
+  handle('highlights:save', (_e, path: string, hs: import('../shared/types').Highlight[]) => {
+    if (deps.highlightSaveFailure) throw new Error('injected highlight save failure')
+    return highlights.save(path, hs)
+  })
   handle('dialog:openFolder', async () => {
     const r = await dialog.showOpenDialog({ properties: ['openDirectory'] })
     return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]
   })
-  handle('dir:read', (_e, path: string, showAll: boolean) => readDir(path, showAll))
-  handle('dir:walk', (_e, path: string, showAll: boolean) => walkFiles(path, showAll))
+  handle('dir:read', (_e, root: string, path: string, filter: WorkspaceFilter) =>
+    readDir(root, path, filter))
+  handle('dir:walk', (_e, root: string, filter: WorkspaceFilter) => walkFiles(root, filter))
 
-  // Cancellation is keyed on a counter OWNED here, not on the renderer-supplied req.searchId.
-  // The renderer's own counter restarts at 0 every time the renderer reloads (electron-vite HMR
-  // does this on every save in `npm run dev`), but this closure lives for the whole main-process
-  // session — trusting req.searchId as a high-water mark would make every post-reload request
-  // look "behind" the pre-reload mark forever, so disk search would silently return nothing for
-  // the rest of the session. Bumping our own generation on every request sidesteps that: typing
-  // fast still lets each stale request bail as soon as a newer one has arrived, and a renderer
-  // reload can't wedge it. The response still echoes back req.searchId so the renderer can match
-  // an answer to the request that asked for it.
-  let generation = 0
-  handle('search:files', (_e, req: SearchRequest) => {
-    const mine = ++generation
-    return searchFiles(req, () => mine < generation)
+  // SearchGeneration owns monotonic main-process generations while searchId remains the
+  // renderer's correlation/cancellation id. A reload may restart renderer ids without wedging
+  // future work; the sender-guarded one-way cancel can stop only the matching active request.
+  handle('search:files', async (_e, req: SearchRequest) => {
+    const lease = searchGeneration.begin(req.searchId)
+    try {
+      return await searchFiles(req, lease.shouldCancel, undefined, { afterDirectoryRead })
+    } finally {
+      lease.complete()
+    }
   })
+  on('search:cancel', (_e, searchId: number) => searchGeneration.cancel(searchId))
 
   handle('fs:createFile', (_e, path: string) => createFile(path))
   handle('fs:createFolder', (_e, path: string) => createFolder(path))

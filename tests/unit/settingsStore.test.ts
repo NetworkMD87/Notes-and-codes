@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { SettingsStore } from '../../src/main/settingsStore'
@@ -84,5 +84,49 @@ describe('SettingsStore', () => {
 
     expect(settings.spellCheckEnabled).toBe(false)
     expect(settings.spellCheckLanguage).toBe('en-US')
+  })
+
+  it('defaults workspace exclusions for a settings file written before the field existed', async () => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ themeId: 'nord' }))
+    const settings = await new SettingsStore(dir).load()
+    expect(settings.workspaceExcludes).toEqual(DEFAULT_SETTINGS.workspaceExcludes)
+    expect(settings.workspaceExcludes).not.toBe(DEFAULT_SETTINGS.workspaceExcludes)
+  })
+
+  it('normalizes the update result and persisted workspace exclusions', async () => {
+    const store = new SettingsStore(dir)
+    const updated = await store.update({
+      workspaceExcludes: [' /SRC\\** ', 'src/**', '', '/dist/**'],
+    })
+
+    expect(updated.workspaceExcludes).toEqual(['SRC/**', 'dist/**'])
+    expect(JSON.parse(readFileSync(join(dir, 'settings.json'), 'utf8')).workspaceExcludes)
+      .toEqual(['SRC/**', 'dist/**'])
+    expect((await store.load()).workspaceExcludes).toEqual(['SRC/**', 'dist/**'])
+  })
+
+  it('permits an empty persisted workspace exclusion list', async () => {
+    const store = new SettingsStore(dir)
+    await store.update({ workspaceExcludes: [] })
+    expect((await store.load()).workspaceExcludes).toEqual([])
+  })
+
+  it('normalizes workspace exclusions before save resolves and writes them', async () => {
+    const store = new SettingsStore(dir)
+    const result = await store.save({
+      ...DEFAULT_SETTINGS,
+      workspaceExcludes: [' /SRC\\** ', 'src/**', '', '/dist/**'],
+    })
+
+    expect(result).toBeUndefined()
+    expect(JSON.parse(readFileSync(join(dir, 'settings.json'), 'utf8')).workspaceExcludes)
+      .toEqual(['SRC/**', 'dist/**'])
+    expect((await store.load()).workspaceExcludes).toEqual(['SRC/**', 'dist/**'])
+  })
+
+  it('falls back to defaults when workspaceExcludes has the wrong persisted type', async () => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ workspaceExcludes: 'dist/**' }))
+    expect((await new SettingsStore(dir).load()).workspaceExcludes)
+      .toEqual(DEFAULT_SETTINGS.workspaceExcludes)
   })
 })

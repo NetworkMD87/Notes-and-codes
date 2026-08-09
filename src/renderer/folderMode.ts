@@ -1,5 +1,5 @@
 import Split from 'split.js'
-import type { DirEntry } from '../shared/types'
+import type { DirEntry, WorkspaceFilter } from '../shared/types'
 import { TreeModel } from './treeModel'
 import { Sidebar } from './sidebar'
 import { FolderPanel } from './folderPanel'
@@ -8,6 +8,8 @@ import { showContextMenu, type ContextMenuEntry } from './contextMenu'
 import { promptInput, confirmDialog } from './inputOverlay'
 import { toast } from './notify'
 import { menuEntries, splitPath } from './recentFolders'
+import { buildQuickOpenCandidates, type QuickOpenCandidate } from './fuzzy'
+import { RefreshScheduler } from './refreshScheduler'
 
 export interface FolderModeDeps {
   sidebarEl: HTMLElement
@@ -15,6 +17,15 @@ export interface FolderModeDeps {
   openFile: (path: string) => void
   activePath: () => string | null
   pickFolder: () => Promise<void>   // the same picker the File menu / palette use
+  focusEditor: () => void
+  filter: () => WorkspaceFilter
+  onWorkspaceChanged: (rerun: boolean) => void
+}
+
+interface FolderRefreshSnapshot {
+  root: string | null
+  filter: WorkspaceFilter
+  directories: string[]
 }
 
 export class FolderMode {
@@ -22,10 +33,17 @@ export class FolderMode {
   private sidebar: Sidebar
   private panel: FolderPanel
   private quick: QuickOpen
-  private index: string[] = []
+  private index: QuickOpenCandidate[] = []
   private indexTruncated = false
   private split: ReturnType<typeof Split> | null = null
-  private showAll = false
+  private lifecycleGeneration = 0
+  private pendingRootCommitGeneration: number | null = null
+  private desiredRoot: string | null = null
+  private desiredSidebarVisible = false
+  private refresh = new RefreshScheduler(
+    () => this.refreshSnapshot(),
+    run => this.runRefresh(run.snapshot, run.isCurrent),
+  )
 
   constructor(private d: FolderModeDeps) {
     this.sidebar = new Sidebar(d.sidebarEl, {
@@ -33,12 +51,13 @@ export class FolderMode {
       loadChildren: (p) => this.loadChildren(p),
       openFile: d.openFile,
       onContext: (entry, x, y) => this.contextMenu(entry, x, y),
-      onHeaderClick: (x, y) => void this.folderMenu(x, y)
+      onHeaderClick: (x, y, keyboardOpener) => void this.folderMenu(x, y, keyboardOpener)
     })
     this.quick = new QuickOpen(document.getElementById('app')!, {
-      files: () => this.index,
+      candidates: () => this.index,
       truncated: () => this.indexTruncated,
-      openFile: d.openFile
+      openFile: d.openFile,
+      focusEditor: d.focusEditor
     })
     this.panel = new FolderPanel(d.sidebarEl, {
       pickFolder: () => d.pickFolder(),
@@ -53,32 +72,53 @@ export class FolderMode {
   root(): string | null { return this.model.root }
 
   async openFolder(root: string): Promise<void> {
+    this.d.onWorkspaceChanged(false)
+    const generation = ++this.lifecycleGeneration
+    this.pendingRootCommitGeneration = generation
+    this.desiredRoot = root
+    this.desiredSidebarVisible = true
+    this.refresh.invalidate()
+    this.index = []
+    this.indexTruncated = false
     const s = await window.api.loadSettings()
-    this.showAll = s.showAllFiles
+    if (!this.isCurrent(generation)) return
     this.model.setRoot(root)
-    await this.loadChildren(root)
+    if (this.pendingRootCommitGeneration === generation) {
+      this.pendingRootCommitGeneration = null
+    }
+    this.d.onWorkspaceChanged(true)
     this.hideSidebar()
     this.showSidebar(s.sidebarWidth)
     this.sidebar.render()
-    await window.api.watchDir(root)
-    await window.api.updateSettings({ lastFolder: root, sidebarVisible: true })
+    await this.syncWatcher(root, generation)
+    if (!this.isCurrent(generation)) return
+    await this.persistFolderState(root, true, generation)
+    if (!this.isCurrent(generation)) return
+    await this.refresh.request()
+    if (!this.isCurrent(generation)) return
     void window.api.addRecentFolder(root)
-    void this.reindex()
   }
 
   closeFolder(): void {
+    this.d.onWorkspaceChanged(false)
+    const generation = ++this.lifecycleGeneration
+    this.pendingRootCommitGeneration = null
+    this.desiredRoot = null
+    this.desiredSidebarVisible = this.split !== null
+    this.refresh.invalidate()
     this.model.setRoot('')
     this.model.root = null
     this.index = []
     this.indexTruncated = false
-    void window.api.watchDir(null)
+    this.d.onWorkspaceChanged(true)
+    void this.syncWatcher(null, generation)
     // Spec: "Close Folder returns the panel; the tab stays." The panel replaces the tree in
     // place rather than collapsing the sidebar — hideSidebar() destroys the Split, which would
     // force a second click on the tab just to reach Open Folder…/recents. So the Split (if any)
     // is left exactly as it is; only the sidebar's *content* changes. If the sidebar was already
     // collapsed, it stays collapsed — this only stops an *open* sidebar from closing on you.
     this.renderSidebar()
-    void window.api.updateSettings({ lastFolder: null, sidebarVisible: this.split !== null })
+    void this.persistFolderState(null, this.desiredSidebarVisible, generation)
   }
 
   toggleSidebar(): void {
@@ -113,7 +153,7 @@ export class FolderMode {
   /** The sidebar header doubles as a folder switcher: recents (minus the open one), then the
    *  same two actions the File menu offers. Reuses showContextMenu rather than adding a new
    *  overlay component. */
-  private async folderMenu(x: number, y: number): Promise<void> {
+  private async folderMenu(x: number, y: number, keyboardOpener?: HTMLElement): Promise<void> {
     const recents = menuEntries(await window.api.loadRecentFolders(), this.model.root)
     const items: ContextMenuEntry[] = recents.map(p => ({
       label: splitPath(p).name,
@@ -122,7 +162,7 @@ export class FolderMode {
     if (items.length) items.push({ separator: true })
     items.push({ label: 'Open Folder…', run: () => void this.d.pickFolder() })
     items.push({ label: 'Close Folder', run: () => this.closeFolder() })
-    showContextMenu(x, y, items)
+    showContextMenu(x, y, items, keyboardOpener ? { opener: keyboardOpener, focusFirst: true } : undefined)
   }
 
   /** Reflect the active editor file in the sidebar (highlights its row). No-op with no folder open. */
@@ -164,29 +204,94 @@ export class FolderMode {
 
   // --- internals ---
 
-  private async loadChildren(path: string): Promise<void> {
-    this.model.setChildren(path, await window.api.readDir(path, this.showAll))
+  private isCurrent(generation: number): boolean {
+    return generation === this.lifecycleGeneration
   }
 
-  private async reindex(): Promise<void> {
+  /** A stale watchDir continuation may finish after a newer open/close. Reapply the latest
+   * desired root before returning so the main process cannot be left watching the stale one. */
+  private async syncWatcher(root: string | null, generation: number): Promise<void> {
+    let targetRoot = root
+    let targetGeneration = generation
+    while (true) {
+      await window.api.watchDir(targetRoot)
+      if (this.isCurrent(targetGeneration)) return
+      targetRoot = this.desiredRoot
+      targetGeneration = this.lifecycleGeneration
+    }
+  }
+
+  /** updateSettings writes are asynchronous too. If an older write lands last, follow it with
+   * the current desired state so lastFolder/sidebarVisible converge on the active lifecycle. */
+  private async persistFolderState(
+    root: string | null,
+    sidebarVisible: boolean,
+    generation: number,
+  ): Promise<void> {
+    let targetRoot = root
+    let targetVisible = sidebarVisible
+    let targetGeneration = generation
+    while (true) {
+      await window.api.updateSettings({ lastFolder: targetRoot, sidebarVisible: targetVisible })
+      if (this.isCurrent(targetGeneration)) return
+      targetRoot = this.desiredRoot
+      targetVisible = this.desiredSidebarVisible
+      targetGeneration = this.lifecycleGeneration
+    }
+  }
+
+  private async loadChildren(path: string): Promise<void> {
     const root = this.model.root
     if (!root) return
-    const r = await window.api.walkFiles(root, this.showAll)
-    // A folder switch while the walk was in flight makes this answer stale — dropping it is what
-    // stops folder A's index from overwriting folder B's (Quick Open would list the wrong folder).
-    if (this.model.root !== root) return
-    this.index = r.files
-    this.indexTruncated = r.truncated
+    const filter = this.d.filter()
+    const children = await window.api.readDir(root, path, filter)
+    const current = this.d.filter()
+    if (this.model.root !== root || current.showAll !== filter.showAll ||
+      current.excludePatterns.join('\n') !== filter.excludePatterns.join('\n')) return
+    this.model.setChildren(path, children)
   }
 
-  private async onDiskChange(): Promise<void> {
-    if (!this.model.root) return
-    for (const p of [this.model.root, ...this.model.expandedPaths()]) {
-      if (this.model.hasChildren(p)) this.model.setChildren(p, await window.api.readDir(p, this.showAll))
+  private refreshSnapshot(): FolderRefreshSnapshot {
+    const root = this.model.root
+    const filter = this.d.filter()
+    return {
+      root,
+      filter: { showAll: filter.showAll, excludePatterns: [...filter.excludePatterns] },
+      directories: root ? [root, ...this.model.expandedPaths()] : [],
     }
-    this.sidebar.render()
-    await this.reindex()
   }
+
+  private async runRefresh(
+    snapshot: FolderRefreshSnapshot,
+    isCurrent: () => boolean,
+  ): Promise<void> {
+    if (!snapshot.root) return
+    const walk = await window.api.walkFiles(snapshot.root, snapshot.filter)
+    const children: DirEntry[][] = []
+    for (const path of snapshot.directories) {
+      if (!isCurrent()) return
+      children.push(await window.api.readDir(snapshot.root, path, snapshot.filter))
+    }
+    if (!isCurrent() || this.model.root !== snapshot.root) return
+    snapshot.directories.forEach((path, index) => this.model.setChildren(path, children[index]))
+    this.index = buildQuickOpenCandidates(snapshot.root, walk.files)
+    this.indexTruncated = walk.truncated
+    this.sidebar.render()
+  }
+
+  workspaceSettingsChanged(): Promise<void> {
+    if (this.pendingRootCommitGeneration !== null) {
+      // The desired folder has not committed yet. Keep Find suspended and fold this settings
+      // change into openFolder's eventual refresh of the desired root; never refresh/search the
+      // still-visible old root with the new filter.
+      this.d.onWorkspaceChanged(false)
+      return Promise.resolve()
+    }
+    this.d.onWorkspaceChanged(true)
+    return this.refresh.request()
+  }
+
+  private onDiskChange(): Promise<void> { return this.refresh.request() }
 
   private showSidebar(width: number): void {
     this.d.sidebarEl.classList.remove('hidden')
@@ -233,32 +338,27 @@ export class FolderMode {
   }
 
   private async newFile(dir: string): Promise<void> {
-    const name = await promptInput('New file name'); if (!name) return
+    const name = await promptInput('New file name', { focusFallback: this.d.focusEditor }); if (!name) return
     if (await window.api.createFile(dir.replace(/[\\/]$/, '') + '/' + name)) await this.refreshDir(dir)
     else toast('Could not create file (already exists?).', 'error')
   }
   private async newFolder(dir: string): Promise<void> {
-    const name = await promptInput('New folder name'); if (!name) return
+    const name = await promptInput('New folder name', { focusFallback: this.d.focusEditor }); if (!name) return
     if (await window.api.createFolder(dir.replace(/[\\/]$/, '') + '/' + name)) await this.refreshDir(dir)
     else toast('Could not create folder (already exists?).', 'error')
   }
   private async rename(entry: DirEntry): Promise<void> {
-    const name = await promptInput('Rename', entry.name); if (!name || name === entry.name) return
+    const name = await promptInput('Rename', { initial: entry.name, focusFallback: this.d.focusEditor }); if (!name || name === entry.name) return
     const parent = entry.path.replace(/[\\/][^\\/]+$/, '')
     if (await window.api.renamePath(entry.path, parent + '/' + name)) await this.refreshDir(parent)
     else toast('Could not rename (name in use?).', 'error')
   }
   private async remove(entry: DirEntry): Promise<void> {
-    if (!await confirmDialog(`Delete "${entry.name}"? It will be moved to the Recycle Bin.`)) return
+    if (!await confirmDialog(`Delete "${entry.name}"? It will be moved to the Recycle Bin.`, { focusFallback: this.d.focusEditor })) return
     const parent = entry.path.replace(/[\\/][^\\/]+$/, '')
     if (await window.api.trashPath(entry.path)) { await this.refreshDir(parent); toast(`Moved "${entry.name}" to Recycle Bin.`, 'success') }
     else toast('Could not delete.', 'error')
   }
 
-  private async refreshDir(dir: string): Promise<void> {
-    this.model.setChildren(dir, await window.api.readDir(dir, this.showAll))
-    this.model.setExpanded(dir, true)
-    this.sidebar.render()
-    await this.reindex()
-  }
+  private refreshDir(_dir: string): Promise<void> { return this.refresh.request() }
 }

@@ -8,10 +8,9 @@ import { expect, type Page } from '@playwright/test'
  *  goes through this — the detail pane only renders the ACTIVE category, so a
  *  control is not in the DOM until its category is selected. */
 export async function openSettings(win: Page, category = 'Appearance') {
-  await win.keyboard.press('Control+Shift+P')
-  await win.locator('#palette input').fill('Settings')
-  await win.keyboard.press('Enter')
-  await expect(win.locator('#settings')).toBeVisible()
-  await win.locator('.settings-cat', { hasText: category }).click()
-  await expect(win.locator('.settings-cat.active')).toContainText(category)
+  await win.getByRole('button', { name: 'Settings' }).click()
+  const dialog = win.getByRole('dialog', { name: 'Settings' })
+  await expect(dialog).toBeVisible()
+  if (category !== 'Appearance') await dialog.getByRole('tab', { name: category }).click()
+  await expect(dialog.getByRole('tab', { name: category })).toHaveAttribute('aria-selected', 'true')
 }

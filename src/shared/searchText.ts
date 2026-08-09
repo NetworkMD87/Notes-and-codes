@@ -46,18 +46,46 @@ function preview(line: string, index: number, length: number): string {
   return (start > 0 ? '…' : '') + line.slice(start, end) + (end < line.length ? '…' : '')
 }
 
-export function searchText(content: string, query: string, opts: SearchOptions, maxMatches: number): SearchMatch[] {
+export type SearchMatchVisitor = (match: SearchMatch) => boolean | void
+
+export function visitSearchMatches(
+  content: string,
+  query: string,
+  opts: SearchOptions,
+  maxMatches: number,
+  visit: SearchMatchVisitor,
+): number {
   const re = buildMatcher(query, opts)
-  if (!re) return []
-  const out: SearchMatch[] = []
-  const lines = content.split(/\r\n|\r|\n/)
-  for (let i = 0; i < lines.length && out.length < maxMatches; i++) {
-    const line = lines[i]
+  if (!re || maxMatches <= 0) return 0
+  let count = 0
+  let lineNumber = 1
+  let start = 0
+
+  while (start <= content.length && count < maxMatches) {
+    let end = start
+    while (end < content.length && content.charCodeAt(end) !== 10 && content.charCodeAt(end) !== 13) end++
+    const line = content.slice(start, end)
     re.lastIndex = 0
-    let m: RegExpExecArray | null
-    while ((m = re.exec(line)) !== null && out.length < maxMatches) {
-      out.push({ line: i + 1, column: m.index + 1, length: m[0].length, preview: preview(line, m.index, m[0].length) })
+    let match: RegExpExecArray | null
+    while ((match = re.exec(line)) !== null && count < maxMatches) {
+      count++
+      const keepGoing = visit({
+        line: lineNumber,
+        column: match.index + 1,
+        length: match[0].length,
+        preview: preview(line, match.index, match[0].length),
+      })
+      if (keepGoing === false) return count
     }
+    if (end >= content.length) break
+    start = end + (content.charCodeAt(end) === 13 && content.charCodeAt(end + 1) === 10 ? 2 : 1)
+    lineNumber++
   }
-  return out
+  return count
+}
+
+export function searchText(content: string, query: string, opts: SearchOptions, maxMatches: number): SearchMatch[] {
+  const matches: SearchMatch[] = []
+  visitSearchMatches(content, query, opts, maxMatches, match => { matches.push(match) })
+  return matches
 }

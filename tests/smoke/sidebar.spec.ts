@@ -2,6 +2,7 @@ import { test, expect } from './smokeTest'
 import type { SmokeResources } from './smokeCleanup'
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { join, basename } from 'node:path'
+import { openSettings } from './settingsHelper'
 
 function seededFolder(smoke: SmokeResources) {
   const userDataDir = smoke.tempDir('notes-smoke-')
@@ -41,6 +42,49 @@ test('the sidebar header switches folders from the recent list', async ({ smoke 
     await item.click()
     await expect(win.locator('.sb-row', { hasText: 'other.txt' })).toBeVisible()
     await expect(win.locator('#sidebar .sb-header .sb-label')).toHaveText(basename(other))
+})
+
+test('the keyboard-owned folder switcher menu navigates and restores focus', async ({ smoke }) => {
+  const { userDataDir } = seededFolder(smoke)
+  let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  let win = await app.firstWindow()
+  // Concurrent Electron workers own separate visible BrowserWindows. Keep this renderer's
+  // document focus emulated so another worker cannot invalidate its keyboard/focus contract.
+  const cdp = await win.context().newCDPSession(win)
+  await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true })
+  await win.evaluate(() => {
+    const addEventListener = window.addEventListener.bind(window)
+    window.addEventListener = ((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
+      if (type !== 'blur') addEventListener(type, listener, options)
+    }) as typeof window.addEventListener
+  })
+  const opener = win.getByRole('button', { name: /switch folder/i })
+  const originalOpener = await opener.elementHandle()
+  expect(originalOpener).not.toBeNull()
+  const menu = win.getByRole('menu')
+  const openMenuFromKeyboard = async () => {
+    await expect.poll(async () => {
+      if (await menu.isVisible().catch(() => false)) return true
+      await opener.focus(); await opener.press('Enter')
+      return menu.isVisible().catch(() => false)
+    }).toBe(true)
+  }
+  await openMenuFromKeyboard()
+  await expect(menu.getByRole('menuitem').first()).toBeFocused()
+  await menu.getByRole('menuitem').first().press('ArrowDown')
+  await expect(menu.getByRole('menuitem', { name: 'Close Folder' })).toBeFocused()
+  await menu.getByRole('menuitem', { name: 'Close Folder' }).press('Home')
+  await expect(menu.getByRole('menuitem').first()).toBeFocused()
+  await menu.getByRole('menuitem').first().press('End')
+  const closeItem = menu.getByRole('menuitem', { name: 'Close Folder' })
+  await expect(closeItem).toBeFocused()
+  expect(await originalOpener!.evaluate(element => element.isConnected)).toBe(true)
+  await closeItem.press('Escape')
+  await expect(opener).toBeFocused()
+  await openMenuFromKeyboard()
+  await win.getByRole('menu').getByRole('menuitem').first().press('End')
+  await win.getByRole('menu').getByRole('menuitem', { name: 'Close Folder' }).press('Enter')
+  await expect(win.getByRole('button', { name: /open folder/i })).toBeVisible()
 })
 
 test('nested sidebar rows carry a --depth for indent guides', async ({ smoke }) => {

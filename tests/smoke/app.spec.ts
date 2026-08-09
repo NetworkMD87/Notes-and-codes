@@ -53,6 +53,75 @@ test('markdown preview toggles and paste-history picker opens', async ({ smoke }
     await expect(win.locator('.ph-picker')).toBeVisible()
 })
 
+test('visible Markdown preview renders only the newest rapid edit', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-previewlatest-')
+  const markdownPath = join(userDataDir, 'preview.md')
+  writeFileSync(markdownPath, '# prior preview')
+  const app = await smoke.launch({
+    args: ['out/main/index.js', markdownPath, `--user-data-dir=${userDataDir}`]
+  })
+  const win = await app.firstWindow()
+  await waitForBoot(win)
+
+  await win.locator('.tb-btn[title="Toggle markdown preview"]').click()
+  await expect(win.locator('#mdpreview h1')).toHaveText('prior preview')
+  await win.locator('#mdpreview').evaluate((panel) => {
+    const seen: string[] = []
+    const observer = new MutationObserver(() => {
+      const heading = panel.querySelector('h1')?.textContent
+      if (heading) seen.push(heading)
+    })
+    observer.observe(panel, { childList: true, subtree: true, characterData: true })
+    ;(window as typeof window & { __previewHeadings?: string[]; __previewObserver?: MutationObserver }).__previewHeadings = seen
+    ;(window as typeof window & { __previewHeadings?: string[]; __previewObserver?: MutationObserver }).__previewObserver = observer
+  })
+
+  const editor = win.locator('#paneA .monaco-editor')
+  await editor.click()
+  await win.keyboard.press('Control+A')
+  await win.keyboard.type('# intermediate')
+  await win.keyboard.press('Control+A')
+  await win.keyboard.type('# newest preview')
+
+  await expect(win.locator('#mdpreview h1')).toHaveText('newest preview')
+  const renderedHeadings = await win.evaluate(() => {
+    const state = window as typeof window & { __previewHeadings?: string[]; __previewObserver?: MutationObserver }
+    state.__previewObserver?.disconnect()
+    return state.__previewHeadings ?? []
+  })
+  expect(renderedHeadings).toEqual(['newest preview'])
+})
+
+test('visible Markdown preview follows split-pane focus without an edit or tab activation', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-previewfocus-')
+  const markdownPath = join(userDataDir, 'pane-a.md')
+  writeFileSync(markdownPath, '# pane a')
+  const app = await smoke.launch({
+    args: ['out/main/index.js', markdownPath, `--user-data-dir=${userDataDir}`]
+  })
+  const win = await app.firstWindow()
+  await waitForBoot(win)
+  const initialTabCount = await win.locator('.tab').count()
+
+  await win.locator('.tb-btn[title="Toggle markdown preview"]').click()
+  await expect(win.locator('#mdpreview h1')).toHaveText('pane a')
+  await win.locator('.tb-btn[title="Toggle split pane"]').click()
+  await win.locator('#paneB .monaco-editor').click()
+  await expect(win.locator('#mdpreview h1')).toHaveText('pane a')
+  await win.keyboard.press('Control+Shift+P')
+  await win.locator('#palette input').fill('New Tab')
+  await win.keyboard.press('Enter')
+  await expect(win.locator('.tab')).toHaveCount(initialTabCount + 1)
+  await win.locator('#paneB .monaco-editor').click()
+  await win.keyboard.type('# pane b')
+
+  await expect(win.locator('#mdpreview h1')).toHaveText('pane b')
+  await win.locator('#paneA .monaco-editor').click()
+  await expect(win.locator('#mdpreview h1')).toHaveText('pane a')
+  await win.locator('#paneB .monaco-editor').click()
+  await expect(win.locator('#mdpreview h1')).toHaveText('pane b')
+})
+
 test('toolbar split and preview buttons work and show active state', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
@@ -236,12 +305,14 @@ test('settings panel changes theme, accent, and font', async ({ smoke }) => {
 
 test('file history captures versions and restores in-editor', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
-  const filePath = join(userDataDir, 'hist.txt')
-  writeFileSync(filePath, 'version-one')
+  const filePath = join(userDataDir, 'hist.md')
+  writeFileSync(filePath, '# version-one')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await expect(win.locator('#paneA .view-lines')).toContainText('version-one')
+    await win.locator('.tb-btn[title="Toggle markdown preview"]').click()
+    await expect(win.locator('#mdpreview h1')).toHaveText('version-one')
 
     const runCmd = async (label: string) => {
       await win.keyboard.press('Control+Shift+P')
@@ -252,7 +323,7 @@ test('file history captures versions and restores in-editor', async ({ smoke }) 
     await runCmd('Save')
     // edit → v2
     await win.locator('#paneA .monaco-editor').click()
-    await win.keyboard.press('Control+A'); await win.keyboard.type('version-two')
+    await win.keyboard.press('Control+A'); await win.keyboard.type('# version-two')
     await runCmd('Save')
 
     await runCmd('File History')
@@ -261,6 +332,7 @@ test('file history captures versions and restores in-editor', async ({ smoke }) 
     // restore the oldest (last row, since newest-first) → editor shows version-one
     await win.locator('#file-history .fh-row').last().locator('button', { hasText: 'Restore' }).click()
     await expect(win.locator('#paneA .view-lines')).toContainText('version-one')
+    await expect(win.locator('#mdpreview h1')).toHaveText('version-one')
 })
 
 test('folder mode: restores a folder, shows the tree, quick-open finds a file', async ({ smoke }) => {
@@ -484,6 +556,45 @@ test('status bar sits a half-step below the header, not an accent slab', async (
     expect(sr + sg + sb).toBeLessThan(hr + hg + hb)
 })
 
+test('file format selectors update status and rewrite bytes on save', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-file-format-')
+  const filePath = join(userDataDir, 'format.txt')
+  writeFileSync(filePath, 'a\nb')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
+  const win = await app.firstWindow()
+
+  const encoding = win.getByLabel('File encoding')
+  const eol = win.getByLabel('Line endings')
+  await expect(encoding).toHaveValue('utf8')
+  await expect(eol).toHaveValue('LF')
+
+  await encoding.focus()
+  await win.keyboard.press('ArrowDown')
+  await expect(encoding).toBeFocused()
+  await expect(encoding).toHaveValue('utf8bom')
+  await encoding.selectOption('utf16le')
+  await eol.focus()
+  await win.keyboard.press('ArrowDown')
+  await expect(eol).toBeFocused()
+  await expect(eol).toHaveValue('CRLF')
+
+  await expect(win.locator('#statusbar .sb-dirty')).toContainText('unsaved')
+  await expect(win.locator('[role="tab"][aria-selected="true"] .tab-title')).toContainText('●')
+  await expect(win.getByLabel('File encoding')).toHaveAttribute('aria-describedby', 'status-format-note')
+  await expect(win.locator('#status-format-note')).toContainText('next save')
+
+  // Playwright cannot trigger Electron's native-menu Ctrl+S accelerator; run the same Save command via the palette.
+  await win.keyboard.press('Control+Shift+P')
+  await win.locator('#palette input').fill('Save')
+  await win.keyboard.press('Enter')
+  await expect.poll(() => [...readFileSync(filePath).subarray(0, 2)], { timeout: 5000 }).toEqual([0xff, 0xfe])
+  expect(readFileSync(filePath).subarray(2).toString('utf16le')).toBe('a\r\nb')
+  await expect(win.getByLabel('File encoding')).toHaveValue('utf16le')
+  await expect(win.getByLabel('Line endings')).toHaveValue('CRLF')
+  await expect(win.locator('#toast-host')).toContainText('Encoding: UTF-16 LE')
+  await expect(win.locator('#toast-host')).toContainText('Line endings: CRLF')
+})
+
 test('floating chrome carries an accent border', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
@@ -634,17 +745,20 @@ test('tabs have rounded top corners and square bottoms', async ({ smoke }) => {
 
 test('Revert File discards unsaved edits and reloads from disk', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-revert-')
-  const filePath = join(userDataDir, 'note.txt')
-  writeFileSync(filePath, 'original disk content')
+  const filePath = join(userDataDir, 'note.md')
+  writeFileSync(filePath, '# original disk content')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#paneA .view-lines')).toContainText('original disk content')
+    await win.locator('.tb-btn[title="Toggle markdown preview"]').click()
+    await expect(win.locator('#mdpreview h1')).toHaveText('original disk content')
 
     // Make an unsaved edit → the buffer is dirty.
     await win.locator('#paneA .monaco-editor').click()
     await win.keyboard.press('Control+A')
-    await win.keyboard.type('my unsaved edit')
+    await win.keyboard.type('# my unsaved edit')
     await expect(win.locator('#paneA .view-lines')).toContainText('my unsaved edit')
+    await expect(win.locator('#mdpreview h1')).toHaveText('my unsaved edit')
 
     // Run Revert File via the palette, then confirm the themed dialog by clicking its Revert button.
     await win.keyboard.press('Control+Shift+P')
@@ -656,6 +770,7 @@ test('Revert File discards unsaved edits and reloads from disk', async ({ smoke 
     // Editor is back to the on-disk content; the edit is gone.
     await expect(win.locator('#paneA .view-lines')).toContainText('original disk content')
     await expect(win.locator('#paneA .view-lines')).not.toContainText('my unsaved edit')
+    await expect(win.locator('#mdpreview h1')).toHaveText('original disk content')
 })
 
 test('Revert File is wired into the File menu', async ({ smoke }) => {

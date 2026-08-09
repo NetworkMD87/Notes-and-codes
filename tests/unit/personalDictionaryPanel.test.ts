@@ -23,7 +23,7 @@ function harness(
     remove,
     changed,
     notify,
-  })
+  }, vi.fn())
   return { panel, changed, notify }
 }
 
@@ -40,6 +40,39 @@ describe('PersonalDictionaryPanel', () => {
 
     expect([...document.querySelectorAll('.personal-word-text')].map(el => el.textContent))
       .toEqual(['Apple', 'banana', 'zebra'])
+  })
+
+  it('names word removal controls without changing sorted order', async () => {
+    const { panel } = harness(['Zulu', 'alpha'])
+
+    await panel.open()
+
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>('.personal-word button')]
+    expect(buttons.map(button => button.getAttribute('aria-label'))).toEqual([
+      'Remove alpha from personal dictionary',
+      'Remove Zulu from personal dictionary',
+    ])
+  })
+
+  it('does not let a stale list generation repaint after close and reopen', async () => {
+    const pending: Array<{ resolve: (words: string[]) => void }> = []
+    const panel = new PersonalDictionaryPanel(document.body, {
+      list: () => new Promise(resolve => pending.push({ resolve })),
+      remove: async () => ({ ok: true, words: [] }),
+      changed: vi.fn(),
+      notify: vi.fn(),
+    }, vi.fn())
+
+    const firstOpen = panel.open()
+    escape()
+    const secondOpen = panel.open()
+    pending[1].resolve(['current'])
+    await secondOpen
+    pending[0].resolve(['stale'])
+    await firstOpen
+
+    expect([...document.querySelectorAll('.personal-word-text')].map(el => el.textContent))
+      .toEqual(['current'])
   })
 
   it('renders the empty state', async () => {

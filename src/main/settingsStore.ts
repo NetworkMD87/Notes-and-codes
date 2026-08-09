@@ -1,7 +1,20 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { DEFAULT_SETTINGS, type Settings } from '../shared/types'
+import { normalizePathGlobs } from '../shared/pathGlob'
 import { atomicWrite } from './atomicWrite'
+
+function normalizeSettings(value: unknown): Settings {
+  const stored = value && typeof value === 'object' ? value as Partial<Settings> : {}
+  const rawExcludes = Array.isArray(stored.workspaceExcludes)
+    ? stored.workspaceExcludes.filter((item): item is string => typeof item === 'string')
+    : DEFAULT_SETTINGS.workspaceExcludes
+  return {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    workspaceExcludes: normalizePathGlobs(rawExcludes),
+  }
+}
 
 export class SettingsStore {
   private file: string
@@ -12,14 +25,15 @@ export class SettingsStore {
   async load(): Promise<Settings> {
     try {
       const raw = await fs.readFile(this.file, 'utf8')
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+      return normalizeSettings(JSON.parse(raw))
     } catch {
-      return { ...DEFAULT_SETTINGS }
+      return normalizeSettings(undefined)
     }
   }
 
   save(s: Settings): Promise<void> {
-    const next = this.chain.then(() => atomicWrite(this.file, JSON.stringify(s, null, 2)))
+    const next = this.chain.then(() =>
+      atomicWrite(this.file, JSON.stringify(normalizeSettings(s), null, 2)))
     this.chain = next.catch(() => {})
     return next
   }
@@ -28,7 +42,7 @@ export class SettingsStore {
    *  every other write so two concurrent field updates can't clobber each other. */
   update(partial: Partial<Settings>): Promise<Settings> {
     const next = this.chain.then(async () => {
-      const merged = { ...(await this.load()), ...partial }
+      const merged = normalizeSettings({ ...(await this.load()), ...partial })
       await atomicWrite(this.file, JSON.stringify(merged, null, 2))
       return merged
     })

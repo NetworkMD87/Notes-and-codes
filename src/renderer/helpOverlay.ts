@@ -1,6 +1,6 @@
 import { HELP_SECTIONS, APP_TAGLINE, APP_LINKS, type HelpEntry } from './helpContent'
 import { WORDMARK_SVG } from './brand'
-import { OverlayRegistration } from './overlayManager'
+import { DialogController } from './dialogController'
 
 export class HelpOverlay {
   private root: HTMLDivElement
@@ -9,12 +9,14 @@ export class HelpOverlay {
   private body: HTMLDivElement
   private note: HTMLDivElement
   private descOn = false
-  private reg = new OverlayRegistration()
+  private dialog: DialogController
+  private closeButton: HTMLButtonElement | null = null
 
-  constructor() {
+  constructor(focusEditor: () => void) {
+    this.dialog = new DialogController(focusEditor)
     this.root = document.createElement('div'); this.root.className = 'help-overlay hidden'
     this.box = document.createElement('div'); this.box.className = 'help-box'
-    this.search = document.createElement('input'); this.search.type = 'text'
+    this.search = document.createElement('input'); this.search.type = 'search'; this.search.setAttribute('aria-label', 'Search commands')
     this.search.placeholder = 'Search commands…'; this.search.className = 'help-search'
     this.note = document.createElement('div'); this.note.className = 'help-note'
     this.note.textContent = 'Not every command has a shortcut — run any from the Command Palette (Ctrl+Shift+P).'
@@ -31,12 +33,11 @@ export class HelpOverlay {
     this.box.replaceChildren(this.buildTitlebar('Shortcuts & Commands', this.buildDescToggle()), this.search, this.note, this.body)
     this.search.value = ''
     this.render()
-    this.show()
-    this.search.focus()
+    this.show(this.search)
   }
 
   openAbout(): void {
-    this.box.replaceChildren(this.buildTitlebar('About'))
+    this.box.replaceChildren(this.buildTitlebar('About Notes & Codes'))
     const card = document.createElement('div'); card.className = 'about-card'
     const logo = document.createElement('div'); logo.className = 'about-logo'; logo.innerHTML = WORDMARK_SVG
     const rule = document.createElement('div'); rule.className = 'about-rule'
@@ -46,22 +47,24 @@ export class HelpOverlay {
       .catch(() => { ver.textContent = 'v—' })
     const tag = document.createElement('div'); tag.className = 'about-tagline'; tag.textContent = APP_TAGLINE
     const links = document.createElement('div'); links.className = 'about-links'
+    let firstLink: HTMLButtonElement | null = null
     for (const l of APP_LINKS) {
       const b = document.createElement('button'); b.className = 'about-link'; b.textContent = l.label
       b.onclick = () => { void window.api.openExternal(l.url) }
+      firstLink ??= b
       links.appendChild(b)
     }
     card.append(logo, rule, ver, tag, links)
     this.box.appendChild(card)
-    this.show()
+    this.show(firstLink ?? this.closeButton)
   }
 
   private buildTitlebar(title: string, extra?: HTMLElement): HTMLDivElement {
     const bar = document.createElement('div'); bar.className = 'help-titlebar'
-    const h = document.createElement('span'); h.className = 'help-title'; h.textContent = title
+    const h = document.createElement('h2'); h.id = 'help-overlay-title'; h.className = 'help-title'; h.textContent = title
     bar.appendChild(h)
     if (extra) bar.appendChild(extra)
-    bar.appendChild(this.buildClose())
+    bar.appendChild(this.buildClose(title))
     return bar
   }
 
@@ -74,18 +77,18 @@ export class HelpOverlay {
     return btn
   }
 
-  private buildClose(): HTMLButtonElement {
+  private buildClose(title: string): HTMLButtonElement {
     const btn = document.createElement('button'); btn.className = 'help-close'; btn.textContent = '✕'
-    btn.title = 'Close'; btn.onclick = () => this.close(); return btn
+    btn.setAttribute('aria-label', `Close ${title}`); btn.onclick = () => this.close()
+    this.closeButton = btn
+    return btn
   }
 
-  private show(): void {
+  private show(initialFocus: HTMLElement | null): void {
     this.root.classList.remove('hidden')
-    this.root.tabIndex = -1
-    this.root.focus()
-    this.reg.open(() => this.close())
+    this.dialog.open({ panel: this.box, labelledBy: 'help-overlay-title', initialFocus, requestClose: () => this.close() })
   }
-  private close(): void { this.reg.release(); this.root.classList.add('hidden') }
+  private close(): void { this.root.classList.add('hidden'); this.dialog.close() }
 
   private render(): void {
     this.body.replaceChildren()

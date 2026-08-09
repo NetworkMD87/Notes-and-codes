@@ -5,7 +5,8 @@ import '@fontsource/fira-code/400.css'
 import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/700.css'
 import { installMenuCommands } from './menuCommands'
-import type { Api, Encoding, Settings } from '../shared/types'
+import type { Api, Encoding, SessionData, Settings, WorkspaceFilter } from '../shared/types'
+import { DEFAULT_WORKSPACE_EXCLUDES, normalizePathGlobs } from '../shared/pathGlob'
 import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
 import { TabBar } from './tabBar'
@@ -48,6 +49,11 @@ import { PersonalDictionaryPanel } from './personalDictionaryPanel'
 import { resolveSpellLocale } from '../shared/spellText'
 import type { ResolvedSpellLocale } from '../shared/spell'
 import { StartupOpenQueue } from './startupOpenQueue'
+import { hasOpenDialog } from './dialogController'
+import { LatestWriteScheduler } from './latestWriteScheduler'
+import { settleQuitWrites } from './settleQuitWrites'
+import { snapshotSession } from './sessionSnapshot'
+import { loadStartupState } from './startupReads'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -67,18 +73,33 @@ const statusBar = new StatusBar(document.getElementById('statusbar')!, {
   onEncoding: (enc) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.encoding = enc; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave(); toast('Encoding: ' + ENC_LABEL[enc]) } }
 })
 const diff = new DiffView(document.getElementById('diff')!)
-const diffPicker = new DiffPicker(document.getElementById('app')!)
-const phPicker = new PasteHistoryPicker(document.getElementById('app')!)
-const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, () => { view.paneA.layout(); view.paneB.layout() })
+const diffPicker = new DiffPicker(document.getElementById('app')!, focusActiveEditor)
+const phPicker = new PasteHistoryPicker(document.getElementById('app')!, focusActiveEditor)
+const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, {
+  onLayout: () => { view.paneA.layout(); view.paneB.layout() },
+})
 
-function previewContent(): string { return paneFor(view.focusedPane()).getContent() }
-function refreshPreview(): void { mdPreview.update(previewContent()) }
+function previewSnapshot(): { bufferId: string; content: string } {
+  const pane = paneFor(view.focusedPane())
+  const bufferId = pane.currentBufferId()
+  if (bufferId) return { bufferId, content: pane.getContent() }
+  const active = manager.activeId ? manager.get(manager.activeId) : undefined
+  return { bufferId: active?.id ?? '', content: active?.content ?? '' }
+}
+
+function syncVisiblePreview(): void {
+  if (!mdPreview.isVisible()) return
+  const snapshot = previewSnapshot()
+  mdPreview.switchBuffer(snapshot.bufferId, snapshot.content)
+}
 
 const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) => {
   void window.api.updateSettings({ themeId, accent })
 })
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
+function focusActiveEditor(): void { paneFor(view.focusedPane()).focus() }
+view.onFocusChange(() => syncVisiblePreview())
 
 function applyHighlightsToPanes(bufferId: string, hs: Highlight[]): void {
   for (const which of ['A', 'B'] as const) {
@@ -144,7 +165,7 @@ async function closeTab(id: string): Promise<void> {
   if (b && b.dirty && (b.filePath || /\S/.test(b.content))) {
     // Unsaved edits — a named file (drops from disk) or an untitled scratch buffer
     // (never hits file history, so it's unrecoverable). Warn before discarding either.
-    const ok = await confirmDialog(`"${b.title}" has unsaved changes. Discard and close?`, 'Discard')
+    const ok = await confirmDialog(`"${b.title}" has unsaved changes. Discard and close?`, { confirmLabel: 'Discard', focusFallback: focusActiveEditor })
     if (!ok) return
   }
   const wasLast = manager.list().length === 1
@@ -160,7 +181,7 @@ async function closeTab(id: string): Promise<void> {
 
 const tabBar = new TabBar(document.getElementById('tabbar')!, {
   onSelect: (id) => { manager.setActive(id); showActive(); scheduleSessionSave() },
-  onClose: (id) => void closeTab(id),
+  onClose: (id) => closeTab(id),
   onNew: () => { manager.create(); showActive(); scheduleSessionSave() },
   onReorder: (id, toIndex) => { manager.move(id, toIndex); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave() }
 })
@@ -172,12 +193,20 @@ function showActive(): void {
   void loadHighlightsFor(active)
   tabBar.render(manager.list(), manager.activeId)
   refreshStatus()
-  refreshPreview()
+  mdPreview.switchBuffer(active.id, active.content)
   refreshToolbar()
   folder.setActiveFile(active.filePath ?? null) // highlight the open file's row in the sidebar
   syncWatch()
   autosave.flushNow()
   spell?.schedule()
+}
+
+function switchRelativeTab(direction: -1 | 1): void {
+  const buffers = manager.list()
+  if (buffers.length < 2) return
+  const current = Math.max(0, buffers.findIndex(buffer => buffer.id === manager.activeId))
+  const next = (current + direction + buffers.length) % buffers.length
+  manager.setActive(buffers[next].id); showActive(); scheduleSessionSave(); focusActiveEditor()
 }
 
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())
@@ -204,7 +233,7 @@ for (const which of ['A', 'B'] as const) {
     refreshStatus()
     scheduleSessionSave()
     autosave.noteEdit()
-    refreshPreview()
+    mdPreview.update(id, manager.get(id)?.content ?? c)
     spell?.schedule()
   })
 }
@@ -217,8 +246,27 @@ const conflicts = new Set<string>()
 const selfWrites = new Map<string, number>()
 const autosaveFailed = new Set<string>()
 const SELF_WRITE_WINDOW_MS = 2500
-let saveTimer: number | undefined
 let sessionSaveFailed = false
+const exposeSessionWriteState = new URLSearchParams(window.location.search).get('nc-headless') === '1'
+const sessionWrites = new LatestWriteScheduler<SessionData>({
+  debounceMs: 500,
+  snapshot: snapshotSession,
+  write: snapshot => window.api.saveSession(snapshot),
+  onSuccess: () => { sessionSaveFailed = false },
+  onFailure: error => {
+    console.error('session save failed', error)
+    if (sessionSaveFailed) return
+    sessionSaveFailed = true
+    toast('Session save failed — check disk space / permissions.', 'error')
+  },
+  onStateChange: state => {
+    if (!exposeSessionWriteState) return
+    document.body.dataset.sessionWriteState = state.active
+      ? (state.pending ? 'active-pending' : 'active')
+      : (state.pending ? 'pending' : 'idle')
+    document.body.dataset.sessionWriteRevision = String(state.revision)
+  },
+})
 let alwaysOnTop = false
 let fontSize = 14
 function applyFontSize(): void { view.paneA.setFontSize(fontSize); view.paneB.setFontSize(fontSize) }
@@ -229,6 +277,13 @@ function zoomReset(): void { fontSize = 14; applyFontSize(); persistFontSize() }
 let fontFamily = 'JetBrains Mono'
 let fontLigatures = true
 let showAllFiles = false
+let workspaceExcludes: string[] = [...DEFAULT_WORKSPACE_EXCLUDES]
+const workspaceFilter = (): WorkspaceFilter => ({
+  showAll: showAllFiles,
+  excludePatterns: [...workspaceExcludes],
+})
+let folder!: FolderMode
+let findInFiles!: FindInFiles
 let restoreFolder = true
 let openAtLogin = false
 let globalHotkey = ''
@@ -257,16 +312,7 @@ async function setAlwaysOnTop(on: boolean): Promise<void> {
 const toggleAlwaysOnTop = () => setAlwaysOnTop(!alwaysOnTop)
 
 function scheduleSessionSave(): void {
-  if (!autoSave) return
-  clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
-    window.api.saveSession(manager.toSession())
-      .then(() => { sessionSaveFailed = false })
-      .catch(err => {
-        console.error('session save failed', err)
-        if (!sessionSaveFailed) { sessionSaveFailed = true; toast('Session save failed — check disk space / permissions.', 'error') }
-      })
-  }, 500) as unknown as number
+  if (autoSave) sessionWrites.schedule(manager.toSession())
 }
 
 // The app is only truly ready once boot() has finished applying persisted settings — until
@@ -284,11 +330,15 @@ async function boot(): Promise<void> {
     document.body.textContent = 'Failed to initialize: the preload bridge did not load.'
     return
   }
-  const [settings, systemLocale, personalWords] = await Promise.all([
-    window.api.loadSettings(),
-    window.api.getSystemLocale(),
-    window.api.listPersonalWords(),
-  ])
+  const startup = await loadStartupState({
+    loadSettings: () => window.api.loadSettings(),
+    getSystemLocale: () => window.api.getSystemLocale(),
+    listPersonalWords: () => window.api.listPersonalWords(),
+    loadClipboardHistory: () => window.api.loadClipboardHistory(),
+    loadSnippets: () => window.api.loadSnippets(),
+    loadSession: () => window.api.loadSession(),
+  })
+  const { settings, systemLocale, personalWords } = startup
   spellSettings = {
     spellCheckEnabled: settings.spellCheckEnabled,
     spellCheckLanguage: settings.spellCheckLanguage,
@@ -304,6 +354,7 @@ async function boot(): Promise<void> {
   uiFontFamily = settings.uiFontFamily ?? 'System'
   fontLigatures = settings.fontLigatures ?? true
   showAllFiles = settings.showAllFiles
+  workspaceExcludes = [...settings.workspaceExcludes]
   restoreFolder = settings.restoreFolderOnLaunch
   openAtLogin = settings.openAtLogin
   globalHotkey = settings.globalHotkey
@@ -311,10 +362,9 @@ async function boot(): Promise<void> {
   applyUiFont()
   fontSize = settings.fontSize ?? 14; applyFontSize()
   alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
-  pasteHistory.load(await window.api.loadClipboardHistory())
-  snippets.load(await window.api.loadSnippets())
-  const session = await window.api.loadSession()
-  if (session.buffers.length > 0) manager.restore(session)
+  pasteHistory.load(startup.clipboardHistory)
+  snippets.load(startup.snippets)
+  if (startup.session.buffers.length > 0) manager.restore(startup.session)
   await finishStartupBuffers()
   // Main only adds this query under NC_HEADLESS plus the dedicated smoke-test environment flag.
   // Keeping the stalled port here exercises boot behavior without exposing a production IPC seam.
@@ -352,6 +402,9 @@ async function boot(): Promise<void> {
   reportDirty()
   await folder.restore()
   markBooted()
+  if (startup.failures.length > 0) {
+    toast('Some saved state could not be loaded. Defaults were used.', 'warning')
+  }
 }
 
 window.api.onSaveAllAndQuit(async () => {
@@ -388,14 +441,12 @@ window.api.onFlushAndQuit(async () => {
 // none of the last ~500ms is lost on quit. Shared by the save-then-quit and the
 // clean-quit paths. Never throws — a failed flush must not trap the quit.
 async function flushPendingWritesBeforeQuit(): Promise<void> {
-  clearTimeout(clipSaveTimer); clearTimeout(saveTimer)   // sync — can't throw
-  try {
-    await Promise.all([...hlSaveTimers.keys()].map(id => flushHighlightSave(id) ?? Promise.resolve()))
-    await window.api.saveClipboardHistory(pasteHistory.entries())
-    await window.api.saveSession(manager.toSession())
-  } catch (err) {
-    console.error('final flush before quit failed', err)
-  }
+  clearTimeout(clipSaveTimer)
+  await settleQuitWrites([
+    ...[...hlSaveTimers.keys()].map(id => flushHighlightSave(id) ?? Promise.resolve()),
+    window.api.saveClipboardHistory(pasteHistory.entries()),
+    sessionWrites.flush(manager.toSession()),
+  ], error => console.error('quit flush failed', error))
 }
 
 interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean; format: boolean; forceDialog: boolean }
@@ -408,7 +459,12 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   if (opts.format && formatOnSave && isFormattable(b.language)) {
     if (pane) await pane.formatDocument()
     else {
-      try { manager.update(id, await formatText(b.content, b.language)) }
+      try {
+        manager.update(id, await formatText(b.content, b.language))
+        // Formatting mutates the background buffer before disk I/O. Snapshot that mutation now:
+        // writeFile may reject, but the live manager state must still be the newest session state.
+        scheduleSessionSave()
+      }
       catch { /* leave unformatted — never block a save */ }
     }
   }
@@ -430,7 +486,7 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
     // that is where "Reload (discard mine)" lives, and it is the third outcome of this prompt.
     conflicts.add(id); refreshChangeBar()
     if (!opts.allowDialog) return false // autosave: never modal. Buffer stays dirty; the bar tells the story.
-    const ok = await confirmDialog(`"${b.title}" changed on disk since you opened it. Overwrite those changes?`, 'Overwrite')
+    const ok = await confirmDialog(`"${b.title}" changed on disk since you opened it. Overwrite those changes?`, { confirmLabel: 'Overwrite', focusFallback: focusActiveEditor })
     if (!ok) return false
     r = await window.api.writeFile(path, content, b.eol, b.encoding) // unchecked — the user chose to overwrite
   }
@@ -438,13 +494,20 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   selfWrites.set(path, Date.now())
   if (opts.snapshot) window.api.snapshotHistory(path, content, b.eol, b.encoding)
   manager.markSaved(id, path, r.mtimeMs)
+  // markSaved changes path/title/language/dirty/mtime. Persist it before highlight I/O, which can
+  // reject independently after the file itself was saved successfully.
+  scheduleSessionSave()
   await window.api.saveHighlights(path, highlights.get(id))
   manager.get(id)!.highlights = undefined
+  // Successful migration moves highlights out of the session and into HighlightStore. Queue the
+  // post-migration shape too so the earlier immutable snapshot cannot retain embedded highlights.
+  scheduleSessionSave()
   conflicts.delete(id)
   refreshChangeBar() // a conflict we just resolved by overwriting must not leave its bar behind
   if (opts.recent) window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) {
     pane.refreshBuffer(manager.get(id)!)
+    syncVisiblePreview()
     spell?.refreshNow()
   }
   syncWatch()
@@ -455,7 +518,7 @@ async function revertActive(): Promise<void> {
   const b = manager.get(id); if (!b) return
   if (!b.filePath) { toast('Nothing to revert — save the file first.', 'warning'); return }
   if (!b.dirty) { toast('No unsaved changes to revert.', 'warning'); return }
-  const ok = await confirmDialog(`Discard unsaved changes to "${b.title}" and reload the saved version?`, 'Revert')
+  const ok = await confirmDialog(`Discard unsaved changes to "${b.title}" and reload the saved version?`, { confirmLabel: 'Revert', focusFallback: focusActiveEditor })
   if (!ok) return
   await reloadBuffer(id)
   toast('Reverted to the saved version.', 'success')
@@ -555,7 +618,7 @@ async function openFromDisk(): Promise<void> {
   const path = await window.api.openDialog(); if (!path) return
   const r = await window.api.readFile(path)
   if (!r.ok) { toast(r.reason, 'error'); return }
-  manager.open(r.file); showActive()
+  manager.open(r.file); showActive(); scheduleSessionSave()
   await window.api.addRecentFile(path)
 }
 
@@ -596,7 +659,11 @@ function startDiff(): void {
   })
 }
 
-const togglePreview = () => { mdPreview.toggle(); refreshPreview(); refreshToolbar() }
+const togglePreview = () => {
+  const snapshot = previewSnapshot()
+  mdPreview.toggle(snapshot.bufferId, snapshot.content)
+  refreshToolbar()
+}
 
 async function exportActive(format: ExportFormat): Promise<void> {
   const content = paneFor(view.focusedPane()).getContent()
@@ -648,7 +715,7 @@ function clearHighlights(): void {
 }
 
 const snippets = new SnippetList(() => crypto.randomUUID())
-const snipPicker = new SnippetPicker(document.getElementById('app')!)
+const snipPicker = new SnippetPicker(document.getElementById('app')!, focusActiveEditor)
 function persistSnippets(): void { window.api.saveSnippets(snippets.list()) }
 const snipManager = new SnippetManager(document.getElementById('app')!, {
   list: () => snippets.list(),
@@ -657,13 +724,13 @@ const snipManager = new SnippetManager(document.getElementById('app')!, {
   updateBody: (id, body) => snippets.updateBody(id, body),
   remove: (id) => snippets.remove(id),
   persist: () => persistSnippets()
-})
+}, focusActiveEditor)
 const manageSnippets = () => snipManager.open()
 
 async function saveSelectionAsSnippet(): Promise<void> {
   const body = paneFor(view.focusedPane()).getSelectionText()
   if (!body) { toast('Select some text first.', 'warning'); return }
-  const name = await promptInput('Snippet name')
+  const name = await promptInput('Snippet name', { focusFallback: focusActiveEditor })
   if (!name) return
   snippets.add(name, body); persistSnippets(); toast(`Saved snippet "${name}".`, 'success')
 }
@@ -691,6 +758,7 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
 document.body.style.setProperty('--hl-cursor', penCursor(highlights.colour()))
 
 const settingsDeps: SettingsDeps = {
+  focusEditor: focusActiveEditor,
   currentThemeId: () => theme.currentId(), currentAccent: () => theme.currentAccent(),
   pickTheme: (id) => theme.pick(id), setAccent: (a) => theme.setAccent(a),
   fontFamily: () => fontFamily, setFontFamily: setFontFamilyState,
@@ -698,7 +766,27 @@ const settingsDeps: SettingsDeps = {
   uiFontFamily: () => uiFontFamily, setUiFontFamily: setUiFontFamilyState,
   fontSize: () => fontSize, setFontSize: setFontSizeState,
   showAllFiles: () => showAllFiles,
-  setShowAllFiles: (on) => { showAllFiles = on; void window.api.updateSettings({ showAllFiles: on }) },
+  setShowAllFiles: async (on) => {
+    const saved = await window.api.updateSettings({ showAllFiles: on })
+    showAllFiles = saved.showAllFiles
+    workspaceExcludes = [...saved.workspaceExcludes]
+    await folder.workspaceSettingsChanged()
+  },
+  workspaceExcludes: () => [...workspaceExcludes],
+  setWorkspaceExcludes: async (patterns) => {
+    const saved = await window.api.updateSettings({
+      workspaceExcludes: normalizePathGlobs(patterns),
+    })
+    workspaceExcludes = [...saved.workspaceExcludes]
+    await folder.workspaceSettingsChanged()
+  },
+  restoreWorkspaceExcludes: async () => {
+    const saved = await window.api.updateSettings({
+      workspaceExcludes: [...DEFAULT_WORKSPACE_EXCLUDES],
+    })
+    workspaceExcludes = [...saved.workspaceExcludes]
+    await folder.workspaceSettingsChanged()
+  },
   restoreFolder: () => restoreFolder,
   setRestoreFolder: (on) => { restoreFolder = on; void window.api.updateSettings({ restoreFolderOnLaunch: on }) },
   autoSaveToDisk: () => autoSaveToDisk,
@@ -763,7 +851,7 @@ const personalDictionary = new PersonalDictionaryPanel(document.getElementById('
   remove: word => window.api.removePersonalWord(word),
   changed: words => { void spell?.personalWordsChanged(words) },
   notify: (message, level) => toast(message, level),
-})
+}, focusActiveEditor)
 const openSettings = (category: SettingsCategory = 'appearance') => settings.open(category)
 // Deep-link alias into Settings ▸ Appearance. No button owns it — its consumers are the
 // palette's `Appearance…` command and the View ▸ Appearance… menu item.
@@ -785,17 +873,21 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
     window.api.snapshotHistory(b.filePath, paneFor(view.focusedPane()).getContent(), b.eol, b.encoding)
     manager.update(id, v.content)
     paneFor(view.focusedPane()).refreshBuffer(b)
+    syncVisiblePreview()
     spell?.refreshNow()
     tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
     toast('Restored an earlier version — unsaved, Save to keep it.', 'success')
   }
-})
+}, focusActiveEditor)
 const openHistory = () => void fileHistory.open()
 
-const folder = new FolderMode({
+folder = new FolderMode({
   sidebarEl: document.getElementById('sidebar')!,
   mainEl: document.getElementById('main')!,
   openFile: (path) => void openPath(path),
+  focusEditor: focusActiveEditor,
+  filter: workspaceFilter,
+  onWorkspaceChanged: (rerun) => findInFiles.workspaceChanged(rerun),
   pickFolder: () => openFolderFromDialog(),
   activePath: () => {
     const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null
@@ -831,11 +923,12 @@ function refreshToolbar(): void {
   toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible(), pin: alwaysOnTop })
 }
 
-const palette = new CommandPalette()
-const helpOverlay = new HelpOverlay()
-const findInFiles = new FindInFiles(document.getElementById('app')!, {
+const palette = new CommandPalette(focusActiveEditor)
+const helpOverlay = new HelpOverlay(focusActiveEditor)
+findInFiles = new FindInFiles(document.getElementById('app')!, {
   root: () => folder.root(),
-  showAll: () => showAllFiles,
+  filter: workspaceFilter,
+  workspaceExcludes: () => [...workspaceExcludes],
   buffers: () => manager.list().map(b => ({ filePath: b.filePath, title: b.title, content: b.content })),
   openMatch: (path, title, line, column, length) => {
     void (async () => {
@@ -843,10 +936,11 @@ const findInFiles = new FindInFiles(document.getElementById('app')!, {
       // must not run then — it would move the cursor and seed the find widget in whatever
       // buffer happens to be active, which has nothing to do with this match.
       if (path) { if (!(await openPath(path))) return }
-      else { const b = manager.list().find(x => x.title === title); if (!b) return; manager.setActive(b.id); showActive() }
+      else { const b = manager.list().find(x => x.title === title); if (!b) return; manager.setActive(b.id); showActive(); scheduleSessionSave() }
       paneFor(view.focusedPane()).revealMatch(line, column, length)
     })()
   },
+  focusEditor: focusActiveEditor,
 })
 registerCommands({
   palette, manager, view, diff, paneFor, showActive, scheduleSessionSave, closeTab,
@@ -879,6 +973,10 @@ registerCommands({
 })
 
 window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'PageUp' || e.key === 'PageDown')) {
+    e.preventDefault()
+    if (!hasOpenDialog()) switchRelativeTab(e.key === 'PageUp' ? -1 : 1)
+  }
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); palette.open() }
   if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); folder.openQuickOpen() }
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); findInFiles.open() }
@@ -921,9 +1019,11 @@ async function reloadBuffer(id: string): Promise<void> {
   conflicts.delete(id)
   if (paneFor(view.focusedPane()).currentBufferId() === id) {
     paneFor(view.focusedPane()).refreshBuffer(b)
+    syncVisiblePreview()
     spell?.refreshNow()
   }
   refreshStatus(); tabBar.render(manager.list(), manager.activeId)
+  scheduleSessionSave()
   refreshChangeBar() // surface the next queued conflict (or hide the bar)
 }
 const changeBar = document.getElementById('change-bar')!
@@ -1035,6 +1135,7 @@ const historyTimer = setInterval(() => {
 // Clear on unload so HMR dev reloads don't stack duplicate timers.
 window.addEventListener('beforeunload', () => {
   clearInterval(historyTimer)
+  mdPreview.dispose()
   spell?.dispose()
   spell = null
 })

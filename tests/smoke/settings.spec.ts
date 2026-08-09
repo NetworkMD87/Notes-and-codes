@@ -1,5 +1,5 @@
 import { test, expect } from './smokeTest'
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
 
@@ -8,6 +8,162 @@ const spellToggle = (win: import('@playwright/test').Page) => win.locator(
 ).locator('input[type=checkbox]')
 
 const spellLanguage = (win: import('@playwright/test').Page) => win.getByLabel('Spell check language')
+
+test('Settings: dialog semantics, vertical tabs, focus trap, labels, and focus return', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-a11y-')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ themeId: 'light' }))
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  const opener = win.getByRole('button', { name: 'Settings' })
+  await opener.focus(); await opener.press('Enter')
+  const dialog = win.getByRole('dialog', { name: 'Settings' })
+  const appearance = dialog.getByRole('tab', { name: 'Appearance' })
+  await expect(appearance).toBeFocused()
+  await win.keyboard.press('ArrowDown')
+  await expect(dialog.getByRole('tab', { name: 'Font' })).toBeFocused()
+  await expect(dialog.getByRole('tab', { name: 'Font' })).toHaveAttribute('aria-selected', 'true')
+  await win.keyboard.press('End')
+  await expect(dialog.getByRole('tab', { name: 'Integration' })).toHaveAttribute('aria-selected', 'true')
+  await win.keyboard.press('Home')
+  await expect(appearance).toHaveAttribute('aria-selected', 'true')
+  await expect(dialog.getByRole('radiogroup', { name: 'Theme' })).toBeVisible()
+  const themes = dialog.getByRole('radio')
+  const selectedTheme = dialog.getByRole('radio', { checked: true })
+  await expect(selectedTheme).toHaveAttribute('aria-checked', 'true')
+  expect(await themes.evaluateAll(radios => radios.filter(radio => radio.tabIndex === 0).length)).toBe(1)
+  await selectedTheme.focus(); await win.keyboard.press('Tab')
+  await expect(dialog.getByRole('button', { name: 'Use theme default accent' })).toBeFocused()
+  const selectedThemeIndex = await themes.evaluateAll(radios => radios.findIndex(radio => radio.getAttribute('aria-checked') === 'true'))
+  const nextThemeIndex = (selectedThemeIndex + 1) % await themes.count()
+  await selectedTheme.focus(); await win.keyboard.press('ArrowRight')
+  await expect(themes.nth(nextThemeIndex)).toBeFocused()
+  await expect(themes.nth(nextThemeIndex)).toHaveAttribute('aria-checked', 'true')
+  const tabControls = await dialog.getByRole('tab').evaluateAll(tabs => tabs.map(tab => tab.getAttribute('aria-controls')))
+  expect(tabControls.every((panelId): panelId is string => panelId !== null)).toBe(true)
+  for (const panelId of tabControls) await expect(dialog.locator(`[id="${panelId}"]`)).toHaveCount(1)
+  const panels = dialog.locator('[role="tabpanel"]')
+  await expect(panels).toHaveCount(tabControls.length)
+  expect(await panels.evaluateAll(items => items.filter(item => !item.hidden).length)).toBe(1)
+  await expect(dialog.getByRole('button', { name: /accent/i }).first()).toHaveAttribute('aria-pressed', /true|false/)
+  const close = dialog.getByRole('button', { name: 'Close Settings' })
+  await close.focus(); await win.keyboard.press('Tab')
+  await expect(appearance).toBeFocused()
+  await win.keyboard.press('Shift+Tab')
+  await expect(close).toBeFocused()
+  await close.click()
+  await expect(opener).toBeFocused()
+})
+
+test('Settings: modal suppresses app-wide tab cycling', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-tab-cycle-')
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [
+      { id: 'a', title: 'a.txt', filePath: null, content: 'tab a content', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'b', title: 'b.txt', filePath: null, content: 'tab b content', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+    ], activeId: 'a',
+  }))
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  const tablist = win.getByRole('tablist', { name: 'Open files' })
+  const firstTab = tablist.getByRole('tab', { name: 'a.txt' })
+  const secondTab = tablist.getByRole('tab', { name: 'b.txt' })
+  await expect(firstTab).toHaveAttribute('aria-selected', 'true')
+
+  await openSettings(win, 'Startup')
+  const dialog = win.getByRole('dialog', { name: 'Settings' })
+  const category = dialog.getByRole('tab', { name: 'Startup' })
+  await category.focus()
+  await win.keyboard.press('Control+PageDown')
+
+  await expect(dialog).toBeVisible()
+  await expect(category).toBeFocused()
+  await expect(firstTab).toHaveAttribute('aria-selected', 'true')
+  await expect(secondTab).toHaveAttribute('aria-selected', 'false')
+})
+
+test('Settings: workspace exclusion invalidates active Find and Show All bypasses it', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-search-scope-')
+  const projectDir = smoke.tempDir('notes-settings-search-project-')
+  mkdirSync(join(projectDir, 'generated'))
+  writeFileSync(join(projectDir, 'generated', 'hidden.txt'), 'workspace exclusion marker')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true,
+    lastFolder: projectDir,
+    sidebarVisible: true,
+    showAllFiles: false,
+    workspaceExcludes: [],
+  }))
+
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+
+  await win.keyboard.press('Control+p')
+  const quick = win.getByRole('combobox', { name: 'Quick Open' })
+  await quick.fill('hidden')
+  await expect(win.locator('.qo-row').first()).toContainText('hidden.txt')
+  await quick.press('Escape')
+
+  await win.keyboard.press('Control+Shift+F')
+  const find = win.getByRole('dialog', { name: 'Find in Files' })
+  await win.getByRole('button', { name: 'Search scope' }).click()
+  await win.getByLabel('Files to include').fill('**/*.txt')
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill('workspace exclusion marker')
+  const summary = win.getByRole('status', { name: 'Effective search scope' })
+  await expect(summary).toHaveText('**/*.txt')
+  await expect(win.locator('.fif-file', { hasText: 'generated\\hidden.txt' })).toHaveCount(1)
+
+  // Settings opens above Find in Files. Keeping the completed search session mounted makes the
+  // workspace-change callback independently observable: reopening Find would rerun anyway and
+  // would let a missing callback pass for the wrong reason.
+  await win.keyboard.press('Control+,')
+  let settings = win.getByRole('dialog', { name: 'Settings' })
+  await expect(settings).toBeVisible()
+  const folderTab = settings.getByRole('tab', { name: 'Folder' })
+  await folderTab.focus()
+  await folderTab.press('Enter')
+  const excludes = win.getByLabel('Exclude from workspace')
+  await excludes.fill('**/generated/**')
+  await excludes.press('Tab')
+  await expect(excludes).toHaveValue('**/generated/**')
+  await expect(win.locator('.sb-row', { hasText: 'generated' })).toHaveCount(0)
+  const closeSettings = settings.getByRole('button', { name: 'Close Settings' })
+  await closeSettings.focus()
+  await closeSettings.press('Enter')
+
+  await expect(find).toBeVisible()
+  await expect(win.getByLabel('Files to include')).toHaveValue('**/*.txt')
+  await expect(summary).toHaveText('**/*.txt · excluding 1 workspace pattern')
+  await expect(win.locator('.fif-empty')).toContainText('No matches for')
+  await expect(win.locator('.fif-file')).toHaveCount(0)
+
+  await win.keyboard.press('Control+,')
+  settings = win.getByRole('dialog', { name: 'Settings' })
+  await expect(settings).toBeVisible()
+  const reopenedFolderTab = settings.getByRole('tab', { name: 'Folder' })
+  await reopenedFolderTab.focus()
+  await reopenedFolderTab.press('Enter')
+  const showAll = win.getByLabel('Show all files (incl. node_modules / .git)')
+  await showAll.focus()
+  await showAll.press('Space')
+  await expect(win.locator('.sb-row', { hasText: 'generated' })).toBeVisible()
+  const closeReopenedSettings = settings.getByRole('button', { name: 'Close Settings' })
+  await closeReopenedSettings.focus()
+  await closeReopenedSettings.press('Enter')
+
+  await expect(find).toBeVisible()
+  await expect(win.getByLabel('Files to include')).toHaveValue('**/*.txt')
+  await expect(summary).toHaveText('**/*.txt')
+  await expect(win.locator('.fif-file', { hasText: 'generated\\hidden.txt' })).toHaveCount(1)
+
+  await win.keyboard.press('Escape')
+  await win.keyboard.press('Control+p')
+  await quick.fill('hidden')
+  await expect(win.locator('.qo-row').first()).toContainText('hidden.txt')
+})
 
 test('Settings: nav lists categories, detail shows the active one', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-settings-nav-')
@@ -345,7 +501,11 @@ test('Settings: recording a hotkey updates the chips and persists', async ({ smo
     await expect(win.locator('#tabbar')).toBeVisible()
     await openSettings(win, 'Startup')
 
-    await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Shift', 'Space'])
+    const hotkeyGroup = win.getByRole('group', { name: 'Summon hotkey' })
+    await expect(hotkeyGroup).toBeVisible()
+    await expect(hotkeyGroup.getByRole('button', { name: 'Record' })).toBeVisible()
+    await expect(hotkeyGroup.getByRole('button', { name: 'Clear' })).toBeVisible()
+    await expect(hotkeyGroup.locator('.hk-chip')).toHaveText(['Ctrl', 'Shift', 'Space'])
 
     await win.locator('.hk-record').click()
     await expect(win.locator('.hk-record')).toHaveText('Press keys…')

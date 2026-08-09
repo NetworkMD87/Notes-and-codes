@@ -17,13 +17,13 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — Design the Quality, Scale & Keyboard Access pass
+## ▶ NEXT ACTION — Owner-check v1.19.0, then design the Microsoft Store / MSIX pass
 
-**New ordering (2026-08-08).** The codebase audit found a small group of high-leverage
-responsiveness and accessibility improvements that share UI and workspace-indexing foundations.
-Ship them together before the next platform investment: **① Quality, Scale & Keyboard Access** →
-**② Microsoft Store / MSIX** → **③ Safe Replace in Files** → **④ Snippet placeholders / tabstops**.
-MSIX remains the next platform move; it is intentionally moved one product pass later, not removed.
+**Quality, Scale & Keyboard Access is implemented for v1.19.0.** Automated verification is complete;
+the owner-only Windows/Narrator/installed-build checklist under **Phase 4.6** remains before a release
+tag. After that, the next design pass is **① Microsoft Store / MSIX** → **② Safe Replace in Files** →
+**③ Snippet placeholders / tabstops**. MSIX remains the next platform move; it was moved one product
+pass later, not removed.
 
 ✅ **v1.18.1 shipped 2026-08-08 — Markdown dependency security and release-test reliability.**
 Tagged and published as a GitHub release after validation of the installed build. PR #11 raised
@@ -466,14 +466,14 @@ command-registry changes on systems already in place. Shipped as **one release u
   packaged startup** (gated on `app.isPackaged`) so existing users get it without re-toggling the
   setting; the re-apply also self-heals a stale exe path after a reinstall elsewhere._
 
-## 🔜 Phase 4.6 — Quality, scale & keyboard access (next product pass)
+## ✅ Phase 4.6 — Quality, scale & keyboard access (implemented for v1.19.0)
 
 _A focused product-health pass from the 2026-08-08 audit. The order deliberately fixes the
 shared interaction primitives and large-workspace foundations before adding search scope or bulk
 edits. It is not a redesign: preserve the existing visual system, typed IPC boundary, atomic-save
 semantics, literal-only search safety, and one-owner-per-keybinding rule._
 
-1. **Accessible interaction foundations** (**M**) — make Settings, tabs, custom menus, and overlays
+1. ✅ **Accessible interaction foundations** (**M**) — make Settings, tabs, custom menus, and overlays
    fully usable without a mouse or screen. Replace clickable `div` controls with semantic buttons /
    radio controls; bind every visible label to its input; expose selected state; add a shared dialog
    primitive with labelling, focus trap, and focus return; and add a semantic tablist with next /
@@ -482,14 +482,14 @@ semantics, literal-only search safety, and one-owner-per-keybinding rule._
    across labels, command IDs, and shortcut hints. Add keyboard and accessible-name smoke coverage
    alongside each surface.
 
-2. **Large-workspace responsiveness** (**M**) — keep Quick Open and the folder sidebar instant at
+2. ✅ **Large-workspace responsiveness** (**M**) — keep Quick Open and the folder sidebar instant at
    the 20k-file cap. Cache normalized quick-open candidates and retain only the best visible results
    instead of sorting every match; coalesce watcher-driven sidebar/index refreshes into one active
    pass plus at most one dirty follow-up; and add sensible project excludes beyond `.git` and
    `node_modules`, with user-visible configuration. Add a 20k-file fixture and before/after latency
    measurements; do not add broad I/O parallelism without those measurements.
 
-3. **Search, recovery & live-preview efficiency** (**M**) — pass Find in Files cancellation into
+3. ✅ **Search, recovery & live-preview efficiency** (**M**) — pass Find in Files cancellation into
    directory traversal and cancel on overlay close; retain its caps and shared matcher, then measure
    a bounded file-read pool only if traversal is no longer the bottleneck. Make the open-buffer
    matcher scan lazily rather than split an entire large buffer. Coalesce session snapshots to one
@@ -497,19 +497,56 @@ semantics, literal-only search safety, and one-owner-per-keybinding rule._
    Markdown preview rendering and load the remaining independent persisted state in parallel.
    Profile the always-created second Monaco pane before deciding whether lazy creation is worthwhile.
 
-4. **Scoped Find in Files** (**M**, follows 2–3) — add include/exclude globs and a clear scope
+4. ✅ **Scoped Find in Files** (**M**, follows 2–3) — add include/exclude globs and a clear scope
    summary, using the folder-exclude rules from item 2. Preserve literal query matching, encoding
    detection, stale-buffer de-duplication, cancellation, result caps, and the existing “results
    truncated” explanation. Streaming results may follow only if the measured search latency still
    needs it.
 
-5. **Safe Replace in Files** (**L**, after scoped search) — preview a change set; let the user opt
-   files in or out; snapshot history before write; use atomic writes and stale-mtime conflict checks;
-   and make the destructive scope unmistakable. This is deliberately not bundled into scoped search.
-
 **Verification bar:** profile cold start, Quick Open, folder refresh, search cancellation, session
 writes, and visible Markdown preview against representative large-workspace fixtures. Every new
 keyboard path needs a focused smoke assertion that would fail if the binding/semantics disappear.
+
+**Automated gate:** Windows Electron journeys cover the new keyboard/accessibility surfaces,
+workspace exclusions and 20k-file behavior, search cancellation/scope, session recovery, Markdown
+preview freshness, and startup fallback behavior. Quick Open remains under its 50 ms p95 target.
+Serial reading of the representative 20k-file workspace remains the dominant measured search phase;
+bounded read concurrency is a separate owner-approved design amendment, not part of v1.19.0. The
+second Monaco pane was not a dominant cost, so it remains eager.
+
+**Owner-only validation before the v1.19.0 tag** — not claimed as passed by automation:
+
+- ⬜ With Windows Narrator, verify Settings dialog/category names and state announcements.
+- ⬜ In Settings, verify category Arrow/Home/End navigation, recorder double-Escape, and opener
+  focus return.
+- ⬜ With Narrator, verify theme radio state and accent pressed state.
+- ⬜ With Narrator, verify nested-dialog containment and focus return.
+- ⬜ For every migrated modal, verify Tab/Shift+Tab containment, Escape close, and opener/fallback
+  focus return.
+- ⬜ With Narrator, verify editor-tab names and selected state.
+- ⬜ Verify tab Arrow-key navigation, close-button/close-neighbour focus, and Ctrl+PageUp/PageDown
+  from both panes.
+- ⬜ With Narrator, verify custom menu/menuitem announcements.
+- ⬜ Verify the full folder-menu Arrow/Home/End/Enter/Space/Escape model and opener focus return.
+- ⬜ With Narrator, verify encoding, line-ending, and next-save descriptions.
+- ⬜ With Narrator, verify Command Palette combobox, options, and live-result announcements.
+- ⬜ Verify Command Palette matching by command ID and shortcut hint, including result-count and
+  selected-option announcements.
+- ⬜ Verify Monaco Shift+F10, Ctrl+., and find-widget Escape remain owned by Monaco/app as designed.
+- ⬜ With Narrator, verify the Find in Files scope controls and effective-scope status.
+- ⬜ Traverse every Settings control with a physical keyboard without losing focus.
+- ⬜ Activate a sidebar menuitem with physical **Space** in the installed app.
+- ⬜ Visually inspect focus rings, contrast, motion, density, and compact control sizing.
+- ⬜ Verify pointer tab selection, middle-click close, and tab dragging on the installed build.
+- ⬜ Run an independent Windows GUI-control pass (automation was blocked by local `EPERM`).
+- ⬜ Confirm encoding/line-ending selections write the expected bytes and newlines.
+- ⬜ Subjectively check Quick Open/sidebar responsiveness on a representative 20k-file folder.
+- ⬜ Exercise include/exclude scoped search and cancellation on a large real folder, including dirty
+  open files and untitled tabs.
+- ⬜ Relaunch after rapid edits and confirm the newest session state is restored.
+- ⬜ Verify visible Markdown preview freshness across rapid edits, pane focus changes, history
+  restore, and disk reload.
+- ⬜ Verify tray hide/show, configured global hotkey, and launch-on-login on the installed build.
 
 ## 🚧 Phase 4 — Platform & power (3 shipped in v1.14.0 · next platform move after Phase 4.6 · 3 parked)
 
@@ -546,6 +583,10 @@ keyboard path needs a focused smoke assertion that would fail if the binding/sem
 
   **Explicitly a trial run.** Owner intent (2026-07-25): learn the Store submission and signing
   pipeline end-to-end on a free app, before it matters on a paid one.
+
+- 🔜 **Safe Replace in Files** (**L**, after the MSIX pass) — preview a change set; let the user opt
+  files in or out; snapshot history before write; use atomic writes and stale-mtime conflict checks;
+  and make the destructive scope unmistakable. This is deliberately not bundled into scoped search.
 
 - 🧊 **Code signing — a purchased cert** (**M**) — **demoted, not deleted.** The Store route above
   removes the need for this *for the Store channel only*: Microsoft's signature covers the Store

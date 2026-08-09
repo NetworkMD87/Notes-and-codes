@@ -27,6 +27,44 @@ test('a malformed session entry does not brick startup', async ({ smoke }) => {
   await expect(win.locator('#paneA .view-lines')).toContainText('still here')
 })
 
+test('one rejected startup read preserves other state and reaches booted', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-startup-partial-')
+  mkdirSync(join(userDataDir, 'session'), { recursive: true })
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ themeId: 'light' }))
+  writeFileSync(join(userDataDir, 'clipboard-history.json'), JSON.stringify(['preserved clip']))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [{
+      id: 'kept',
+      title: 'Recovered',
+      filePath: null,
+      content: 'other reads survived',
+      language: 'plaintext',
+      eol: 'LF',
+      encoding: 'utf8',
+      dirty: false,
+    }],
+    activeId: 'kept',
+  }))
+
+  const app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+    env: { ...process.env, NC_TEST_FAIL_STARTUP_READ: 'snippets' },
+  })
+  const win = await app.firstWindow()
+
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
+  await expect(win.locator('body')).toHaveAttribute('data-theme', 'light')
+  await expect(win.locator('#paneA .view-lines')).toContainText('other reads survived')
+  const startupWarnings = win.locator('.toast--warning')
+  await expect(startupWarnings).toHaveCount(1)
+  await expect(startupWarnings).toHaveText('Some saved state could not be loaded. Defaults were used.')
+
+  await win.keyboard.press('Control+Shift+P')
+  await win.locator('#palette input').fill('Paste from History')
+  await win.keyboard.press('Enter')
+  await expect(win.locator('.ph-picker')).toContainText('preserved clip')
+})
+
 test('a real second process forwards its file arg and shows the hidden window', async ({ smoke }) => {
   // The previous version of this test faked the handoff with
   // `app.emit('second-instance', {}, ['electron', '.'])`, which reached exactly one line of

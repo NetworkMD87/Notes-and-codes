@@ -1,10 +1,11 @@
-import { rankFiles } from './fuzzy'
-import { OverlayRegistration } from './overlayManager'
+import { rankFileCandidates, type QuickOpenCandidate } from './fuzzy'
+import { DialogController } from './dialogController'
 
 export interface QuickOpenDeps {
-  files: () => string[]
+  candidates: () => readonly QuickOpenCandidate[]
   truncated: () => boolean
   openFile: (path: string) => void
+  focusEditor: () => void
 }
 
 export class QuickOpen {
@@ -13,8 +14,9 @@ export class QuickOpen {
   private listEl!: HTMLElement
   private results: string[] = []
   private active = 0
-  private reg = new OverlayRegistration()
+  private dialog: DialogController
   constructor(parent: HTMLElement, private d: QuickOpenDeps) {
+    this.dialog = new DialogController(d.focusEditor)
     this.host = document.createElement('div')
     this.host.id = 'quick-open'; this.host.className = 'hidden'
     this.host.addEventListener('mousedown', (e) => { if (e.target === this.host) this.close() })
@@ -23,9 +25,14 @@ export class QuickOpen {
 
   open(): void {
     const box = document.createElement('div'); box.className = 'qo-box'
-    this.input = document.createElement('input'); this.input.placeholder = 'Go to file…'
-    this.listEl = document.createElement('div'); this.listEl.className = 'qo-list'
-    box.append(this.input, this.listEl)
+    const title = document.createElement('h2')
+    title.id = 'quick-open-title'; title.textContent = 'Quick Open'; title.className = 'sr-only'
+    this.input = document.createElement('input'); this.input.type = 'search'; this.input.placeholder = 'Go to file…'
+    this.input.setAttribute('role', 'combobox'); this.input.setAttribute('aria-label', 'Quick Open')
+    this.input.setAttribute('aria-controls', 'quick-open-results'); this.input.setAttribute('aria-expanded', 'true')
+    this.listEl = document.createElement('div'); this.listEl.id = 'quick-open-results'
+    this.listEl.className = 'qo-list'; this.listEl.setAttribute('role', 'listbox')
+    box.append(title, this.input, this.listEl)
     if (this.d.truncated()) {
       const note = document.createElement('div'); note.className = 'qo-note'
       note.textContent = 'Index truncated — some files may not appear.'
@@ -33,15 +40,15 @@ export class QuickOpen {
     }
     this.host.replaceChildren(box)
     this.host.classList.remove('hidden')
-    this.reg.open(() => this.close())
+    this.dialog.open({ panel: box, labelledBy: title.id, initialFocus: this.input, requestClose: () => this.close() })
     this.input.addEventListener('input', () => this.refresh())
     this.input.addEventListener('keydown', (e) => this.onKey(e))
     this.refresh()
-    this.input.focus()
   }
 
   private refresh(): void {
-    this.results = rankFiles(this.input.value, this.d.files(), 50).map(r => r.path)
+    this.results = rankFileCandidates(this.input.value, this.d.candidates(), 50)
+      .map(result => result.path)
     this.active = 0
     this.renderList()
   }
@@ -72,5 +79,5 @@ export class QuickOpen {
     if (path) { this.close(); this.d.openFile(path) }
   }
 
-  private close(): void { this.reg.release(); this.host.classList.add('hidden') }
+  private close(): void { this.host.classList.add('hidden'); this.dialog.close() }
 }

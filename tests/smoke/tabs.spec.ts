@@ -23,3 +23,46 @@ test('a file tab shows its language badge; a scratch tab shows a badge too', asy
     const tab = win.locator('.tab', { hasText: 'alpha.ts' })
     await expect(tab.locator('.badge')).toHaveText('ts')
 })
+
+test('semantic tabs support keyboard roving, closing, and app-wide cycling in split view', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-keyboard-tabs-')
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [
+      { id: 'a', title: 'a.txt', filePath: null, content: 'tab a content', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'b', title: 'b.txt', filePath: null, content: 'tab b content', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'c', title: 'c.txt', filePath: null, content: 'tab c content', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+    ], activeId: 'a',
+  }))
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  const tablist = win.getByRole('tablist', { name: 'Open files' })
+  const first = tablist.getByRole('tab').nth(0)
+
+  await first.focus(); await win.keyboard.press('ArrowLeft')
+  await expect(tablist.getByRole('tab').nth(2)).toBeFocused()
+  await expect(tablist.getByRole('tab').nth(2)).toHaveAttribute('aria-selected', 'true')
+  await win.keyboard.press('Home'); await expect(tablist.getByRole('tab').nth(0)).toBeFocused()
+  await win.keyboard.press('Tab'); await expect(tablist.getByRole('button', { name: 'Close a.txt' })).toBeFocused()
+
+  const paneATextarea = win.locator('#paneA textarea.inputarea')
+  await paneATextarea.focus(); await win.keyboard.press('Control+PageDown')
+  await expect(tablist.getByRole('tab').nth(1)).toHaveAttribute('aria-selected', 'true')
+  await expect(paneATextarea).toBeFocused()
+  await expect(win.locator('#paneA .view-lines')).toContainText('tab b content')
+
+  await win.locator('.tb-btn[title="Toggle split pane"]').click()
+  await expect(win.locator('#paneB')).toBeVisible()
+  await win.locator('#paneB textarea.inputarea').focus()
+  await tablist.getByRole('tab', { name: 'c.txt' }).click()
+  await expect(win.locator('#paneB .view-lines')).toContainText('tab c content')
+  await paneATextarea.focus(); await win.keyboard.press('Control+PageDown')
+  await expect(tablist.getByRole('tab', { name: 'a.txt' })).toHaveAttribute('aria-selected', 'true')
+  await expect(win.locator('#paneA .view-lines')).toContainText('tab a content')
+  await expect(win.locator('#paneB .view-lines')).toContainText('tab c content')
+
+  const closeA = tablist.getByRole('button', { name: 'Close a.txt' })
+  await closeA.focus(); await win.keyboard.press('Enter')
+  await expect(tablist.getByRole('tab', { name: 'b.txt' })).toBeFocused()
+  await expect(tablist.getByRole('tab', { name: 'b.txt' })).toHaveAttribute('aria-selected', 'true')
+})

@@ -15,7 +15,8 @@ test('the search:files channel returns matches from the folder', async ({ smoke 
     const res = await win.evaluate((root) => window.api.searchFiles({
       root, query: 'needle',
       opts: { caseSensitive: false, wholeWord: false },
-      skipPaths: [], showAll: false, searchId: 1,
+      skipPaths: [], filter: { showAll: false, excludePatterns: [] },
+      scope: { includePatterns: [], excludePatterns: [] }, searchId: 1,
     }), folder) as SearchResponse
     expect(res.totalMatches).toBe(2)
     expect(res.files).toHaveLength(2)
@@ -81,6 +82,48 @@ test('with no folder open, a dirty buffer is searched from its live content, not
     await expect(win.locator('.fif-row')).toHaveCount(0)      // (b) the old content is NOT (buffer-only guard)
 })
 
+test('scope uses a loose tab basename and excludes untitled until includes are cleared', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-searchloose-scope-')
+  const folder = smoke.tempDir('notes-searchloose-scope-dir-')
+  const file = join(folder, 'loose-note.md')
+  const marker = 'loose scope marker'
+  writeFileSync(file, marker)
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [
+      { id: 'loose', title: 'loose-note.md', filePath: file, content: marker, language: 'markdown', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'untitled', title: 'Untitled-1', filePath: null, content: marker, language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: true },
+    ],
+    activeId: 'untitled',
+  }))
+
+  const app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+  })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  await expect(win.locator('.tab')).toHaveCount(2)
+  await expect(win.locator('.tab', { hasText: 'loose-note.md' })).toHaveCount(1)
+  await expect(win.locator('.tab', { hasText: 'Untitled-1' })).toHaveCount(1)
+
+  await win.keyboard.press('Control+Shift+F')
+  await win.getByRole('button', { name: 'Search scope' }).click()
+  await win.getByLabel('Files to include').fill('*.md')
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill(marker)
+
+  const summary = win.getByRole('status', { name: 'Effective search scope' })
+  await expect(summary).toHaveText('*.md · excluding 6 workspace patterns')
+  await expect(win.locator('.fif-file')).toHaveCount(1)
+  await expect(win.locator('.fif-file')).toContainText(['loose-note.md'])
+  await expect(win.locator('.fif-file', { hasText: 'Untitled-1' })).toHaveCount(0)
+
+  await win.getByLabel('Files to include').fill('')
+  await expect(summary).toHaveText('All files · excluding 6 workspace patterns')
+  await expect(win.locator('.fif-file')).toHaveCount(2)
+  await expect(win.locator('.fif-file', { hasText: 'loose-note.md' })).toHaveCount(1)
+  await expect(win.locator('.fif-file', { hasText: 'Untitled-1' })).toHaveCount(1)
+})
+
 // THIS is the test that actually exercises skipPaths. A folder must be open AND the dirtied file
 // must live inside it — only then does runSearch() have a non-null root() and reach the
 // window.api.searchFiles() call skipPaths feeds into. Without a folder (the test above), that
@@ -118,6 +161,78 @@ test('a dirty buffer for a file inside an open folder is searched live, not from
     await expect(win.locator('.fif-row')).toHaveCount(0)      // (b) the stale on-disk copy is NOT — proves skipPaths
 })
 
+test('scopes disk and live results with accessible session-local controls', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-searchscope-')
+  const projectDir = smoke.tempDir('notes-searchscopeproj-')
+  mkdirSync(join(projectDir, 'src'))
+  mkdirSync(join(projectDir, 'docs'))
+  writeFileSync(join(projectDir, 'src', 'dirty.ts'), 'stale disk text')
+  writeFileSync(join(projectDir, 'src', 'clean.ts'), 'scoped needle')
+  writeFileSync(join(projectDir, 'src', 'disk-only.ts'), 'scoped needle')
+  writeFileSync(join(projectDir, 'src', 'drop.test.ts'), 'scoped needle')
+  writeFileSync(join(projectDir, 'docs', 'drop.md'), 'scoped needle')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true,
+    lastFolder: projectDir,
+    sidebarVisible: true,
+  }))
+
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
+
+  // The startup untitled buffer supplies the pathless/live category.
+  await win.locator('#paneA .monaco-editor').click()
+  await win.keyboard.type('scoped needle')
+
+  await win.locator('.sb-row', { hasText: 'src' }).click()
+  await win.locator('.sb-row', { hasText: 'dirty.ts' }).click()
+  await expect(win.locator('#paneA .view-lines')).toContainText('stale disk text')
+  await win.locator('#paneA .monaco-editor').click()
+  await win.keyboard.press('Control+A')
+  await win.keyboard.type('scoped needle')
+  await win.locator('.sb-row', { hasText: 'clean.ts' }).click()
+  await expect(win.locator('#paneA .view-lines')).toContainText('scoped needle')
+
+  await win.keyboard.press('Control+Shift+F')
+  const dialog = win.getByRole('dialog', { name: 'Find in Files' })
+  await expect(dialog).toBeVisible()
+
+  // The dirty live buffer shadows its stale disk copy before scope is applied.
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill('stale disk text')
+  await expect(win.locator('.fif-empty')).toContainText('No matches for')
+  await expect(win.locator('.fif-file')).toHaveCount(0)
+
+  const scopeButton = win.getByRole('button', { name: 'Search scope' })
+  const scopeSummary = win.getByRole('status', { name: 'Effective search scope' })
+  await expect(scopeSummary).toHaveText('All files · excluding 6 workspace patterns')
+  await expect(scopeButton).toHaveAttribute('aria-controls', 'find-in-files-scope')
+  await expect(scopeButton).toHaveAttribute('aria-expanded', 'false')
+  await scopeButton.click()
+  await expect(scopeButton).toHaveAttribute('aria-expanded', 'true')
+  await expect(win.getByRole('group', { name: 'Search scope filters' })).toBeVisible()
+  await expect(win.getByText('Comma-separated patterns. Empty includes all files. Supports *, ?, and **. Backslashes are path separators; wildcard escaping is not supported. Braces, character classes, and leading ! are literal.')).toBeVisible()
+  await win.getByLabel('Files to include').fill('src/**/*.ts')
+  await win.getByLabel('Files to exclude').fill('**/*.test.ts')
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill('scoped needle')
+
+  await expect(scopeSummary).toHaveText('src/**/*.ts · excluding 6 workspace patterns + 1 search pattern')
+  await expect(win.locator('.fif-file')).toHaveCount(3)
+  await expect(win.locator('.fif-file')).toContainText(['src\\dirty.ts', 'src\\clean.ts', 'src\\disk-only.ts'])
+  await expect(win.locator('.fif-file')).not.toContainText(['src\\drop.test.ts', 'docs\\drop.md', 'Untitled-1'])
+
+  await win.getByLabel('Files to include').fill('')
+  await expect(win.locator('.fif-file', { hasText: 'Untitled-1' })).toHaveCount(1)
+
+  // Retained for this app session, but not persisted through Settings.
+  await win.getByLabel('Files to include').fill('src/**/*.ts')
+  await win.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await win.keyboard.press('Control+Shift+F')
+  await expect(win.getByLabel('Files to include')).toHaveValue('src/**/*.ts')
+  await expect(win.getByLabel('Files to exclude')).toHaveValue('**/*.test.ts')
+})
+
 test('Escape closes the overlay', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-searchesc-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
@@ -127,4 +242,89 @@ test('Escape closes the overlay', async ({ smoke }) => {
     await expect(win.locator('.fif-box')).toBeVisible()
     await win.keyboard.press('Escape')
     await expect(win.locator('.fif-box')).toBeHidden()
+})
+
+test('closing Find in Files cancels main traversal and never repaints', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-searchcancel-')
+  const projectDir = smoke.tempDir('notes-searchcancelproj-')
+  for (let i = 0; i < 400; i++) {
+    const nested = join(projectDir, `d${String(i).padStart(3, '0')}`)
+    mkdirSync(nested)
+    writeFileSync(join(nested, 'file.txt'), 'needle')
+  }
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true,
+    lastFolder: projectDir,
+    sidebarVisible: true,
+  }))
+
+  const app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+    env: { ...process.env, NC_TEST_SLOW_SEARCH_MS: '5' },
+  })
+  const win = await app.firstWindow()
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
+  await win.keyboard.press('Control+Shift+F')
+  await win.locator('.fif-head input').fill('needle')
+  await expect(win.locator('.fif-note')).toContainText('Searching')
+  await win.keyboard.press('Escape')
+  await expect(win.locator('.fif-box')).toBeHidden()
+  await expect.poll(
+    () => win.locator('#find-in-files').getAttribute('data-last-search-state'),
+    { timeout: 1000 },
+  ).toBe('cancelled')
+  await win.waitForTimeout(250)
+  await expect(win.locator('.fif-box')).toBeHidden()
+  await expect(win.locator('.fif-row')).toHaveCount(0)
+})
+
+test('editing scope cancels the active traversal before debounce and resets result selection', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-searchscope-cancel-')
+  const projectDir = smoke.tempDir('notes-searchscope-cancelproj-')
+  for (let i = 0; i < 400; i++) {
+    const nested = join(projectDir, `d${String(i).padStart(3, '0')}`)
+    mkdirSync(nested)
+    writeFileSync(join(nested, 'file.txt'), 'needle')
+  }
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true,
+    lastFolder: projectDir,
+    sidebarVisible: true,
+  }))
+
+  const app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+    env: { ...process.env, NC_TEST_SLOW_SEARCH_MS: '5' },
+  })
+  const win = await app.firstWindow()
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
+  await win.keyboard.press('Control+Shift+F')
+  await win.getByRole('button', { name: 'Search scope' }).click()
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill('needle')
+  await expect(win.locator('.fif-note')).toHaveText('400 matches in 400 files')
+
+  await win.getByRole('searchbox', { name: 'Find in Files' }).press('ArrowDown')
+  await expect(win.locator('.fif-row').nth(1)).toHaveClass(/active/)
+
+  // Re-run the same query immediately so row 1 remains the logical selection while the old
+  // result DOM is replaced by the Searching state. Scope editing must cancel this exact main
+  // traversal synchronously, before its separate 150 ms rerun timer is allowed to fire.
+  await win.getByRole('button', { name: 'Whole word' }).click()
+  await expect(win.locator('.fif-note')).toHaveText('Searching…')
+  const activeSearchId = await win.locator('#find-in-files').getAttribute('data-last-search-id')
+  expect(activeSearchId).toMatch(/^\d+$/)
+
+  const cancelledSearchId = await win.getByLabel('Files to exclude').evaluate((element) => {
+    const input = element as HTMLInputElement
+    const host = input.closest<HTMLElement>('#find-in-files')!
+    delete host.dataset.lastCancelledSearchId
+    input.value = 'd000/**'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    return host.dataset.lastCancelledSearchId ?? null
+  })
+  expect(cancelledSearchId).toBe(activeSearchId)
+
+  await expect(win.locator('.fif-note')).toHaveText('399 matches in 399 files')
+  await expect(win.locator('.fif-row').first()).toHaveClass(/active/)
+  await expect(win.locator('.fif-row').nth(1)).not.toHaveClass(/active/)
 })
