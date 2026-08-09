@@ -6,6 +6,11 @@ export type Encoding = 'utf8' | 'utf8bom' | 'utf16le' | 'utf16be'
 
 export interface SearchOptions { caseSensitive: boolean; wholeWord: boolean }
 
+export interface SearchScope {
+  includePatterns: string[]
+  excludePatterns: string[]
+}
+
 export interface SearchMatch {
   /** 1-based line number — Monaco's own convention, so `editorPane.ts` can hand this straight
    *  to `new monaco.Range(line, column, …)` with no off-by-one adjustment. Emitted as `i + 1`
