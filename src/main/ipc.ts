@@ -35,6 +35,8 @@ export interface IpcDeps {
   searchTestDelayMs: number
   sessionSaveTestDelayMs: number
   startupReadFailure: 'snippets' | null
+  fileWriteFailure: boolean
+  highlightSaveFailure: boolean
 }
 
 export function registerIpc(deps: IpcDeps): void {
@@ -83,8 +85,10 @@ export function registerIpc(deps: IpcDeps): void {
   handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))
 
   handle('file:read', (_e, path: string) => readFileForEditor(path))
-  handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number) =>
-    writeFile(path, content, eol, encoding, expectedMtime))
+  handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number) => {
+    if (deps.fileWriteFailure) throw new Error('injected file write failure')
+    return writeFile(path, content, eol, encoding, expectedMtime)
+  })
   handle('session:load', () => session.load())
   handle('session:save', async (_e, data: SessionData) => {
     if (deps.sessionSaveTestDelayMs > 0) {
@@ -137,8 +141,10 @@ export function registerIpc(deps: IpcDeps): void {
   handle('history:list', (_e, path: string) => history.list(path))
   handle('history:get', (_e, path: string, ts: number) => history.get(path, ts))
   handle('highlights:load', (_e, path: string) => highlights.load(path))
-  handle('highlights:save', (_e, path: string, hs: import('../shared/types').Highlight[]) =>
-    highlights.save(path, hs))
+  handle('highlights:save', (_e, path: string, hs: import('../shared/types').Highlight[]) => {
+    if (deps.highlightSaveFailure) throw new Error('injected highlight save failure')
+    return highlights.save(path, hs)
+  })
   handle('dialog:openFolder', async () => {
     const r = await dialog.showOpenDialog({ properties: ['openDirectory'] })
     return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]

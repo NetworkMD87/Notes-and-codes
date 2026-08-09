@@ -164,14 +164,15 @@ describe('FolderMode refresh integration', () => {
       cancelSearch,
     })
     let find!: FindInFiles
+    let filter: WorkspaceFilter = { showAll: false, excludePatterns: ['old/**'] }
     const mode = mount(
       api,
-      () => ({ showAll: false, excludePatterns: [] }),
+      () => filter,
       rerun => find.workspaceChanged(rerun),
     )
     find = new FindInFiles(document.getElementById('app')!, {
       root: () => mode.root(),
-      filter: () => ({ showAll: false, excludePatterns: [] }),
+      filter: () => filter,
       buffers: () => [],
       openMatch: vi.fn(),
       focusEditor: vi.fn(),
@@ -189,6 +190,8 @@ describe('FolderMode refresh integration', () => {
       const openingB = mode.openFolder('C:\\B')
       expect(cancelSearch).toHaveBeenCalledWith(aId)
 
+      filter = { showAll: false, excludePatterns: ['fresh/**'] }
+      const settingsRefresh = mode.workspaceSettingsChanged()
       input.value = 'needlex'; input.dispatchEvent(new Event('input'))
       document.querySelector<HTMLButtonElement>('[aria-label="Match case"]')!.click()
       handleEscape({ key: 'Escape', preventDefault: vi.fn(), stopPropagation: vi.fn() })
@@ -201,10 +204,14 @@ describe('FolderMode refresh integration', () => {
       expect(document.body.textContent).not.toContain('old A result')
 
       bSettings.resolve({ ...DEFAULT_SETTINGS })
-      await openingB
+      await Promise.all([openingB, settingsRefresh])
       expect(mode.root()).toBe('C:\\B')
       await vi.advanceTimersByTimeAsync(151)
       expect(searchFiles.mock.calls.map(call => call[0].root)).toEqual(['C:\\A', 'C:\\B'])
+      expect(searchFiles.mock.calls[1][0].filter).toEqual({
+        showAll: false,
+        excludePatterns: ['fresh/**'],
+      })
       expect(document.body.textContent).toContain('fresh B result')
       expect(document.body.textContent).not.toContain('old A result')
     } finally {

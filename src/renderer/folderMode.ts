@@ -37,6 +37,7 @@ export class FolderMode {
   private indexTruncated = false
   private split: ReturnType<typeof Split> | null = null
   private lifecycleGeneration = 0
+  private pendingRootCommitGeneration: number | null = null
   private desiredRoot: string | null = null
   private desiredSidebarVisible = false
   private refresh = new RefreshScheduler(
@@ -73,6 +74,7 @@ export class FolderMode {
   async openFolder(root: string): Promise<void> {
     this.d.onWorkspaceChanged(false)
     const generation = ++this.lifecycleGeneration
+    this.pendingRootCommitGeneration = generation
     this.desiredRoot = root
     this.desiredSidebarVisible = true
     this.refresh.invalidate()
@@ -81,6 +83,9 @@ export class FolderMode {
     const s = await window.api.loadSettings()
     if (!this.isCurrent(generation)) return
     this.model.setRoot(root)
+    if (this.pendingRootCommitGeneration === generation) {
+      this.pendingRootCommitGeneration = null
+    }
     this.d.onWorkspaceChanged(true)
     this.hideSidebar()
     this.showSidebar(s.sidebarWidth)
@@ -97,6 +102,7 @@ export class FolderMode {
   closeFolder(): void {
     this.d.onWorkspaceChanged(false)
     const generation = ++this.lifecycleGeneration
+    this.pendingRootCommitGeneration = null
     this.desiredRoot = null
     this.desiredSidebarVisible = this.split !== null
     this.refresh.invalidate()
@@ -274,6 +280,13 @@ export class FolderMode {
   }
 
   workspaceSettingsChanged(): Promise<void> {
+    if (this.pendingRootCommitGeneration !== null) {
+      // The desired folder has not committed yet. Keep Find suspended and fold this settings
+      // change into openFolder's eventual refresh of the desired root; never refresh/search the
+      // still-visible old root with the new filter.
+      this.d.onWorkspaceChanged(false)
+      return Promise.resolve()
+    }
     this.d.onWorkspaceChanged(true)
     return this.refresh.request()
   }

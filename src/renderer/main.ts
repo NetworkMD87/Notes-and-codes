@@ -459,7 +459,12 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   if (opts.format && formatOnSave && isFormattable(b.language)) {
     if (pane) await pane.formatDocument()
     else {
-      try { manager.update(id, await formatText(b.content, b.language)) }
+      try {
+        manager.update(id, await formatText(b.content, b.language))
+        // Formatting mutates the background buffer before disk I/O. Snapshot that mutation now:
+        // writeFile may reject, but the live manager state must still be the newest session state.
+        scheduleSessionSave()
+      }
       catch { /* leave unformatted — never block a save */ }
     }
   }
@@ -489,10 +494,15 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   selfWrites.set(path, Date.now())
   if (opts.snapshot) window.api.snapshotHistory(path, content, b.eol, b.encoding)
   manager.markSaved(id, path, r.mtimeMs)
+  // markSaved changes path/title/language/dirty/mtime. Persist it before highlight I/O, which can
+  // reject independently after the file itself was saved successfully.
+  scheduleSessionSave()
   await window.api.saveHighlights(path, highlights.get(id))
   manager.get(id)!.highlights = undefined
-  conflicts.delete(id)
+  // Successful migration moves highlights out of the session and into HighlightStore. Queue the
+  // post-migration shape too so the earlier immutable snapshot cannot retain embedded highlights.
   scheduleSessionSave()
+  conflicts.delete(id)
   refreshChangeBar() // a conflict we just resolved by overwriting must not leave its bar behind
   if (opts.recent) window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) {

@@ -261,6 +261,10 @@ if (!gotLock) {
       && process.env.NC_TEST_FAIL_STARTUP_READ === 'snippets'
       ? 'snippets' as const
       : null
+    const fileWriteFailure = process.env.NC_HEADLESS === '1'
+      && process.env.NC_TEST_FAIL_FILE_WRITE === '1'
+    const highlightSaveFailure = process.env.NC_HEADLESS === '1'
+      && process.env.NC_TEST_FAIL_HIGHLIGHT_SAVE === '1'
     registerIpc({
       baseDir: app.getPath('userData'),
       settings: settingsStore,
@@ -276,6 +280,8 @@ if (!gotLock) {
       searchTestDelayMs,
       sessionSaveTestDelayMs,
       startupReadFailure,
+      fileWriteFailure,
+      highlightSaveFailure,
     })
     pendingFile = fileArgFrom(process.argv)
 
