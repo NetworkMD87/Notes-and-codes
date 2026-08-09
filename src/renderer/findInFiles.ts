@@ -37,6 +37,7 @@ export class FindInFiles {
   private searchId = 0
   private activeSearchId: number | null = null
   private workspaceGeneration = 0
+  private workspaceSuspended = false
   private timer: number | undefined
 
   constructor(parent: HTMLElement, private d: FindInFilesDeps) {
@@ -82,6 +83,7 @@ export class FindInFiles {
   /** Invalidate results captured under an older folder/filter context. `rerun=false` is the
    * synchronous pre-change phase; the commit phase calls again with the new root and reruns. */
   workspaceChanged(rerun = true): void {
+    this.workspaceSuspended = !rerun
     this.workspaceGeneration++
     this.cancelActiveSearch()
     clearTimeout(this.timer)
@@ -114,6 +116,7 @@ export class FindInFiles {
 
   private schedule(): void {
     clearTimeout(this.timer)
+    if (this.workspaceSuspended) return
     this.timer = window.setTimeout(() => void this.runSearch(), DEBOUNCE_MS)
   }
 
@@ -125,6 +128,7 @@ export class FindInFiles {
   }
 
   private async runSearch(): Promise<void> {
+    if (this.workspaceSuspended) return
     const query = this.query
     const workspaceGeneration = this.workspaceGeneration
     // Arrow-key position only survives a re-run of the SAME query (reopen with a carried-over

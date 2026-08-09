@@ -188,6 +188,11 @@ describe('FolderMode refresh integration', () => {
 
       const openingB = mode.openFolder('C:\\B')
       expect(cancelSearch).toHaveBeenCalledWith(aId)
+
+      input.value = 'needlex'; input.dispatchEvent(new Event('input'))
+      document.querySelector<HTMLButtonElement>('[aria-label="Match case"]')!.click()
+      handleEscape({ key: 'Escape', preventDefault: vi.fn(), stopPropagation: vi.fn() })
+      find.open()
       await vi.advanceTimersByTimeAsync(500)
       expect(searchFiles.mock.calls.map(call => call[0].root)).toEqual(['C:\\A'])
 
