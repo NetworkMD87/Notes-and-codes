@@ -34,6 +34,7 @@ export interface IpcDeps {
   onRecentChanged?: () => void
   searchTestDelayMs: number
   sessionSaveTestDelayMs: number
+  startupReadFailure: 'snippets' | null
 }
 
 export function registerIpc(deps: IpcDeps): void {
@@ -118,7 +119,10 @@ export function registerIpc(deps: IpcDeps): void {
   handle('clipboard:read', () => clipboard.readText())
   handle('clipboard-history:load', () => clip.load())
   handle('clipboard-history:save', (_e, entries: string[]) => clip.save(entries))
-  handle('snippets:load', () => snippets.load())
+  handle('snippets:load', () => {
+    if (deps.startupReadFailure === 'snippets') throw new Error('injected startup read failure')
+    return snippets.load()
+  })
   handle('snippets:save', (_e, list) => snippets.save(list))
   handle('window:setAlwaysOnTop', (_e, enabled: boolean) => { deps.getWindow()?.setAlwaysOnTop(enabled) })
   handle('recent:load', () => recent.load())

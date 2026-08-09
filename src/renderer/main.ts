@@ -53,6 +53,7 @@ import { hasOpenDialog } from './dialogController'
 import { LatestWriteScheduler } from './latestWriteScheduler'
 import { settleQuitWrites } from './settleQuitWrites'
 import { snapshotSession } from './sessionSnapshot'
+import { loadStartupState } from './startupReads'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -329,11 +330,15 @@ async function boot(): Promise<void> {
     document.body.textContent = 'Failed to initialize: the preload bridge did not load.'
     return
   }
-  const [settings, systemLocale, personalWords] = await Promise.all([
-    window.api.loadSettings(),
-    window.api.getSystemLocale(),
-    window.api.listPersonalWords(),
-  ])
+  const startup = await loadStartupState({
+    loadSettings: () => window.api.loadSettings(),
+    getSystemLocale: () => window.api.getSystemLocale(),
+    listPersonalWords: () => window.api.listPersonalWords(),
+    loadClipboardHistory: () => window.api.loadClipboardHistory(),
+    loadSnippets: () => window.api.loadSnippets(),
+    loadSession: () => window.api.loadSession(),
+  })
+  const { settings, systemLocale, personalWords } = startup
   spellSettings = {
     spellCheckEnabled: settings.spellCheckEnabled,
     spellCheckLanguage: settings.spellCheckLanguage,
@@ -357,10 +362,9 @@ async function boot(): Promise<void> {
   applyUiFont()
   fontSize = settings.fontSize ?? 14; applyFontSize()
   alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
-  pasteHistory.load(await window.api.loadClipboardHistory())
-  snippets.load(await window.api.loadSnippets())
-  const session = await window.api.loadSession()
-  if (session.buffers.length > 0) manager.restore(session)
+  pasteHistory.load(startup.clipboardHistory)
+  snippets.load(startup.snippets)
+  if (startup.session.buffers.length > 0) manager.restore(startup.session)
   await finishStartupBuffers()
   // Main only adds this query under NC_HEADLESS plus the dedicated smoke-test environment flag.
   // Keeping the stalled port here exercises boot behavior without exposing a production IPC seam.
@@ -398,6 +402,9 @@ async function boot(): Promise<void> {
   reportDirty()
   await folder.restore()
   markBooted()
+  if (startup.failures.length > 0) {
+    toast('Some saved state could not be loaded. Defaults were used.', 'warning')
+  }
 }
 
 window.api.onSaveAllAndQuit(async () => {
