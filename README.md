@@ -47,6 +47,9 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.19.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.0):** faster 20k-file
+  workspaces, keyboard- and screen-reader-ready controls, configurable workspace exclusions, and
+  scoped Find in Files across disk files, dirty tabs, loose files, and untitled notes.
 - **[v1.18.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.18.1):** patched the
   Markdown preview/export sanitizer and linkifier dependencies, kept the production audit clean,
   and made Windows release smoke validation more reliable.

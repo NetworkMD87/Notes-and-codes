@@ -17,13 +17,20 @@ features twice.
 
 ---
 
-## ▶ NEXT ACTION — Owner-check v1.19.0, then design the Microsoft Store / MSIX pass
+## ▶ NEXT ACTION — Design the Microsoft Store / MSIX pass
 
-**Quality, Scale & Keyboard Access is implemented for v1.19.0.** Automated verification is complete;
-the owner-only Windows/Narrator/installed-build checklist under **Phase 4.6** remains before a release
-tag. After that, the next design pass is **① Microsoft Store / MSIX** → **② Safe Replace in Files** →
-**③ Snippet placeholders / tabstops**. MSIX remains the next platform move; it was moved one product
-pass later, not removed.
+**Quality, Scale & Keyboard Access shipped in tagged and published v1.19.0 on 2026-08-09.** Automated verification and
+the owner-reported Windows/Narrator/installed-build checklist are complete. The next design pass is
+**① Microsoft Store / MSIX** → **② Safe Replace in Files** → **③ Snippet placeholders / tabstops**.
+MSIX remains the next platform move; it was moved one product pass later, not removed.
+
+✅ **v1.19.0 tagged and published 2026-08-09 — Quality, scale & keyboard access.** PR #13 merged the complete
+quality pass: semantic keyboard/accessibility controls, modal focus containment, 20k-file workspace
+responsiveness, configurable exclusions, cancellable and scoped Find in Files, newest-state session
+recovery, fresh Markdown preview, and concurrent startup reads. Automated Windows Electron coverage,
+full units, benchmark, build, packaging, PR CI, and merge CI passed. Owner testing on the installed
+build also passed the Narrator, physical keyboard/pointer, tray/hotkey/login, and subjective
+responsiveness checklist recorded under Phase 4.6.
 
 ✅ **v1.18.1 shipped 2026-08-08 — Markdown dependency security and release-test reliability.**
 Tagged and published as a GitHub release after validation of the installed build. PR #11 raised
@@ -466,7 +473,7 @@ command-registry changes on systems already in place. Shipped as **one release u
   packaged startup** (gated on `app.isPackaged`) so existing users get it without re-toggling the
   setting; the re-apply also self-heals a stale exe path after a reinstall elsewhere._
 
-## ✅ Phase 4.6 — Quality, scale & keyboard access (implemented for v1.19.0)
+## ✅ Phase 4.6 — Quality, scale & keyboard access (shipped v1.19.0)
 
 _A focused product-health pass from the 2026-08-08 audit. The order deliberately fixes the
 shared interaction primitives and large-workspace foundations before adding search scope or bulk
@@ -514,39 +521,39 @@ Serial reading of the representative 20k-file workspace remains the dominant mea
 bounded read concurrency is a separate owner-approved design amendment, not part of v1.19.0. The
 second Monaco pane was not a dominant cost, so it remains eager.
 
-**Owner-only validation before the v1.19.0 tag** — not claimed as passed by automation:
+**Owner validation reported complete 2026-08-09 on the installed v1.19.0 build:**
 
-- ⬜ With Windows Narrator, verify Settings dialog/category names and state announcements.
-- ⬜ In Settings, verify category Arrow/Home/End navigation, recorder double-Escape, and opener
+- ✅ With Windows Narrator, verify Settings dialog/category names and state announcements.
+- ✅ In Settings, verify category Arrow/Home/End navigation, recorder double-Escape, and opener
   focus return.
-- ⬜ With Narrator, verify theme radio state and accent pressed state.
-- ⬜ With Narrator, verify nested-dialog containment and focus return.
-- ⬜ For every migrated modal, verify Tab/Shift+Tab containment, Escape close, and opener/fallback
+- ✅ With Narrator, verify theme radio state and accent pressed state.
+- ✅ With Narrator, verify nested-dialog containment and focus return.
+- ✅ For every migrated modal, verify Tab/Shift+Tab containment, Escape close, and opener/fallback
   focus return.
-- ⬜ With Narrator, verify editor-tab names and selected state.
-- ⬜ Verify tab Arrow-key navigation, close-button/close-neighbour focus, and Ctrl+PageUp/PageDown
+- ✅ With Narrator, verify editor-tab names and selected state.
+- ✅ Verify tab Arrow-key navigation, close-button/close-neighbour focus, and Ctrl+PageUp/PageDown
   from both panes.
-- ⬜ With Narrator, verify custom menu/menuitem announcements.
-- ⬜ Verify the full folder-menu Arrow/Home/End/Enter/Space/Escape model and opener focus return.
-- ⬜ With Narrator, verify encoding, line-ending, and next-save descriptions.
-- ⬜ With Narrator, verify Command Palette combobox, options, and live-result announcements.
-- ⬜ Verify Command Palette matching by command ID and shortcut hint, including result-count and
+- ✅ With Narrator, verify custom menu/menuitem announcements.
+- ✅ Verify the full folder-menu Arrow/Home/End/Enter/Space/Escape model and opener focus return.
+- ✅ With Narrator, verify encoding, line-ending, and next-save descriptions.
+- ✅ With Narrator, verify Command Palette combobox, options, and live-result announcements.
+- ✅ Verify Command Palette matching by command ID and shortcut hint, including result-count and
   selected-option announcements.
-- ⬜ Verify Monaco Shift+F10, Ctrl+., and find-widget Escape remain owned by Monaco/app as designed.
-- ⬜ With Narrator, verify the Find in Files scope controls and effective-scope status.
-- ⬜ Traverse every Settings control with a physical keyboard without losing focus.
-- ⬜ Activate a sidebar menuitem with physical **Space** in the installed app.
-- ⬜ Visually inspect focus rings, contrast, motion, density, and compact control sizing.
-- ⬜ Verify pointer tab selection, middle-click close, and tab dragging on the installed build.
-- ⬜ Run an independent Windows GUI-control pass (automation was blocked by local `EPERM`).
-- ⬜ Confirm encoding/line-ending selections write the expected bytes and newlines.
-- ⬜ Subjectively check Quick Open/sidebar responsiveness on a representative 20k-file folder.
-- ⬜ Exercise include/exclude scoped search and cancellation on a large real folder, including dirty
+- ✅ Verify Monaco Shift+F10, Ctrl+., and find-widget Escape remain owned by Monaco/app as designed.
+- ✅ With Narrator, verify the Find in Files scope controls and effective-scope status.
+- ✅ Traverse every Settings control with a physical keyboard without losing focus.
+- ✅ Activate a sidebar menuitem with physical **Space** in the installed app.
+- ✅ Visually inspect focus rings, contrast, motion, density, and compact control sizing.
+- ✅ Verify pointer tab selection, middle-click close, and tab dragging on the installed build.
+- ✅ Run an independent Windows GUI-control pass.
+- ✅ Confirm encoding/line-ending selections write the expected bytes and newlines.
+- ✅ Subjectively check Quick Open/sidebar responsiveness on a representative 20k-file folder.
+- ✅ Exercise include/exclude scoped search and cancellation on a large real folder, including dirty
   open files and untitled tabs.
-- ⬜ Relaunch after rapid edits and confirm the newest session state is restored.
-- ⬜ Verify visible Markdown preview freshness across rapid edits, pane focus changes, history
+- ✅ Relaunch after rapid edits and confirm the newest session state is restored.
+- ✅ Verify visible Markdown preview freshness across rapid edits, pane focus changes, history
   restore, and disk reload.
-- ⬜ Verify tray hide/show, configured global hotkey, and launch-on-login on the installed build.
+- ✅ Verify tray hide/show, configured global hotkey, and launch-on-login on the installed build.
 
 ## 🚧 Phase 4 — Platform & power (3 shipped in v1.14.0 · next platform move after Phase 4.6 · 3 parked)
 
