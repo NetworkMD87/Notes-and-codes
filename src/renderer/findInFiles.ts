@@ -216,7 +216,11 @@ export class FindInFiles {
 
   private cancelActiveSearch(): void {
     if (this.activeSearchId === null) return
-    window.api.cancelSearch(this.activeSearchId)
+    const id = this.activeSearchId
+    window.api.cancelSearch(id)
+    if (new URLSearchParams(window.location.search).get('nc-headless') === '1') {
+      this.host.dataset.lastCancelledSearchId = String(id)
+    }
     this.activeSearchId = null
     this.searchId++
   }
@@ -249,7 +253,10 @@ export class FindInFiles {
     this.render()
     this.activeSearchId = id
     const headless = new URLSearchParams(window.location.search).get('nc-headless') === '1'
-    if (headless) this.host.dataset.lastSearchState = 'started'
+    if (headless) {
+      this.host.dataset.lastSearchId = String(id)
+      this.host.dataset.lastSearchState = 'started'
+    }
     const res = await window.api.searchFiles({
       root, query, opts: this.opts,
       skipPaths: buffers.map(b => b.filePath).filter((p): p is string => !!p),

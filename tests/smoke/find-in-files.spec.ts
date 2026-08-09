@@ -277,3 +277,47 @@ test('closing Find in Files cancels main traversal and never repaints', async ({
   await expect(win.locator('.fif-box')).toBeHidden()
   await expect(win.locator('.fif-row')).toHaveCount(0)
 })
+
+test('editing scope cancels the active traversal before debounce and resets result selection', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-searchscope-cancel-')
+  const projectDir = smoke.tempDir('notes-searchscope-cancelproj-')
+  for (let i = 0; i < 400; i++) {
+    const nested = join(projectDir, `d${String(i).padStart(3, '0')}`)
+    mkdirSync(nested)
+    writeFileSync(join(nested, 'file.txt'), 'needle')
+  }
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true,
+    lastFolder: projectDir,
+    sidebarVisible: true,
+  }))
+
+  const app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+    env: { ...process.env, NC_TEST_SLOW_SEARCH_MS: '5' },
+  })
+  const win = await app.firstWindow()
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
+  await win.keyboard.press('Control+Shift+F')
+  await win.getByRole('button', { name: 'Search scope' }).click()
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill('needle')
+  await expect(win.locator('.fif-note')).toHaveText('400 matches in 400 files')
+
+  await win.getByRole('searchbox', { name: 'Find in Files' }).press('ArrowDown')
+  await expect(win.locator('.fif-row').nth(1)).toHaveClass(/active/)
+
+  // Re-run the same query immediately so row 1 remains the logical selection while the old
+  // result DOM is replaced by the Searching state. Scope editing must cancel this exact main
+  // traversal synchronously, before its separate 150 ms rerun timer is allowed to fire.
+  await win.getByRole('button', { name: 'Whole word' }).click()
+  await expect(win.locator('.fif-note')).toHaveText('Searching…')
+  const activeSearchId = await win.locator('#find-in-files').getAttribute('data-last-search-id')
+  expect(activeSearchId).toMatch(/^\d+$/)
+
+  await win.getByLabel('Files to exclude').fill('d000/**')
+  expect(await win.locator('#find-in-files').getAttribute('data-last-cancelled-search-id')).toBe(activeSearchId)
+
+  await expect(win.locator('.fif-note')).toHaveText('399 matches in 399 files')
+  await expect(win.locator('.fif-row').first()).toHaveClass(/active/)
+  await expect(win.locator('.fif-row').nth(1)).not.toHaveClass(/active/)
+})
