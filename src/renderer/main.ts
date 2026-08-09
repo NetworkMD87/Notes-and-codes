@@ -80,8 +80,16 @@ const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, {
 
 function previewSnapshot(): { bufferId: string; content: string } {
   const pane = paneFor(view.focusedPane())
-  const bufferId = pane.currentBufferId() ?? manager.activeId!
-  return { bufferId, content: pane.getContent() }
+  const bufferId = pane.currentBufferId()
+  if (bufferId) return { bufferId, content: pane.getContent() }
+  const active = manager.activeId ? manager.get(manager.activeId) : undefined
+  return { bufferId: active?.id ?? '', content: active?.content ?? '' }
+}
+
+function syncVisiblePreview(): void {
+  if (!mdPreview.isVisible()) return
+  const snapshot = previewSnapshot()
+  mdPreview.switchBuffer(snapshot.bufferId, snapshot.content)
 }
 
 const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) => {
@@ -90,6 +98,7 @@ const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) =>
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
 function focusActiveEditor(): void { paneFor(view.focusedPane()).focus() }
+view.onFocusChange(() => syncVisiblePreview())
 
 function applyHighlightsToPanes(bufferId: string, hs: Highlight[]): void {
   for (const which of ['A', 'B'] as const) {
@@ -481,6 +490,7 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   if (opts.recent) window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) {
     pane.refreshBuffer(manager.get(id)!)
+    syncVisiblePreview()
     spell?.refreshNow()
   }
   syncWatch()
@@ -846,6 +856,7 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
     window.api.snapshotHistory(b.filePath, paneFor(view.focusedPane()).getContent(), b.eol, b.encoding)
     manager.update(id, v.content)
     paneFor(view.focusedPane()).refreshBuffer(b)
+    syncVisiblePreview()
     spell?.refreshNow()
     tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
     toast('Restored an earlier version — unsaved, Save to keep it.', 'success')
@@ -990,6 +1001,7 @@ async function reloadBuffer(id: string): Promise<void> {
   conflicts.delete(id)
   if (paneFor(view.focusedPane()).currentBufferId() === id) {
     paneFor(view.focusedPane()).refreshBuffer(b)
+    syncVisiblePreview()
     spell?.refreshNow()
   }
   refreshStatus(); tabBar.render(manager.list(), manager.activeId)
@@ -1105,6 +1117,7 @@ const historyTimer = setInterval(() => {
 // Clear on unload so HMR dev reloads don't stack duplicate timers.
 window.addEventListener('beforeunload', () => {
   clearInterval(historyTimer)
+  mdPreview.dispose()
   spell?.dispose()
   spell = null
 })

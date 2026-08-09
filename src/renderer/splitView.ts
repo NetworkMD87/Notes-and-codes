@@ -6,16 +6,18 @@ export class SplitView {
   readonly paneB: EditorPane
   private split: ReturnType<typeof Split> | null = null
   private focused: 'A' | 'B' = 'A'
+  private focusChangeCb: ((which: 'A' | 'B') => void) | null = null
 
   constructor(private aEl: HTMLElement, private bEl: HTMLElement) {
     this.paneA = new EditorPane(aEl)
     this.paneB = new EditorPane(bEl)
-    aEl.addEventListener('focusin', () => { this.focused = 'A' })
-    bEl.addEventListener('focusin', () => { this.focused = 'B' })
+    aEl.addEventListener('focusin', () => this.setFocused('A'))
+    bEl.addEventListener('focusin', () => this.setFocused('B'))
   }
 
   isSplit(): boolean { return this.split !== null }
   focusedPane(): 'A' | 'B' { return this.focused }
+  onFocusChange(cb: (which: 'A' | 'B') => void): void { this.focusChangeCb = cb }
   visiblePanes(): EditorPane[] { return this.split ? [this.paneA, this.paneB] : [this.paneA] }
 
   setSplit(on: boolean): void {
@@ -37,8 +39,14 @@ export class SplitView {
       this.aEl.style.flexBasis = ''
       this.bEl.style.flexBasis = ''
       this.bEl.classList.add('hidden')
-      this.focused = 'A'
+      this.setFocused('A')
     }
     this.paneA.layout(); this.paneB.layout()
+  }
+
+  private setFocused(which: 'A' | 'B'): void {
+    if (which === this.focused) return
+    this.focused = which
+    this.focusChangeCb?.(which)
   }
 }

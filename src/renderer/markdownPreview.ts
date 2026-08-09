@@ -12,23 +12,27 @@ export class MarkdownPreview {
   private bufferId: string | null = null
   private timer: ReturnType<typeof setTimeout> | null = null
   private generation = 0
+  private revision = 0
+  private disposed = false
   private readonly render: (markdown: string) => string
   private readonly setTimer: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
   private readonly clearTimer: (timer: ReturnType<typeof setTimeout>) => void
+  private readonly handlePanelClick = (event: MouseEvent): void => {
+    const anchor = (event.target as HTMLElement).closest('a')
+    if (anchor) event.preventDefault()
+  }
 
   constructor(private panel: HTMLElement, private deps: MarkdownPreviewDeps) {
     this.render = deps.render ?? renderMarkdown
     this.setTimer = deps.setTimer ?? ((callback, delay) => setTimeout(callback, delay))
     this.clearTimer = deps.clearTimer ?? (timer => clearTimeout(timer))
-    this.panel.addEventListener('click', event => {
-      const anchor = (event.target as HTMLElement).closest('a')
-      if (anchor) event.preventDefault()
-    })
+    this.panel.addEventListener('click', this.handlePanelClick)
   }
 
   isVisible(): boolean { return this.visible }
 
   toggle(bufferId: string, markdown: string): boolean {
+    if (this.disposed) return false
     this.visible = !this.visible
     this.panel.classList.toggle('hidden', !this.visible)
     this.cancelPending()
@@ -39,30 +43,39 @@ export class MarkdownPreview {
   }
 
   switchBuffer(bufferId: string, markdown: string): void {
+    if (this.disposed) return
     this.cancelPending()
     this.bufferId = bufferId
     if (this.visible) this.renderNow(markdown)
   }
 
   update(bufferId: string, markdown: string): void {
-    if (!this.visible) return
+    const revision = ++this.revision
+    if (this.disposed || !this.visible) return
     if (bufferId !== this.bufferId) {
       this.switchBuffer(bufferId, markdown)
       return
     }
     this.cancelTimer()
     const generation = this.generation
-    this.timer = this.setTimer(() => {
-      this.timer = null
-      if (this.visible && generation === this.generation && this.bufferId === bufferId) {
+    let timer!: ReturnType<typeof setTimeout>
+    timer = this.setTimer(() => {
+      if (this.timer === timer) this.timer = null
+      if (!this.disposed && this.visible && generation === this.generation
+        && revision === this.revision && this.bufferId === bufferId) {
         this.renderNow(markdown)
       }
     }, 150)
+    this.timer = timer
   }
 
   dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
     this.visible = false
+    this.panel.classList.add('hidden')
     this.cancelPending()
+    this.panel.removeEventListener('click', this.handlePanelClick)
   }
 
   private renderNow(markdown: string): void {

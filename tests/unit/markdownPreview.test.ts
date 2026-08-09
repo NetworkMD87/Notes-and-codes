@@ -77,4 +77,86 @@ describe('MarkdownPreview', () => {
     expect(panel.textContent).toBe('fresh-a')
     expect(render).not.toHaveBeenCalledWith('stale-a')
   })
+
+  it('rejects an old same-buffer callback without clearing the newest timer', () => {
+    const callbacks: Array<() => void> = []
+    const panel = document.createElement('div')
+    const render = vi.fn((markdown: string) => markdown)
+    const preview = new MarkdownPreview(panel, {
+      onLayout: vi.fn(),
+      render,
+      setTimer: (callback) => {
+        callbacks.push(callback)
+        return callbacks.length as ReturnType<typeof setTimeout>
+      },
+      // Model callbacks already queued by the host, which clearTimeout cannot retract.
+      clearTimer: vi.fn(),
+    })
+
+    preview.toggle('a', 'a0')
+    preview.update('a', 'old-edit')
+    preview.update('a', 'newest-edit')
+    callbacks[0]()
+    callbacks[1]()
+
+    expect(render.mock.calls.map(([markdown]) => markdown)).toEqual(['a0', 'newest-edit'])
+    expect(panel.textContent).toBe('newest-edit')
+  })
+
+  it('keeps the newest timer cancellable after an old callback runs', () => {
+    const callbacks: Array<() => void> = []
+    const clearTimer = vi.fn()
+    const preview = new MarkdownPreview(document.createElement('div'), {
+      onLayout: vi.fn(),
+      render: markdown => markdown,
+      setTimer: (callback) => {
+        callbacks.push(callback)
+        return callbacks.length as ReturnType<typeof setTimeout>
+      },
+      clearTimer,
+    })
+
+    preview.toggle('a', 'a0')
+    preview.update('a', 'old-edit')
+    preview.update('a', 'newest-edit')
+    callbacks[0]()
+    preview.dispose()
+
+    expect(clearTimer.mock.calls.map(([timer]) => timer)).toEqual([1, 2])
+  })
+
+  it('disposes its timer and click listener once and cannot render again', () => {
+    const callbacks: Array<() => void> = []
+    const panel = document.createElement('div')
+    const clearTimer = vi.fn()
+    const render = vi.fn((markdown: string) => markdown)
+    const preview = new MarkdownPreview(panel, {
+      onLayout: vi.fn(),
+      render,
+      setTimer: (callback) => {
+        callbacks.push(callback)
+        return callbacks.length as ReturnType<typeof setTimeout>
+      },
+      clearTimer,
+    })
+
+    preview.toggle('a', 'shown')
+    const anchor = document.createElement('a')
+    panel.appendChild(anchor)
+    const beforeDispose = new MouseEvent('click', { bubbles: true, cancelable: true })
+    anchor.dispatchEvent(beforeDispose)
+    expect(beforeDispose.defaultPrevented).toBe(true)
+    preview.update('a', 'queued')
+
+    preview.dispose()
+    preview.dispose()
+    callbacks[0]()
+    const afterDispose = new MouseEvent('click', { bubbles: true, cancelable: true })
+    anchor.dispatchEvent(afterDispose)
+
+    expect(clearTimer).toHaveBeenCalledTimes(1)
+    expect(afterDispose.defaultPrevented).toBe(false)
+    expect(preview.toggle('a', 'after-dispose')).toBe(false)
+    expect(render.mock.calls.map(([markdown]) => markdown)).toEqual(['shown'])
+  })
 })
