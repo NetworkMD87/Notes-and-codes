@@ -5,7 +5,7 @@ import '@fontsource/fira-code/400.css'
 import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/700.css'
 import { installMenuCommands } from './menuCommands'
-import type { Api, Encoding, Settings, WorkspaceFilter } from '../shared/types'
+import type { Api, Encoding, SessionData, Settings, WorkspaceFilter } from '../shared/types'
 import { DEFAULT_WORKSPACE_EXCLUDES, normalizePathGlobs } from '../shared/pathGlob'
 import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
@@ -50,6 +50,8 @@ import { resolveSpellLocale } from '../shared/spellText'
 import type { ResolvedSpellLocale } from '../shared/spell'
 import { StartupOpenQueue } from './startupOpenQueue'
 import { hasOpenDialog } from './dialogController'
+import { LatestWriteScheduler } from './latestWriteScheduler'
+import { settleQuitWrites } from './settleQuitWrites'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
@@ -228,8 +230,18 @@ const conflicts = new Set<string>()
 const selfWrites = new Map<string, number>()
 const autosaveFailed = new Set<string>()
 const SELF_WRITE_WINDOW_MS = 2500
-let saveTimer: number | undefined
 let sessionSaveFailed = false
+const sessionWrites = new LatestWriteScheduler<SessionData>({
+  debounceMs: 500,
+  write: snapshot => window.api.saveSession(snapshot),
+  onSuccess: () => { sessionSaveFailed = false },
+  onFailure: error => {
+    console.error('session save failed', error)
+    if (sessionSaveFailed) return
+    sessionSaveFailed = true
+    toast('Session save failed — check disk space / permissions.', 'error')
+  },
+})
 let alwaysOnTop = false
 let fontSize = 14
 function applyFontSize(): void { view.paneA.setFontSize(fontSize); view.paneB.setFontSize(fontSize) }
@@ -275,16 +287,7 @@ async function setAlwaysOnTop(on: boolean): Promise<void> {
 const toggleAlwaysOnTop = () => setAlwaysOnTop(!alwaysOnTop)
 
 function scheduleSessionSave(): void {
-  if (!autoSave) return
-  clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
-    window.api.saveSession(manager.toSession())
-      .then(() => { sessionSaveFailed = false })
-      .catch(err => {
-        console.error('session save failed', err)
-        if (!sessionSaveFailed) { sessionSaveFailed = true; toast('Session save failed — check disk space / permissions.', 'error') }
-      })
-  }, 500) as unknown as number
+  if (autoSave) sessionWrites.schedule(manager.toSession())
 }
 
 // The app is only truly ready once boot() has finished applying persisted settings — until
@@ -407,14 +410,12 @@ window.api.onFlushAndQuit(async () => {
 // none of the last ~500ms is lost on quit. Shared by the save-then-quit and the
 // clean-quit paths. Never throws — a failed flush must not trap the quit.
 async function flushPendingWritesBeforeQuit(): Promise<void> {
-  clearTimeout(clipSaveTimer); clearTimeout(saveTimer)   // sync — can't throw
-  try {
-    await Promise.all([...hlSaveTimers.keys()].map(id => flushHighlightSave(id) ?? Promise.resolve()))
-    await window.api.saveClipboardHistory(pasteHistory.entries())
-    await window.api.saveSession(manager.toSession())
-  } catch (err) {
-    console.error('final flush before quit failed', err)
-  }
+  clearTimeout(clipSaveTimer)
+  await settleQuitWrites([
+    ...[...hlSaveTimers.keys()].map(id => flushHighlightSave(id) ?? Promise.resolve()),
+    window.api.saveClipboardHistory(pasteHistory.entries()),
+    sessionWrites.flush(manager.toSession()),
+  ], error => console.error('quit flush failed', error))
 }
 
 interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean; format: boolean; forceDialog: boolean }

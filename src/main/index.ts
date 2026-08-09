@@ -255,6 +255,9 @@ if (!gotLock) {
     const searchTestDelayMs = process.env.NC_HEADLESS === '1'
       ? Math.min(25, Math.max(0, Number.parseInt(process.env.NC_TEST_SLOW_SEARCH_MS ?? '0', 10) || 0))
       : 0
+    const sessionSaveTestDelayMs = process.env.NC_HEADLESS === '1'
+      ? Math.min(1000, Math.max(0, Number.parseInt(process.env.NC_TEST_SESSION_SAVE_DELAY_MS ?? '0', 10) || 0))
+      : 0
     registerIpc({
       baseDir: app.getPath('userData'),
       settings: settingsStore,
@@ -268,6 +271,7 @@ if (!gotLock) {
       onQuitNow: () => { isQuitting = true; app.quit() },
       onRecentChanged: () => { void rebuildMenu() },
       searchTestDelayMs,
+      sessionSaveTestDelayMs,
     })
     pendingFile = fileArgFrom(process.argv)
 

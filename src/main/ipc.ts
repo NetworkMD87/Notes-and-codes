@@ -33,6 +33,7 @@ export interface IpcDeps {
   onQuitNow: () => void
   onRecentChanged?: () => void
   searchTestDelayMs: number
+  sessionSaveTestDelayMs: number
 }
 
 export function registerIpc(deps: IpcDeps): void {
@@ -84,7 +85,12 @@ export function registerIpc(deps: IpcDeps): void {
   handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number) =>
     writeFile(path, content, eol, encoding, expectedMtime))
   handle('session:load', () => session.load())
-  handle('session:save', (_e, data: SessionData) => session.save(data))
+  handle('session:save', async (_e, data: SessionData) => {
+    if (deps.sessionSaveTestDelayMs > 0) {
+      await new Promise<void>(resolve => setTimeout(resolve, deps.sessionSaveTestDelayMs))
+    }
+    await session.save(data)
+  })
   handle('settings:load', () => settings.load())
   handle('settings:save', (_e, s: Settings) => settings.save(s))
   handle('settings:update', (_e, partial: Partial<Settings>) => settings.update(partial))
