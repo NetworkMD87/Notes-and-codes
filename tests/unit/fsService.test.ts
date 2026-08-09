@@ -18,11 +18,57 @@ const DEFAULT_FILTER: WorkspaceFilter = {
   excludePatterns: ['**/.git/**', '**/node_modules/**', '**/dist/**'],
 }
 
+const FILTER: WorkspaceFilter = { showAll: false, excludePatterns: [] }
+
 let dir: string
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'nc-fs-')) })
 afterEach(() => { rmSync(dir, { recursive: true, force: true }) })
 
 describe('workspace filtering', () => {
+  it('cancels before descending into the root', async () => {
+    mkdirSync(join(dir, 'nested'))
+    writeFileSync(join(dir, 'nested', 'hidden.txt'), 'x')
+    const readdir = vi.spyOn(fs, 'readdir')
+    try {
+      const result = await walkFiles(dir, FILTER, { shouldCancel: () => true })
+      expect(readdir).not.toHaveBeenCalled()
+      expect(result).toEqual({ files: [], truncated: false })
+    } finally {
+      readdir.mockRestore()
+    }
+  })
+
+  it('checks cancellation again immediately after a directory read', async () => {
+    let cancelled = false
+    let checks = 0
+    const result = await walkFiles(dir, FILTER, {
+      shouldCancel: () => {
+        checks++
+        return cancelled
+      },
+      afterDirectoryRead: async () => { cancelled = true },
+    })
+    expect(checks).toBe(2)
+    expect(result).toEqual({ files: [], truncated: false })
+  })
+
+  it('stops enumeration before descending after cancellation', async () => {
+    mkdirSync(join(dir, 'nested'))
+    writeFileSync(join(dir, 'nested', 'hidden.txt'), 'x')
+    let checks = 0
+    const readdir = vi.spyOn(fs, 'readdir')
+    try {
+      const result = await walkFiles(dir, FILTER, {
+        shouldCancel: () => ++checks >= 3,
+      })
+      expect(checks).toBe(3)
+      expect(readdir).toHaveBeenCalledTimes(1)
+      expect(result).toEqual({ files: [], truncated: false })
+    } finally {
+      readdir.mockRestore()
+    }
+  })
+
   it('filters a lazy directory read relative to the workspace root', async () => {
     const current = join(dir, 'packages', 'app')
     mkdirSync(join(current, 'dist'), { recursive: true })

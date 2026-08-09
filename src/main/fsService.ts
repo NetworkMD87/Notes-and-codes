@@ -4,7 +4,11 @@ import { compilePathGlobs } from '../shared/pathGlob'
 import type { DirEntry, WalkResult, WorkspaceFilter } from '../shared/types'
 
 const MAX_INDEX_FILES = 20000
-export interface WalkFilesOptions { maxFiles?: number }
+export interface WalkFilesOptions {
+  maxFiles?: number
+  shouldCancel?: () => boolean
+  afterDirectoryRead?: () => Promise<void>
+}
 
 function matcherFor(filter: WorkspaceFilter): ReturnType<typeof compilePathGlobs> {
   return compilePathGlobs(filter.showAll ? [] : filter.excludePatterns)
@@ -45,17 +49,22 @@ export async function readDir(
 export async function walkFiles(
   root: string,
   filter: WorkspaceFilter,
-  internalOptions: WalkFilesOptions = {},
+  options: WalkFilesOptions = {},
 ): Promise<WalkResult> {
   const matcher = matcherFor(filter)
-  const maxFiles = internalOptions.maxFiles ?? MAX_INDEX_FILES
+  const maxFiles = options.maxFiles ?? MAX_INDEX_FILES
+  const shouldCancel = options.shouldCancel ?? (() => false)
   const files: string[] = []
   let truncated = false
   async function walk(path: string): Promise<void> {
+    if (shouldCancel()) return
     let entries
     try { entries = await fs.readdir(path, { withFileTypes: true }) } catch { return }
+    await options.afterDirectoryRead?.()
+    if (shouldCancel()) return
     entries.sort((a, b) => compareNames(a.name, b.name))
     for (const entry of entries) {
+      if (shouldCancel()) return
       const absolutePath = join(path, entry.name)
       const relativePath = workspacePath(root, absolutePath)
       if (matcher.matches(relativePath) || (entry.isDirectory() && matcher.prunes(relativePath))) continue

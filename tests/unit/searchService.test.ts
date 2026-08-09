@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { searchFiles, isBinary } from '../../src/main/searchService'
+import { searchFiles, isBinary, type SearchIo } from '../../src/main/searchService'
 import type { SearchRequest } from '../../src/shared/types'
 
 let dir: string
@@ -35,6 +35,114 @@ describe('isBinary', () => {
 })
 
 describe('searchFiles', () => {
+  it('does not read a file after cancellation becomes true during stat', async () => {
+    writeFileSync(join(dir, 'a.txt'), 'needle')
+    let cancelled = false
+    let reads = 0
+    const io: SearchIo = {
+      stat: async () => {
+        cancelled = true
+        return { isFile: () => true, size: 6 }
+      },
+      readFile: async () => { reads++; return Buffer.from('needle') },
+    }
+    const result = await searchFiles(req(), () => cancelled, io)
+    expect(reads).toBe(0)
+    expect(result).toEqual({ files: [], totalMatches: 0, truncated: false, searchId: 1 })
+  })
+
+  it('does not decode or match after cancellation becomes true during read', async () => {
+    writeFileSync(join(dir, 'a.txt'), 'needle')
+    let cancelled = false
+    let decodes = 0
+    const buffer = Buffer.from('needle')
+    const decode = buffer.toString.bind(buffer)
+    buffer.toString = ((...args: Parameters<Buffer['toString']>) => {
+      decodes++
+      return decode(...args)
+    }) as Buffer['toString']
+    const io: SearchIo = {
+      stat: async () => ({ isFile: () => true, size: 6 }),
+      readFile: async () => { cancelled = true; return buffer },
+    }
+    const result = await searchFiles(req(), () => cancelled, io)
+    expect(decodes).toBe(0)
+    expect(result.totalMatches).toBe(0)
+    expect(result.files).toEqual([])
+  })
+
+  it('does not match after cancellation becomes true during decode', async () => {
+    writeFileSync(join(dir, 'a.txt'), 'needle')
+    let cancelled = false
+    let matchCalls = 0
+    const buffer = Buffer.from('needle')
+    const decode = buffer.toString.bind(buffer)
+    buffer.toString = ((...args: Parameters<Buffer['toString']>) => {
+      cancelled = true
+      return decode(...args)
+    }) as Buffer['toString']
+    const originalExec = RegExp.prototype.exec
+    const exec = vi.spyOn(RegExp.prototype, 'exec').mockImplementation(function (value: string) {
+      if (this.source === 'needle') matchCalls++
+      return originalExec.call(this, value)
+    })
+    const io: SearchIo = {
+      stat: async () => ({ isFile: () => true, size: 6 }),
+      readFile: async () => buffer,
+    }
+    try {
+      const result = await searchFiles(req(), () => cancelled, io)
+      expect(matchCalls).toBe(0)
+      expect(result.files).toEqual([])
+    } finally {
+      exec.mockRestore()
+    }
+  })
+
+  it('does not publish matches after cancellation becomes true during matching', async () => {
+    writeFileSync(join(dir, 'a.txt'), 'needle')
+    let cancelled = false
+    const originalExec = RegExp.prototype.exec
+    const exec = vi.spyOn(RegExp.prototype, 'exec').mockImplementation(function (value: string) {
+      const result = originalExec.call(this, value)
+      if (this.source === 'needle') cancelled = true
+      return result
+    })
+    try {
+      const result = await searchFiles(req(), () => cancelled)
+      expect(result).toEqual({ files: [], totalMatches: 0, truncated: false, searchId: 1 })
+    } finally {
+      exec.mockRestore()
+    }
+  })
+
+  it.each(['stat', 'read'] as const)(
+    'returns empty when cancellation happens while %s rejects',
+    async boundary => {
+      writeFileSync(join(dir, 'a.txt'), 'needle')
+      writeFileSync(join(dir, 'b.txt'), 'needle')
+      let cancelled = false
+      const io: SearchIo = {
+        stat: async path => {
+          if (path.endsWith('b.txt') && boundary === 'stat') {
+            cancelled = true
+            throw new Error('cancelled stat')
+          }
+          return { isFile: () => true, size: 6 }
+        },
+        readFile: async path => {
+          if (path.endsWith('b.txt') && boundary === 'read') {
+            cancelled = true
+            throw new Error('cancelled read')
+          }
+          return Buffer.from('needle')
+        },
+      }
+      const result = await searchFiles(req(), () => cancelled, io)
+      expect(result).toEqual({ files: [], totalMatches: 0, truncated: false, searchId: 1 })
+    },
+  )
+
   it('finds matches across nested directories', async () => {
     mkdirSync(join(dir, 'sub'))
     writeFileSync(join(dir, 'a.txt'), 'has a needle here')
