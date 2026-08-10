@@ -120,11 +120,11 @@ test('a real second process forwards its file arg and shows the hidden window', 
     { timeout: 10000 }
   ).toBe(true)
 
-  // ...and the forwarded argv must have survived pickFileArg and the open-file IPC.
-  // Count is 2: the startup Untitled-1 plus the opened file (BufferManager.open() only
-  // reuses a buffer whose filePath already matches; it never recycles an empty untitled).
-  await expect(win.locator('.tab')).toHaveCount(2, { timeout: 10000 })
-  await expect(win.locator('.tab')).toContainText(['Untitled-1', 'note.txt'])
+  // The forwarded external open replaces the sole pristine startup placeholder.
+  // This tab-count assertion is independent of the visibility assertion above.
+  await expect(win.locator('.tab')).toHaveCount(1, { timeout: 10000 })
+  await expect(win.locator('.tab.active')).toContainText('note.txt')
+  await expect(win.locator('.tab')).not.toContainText('Untitled-1')
   await expect(win.locator('#paneA .view-lines')).toContainText(payload)
 })
 

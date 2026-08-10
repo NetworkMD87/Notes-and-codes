@@ -7,12 +7,12 @@ function file(path: string, content = path) {
   return { filePath: path, content, eol: 'LF' as const, encoding: 'utf8' as const }
 }
 
-function restoredBuffer(): BufferState {
+function restoredPlaceholder(): BufferState {
   return {
-    id: 'restored',
-    title: 'Restored',
+    id: 'restored-placeholder',
+    title: 'Untitled-1',
     filePath: null,
-    content: 'restored session content',
+    content: '',
     language: 'plaintext',
     eol: 'LF',
     encoding: 'utf8',
@@ -26,19 +26,22 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
 }
 
 describe('StartupOpenQueue', () => {
-  it('opens a pre-boot request after session restore and leaves it active', async () => {
+  it('opens a pre-boot external request after restore by replacing an eligible placeholder', async () => {
     const manager = new BufferManager(() => 'startup')
-    const queue = new StartupOpenQueue(async path => { manager.open(file(path, 'startup file content')) })
+    const queue = new StartupOpenQueue(async path => { manager.openExternal(file(path, 'startup file content')) })
     queue.open('C:\\notes\\startup.txt')
 
-    manager.restore({ buffers: [restoredBuffer()], activeId: 'restored' })
+    manager.restore({ buffers: [restoredPlaceholder()], activeId: 'restored-placeholder' })
     await queue.finishStartup(() => {
       if (manager.list().length === 0) manager.create()
     })
 
-    expect(manager.get(manager.activeId!)?.content).toBe('startup file content')
-    expect(manager.list().map(buffer => buffer.title)).toEqual(['Restored', 'startup.txt'])
-    expect(manager.get(manager.activeId!)?.filePath).toBe('C:\\notes\\startup.txt')
+    expect(manager.list()).toHaveLength(1)
+    expect(manager.list().map(buffer => buffer.title)).toEqual(['startup.txt'])
+    expect(manager.get(manager.activeId!)).toMatchObject({
+      filePath: 'C:\\notes\\startup.txt',
+      content: 'startup file content',
+    })
   })
 
   it('drains duplicate and late startup requests in arrival order before fallback', async () => {
