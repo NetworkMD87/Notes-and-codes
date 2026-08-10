@@ -1,5 +1,5 @@
 import { test, expect } from './smokeTest'
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { waitForBoot } from './appReady'
 
@@ -62,5 +62,36 @@ test('startup open received before session load completes remains active after b
 
     await waitForBoot(win)
     await expect(win.locator('#paneA .view-lines')).toContainText('startup file content')
-    await expect(win.locator('.tab.active')).toContainText('startup.txt')
+  await expect(win.locator('.tab.active')).toContainText('startup.txt')
+})
+
+test('cold-start file arg replaces a restored pristine Untitled placeholder', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-startup-placeholder-')
+  const filePath = join(userDataDir, 'explorer-open.txt')
+  writeFileSync(filePath, 'opened during cold startup')
+  mkdirSync(join(userDataDir, 'session'), { recursive: true })
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [{
+      id: 'placeholder',
+      title: 'Untitled-1',
+      filePath: null,
+      content: '',
+      language: 'plaintext',
+      eol: 'LF',
+      encoding: 'utf8',
+      dirty: false,
+    }],
+    activeId: 'placeholder',
+  }))
+
+  const app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath],
+  })
+  const win = await app.firstWindow()
+  await waitForBoot(win)
+
+  await expect(win.locator('.tab')).toHaveCount(1)
+  await expect(win.locator('.tab.active')).toContainText('explorer-open.txt')
+  await expect(win.locator('.tab')).not.toContainText('Untitled-1')
+  await expect(win.locator('#paneA .view-lines')).toContainText('opened during cold startup')
 })
