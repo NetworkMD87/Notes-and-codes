@@ -988,16 +988,18 @@ window.addEventListener('keydown', (e) => {
 // Returns whether the file actually opened. Callers that only fire-and-forget (drop, argv,
 // sidebar) can ignore it with `void`; a caller that does something ELSE with the buffer
 // afterward (openMatch below) must gate on it — see the comment there.
-async function openPath(path: string): Promise<boolean> {
+async function openPath(path: string, external = false): Promise<boolean> {
   try {
     const r = await window.api.readFile(path)
     if (!r.ok) { toast(r.reason, 'error'); return false }
-    manager.open(r.file); window.api.addRecentFile(path); showActive(); scheduleSessionSave()
+    if (external) manager.openExternal(r.file)
+    else manager.open(r.file)
+    window.api.addRecentFile(path); showActive(); scheduleSessionSave()
     return true
   } catch (err) { console.error('open failed', path, err); toast(`Could not open: ${path}`, 'error'); return false }
 }
 
-const startupOpenQueue = new StartupOpenQueue(openPath)
+const startupOpenQueue = new StartupOpenQueue(path => openPath(path, true))
 
 async function finishStartupBuffers(): Promise<void> {
   await startupOpenQueue.finishStartup(() => {
