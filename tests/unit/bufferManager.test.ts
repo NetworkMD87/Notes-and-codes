@@ -3,6 +3,13 @@ import { BufferManager } from '../../src/renderer/bufferManager'
 
 let n: number
 const ids = () => `id-${++n}`
+const externalFile = {
+  filePath: 'C:/notes/opened.txt',
+  content: 'opened from Explorer',
+  eol: 'CRLF' as const,
+  encoding: 'utf16le' as const,
+  mtimeMs: 1234,
+}
 
 describe('BufferManager', () => {
   let m: BufferManager
@@ -31,6 +38,65 @@ describe('BufferManager', () => {
     const again = m.open({ filePath: 'C:/a.ts', content: 'a', eol: 'LF' })
     expect(m.list()).toHaveLength(1)
     expect(again.id).toBe(first.id)
+  })
+
+  it('external open replaces the sole clean empty unsaved placeholder', () => {
+    const placeholder = m.create()
+    const opened = m.openExternal(externalFile)
+
+    expect(m.list()).toEqual([opened])
+    expect(opened.id).not.toBe(placeholder.id)
+    expect(opened).toMatchObject({
+      title: 'opened.txt',
+      filePath: externalFile.filePath,
+      content: externalFile.content,
+      language: 'plaintext',
+      eol: 'CRLF',
+      encoding: 'utf16le',
+      dirty: false,
+      diskMtime: 1234,
+    })
+    expect(m.activeId).toBe(opened.id)
+  })
+
+  it.each([
+    { name: 'contains text', content: 'keep me', dirty: false },
+    { name: 'is dirty', content: '', dirty: true },
+  ])('external open preserves a sole Untitled buffer that $name', ({ content, dirty }) => {
+    const kept = m.create({ content, dirty })
+    m.openExternal(externalFile)
+
+    expect(m.list()).toHaveLength(2)
+    expect(m.get(kept.id)).toMatchObject({ content, dirty, filePath: null })
+  })
+
+  it('external open preserves a restored real file buffer', () => {
+    const kept = m.open({ filePath: 'C:/notes/restored.txt', content: 'restored', eol: 'LF', encoding: 'utf8' })
+    m.openExternal(externalFile)
+
+    expect(m.list()).toHaveLength(2)
+    expect(m.get(kept.id)?.content).toBe('restored')
+  })
+
+  it('external open preserves every buffer whenever more than one exists', () => {
+    const restored = m.open({ filePath: 'C:/notes/restored.txt', content: 'restored', eol: 'LF', encoding: 'utf8' })
+    const deliberateBlank = m.create()
+    m.openExternal(externalFile)
+
+    expect(m.list()).toHaveLength(3)
+    expect(m.get(restored.id)?.filePath).toBe('C:/notes/restored.txt')
+    expect(m.get(deliberateBlank.id)).toMatchObject({ filePath: null, content: '', dirty: false })
+  })
+
+  it('external open activates an existing path without removing another buffer', () => {
+    const existing = m.open(externalFile)
+    const deliberateBlank = m.create()
+    const reopened = m.openExternal(externalFile)
+
+    expect(reopened.id).toBe(existing.id)
+    expect(m.activeId).toBe(existing.id)
+    expect(m.list()).toHaveLength(2)
+    expect(m.get(deliberateBlank.id)).toBeDefined()
   })
 
   it('closing the active buffer activates a neighbor', () => {

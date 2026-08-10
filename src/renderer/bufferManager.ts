@@ -37,6 +37,18 @@ export class BufferManager {
     return this.create({ filePath: file.filePath, content: file.content, eol: file.eol, encoding: file.encoding, title, language: languageFromPath(file.filePath), diskMtime: file.mtimeMs })
   }
 
+  openExternal(file: { filePath: string; content: string; eol: EolMode; encoding: Encoding; mtimeMs?: number }): BufferState {
+    const existing = this.buffers.find(b => b.filePath === file.filePath)
+    if (existing) { this._activeId = existing.id; return existing }
+
+    const placeholder = this.buffers.length === 1 ? this.buffers[0] : undefined
+    if (placeholder && placeholder.filePath === null && placeholder.content === '' && !placeholder.dirty) {
+      this.buffers.splice(0, 1)
+      this._activeId = null
+    }
+    return this.open(file)
+  }
+
   setActive(id: string): void { if (this.get(id)) this._activeId = id }
 
   update(id: string, content: string): void {
