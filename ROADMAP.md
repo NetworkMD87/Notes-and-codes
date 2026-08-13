@@ -132,17 +132,18 @@ Three follow-ups landed on `master` the same day, all owner-driven from using th
   `contextMenuAction(enabled, isPackaged)` (4 unit cases) so it's covered without any test touching
   `HKCU`.
 
+**Completed after v1.19.0:**
+- ✅ **Remember the active highlighter colour** (**S**) — implemented in `5843a59`: the last selected
+  pen colour persists globally through Settings, yellow remains the first-use/corrupt-data fallback,
+  and per-file highlight ranges remain unchanged. Full units, build, focused relaunch smoke, and
+  independent review passed. See **Post-v1.19 correctness & interaction follow-ups** below.
+
 **Open, none blocking a release** — candidates after the next Quality, Scale & Keyboard Access pass:
 - 🔜 **Resolve the installed taskbar identity-icon regression** (**M**, first follow-up) — the packaged
   build can still show `{N&C}` on the taskbar at 125%/dark when `{&}` is required. The latest clean-install
   experiment failed even though artifact checks and Alt+Tab passed; the next gate is Windows identity/frame
   selection in the installed build, not another artifact-only or `WM_GETICON` check. See **Post-v1.19
   correctness & interaction follow-ups** below.
-- 🚧 **Remember the active highlighter colour** (**S**, code-complete on
-  `codex/highlighter-colour-persistence`; pending merge) — implemented in `5843a59`: the last selected
-  pen colour persists globally through Settings, yellow remains the first-use/corrupt-data fallback,
-  and per-file highlight ranges remain unchanged. Full units, build, and focused relaunch smoke passed.
-  See **Post-v1.19 correctness & interaction follow-ups** below.
 - 💡 **Bound tab widths for long filenames** (**S**) — give tabs a bounded flexible width so long names
   ellipsize instead of consuming the whole tab bar; keep the file-type badge and close control usable.
 - 💡 **Resizable and focusable Markdown Preview** (**M**) — make Preview a proper side-by-side pane with
@@ -581,7 +582,7 @@ fixed. Each item gets its own design → plan → implementation → validation 
   Acceptance must use the exact packaged installed build at the affected DPI/theme combinations, including
   100%/125% and above-125% cases. Artifact hashes, unit tests, Alt+Tab, `WM_GETICON`, and `win-unpacked`
   observations are supporting evidence only; they do not close the taskbar gate.
-- 🚧 **Global active highlighter-colour persistence** (**S**, code-complete; pending merge) — `5843a59`
+- ✅ **Global active highlighter-colour persistence** (**S**) — `5843a59`
   adds the validated Settings field, restores the toolbar and pen cursor before startup is marked ready,
   defaults absent/malformed values to yellow, and leaves the highlighter mode and per-file range store
   unchanged. Normalization/default/update unit coverage, the full 900-test unit suite, production build,
