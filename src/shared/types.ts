@@ -134,6 +134,7 @@ export interface Settings {
   sidebarWidth: number
   spellCheckEnabled: boolean
   spellCheckLanguage: SpellCheckLanguage
+  lastHighlightColour: HighlightColour
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -159,7 +160,8 @@ export const DEFAULT_SETTINGS: Settings = {
   sidebarVisible: false,
   sidebarWidth: 240,
   spellCheckEnabled: true,
-  spellCheckLanguage: 'system'
+  spellCheckLanguage: 'system',
+  lastHighlightColour: 'yellow'
 }
 
 export interface SessionData {

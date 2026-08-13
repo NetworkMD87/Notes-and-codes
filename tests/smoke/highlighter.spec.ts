@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 import { test, expect } from './smokeTest'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { waitForBoot } from './appReady'
 
 const TEXT = 'hello world foo bar baz'
 
@@ -56,6 +57,37 @@ test('highlights persist across a relaunch', async ({ smoke }) => {
   const app2 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win2 = await app2.firstWindow()
     await expect(win2.locator('#paneA .hl-yellow').first()).toBeVisible()
+})
+
+test('the active highlighter colour persists across a relaunch', async ({ smoke }) => {
+  test.slow()
+  const userDataDir = smoke.tempDir('notes-hl-colour-')
+  let selectedCursor = ''
+
+  await test.step('select blue in the first launch', async () => {
+    const app1 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    try {
+      const win1 = await app1.firstWindow()
+      await waitForBoot(win1)
+      await win1.locator('.tb-caret').click()
+      await win1.locator('.tb-swatch[title="blue"]').click()
+      await expect(win1.locator('.tb-btn[title^="Highlighter (blue)"]')).toBeVisible()
+      selectedCursor = await win1.locator('body').evaluate((body) =>
+        body.style.getPropertyValue('--hl-cursor'))
+    } finally {
+      await app1.close()
+    }
+  })
+
+  await test.step('restore blue in the second launch', async () => {
+    const app2 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+    const win2 = await app2.firstWindow()
+    await waitForBoot(win2)
+    await expect(win2.locator('.tb-btn[title^="Highlighter (blue)"]')).toBeVisible()
+    await expect(win2.locator('#paneA')).not.toHaveClass(/\bhl-mode\b/)
+    await expect.poll(() => win2.locator('body').evaluate((body) =>
+      body.style.getPropertyValue('--hl-cursor'))).toBe(selectedCursor)
+  })
 })
 
 test('highlight colour popup shows 18 swatches (3x6)', async ({ smoke }) => {

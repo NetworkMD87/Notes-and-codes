@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import { DEFAULT_SETTINGS, type Settings } from '../shared/types'
+import { DEFAULT_SETTINGS, HIGHLIGHT_COLOURS, type HighlightColour, type Settings } from '../shared/types'
 import { normalizePathGlobs } from '../shared/pathGlob'
 import { atomicWrite } from './atomicWrite'
 
@@ -13,7 +13,14 @@ function normalizeSettings(value: unknown): Settings {
     ...DEFAULT_SETTINGS,
     ...stored,
     workspaceExcludes: normalizePathGlobs(rawExcludes),
+    lastHighlightColour: isHighlightColour(stored.lastHighlightColour)
+      ? stored.lastHighlightColour
+      : DEFAULT_SETTINGS.lastHighlightColour,
   }
+}
+
+function isHighlightColour(value: unknown): value is HighlightColour {
+  return (HIGHLIGHT_COLOURS as readonly unknown[]).includes(value)
 }
 
 export class SettingsStore {
