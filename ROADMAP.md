@@ -133,6 +133,19 @@ Three follow-ups landed on `master` the same day, all owner-driven from using th
   `HKCU`.
 
 **Open, none blocking a release** — candidates after the next Quality, Scale & Keyboard Access pass:
+- 🔜 **Resolve the installed taskbar identity-icon regression** (**M**, first follow-up) — the packaged
+  build can still show `{N&C}` on the taskbar at 125%/dark when `{&}` is required. The latest clean-install
+  experiment failed even though artifact checks and Alt+Tab passed; the next gate is Windows identity/frame
+  selection in the installed build, not another artifact-only or `WM_GETICON` check. See **Post-v1.19
+  correctness & interaction follow-ups** below.
+- 🔜 **Remember the active highlighter colour** (**S**) — persist the last colour selected for the pen
+  globally through Settings, while keeping yellow as the first-use default and leaving per-file highlight
+  ranges unchanged. See **Post-v1.19 correctness & interaction follow-ups** below.
+- 💡 **Bound tab widths for long filenames** (**S**) — give tabs a bounded flexible width so long names
+  ellipsize instead of consuming the whole tab bar; keep the file-type badge and close control usable.
+- 💡 **Resizable and focusable Markdown Preview** (**M**) — make Preview a proper side-by-side pane with
+  a draggable divider, plus an explicit full-preview mode. Preserve the current focused-editor snapshot
+  and live-refresh behaviour.
 - 🔜 **Microsoft Store release via MSIX** (Phase 4) — the chosen next **platform** move. A free
   individual account plus Microsoft's automatic re-signing of MSIX packages kills the SmartScreen
   warning on the Store channel at zero cost, which retires the parked "buy a cert" item. Needs a
@@ -554,6 +567,33 @@ second Monaco pane was not a dominant cost, so it remains eager.
 - ✅ Verify visible Markdown preview freshness across rapid edits, pane focus changes, history
   restore, and disk reload.
 - ✅ Verify tray hide/show, configured global hotkey, and launch-on-login on the installed build.
+
+## 🚧 Post-v1.19 — Correctness & interaction follow-ups
+
+These follow-ups are intentionally separate from the shipped v1.19.0 quality pass. They are not release
+blockers, but the installed taskbar regression should be investigated before another icon claim is marked
+fixed. Each item gets its own design → plan → implementation → validation pass.
+
+- 🔜 **Installed taskbar identity-icon regression** (**M**) — keep the historical small-size `{&}` / large
+  `{N&C}` identity contract, but trace the Windows taskbar's actual identity source and selected ICO frame.
+  Acceptance must use the exact packaged installed build at the affected DPI/theme combinations, including
+  100%/125% and above-125% cases. Artifact hashes, unit tests, Alt+Tab, `WM_GETICON`, and `win-unpacked`
+  observations are supporting evidence only; they do not close the taskbar gate.
+- 🔜 **Global active highlighter-colour persistence** (**S**) — add a validated Settings field for the last
+  selected pen colour. Restore it on launch before the toolbar/cursor chrome is considered ready; default to
+  yellow when absent or malformed. Do not move or key this preference through the per-file highlight store.
+  Add unit coverage for normalization/defaulting and relaunch coverage that selects a non-yellow colour.
+- 💡 **Bounded tab sizing for long filenames** (**S**) — constrain each tab with a sensible minimum/maximum
+  flexible width, keep badges and close buttons non-shrinking, and make `.tab-title` ellipsis observable.
+  Add an installed smoke assertion that a deliberately long filename remains within the tab-width bound and
+  retains an accessible full filename.
+- 💡 **Markdown Preview layout modes** (**M**) — introduce an outer split between the editor group and
+  Preview, retaining the existing A/B editor split inside the editor group. Add a dedicated draggable gutter,
+  minimum pane sizes, and a separate `off | side-by-side | focus` state so full-preview mode is explicit rather
+  than an accidental flex result. Preserve focused-pane content selection, live refresh, and keyboard focus
+  return when leaving focus mode. Add smoke coverage for dragging, minimum sizes, and enter/exit behaviour.
+
+---
 
 ## 🚧 Phase 4 — Platform & power (3 shipped in v1.14.0 · next platform move after Phase 4.6 · 3 parked)
 
