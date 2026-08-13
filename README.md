@@ -47,6 +47,9 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.19.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.1):** files opened
+  from Explorer replace only a disposable blank tab, and the highlighter remembers its active
+  colour across app restarts without enabling paint mode.
 - **[v1.19.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.0):** faster 20k-file
   workspaces, keyboard- and screen-reader-ready controls, configurable workspace exclusions, and
   scoped Find in Files across disk files, dirty tabs, loose files, and untitled notes.
@@ -73,7 +76,8 @@ See the [changelog](CHANGELOG.md) for every release and fix.
 - **Designed against data loss.** Atomic writes, scratch-buffer recovery, overwrite protection,
   queued external-change conflicts, auto-save, Revert File, and browsable file history.
 - **Useful creative tools.** Live Markdown preview, self-contained HTML/PDF export, paste history,
-  snippets, an 18-colour persistent highlighter, command palette, and searchable in-app help.
+  snippets, an 18-colour highlighter whose marks and active colour survive relaunches, command
+  palette, and searchable in-app help.
 - **Made to feel at home.** Thirteen themes, eighteen accents with automatic contrast, bundled
   coding fonts, separate interface fonts, reduced-motion support, and theme-aware Windows icons.
 

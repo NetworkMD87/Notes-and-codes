@@ -4,9 +4,14 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
-## [Unreleased]
+## [1.19.1] — 2026-08-13
+
+_Cleaner Explorer opens and a highlighter that remembers your colour._
 
 ### Fixed
+- **Files opened from Explorer no longer leave a disposable blank tab behind.** In a fresh window,
+  the requested file replaces only the untouched empty Untitled placeholder; restored tabs with
+  content, edited tabs, and multiple-tab sessions are preserved.
 - **The highlighter remembers its active colour across app restarts.** First use still defaults to
   yellow, while the toolbar and marker cursor restore the last selected colour without turning
   highlighter mode on or changing the highlights stored for individual files.
