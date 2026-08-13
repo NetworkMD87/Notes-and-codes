@@ -4,6 +4,13 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [Unreleased]
+
+### Fixed
+- **The highlighter remembers its active colour across app restarts.** First use still defaults to
+  yellow, while the toolbar and marker cursor restore the last selected colour without turning
+  highlighter mode on or changing the highlights stored for individual files.
+
 ## [1.19.0] — 2026-08-09
 
 _Faster large workspaces, accessible keyboard-first controls, and precise Find in Files scope._

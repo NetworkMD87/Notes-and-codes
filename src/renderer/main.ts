@@ -358,6 +358,8 @@ async function boot(): Promise<void> {
   restoreFolder = settings.restoreFolderOnLaunch
   openAtLogin = settings.openAtLogin
   globalHotkey = settings.globalHotkey
+  highlights.setColour(settings.lastHighlightColour)
+  syncHighlightChrome(highlights.isOn(), settings.lastHighlightColour)
   applyFont()
   applyUiFont()
   fontSize = settings.fontSize ?? 14; applyFontSize()
@@ -703,6 +705,7 @@ function toggleHighlighter(): void {
 }
 function setHighlightColour(c: HighlightColour): void {
   highlights.setColour(c)
+  void window.api.updateSettings({ lastHighlightColour: c })
   if (!highlights.isOn()) { toggleHighlighter(); return }
   syncHighlightChrome(true, c)
 }

@@ -72,6 +72,26 @@ describe('SettingsStore', () => {
     expect(settings.spellCheckLanguage).toBe('system')
     expect(settings.themeId).toBe('nord')
   })
+  it('defaults the active highlighter colour for a settings file written before the field existed', async () => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ themeId: 'nord' }))
+
+    const settings = await new SettingsStore(dir).load()
+
+    expect(settings.lastHighlightColour).toBe('yellow')
+    expect(settings.themeId).toBe('nord')
+  })
+  it.each(['magenta', 7, null])('rejects an invalid persisted highlighter colour: %j', async (lastHighlightColour) => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ lastHighlightColour }))
+
+    expect((await new SettingsStore(dir).load()).lastHighlightColour).toBe('yellow')
+  })
+  it('persists the last selected highlighter colour through an update', async () => {
+    const store = new SettingsStore(dir)
+
+    await store.update({ lastHighlightColour: 'blue' })
+
+    expect((await new SettingsStore(dir).load()).lastHighlightColour).toBe('blue')
+  })
   it('persists explicit spell check settings', async () => {
     const store = new SettingsStore(dir)
     await store.save({
