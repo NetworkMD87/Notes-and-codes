@@ -19,10 +19,17 @@ features twice.
 
 ## ▶ NEXT ACTION — Design the Microsoft Store / MSIX pass
 
-**Quality, Scale & Keyboard Access shipped in tagged and published v1.19.0 on 2026-08-09.** Automated verification and
-the owner-reported Windows/Narrator/installed-build checklist are complete. The next design pass is
+**v1.19.1 ships the post-v1.19 Explorer-open and highlighter-colour fixes on 2026-08-13.** Quality,
+Scale & Keyboard Access remains the v1.19 foundation, with its automated and owner-reported
+Windows/Narrator/installed-build checklist complete. The next design pass is
 **① Microsoft Store / MSIX** → **② Safe Replace in Files** → **③ Snippet placeholders / tabstops**.
 MSIX remains the next platform move; it was moved one product pass later, not removed.
+
+✅ **v1.19.1 — Explorer-open and highlighter persistence fixes (2026-08-13).** Files requested by
+Explorer now replace only a disposable blank Untitled placeholder, preserving restored tabs with
+content, edited tabs, and multiple-tab sessions; the highlighter restores its last selected colour
+while remaining off until enabled.
+The full 900-test unit suite, production build, and 147-test Windows Electron smoke suite passed.
 
 ✅ **v1.19.0 tagged and published 2026-08-09 — Quality, scale & keyboard access.** PR #13 merged the complete
 quality pass: semantic keyboard/accessibility controls, modal focus containment, 20k-file workspace
@@ -132,7 +139,7 @@ Three follow-ups landed on `master` the same day, all owner-driven from using th
   `contextMenuAction(enabled, isPackaged)` (4 unit cases) so it's covered without any test touching
   `HKCU`.
 
-**Completed after v1.19.0:**
+**Completed in v1.19.1:**
 - ✅ **Remember the active highlighter colour** (**S**) — implemented in `5843a59`: the last selected
   pen colour persists globally through Settings, yellow remains the first-use/corrupt-data fallback,
   and per-file highlight ranges remain unchanged. Full units, build, focused relaunch smoke, and
