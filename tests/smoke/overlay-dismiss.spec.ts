@@ -49,7 +49,7 @@ test('Settings recorder consumes its first Escape, then closes and restores tool
 test('Escape closes the command palette from any focus', async ({ smoke }) => {
   const { app } = await launch(smoke)
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()   // renderer ready (keydown listener attached)
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
     await expect(win.locator('#palette .palette-box')).toBeVisible()
     await win.keyboard.press('Escape')
@@ -65,7 +65,7 @@ test('Escape closes the command palette from any focus', async ({ smoke }) => {
 test('a re-entrant overlay open leaves no ghost entry to swallow later Escapes', async ({ smoke }) => {
   const { app } = await launch(smoke)
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
     // Run the same overlay command twice: the second lands while the overlay is already open
     // (what a user does with Ctrl+P twice, or by re-running a palette command).

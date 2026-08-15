@@ -14,6 +14,7 @@ import { SettingsStore } from './settingsStore'
 import type { HotkeyResult } from '../shared/types'
 import { installHeadlessNetworkBlock } from './headlessNetworkBlock'
 import { MAX_SESSION_SAVE_TEST_DELAY_MS, startQuitFlushWatchdog } from './quitFlushWatchdog'
+import { trustedDevRendererUrl } from './rendererUrl'
 
 let mainWindow: BrowserWindow | null = null
 let pendingFile: string | null = null
@@ -195,8 +196,12 @@ function createWindow(hidden = false): BrowserWindow {
   if (process.env.NC_HEADLESS && process.env.NC_TEST_FAIL_SPELL_WORKER_CONSTRUCTION) {
     headlessQuery['nc-spell-worker'] = 'construct-fail'
   }
-  if (process.env.ELECTRON_RENDERER_URL) {
-    const rendererUrl = new URL(process.env.ELECTRON_RENDERER_URL)
+  // Install the guards before starting the initial load. The app owns one renderer; documents
+  // and links must never replace that privileged page or create another Electron window.
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  win.webContents.on('will-navigate', (event) => event.preventDefault())
+  const rendererUrl = trustedDevRendererUrl(process.env.ELECTRON_RENDERER_URL, app.isPackaged)
+  if (rendererUrl) {
     for (const [key, value] of Object.entries(headlessQuery)) rendererUrl.searchParams.set(key, value)
     win.loadURL(rendererUrl.toString())
   } else {

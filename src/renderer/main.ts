@@ -5,7 +5,7 @@ import '@fontsource/fira-code/400.css'
 import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/700.css'
 import { installMenuCommands } from './menuCommands'
-import type { Api, Encoding, SessionData, Settings, WorkspaceFilter } from '../shared/types'
+import type { Api, Encoding, OpenedFile, SessionData, Settings, WorkspaceFilter } from '../shared/types'
 import { DEFAULT_WORKSPACE_EXCLUDES, normalizePathGlobs } from '../shared/pathGlob'
 import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
@@ -175,6 +175,9 @@ async function closeTab(id: string): Promise<void> {
   showActive(); scheduleSessionSave()
   view.paneA.forgetBuffer(id); view.paneB.forgetBuffer(id)
   highlights.forget(id); hlLoaded.delete(id)
+  acknowledgedDiskVersions.delete(id)
+  conflictDiskVersions.delete(id)
+  fileChangeGenerations.delete(id)
   if (conflicts.delete(id)) refreshChangeBar() // closed a conflicted tab → drop it, advance the bar
   if (wasLast) window.api.hideWindow()
 }
@@ -243,6 +246,10 @@ let autoSaveToDisk = false
 let formatOnSave = false
 let contextMenuEnabled = false
 const conflicts = new Set<string>()
+const acknowledgedDiskVersions = new Map<string, string>()
+interface DiskVersionSnapshot { key: string; mtimeMs: number }
+const conflictDiskVersions = new Map<string, DiskVersionSnapshot>()
+const fileChangeGenerations = new Map<string, number>()
 const selfWrites = new Map<string, number>()
 const autosaveFailed = new Set<string>()
 const SELF_WRITE_WINDOW_MS = 2500
@@ -486,6 +493,26 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
     // restores session content without re-reading disk), the watcher failed, or the change
     // raced this save. Queue it either way, so Cancel leaves the user on the change bar —
     // that is where "Reload (discard mine)" lives, and it is the third outcome of this prompt.
+    if (b.filePath) {
+      // This disk observation participates in the same ordering as watcher notifications.
+      // Claiming a generation makes any older in-flight watcher stale before we read.
+      const generation = (fileChangeGenerations.get(id) ?? 0) + 1
+      fileChangeGenerations.set(id, generation)
+      const current = await window.api.readFile(b.filePath)
+      if (current.ok) {
+        const snapshot = {
+          key: await diskVersionKey(current.file),
+          mtimeMs: current.file.mtimeMs,
+        }
+        // A watcher that started while this read/hash was in flight owns the newer snapshot.
+        if (manager.get(id) === b && (fileChangeGenerations.get(id) ?? 0) === generation) {
+          conflictDiskVersions.set(id, snapshot)
+        }
+      } else if ((fileChangeGenerations.get(id) ?? 0) === generation) {
+        // An unreadable current version cannot safely rebase Keep mine on an older snapshot.
+        conflictDiskVersions.delete(id)
+      }
+    }
     conflicts.add(id); refreshChangeBar()
     if (!opts.allowDialog) return false // autosave: never modal. Buffer stays dirty; the bar tells the story.
     const ok = await confirmDialog(`"${b.title}" changed on disk since you opened it. Overwrite those changes?`, { confirmLabel: 'Overwrite', focusFallback: focusActiveEditor })
@@ -496,6 +523,8 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   selfWrites.set(path, Date.now())
   if (opts.snapshot) window.api.snapshotHistory(path, content, b.eol, b.encoding)
   manager.markSaved(id, path, r.mtimeMs)
+  acknowledgedDiskVersions.delete(id)
+  conflictDiskVersions.delete(id)
   // markSaved changes path/title/language/dirty/mtime. Persist it before highlight I/O, which can
   // reject independently after the file itself was saved successfully.
   scheduleSessionSave()
@@ -1021,6 +1050,8 @@ async function reloadBuffer(id: string): Promise<void> {
   if (!r.ok) { toast(r.reason, 'error'); return }
   b.content = r.file.content; b.eol = r.file.eol; b.encoding = r.file.encoding; b.dirty = false
   b.diskMtime = r.file.mtimeMs // reloading rebases the guard on what we just read
+  acknowledgedDiskVersions.delete(id)
+  conflictDiskVersions.delete(id)
   conflicts.delete(id)
   if (paneFor(view.focusedPane()).currentBufferId() === id) {
     paneFor(view.focusedPane()).refreshBuffer(b)
@@ -1049,20 +1080,67 @@ function refreshChangeBar(): void {
   const reload = document.createElement('button'); reload.textContent = 'Reload (discard mine)'
   reload.onclick = () => void reloadBuffer(id) // clears its own conflict + refreshes the bar
   const keep = document.createElement('button'); keep.textContent = 'Keep mine'
-  keep.onclick = () => { conflicts.delete(id); refreshChangeBar() }
+  keep.onclick = () => keepBuffer(id)
   changeBar.append(glyph, msg, reload, keep); changeBar.classList.remove('hidden')
 }
-window.api.onFileChanged((path) => {
+function keepBuffer(id: string): void {
+  const b = manager.get(id)
+  if (!b) return
+  // Rebase synchronously on the exact snapshot which raised this bar. Hashing at click time would
+  // leave a race where an older Keep continuation could erase a genuinely newer conflict.
+  const snapshot = conflictDiskVersions.get(id)
+  if (snapshot) {
+    b.diskMtime = snapshot.mtimeMs
+    acknowledgedDiskVersions.set(id, snapshot.key)
+    scheduleSessionSave()
+  }
+  conflictDiskVersions.delete(id)
+  conflicts.delete(id)
+  refreshChangeBar()
+}
+async function diskVersionKey(file: OpenedFile): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify([file.mtimeMs, file.encoding, file.eol, file.content]))
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))
+  return Array.from(digest, byte => byte.toString(16).padStart(2, '0')).join('')
+}
+let fileChangeReceipt = 0
+async function handleFileChanged(path: string): Promise<void> {
   // Purge self-write markers past their window so a late/never-matching watcher event
   // (slow or unwatchable filesystem) can't leave dead entries in the Map.
-  const now = Date.now()
-  for (const [p, t] of selfWrites) if (now - t >= SELF_WRITE_WINDOW_MS) selfWrites.delete(p)
-  const ts = selfWrites.get(path)
-  if (ts !== undefined && now - ts < SELF_WRITE_WINDOW_MS) { selfWrites.delete(path); return }
-  const b = manager.list().find(x => x.filePath === path); if (!b) return
-  if (b.dirty) { conflicts.add(b.id); refreshChangeBar() }
-  else void reloadBuffer(b.id)
-})
+  try {
+    const now = Date.now()
+    for (const [p, t] of selfWrites) if (now - t >= SELF_WRITE_WINDOW_MS) selfWrites.delete(p)
+    const ts = selfWrites.get(path)
+    if (ts !== undefined && now - ts < SELF_WRITE_WINDOW_MS) { selfWrites.delete(path); return }
+    const b = manager.list().find(x => x.filePath === path); if (!b) return
+    const generation = (fileChangeGenerations.get(b.id) ?? 0) + 1
+    fileChangeGenerations.set(b.id, generation)
+    const current = await window.api.readFile(path)
+    if (current.ok) {
+      const snapshot = { key: await diskVersionKey(current.file), mtimeMs: current.file.mtimeMs }
+      // Concurrent watcher notifications can complete out of order. Only the newest one may
+      // decide whether a conflict exists; the newer handler will evaluate the latest disk state.
+      if (fileChangeGenerations.get(b.id) !== generation) return
+      const acknowledged = acknowledgedDiskVersions.get(b.id)
+      if (acknowledged && acknowledged === snapshot.key) return
+      acknowledgedDiskVersions.delete(b.id)
+      if (b.dirty) {
+        conflictDiskVersions.set(b.id, snapshot)
+        conflicts.add(b.id)
+        refreshChangeBar()
+      } else await reloadBuffer(b.id)
+      return
+    }
+    if (fileChangeGenerations.get(b.id) !== generation) return
+    acknowledgedDiskVersions.delete(b.id)
+    conflictDiskVersions.delete(b.id)
+    if (b.dirty) { conflicts.add(b.id); refreshChangeBar() }
+    else await reloadBuffer(b.id)
+  } finally {
+    if (exposeSessionWriteState) document.body.dataset.fileChangeReceipt = String(++fileChangeReceipt)
+  }
+}
+window.api.onFileChanged((path) => { void handleFileChanged(path) })
 
 installDropOpen((p) => { void openPath(p) })
 

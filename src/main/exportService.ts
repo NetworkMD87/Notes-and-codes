@@ -48,6 +48,8 @@ export async function savePdf(
   const tmpHtml = join(tmpdir(), `nc-export-${process.pid}-${Date.now()}.html`)
   try {
     win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
+    win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+    win.webContents.on('will-navigate', (event) => event.preventDefault())
     await writeFile(tmpHtml, html, 'utf8')
     await win.loadFile(tmpHtml)
     const pdf = await win.webContents.printToPDF({ printBackground: true })

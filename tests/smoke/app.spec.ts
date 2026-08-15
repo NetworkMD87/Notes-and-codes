@@ -38,7 +38,7 @@ test('markdown preview toggles and paste-history picker opens', async ({ smoke }
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
     // Toggle Markdown Preview -> panel visible
     await win.keyboard.press('Control+Shift+P')
@@ -145,7 +145,7 @@ test('paste-history picker renders above the editor minimap in split mode', asyn
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
     // Split: pane A's minimap then sits mid-viewport, under the centered picker.
     await win.keyboard.press('Control+Backslash')
@@ -194,7 +194,7 @@ test('split gutter drag resizes the panes', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
     // Toggle Split via palette, then the gutter should exist
     await win.keyboard.press('Control+Shift+P')
@@ -380,6 +380,7 @@ test('Format Document reformats the active buffer via the palette', async ({ smo
   writeFileSync(filePath, 'const   x=1\nfunction  f( ){return   x}')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     await expect(win.locator('#paneA .view-lines')).toContainText('const')
 
     const runCmd = async (label: string) => {
@@ -388,6 +389,8 @@ test('Format Document reformats the active buffer via the palette', async ({ smo
       await win.keyboard.press('Enter')
     }
     await runCmd('Format Document')
+    await expect(win.locator('#paneA .view-lines')).toContainText('const x = 1;')
+    await expect(win.locator('#paneA .view-lines')).toContainText('function f() {')
     // Save (Ctrl+S is a native-menu accelerator Playwright can't trigger) then read disk.
     await runCmd('Save')
     await expect.poll(() => readFileSync(filePath, 'utf8'), { timeout: 5000 }).toContain('const x = 1;')
@@ -462,7 +465,7 @@ test('drag reorders tabs and the new order persists across relaunch', async ({ s
   const app1 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   try {
     const win = await app1.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
     // Start with the one auto tab; add two more → Untitled-1, Untitled-2, Untitled-3.
     const newTab = async () => {
@@ -495,7 +498,7 @@ test('drag reorders tabs and the new order persists across relaunch', async ({ s
 
   const app2 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win2 = await app2.firstWindow()
-    await expect(win2.locator('#tabbar')).toBeVisible()
+    await expect(win2.locator('body[data-booted="true"]')).toBeVisible()
     await expect.poll(() => titlesOf(win2)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
 
     // Regression: the tabBar rewrite must keep close-× and the + add button working.
@@ -509,7 +512,7 @@ test('command palette is one stacked box and still runs commands', async ({ smok
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
     // input is nested inside the palette box (not a loose flex child)
     await expect(win.locator('#palette .palette-box input')).toBeVisible()
@@ -525,6 +528,7 @@ test('status bar sits a half-step below the header, not an accent slab', async (
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     await expect(win.locator('#statusbar')).toBeVisible()
     // The tonal ladder deliberately steps --statusbar-bg away from --bar (one step
     // darker on the default dark theme) rather than reusing --panel-bg, so the status
@@ -599,7 +603,7 @@ test('floating chrome carries an accent border', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
     await expect(win.locator('#palette .palette-box')).toBeVisible()
     // the box border should resolve to the same colour as --accent (Phase 3.5 P2).
@@ -637,7 +641,7 @@ test('empty states show an inline-SVG glyph', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-empty-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
     await win.locator('#palette .palette-box input').fill('Manage Snippets')
     await win.keyboard.press('Enter')
@@ -665,7 +669,7 @@ test('overlays use the micro-motion entry animation', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
     await expect(win.locator('#palette .palette-box')).toBeVisible()
     const anim = await win.locator('#palette .palette-box')

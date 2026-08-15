@@ -237,7 +237,7 @@ test('Escape closes the overlay', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-searchesc-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     await win.keyboard.press('Control+Shift+F')
     await expect(win.locator('.fif-box')).toBeVisible()
     await win.keyboard.press('Escape')

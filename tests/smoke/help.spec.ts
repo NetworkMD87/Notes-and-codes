@@ -11,7 +11,7 @@ test('Help: Keyboard Shortcuts overlay renders, filters, and closes on Esc', asy
   const userDataDir = smoke.tempDir('notes-help-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
     await runCmd(win, 'Help: Shortcuts & Commands')
     await expect(win.locator('.help-overlay')).toBeVisible()
@@ -43,7 +43,7 @@ test('Help: About shows the live version and link buttons', async ({ smoke }) =>
   const userDataDir = smoke.tempDir('notes-help-about-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
     await runCmd(win, 'Help: About Notes & Codes')
     await expect(win.locator('.help-overlay')).toBeVisible()
