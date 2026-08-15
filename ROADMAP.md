@@ -72,6 +72,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 | Release | Outcome |
 | --- | --- |
+| **v1.19.2** · 2026-08-15 | Electron and build-toolchain security update; offline PDF exports; guarded app navigation; reliable external-change warnings after **Keep mine**. |
 | **v1.19.1** · 2026-08-13 | Explorer opens replace only a disposable blank placeholder; the highlighter persists its active colour. |
 | **v1.19.0** · 2026-08-09 | Quality, scale, and keyboard-access pass: semantic controls and dialogs, 20k-file responsiveness, workspace exclusions, scoped/cancellable Find in Files, session/preview efficiency, and installed-build accessibility validation. |
 | **v1.18.1** · 2026-08-08 | Markdown dependency hardening and deterministic Windows Electron smoke teardown. Production dependency audit clean. |
@@ -84,7 +85,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 - ✅ **Hybrid identity:** a fast scratchpad by default; optional folder sidebar and `Ctrl+P` quick-open for project work.
 - ✅ **Phase 4.6 verification:** automated checks plus the reported installed-build Narrator, keyboard, pointer, large-workspace, tray/hotkey/login, and Markdown/session validation are complete.
-- ✅ **Release record:** the public `AUDIT-CHECKLIST.md` is fully resolved; releases through `v1.19.1` are tagged on `master`.
+- ✅ **Release record:** the public `AUDIT-CHECKLIST.md` is fully resolved; release history is recorded here and published releases are tagged on `master`.
 
 ### ❌ Closed decision
 

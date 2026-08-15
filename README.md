@@ -47,6 +47,10 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.19.2](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.2):** upgrades
+  the Electron runtime and build toolchain to audit-clean releases, keeps PDF exports offline,
+  restricts privileged app navigation, and preserves external-change warnings without resurfacing
+  duplicates after **Keep mine**.
 - **[v1.19.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.1):** files opened
   from Explorer replace only a disposable blank tab, and the highlighter remembers its active
   colour across app restarts without enabling paint mode.

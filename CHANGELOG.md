@@ -4,7 +4,9 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
-## [Unreleased]
+## [1.19.2] — 2026-08-15
+
+_A safer runtime, offline exports, and dependable external-change warnings._
 
 ### Security
 - Updated Electron and the build/test toolchain to audit-clean releases, including Electron 41,
