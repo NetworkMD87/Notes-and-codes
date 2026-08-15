@@ -16,6 +16,7 @@ describe('wrapHtml', () => {
     const out = wrapHtml('<p>hi</p>', 'My Note')
     expect(out).toContain('<!doctype html>')
     expect(out).toContain('<title>My Note</title>')
+    expect(out).toContain(`default-src 'none'; img-src data:; style-src 'unsafe-inline'`)
     expect(out).toContain('max-width: 760px')
     expect(out).toContain('<p>hi</p>')
   })

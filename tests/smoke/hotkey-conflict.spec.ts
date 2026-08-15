@@ -13,8 +13,7 @@ test('hotkey conflict does not freeze a second instance', async ({ smoke }) => {
   const appA = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${dirA}`], env: liveEnv as Record<string, string> })
   const dirB = smoke.tempDir('notes-hkB-')
   const winA = await appA.firstWindow()
-  await winA.waitForSelector('#tabbar')
-  await winA.waitForTimeout(800) // let A register the hotkey
+  await winA.waitForSelector('body[data-booted="true"]')
 
   const appB = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${dirB}`], env: liveEnv as Record<string, string> })
   let bStderr = ''
@@ -22,7 +21,7 @@ test('hotkey conflict does not freeze a second instance', async ({ smoke }) => {
 
   const winB = await appB.firstWindow()
   // Primary assertion (always holds): B is responsive, not frozen behind a modal.
-  await winB.waitForSelector('#tabbar', { timeout: 8000 })
+  await winB.waitForSelector('body[data-booted="true"]', { timeout: 8000 })
   await winB.keyboard.press('Control+Shift+P')
   await expect(winB.locator('#palette .palette-box input')).toBeVisible({ timeout: 5000 })
   await winB.keyboard.press('Escape')

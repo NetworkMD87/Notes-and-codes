@@ -4,6 +4,20 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [Unreleased]
+
+### Security
+- Updated Electron and the build/test toolchain to audit-clean releases, including Electron 41,
+  electron-builder 26, electron-vite 5, Vite 7, Vitest 4, and Playwright 1.62.
+- Development renderer URLs are now accepted only for loopback HTTP(S) servers and are ignored in
+  packaged builds; app and PDF windows also deny popups and top-level navigation.
+- Exported Markdown HTML now carries an offline-only content security policy, preventing remote
+  images or other network resources from being fetched while a PDF is rendered.
+
+### Fixed
+- A delayed duplicate file-watcher event can no longer restore an external-change warning after
+  the user has chosen **Keep mine**; later, genuinely distinct disk changes are still reported.
+
 ## [1.19.1] — 2026-08-13
 
 _Cleaner Explorer opens and a highlighter that remembers your colour._

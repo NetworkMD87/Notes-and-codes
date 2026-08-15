@@ -40,6 +40,7 @@ export function wrapHtml(bodyHtml: string, title: string): string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">
 <title>${escapeHtml(title)}</title>
 <style>${DOC_CSS}</style>
 </head>

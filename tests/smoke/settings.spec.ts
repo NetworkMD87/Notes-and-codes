@@ -379,7 +379,7 @@ test('Settings: palette "Appearance…" command opens Settings on the Appearance
   const userDataDir = smoke.tempDir('notes-settings-palette-appear-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
     await win.locator('#palette input').fill('Appearance')
     await win.keyboard.press('Enter')
@@ -391,7 +391,7 @@ test('Settings: View ▸ Appearance… menu item opens Settings on the Appearanc
   const userDataDir = smoke.tempDir('notes-settings-menu-appear-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     // Real menu click, invoked from the main process the same way clean-quit.spec.ts and
     // overwrite-warning.spec.ts trigger File ▸ Exit / File ▸ Save — MenuItem.click() runs
     // the actual registered handler, not a synthetic IPC send.
@@ -438,7 +438,7 @@ test('Settings: File ▸ Preferences… menu item opens the Settings panel', asy
   const userDataDir = smoke.tempDir('notes-settings-menu-prefs-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     // Real menu click — same technique as the View ▸ Appearance… menu test above.
     await app.evaluate(({ Menu }) => {
       const menu = Menu.getApplicationMenu()!

@@ -137,6 +137,8 @@ and screenshots also regenerate deterministically: unchanged input must leave Gi
 
 ## Build from source
 
+Requires Node.js 22.12 or newer and npm 11 or newer.
+
 ```powershell
 npm ci
 npm run dev          # Electron development mode with HMR

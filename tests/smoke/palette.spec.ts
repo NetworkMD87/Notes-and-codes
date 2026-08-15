@@ -4,7 +4,7 @@ test('palette shortcut hints render as one kbd chip per key', async ({ smoke }) 
   const userDataDir = smoke.tempDir('notes-smoke-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
     await win.keyboard.press('Control+Shift+P')
     await win.locator('#palette input').fill('Save All') // hint 'Ctrl+Shift+S'
     const chips = win.locator('.palette-row', { hasText: 'Save All' }).locator('.kbd')
@@ -17,7 +17,7 @@ test('palette exposes ranked semantic options and preserves nested-dialog focus'
   const userDataDir = smoke.tempDir('notes-palette-a11y-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   const win = await app.firstWindow()
-  await expect(win.locator('#tabbar')).toBeVisible()
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
   await win.keyboard.press('Control+Shift+P')
   const palette = win.getByRole('dialog', { name: 'Command Palette' })
