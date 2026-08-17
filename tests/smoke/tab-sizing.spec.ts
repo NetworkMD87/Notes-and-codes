@@ -18,13 +18,17 @@ test('long filenames are bounded by default and Natural width remains available'
   const tab = win.locator('.tab').first()
   const title = tab.locator('.tab-title')
   const select = tab.locator('.tab-select')
+  await win.setViewportSize({ width: 800, height: 600 })
+  const narrowWidth = await tab.evaluate(element => element.getBoundingClientRect().width)
+  await win.setViewportSize({ width: 1400, height: 800 })
   const bounded = await tab.evaluate(element => ({
     width: element.getBoundingClientRect().width,
     closeShrink: getComputedStyle(element.querySelector('.tab-close')!).flexShrink,
     badgeShrink: getComputedStyle(element.querySelector('.badge')!).flexShrink,
   }))
-  expect(bounded.width).toBeGreaterThanOrEqual(120)
-  expect(bounded.width).toBeLessThanOrEqual(240)
+  expect(narrowWidth).toBeCloseTo(144, 0)
+  expect(bounded.width).toBeCloseTo(240, 0)
+  expect(bounded.width).toBeGreaterThan(narrowWidth)
   expect(bounded.closeShrink).toBe('0')
   expect(bounded.badgeShrink).toBe('0')
   await expect(title).toHaveCSS('text-overflow', 'ellipsis')
@@ -37,7 +41,16 @@ test('long filenames are bounded by default and Natural width remains available'
   await expect(sizing).toHaveValue('bounded')
   await sizing.selectOption('natural')
   await expect(win.locator('#tabbar')).toHaveAttribute('data-tab-sizing', 'natural')
-  expect(await tab.evaluate(element => element.getBoundingClientRect().width)).toBeGreaterThan(240)
+  const natural = await tab.evaluate(element => {
+    const clone = element.cloneNode(true) as HTMLElement
+    clone.style.cssText = 'position:fixed;visibility:hidden;flex:none;width:max-content;min-width:0;max-width:none'
+    document.body.appendChild(clone)
+    const intrinsicWidth = clone.getBoundingClientRect().width
+    clone.remove()
+    return { width: element.getBoundingClientRect().width, intrinsicWidth }
+  })
+  expect(natural.width).toBeGreaterThan(240)
+  expect(natural.width).toBeCloseTo(natural.intrinsicWidth, 0)
   await expect.poll(
     () => JSON.parse(readFileSync(join(userDataDir, 'settings.json'), 'utf8')).tabSizing,
   ).toBe('natural')
