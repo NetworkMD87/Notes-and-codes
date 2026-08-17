@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/NetworkMD87/Notes-and-codes?display_name=tag&amp;sort=semver&amp;style=flat"></a>
+  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/NetworkMD87/Notes-and-codes?display_name=tag&amp;style=flat"></a>
   <a href="https://github.com/NetworkMD87/Notes-and-codes/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/NetworkMD87/Notes-and-codes/actions/workflows/ci.yml/badge.svg"></a>
   <a href="#install"><img alt="Windows 10 and 11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4?logo=windows11&amp;logoColor=white&amp;style=flat"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/NetworkMD87/Notes-and-codes?style=flat"></a>
