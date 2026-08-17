@@ -224,8 +224,8 @@ export class SettingsPanel {
     }
     const tabGroup = document.createElement('div'); tabGroup.className = 'settings-group'
     const tabHeading = document.createElement('h3'); tabHeading.textContent = 'Tabs'
-    const tabSizing = document.createElement('select')
-    for (const [value, label] of [['bounded', 'Bounded (recommended)'], ['natural', 'Natural width']] as const) {
+    const tabSizing = document.createElement('select'); tabSizing.className = 'tab-sizing-select'
+    for (const [value, label] of [['bounded', 'Bounded'], ['natural', 'Natural width']] as const) {
       const option = document.createElement('option'); option.value = value; option.textContent = label
       tabSizing.appendChild(option)
     }

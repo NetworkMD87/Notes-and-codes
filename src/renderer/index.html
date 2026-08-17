@@ -29,7 +29,7 @@
       .tab.dragging{opacity:.5}
       .tab.drop-before{box-shadow:inset 2px 0 0 var(--accent)}
       .tab.drop-after{box-shadow:inset -2px 0 0 var(--accent)}
-      #tabbar[data-tab-sizing=bounded] .tab{flex:0 1 clamp(120px,18vw,240px);min-width:120px;max-width:240px}
+      #tabbar[data-tab-sizing=bounded] .tab{flex:0 1 clamp(84px,12.6vw,168px);min-width:84px;max-width:168px}
       .tab-select{flex:1 1 auto;height:100%;min-width:0;overflow:hidden;display:flex;align-items:center;gap:6px;padding:0 0 0 10px;background:none;border:0;color:inherit;cursor:pointer;font:inherit;white-space:nowrap}
       .tab-title{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
       .tab-close{flex:none;align-self:stretch;opacity:.6;background:none;border:0;color:inherit;cursor:pointer;font:inherit;padding:0 10px 0 6px}.tab-close:hover{opacity:1}
@@ -245,6 +245,8 @@
       .settings h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
       .settings select,.settings input[type=number],.settings input[type=text]{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);padding:4px}
       .settings select{min-width:150px}
+      .settings .tab-sizing-select{min-width:168px;appearance:none;border-radius:var(--radius);font:inherit;cursor:pointer;padding:6px 30px 6px 12px;background-color:var(--bar);background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 13px) 50%,calc(100% - 9px) 50%;background-size:4px 4px,4px 4px;background-repeat:no-repeat}
+      .settings .tab-sizing-select:hover{border-color:var(--accent);background-color:var(--bar-hover)}
       .hk-chips{display:flex;gap:4px;align-items:center}
       .hk-chip{background:var(--bar);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px;font-family:inherit}
       .hk-none{color:var(--muted);font-size:12px}

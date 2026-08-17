@@ -97,6 +97,18 @@ describe('keyboard focus rings', () => {
   })
 })
 
+describe('tab sizing polish', () => {
+  it('uses a themed custom selector for tab sizing', () => {
+    const rule = ruleFor('.settings .tab-sizing-select')
+    expect(rule).toContain('appearance:none')
+    expect(rule).toContain('border-radius:var(--radius)')
+    expect(rule).toContain('background-color:var(--bar)')
+    expect(rule).toContain('var(--muted)')
+    expect(rule).toContain('padding:6px 30px 6px 12px')
+    expect(ruleFor('.settings .tab-sizing-select:hover')).toContain('border-color:var(--accent)')
+  })
+})
+
 describe('floating change banner', () => {
   it('is panel chrome with an accent border and a warning left bar, not a solid accent slab', () => {
     const rule = ruleFor('#change-bar')
