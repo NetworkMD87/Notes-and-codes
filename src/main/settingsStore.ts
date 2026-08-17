@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import { DEFAULT_SETTINGS, HIGHLIGHT_COLOURS, type HighlightColour, type Settings } from '../shared/types'
+import { DEFAULT_SETTINGS, HIGHLIGHT_COLOURS, type HighlightColour, type Settings, type TabSizing } from '../shared/types'
 import { normalizePathGlobs } from '../shared/pathGlob'
 import { atomicWrite } from './atomicWrite'
 
@@ -12,11 +12,16 @@ function normalizeSettings(value: unknown): Settings {
   return {
     ...DEFAULT_SETTINGS,
     ...stored,
+    tabSizing: isTabSizing(stored.tabSizing) ? stored.tabSizing : DEFAULT_SETTINGS.tabSizing,
     workspaceExcludes: normalizePathGlobs(rawExcludes),
     lastHighlightColour: isHighlightColour(stored.lastHighlightColour)
       ? stored.lastHighlightColour
       : DEFAULT_SETTINGS.lastHighlightColour,
   }
+}
+
+function isTabSizing(value: unknown): value is TabSizing {
+  return value === 'bounded' || value === 'natural'
 }
 
 function isHighlightColour(value: unknown): value is HighlightColour {

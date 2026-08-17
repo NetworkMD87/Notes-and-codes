@@ -109,6 +109,7 @@ export interface BufferState {
 }
 
 export type ThemeMode = 'light' | 'dark' | 'follow-os'
+export type TabSizing = 'bounded' | 'natural'
 
 export interface Settings {
   theme: ThemeMode
@@ -121,6 +122,7 @@ export interface Settings {
   fontSize: number
   themeId: string
   accent: string | null
+  tabSizing: TabSizing
   fontFamily: string
   uiFontFamily: string
   fontLigatures: boolean
@@ -148,6 +150,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fontSize: 14,
   themeId: 'dark',
   accent: null,
+  tabSizing: 'bounded',
   fontFamily: 'JetBrains Mono',
   uiFontFamily: 'System',
   fontLigatures: true,

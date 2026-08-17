@@ -29,9 +29,10 @@
       .tab.dragging{opacity:.5}
       .tab.drop-before{box-shadow:inset 2px 0 0 var(--accent)}
       .tab.drop-after{box-shadow:inset -2px 0 0 var(--accent)}
-      .tab-select{height:100%;min-width:0;display:flex;align-items:center;gap:6px;padding:0 0 0 10px;background:none;border:0;color:inherit;cursor:pointer;font:inherit;white-space:nowrap}
-      .tab-title{overflow:hidden;text-overflow:ellipsis}
-      .tab-close{align-self:stretch;opacity:.6;background:none;border:0;color:inherit;cursor:pointer;font:inherit;padding:0 10px 0 6px}.tab-close:hover{opacity:1}
+      #tabbar[data-tab-sizing=bounded] .tab{flex:0 1 clamp(120px,18vw,240px);min-width:120px;max-width:240px}
+      .tab-select{flex:1 1 auto;height:100%;min-width:0;overflow:hidden;display:flex;align-items:center;gap:6px;padding:0 0 0 10px;background:none;border:0;color:inherit;cursor:pointer;font:inherit;white-space:nowrap}
+      .tab-title{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+      .tab-close{flex:none;align-self:stretch;opacity:.6;background:none;border:0;color:inherit;cursor:pointer;font:inherit;padding:0 10px 0 6px}.tab-close:hover{opacity:1}
       .tab-add{background:none;border:none;color:var(--bartext);font-size:16px;cursor:pointer;padding:0 10px}
       .gutter{background:var(--border);cursor:col-resize}
       .gutter.gutter-horizontal{width:6px}
