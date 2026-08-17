@@ -24,6 +24,32 @@ describe('TabBar', () => {
     expect(host.querySelector('.tab-close')?.getAttribute('aria-label')).toBe('Close a.txt')
   })
 
+  it('defaults to bounded sizing and exposes the full filename when the visible title truncates', () => {
+    const host = document.createElement('div')
+    const bar = new TabBar(host, { onSelect: vi.fn(), onClose: vi.fn(), onNew: vi.fn(), onReorder: vi.fn() })
+    const longTitle = 'a-very-long-filename-that-needs-to-be-truncated-without-losing-its-extension.ts'
+    const item = { ...buffer('long'), title: longTitle, language: 'typescript' }
+
+    bar.render([item], item.id)
+
+    const select = host.querySelector<HTMLButtonElement>('.tab-select')
+    expect(host.dataset.tabSizing).toBe('bounded')
+    expect(select?.title).toBe(longTitle)
+    expect(select?.getAttribute('aria-label')).toBe(longTitle)
+  })
+
+  it('switches the tab strip to natural sizing without rebuilding its tabs', () => {
+    const host = document.createElement('div')
+    const bar = new TabBar(host, { onSelect: vi.fn(), onClose: vi.fn(), onNew: vi.fn(), onReorder: vi.fn() })
+    bar.render([buffer('a')], 'a')
+    const tab = host.querySelector('.tab')
+
+    bar.setSizing('natural')
+
+    expect(host.dataset.tabSizing).toBe('natural')
+    expect(host.querySelector('.tab')).toBe(tab)
+  })
+
   it('Left, Right, Home, and End wrap, activate, and focus the destination tab', async () => {
     const host = document.createElement('div'); let active = 'a'; const items = ['a', 'b', 'c'].map(buffer)
     document.body.append(host)

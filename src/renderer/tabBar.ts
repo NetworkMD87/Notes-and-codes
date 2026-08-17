@@ -1,4 +1,4 @@
-import type { BufferState } from '../shared/types'
+import type { BufferState, TabSizing } from '../shared/types'
 import { HL_HEX } from '../shared/types'
 import { langBadge } from './fileType'
 import { moveRovingIndex } from './rovingIndex'
@@ -14,6 +14,7 @@ export class TabBar {
   private draggedId: string | null = null
 
   constructor(private container: HTMLElement, private handlers: TabHandlers) {
+    this.setSizing('bounded')
     this.container.setAttribute('role', 'tablist')
     this.container.setAttribute('aria-label', 'Open files')
     // Delegated on the container so the listeners survive render()'s replaceChildren().
@@ -21,6 +22,10 @@ export class TabBar {
     this.container.addEventListener('dragover', (e) => this.onDragOver(e as DragEvent))
     this.container.addEventListener('drop', (e) => this.onDrop(e as DragEvent))
     this.container.addEventListener('dragend', () => this.onDragEnd())
+  }
+
+  setSizing(mode: TabSizing): void {
+    this.container.dataset.tabSizing = mode
   }
 
   render(buffers: BufferState[], activeId: string | null): void {
@@ -38,6 +43,8 @@ export class TabBar {
       select.setAttribute('role', 'tab')
       select.setAttribute('aria-selected', String(b.id === activeId))
       select.setAttribute('aria-controls', 'panes')
+      select.setAttribute('aria-label', b.title)
+      select.title = b.title
       select.tabIndex = b.id === activeId ? 0 : -1
       const badge = document.createElement('span'); badge.className = 'badge'
       const lb = langBadge(b.language); badge.textContent = lb.label

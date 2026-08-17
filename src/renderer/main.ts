@@ -294,6 +294,12 @@ let findInFiles!: FindInFiles
 let restoreFolder = true
 let openAtLogin = false
 let globalHotkey = ''
+let tabSizing: Settings['tabSizing'] = 'bounded'
+function setTabSizingState(mode: Settings['tabSizing']): void {
+  tabSizing = mode
+  tabBar.setSizing(mode)
+  void window.api.updateSettings({ tabSizing: mode })
+}
 function fontStack(name: string): string { return `'${name}', Consolas, monospace` }
 function applyFont(): void {
   view.paneA.setFontFamily(fontStack(fontFamily)); view.paneB.setFontFamily(fontStack(fontFamily))
@@ -365,6 +371,8 @@ async function boot(): Promise<void> {
   restoreFolder = settings.restoreFolderOnLaunch
   openAtLogin = settings.openAtLogin
   globalHotkey = settings.globalHotkey
+  tabSizing = settings.tabSizing
+  tabBar.setSizing(tabSizing)
   highlights.setColour(settings.lastHighlightColour)
   syncHighlightChrome(highlights.isOn(), settings.lastHighlightColour)
   applyFont()
@@ -793,6 +801,7 @@ const settingsDeps: SettingsDeps = {
   focusEditor: focusActiveEditor,
   currentThemeId: () => theme.currentId(), currentAccent: () => theme.currentAccent(),
   pickTheme: (id) => theme.pick(id), setAccent: (a) => theme.setAccent(a),
+  tabSizing: () => tabSizing, setTabSizing: setTabSizingState,
   fontFamily: () => fontFamily, setFontFamily: setFontFamilyState,
   fontLigatures: () => fontLigatures, setLigatures: setLigaturesState,
   uiFontFamily: () => uiFontFamily, setUiFontFamily: setUiFontFamilyState,

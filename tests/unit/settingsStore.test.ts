@@ -30,6 +30,26 @@ describe('SettingsStore', () => {
     const s = await new SettingsStore(dir).load()
     expect(s.uiFontFamily).toBe('System')
   })
+  it('defaults tab sizing to bounded for settings written before the preference existed', async () => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ themeId: 'nord' }))
+
+    const settings = await new SettingsStore(dir).load()
+
+    expect(settings.tabSizing).toBe('bounded')
+    expect(settings.themeId).toBe('nord')
+  })
+  it.each(['wide', 7, null])('rejects an invalid persisted tab sizing mode: %j', async (tabSizing) => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ tabSizing }))
+
+    expect((await new SettingsStore(dir).load()).tabSizing).toBe('bounded')
+  })
+  it('persists natural-width tab sizing through an update', async () => {
+    const store = new SettingsStore(dir)
+
+    await store.update({ tabSizing: 'natural' })
+
+    expect((await new SettingsStore(dir).load()).tabSizing).toBe('natural')
+  })
   it('persists a chosen uiFontFamily', async () => {
     const store = new SettingsStore(dir)
     await store.save({ ...DEFAULT_SETTINGS, uiFontFamily: 'Fira Code' })

@@ -3,6 +3,7 @@ import { DialogController } from './dialogController'
 import { accelFromEvent, formatAccel } from '../shared/accelerator'
 import { moveRovingIndex } from './rovingIndex'
 import type { ResolvedSpellLocale, SpellCheckLanguage } from '../shared/spell'
+import type { TabSizing } from '../shared/types'
 
 export type SettingsCategory = 'appearance' | 'font' | 'editor' | 'folder' | 'startup' | 'integration'
 
@@ -11,6 +12,8 @@ export interface SettingsDeps {
   currentAccent: () => string | null
   pickTheme: (id: string) => void
   setAccent: (accent: string | null) => void
+  tabSizing: () => TabSizing
+  setTabSizing: (mode: TabSizing) => void
   fontFamily: () => string
   setFontFamily: (name: string) => void
   fontLigatures: () => boolean
@@ -219,7 +222,17 @@ export class SettingsPanel {
       dot.onclick = () => { this.d.setAccent(s.value); this.render(`accent-${s.name}`) }
       sw.appendChild(dot)
     }
-    wrap.append(th, grid, head, sw)
+    const tabGroup = document.createElement('div'); tabGroup.className = 'settings-group'
+    const tabHeading = document.createElement('h3'); tabHeading.textContent = 'Tabs'
+    const tabSizing = document.createElement('select')
+    for (const [value, label] of [['bounded', 'Bounded (recommended)'], ['natural', 'Natural width']] as const) {
+      const option = document.createElement('option'); option.value = value; option.textContent = label
+      tabSizing.appendChild(option)
+    }
+    tabSizing.value = this.d.tabSizing()
+    tabSizing.onchange = () => this.d.setTabSizing(tabSizing.value as TabSizing)
+    tabGroup.append(tabHeading, this.labelledRow('Tab sizing', tabSizing))
+    wrap.append(th, grid, head, sw, tabGroup)
     return wrap
   }
 

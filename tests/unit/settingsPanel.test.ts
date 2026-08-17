@@ -7,6 +7,7 @@ import { handleEscape, openCount } from '../../src/renderer/overlayManager'
 function deps(): SettingsDeps {
   return {
     currentThemeId: () => 'dark', currentAccent: () => null, pickTheme: vi.fn(), setAccent: vi.fn(),
+    tabSizing: () => 'bounded', setTabSizing: vi.fn(),
     fontFamily: () => 'JetBrains Mono', setFontFamily: vi.fn(), fontLigatures: () => true, setLigatures: vi.fn(),
     uiFontFamily: () => 'System', setUiFontFamily: vi.fn(), fontSize: () => 14, setFontSize: vi.fn(),
     showAllFiles: () => false, setShowAllFiles: vi.fn(), restoreFolder: () => true, setRestoreFolder: vi.fn(),
@@ -45,6 +46,26 @@ describe('SettingsPanel', () => {
     expect(document.getElementById(labelId!)?.textContent).toBe('Summon hotkey')
     expect(group?.querySelector('.hk-chips')?.textContent).toBe('CtrlShiftSpace')
     expect([...group!.querySelectorAll('button')].map(button => button.textContent)).toEqual(['Record', 'Clear'])
+  })
+
+  it('offers bounded and natural tab sizing in Appearance and applies the selection', () => {
+    const d = deps()
+    const panel = new SettingsPanel(document.body, d)
+    panel.open('appearance')
+
+    const label = [...document.querySelectorAll<HTMLLabelElement>('label')]
+      .find(candidate => candidate.textContent === 'Tab sizing')
+    const select = label ? document.getElementById(label.htmlFor) as HTMLSelectElement | null : null
+    expect(select?.value).toBe('bounded')
+    expect([...select!.options].map(option => [option.value, option.textContent])).toEqual([
+      ['bounded', 'Bounded (recommended)'],
+      ['natural', 'Natural width'],
+    ])
+
+    select!.value = 'natural'
+    select!.dispatchEvent(new Event('change'))
+
+    expect(d.setTabSizing).toHaveBeenCalledWith('natural')
   })
 
   it('labels and explains the workspace exclusion editor', () => {
