@@ -2,13 +2,13 @@
 
 Living roadmap. Status is deliberately separate from shipping history so the next work is visible at a glance.
 
-**Legend:** ✅ shipped · 🚧 in review · 🔜 next · ⬜ planned · 🐛 open defect · 🧊 parked / deferred · 💡 someday · **S** small · **M** medium · **L** large
+**Legend:** ✅ shipped · 🟢 merged / awaiting release · 🔜 next · ⬜ planned · 🐛 open defect · 🧊 parked / deferred · 💡 someday · **S** small · **M** medium · **L** large
 
 ---
 
-## 🚧 In review — Find in Files correctness cleanup
+## 🟢 Merged — awaiting release
 
-- 🚧 **Find in Files correctness cleanup** (**S**) — implementation completed and locally verified on 2026-08-17; awaiting review and merge.
+- 🟢 **Find in Files correctness cleanup** (**S**) — merged through PR #22 on 2026-08-17; queued for the next release.
   - **Path normalisation:** `pickFileArg` now returns a normalised absolute path, so a file opened through a relative shell argument cannot also appear as a separate disk-search result.
   - **Selection reset:** query, match-case, whole-word, and scope changes now select the first current result.
   - Verification: the build, all 918 unit tests, and focused Electron smoke guards for both regressions pass.
