@@ -26,8 +26,6 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 - ⬜ **Snippet placeholders / tabstops** (**M–L**, after Safe Replace) — VS Code-style `$1` and abbreviation expansion. Prefer Monaco’s snippet support; design placeholder syntax, malformed-snippet behaviour, and keyboard navigation before implementation.
 
-- 💡 **Bound tab sizing for long filenames** (**S**) — use sensible flexible min/max widths; keep badges and close controls non-shrinking; make `.tab-title` ellipsis observable. Add installed smoke coverage for the bound and an accessible full filename.
-
 - 💡 **Markdown Preview layout modes** (**M**) — add an outer editor-group/Preview split while keeping the A/B editor split inside the editor group. Provide a draggable gutter, minimum sizes, and explicit `off | side-by-side | focus` modes; preserve focused-pane content selection, live refresh, and focus return. Smoke-test dragging, limits, and mode transitions.
 
 ---
@@ -72,6 +70,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 | Release | Outcome |
 | --- | --- |
+| **v1.19.3** · 2026-08-17 | Responsive bounded tabs keep long filenames, badges, and close controls usable; natural-width tabs remain available in Appearance settings. |
 | **v1.19.2** · 2026-08-15 | Electron and build-toolchain security update; offline PDF exports; guarded app navigation; reliable external-change warnings after **Keep mine**. |
 | **v1.19.1** · 2026-08-13 | Explorer opens replace only a disposable blank placeholder; the highlighter persists its active colour. |
 | **v1.19.0** · 2026-08-09 | Quality, scale, and keyboard-access pass: semantic controls and dialogs, 20k-file responsiveness, workspace exclusions, scoped/cancellable Find in Files, session/preview efficiency, and installed-build accessibility validation. |
