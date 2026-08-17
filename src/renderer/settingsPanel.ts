@@ -1,5 +1,6 @@
 import { THEME_LIST, ACCENT_SWATCHES, swatchColours } from './themes'
 import { DialogController } from './dialogController'
+import { OverlayRegistration } from './overlayManager'
 import { accelFromEvent, formatAccel } from '../shared/accelerator'
 import { moveRovingIndex } from './rovingIndex'
 import type { ResolvedSpellLocale, SpellCheckLanguage } from '../shared/spell'
@@ -77,6 +78,8 @@ export class SettingsPanel {
   private controlId = 0
   private workspaceExclusionGeneration = 0
   private workspaceExclusionDraftGeneration = 0
+  private readonly tabSizingOverlay = new OverlayRegistration()
+  private closeTabSizing?: (restoreFocus?: boolean) => void
 
   constructor(parent: HTMLElement, private d: SettingsDeps) {
     this.host = document.createElement('div')
@@ -114,6 +117,7 @@ export class SettingsPanel {
     // Escape while recording cancels only the recorder. Keeping the dialog registration live
     // means the next Escape closes the same Settings session and restores its original opener.
     if (this.recording) { this.cancelRecording(); return }
+    this.closeTabSizing?.(false)
     this.host.classList.add('hidden')
     this.dialog.close()
   }
@@ -147,7 +151,7 @@ export class SettingsPanel {
     this.render('hotkey-record')
   }
 
-  private labelledRow(labelText: string, control: HTMLInputElement | HTMLSelectElement): HTMLDivElement {
+  private labelledRow(labelText: string, control: HTMLInputElement | HTMLSelectElement | HTMLButtonElement): HTMLDivElement {
     const row = document.createElement('div'); row.className = 'appearance-row'
     const label = document.createElement('label'); const id = `setting-${this.controlId++}`
     control.id = id; label.htmlFor = id; label.textContent = labelText
@@ -166,6 +170,98 @@ export class SettingsPanel {
     const id = `setting-${this.controlId++}`
     input.id = id; label.htmlFor = id; label.className = 'sr-only'; label.textContent = labelText
     return label
+  }
+
+  private tabSizingRow(): HTMLDivElement {
+    const choices: readonly (readonly [TabSizing, string])[] = [
+      ['bounded', 'Bounded'],
+      ['natural', 'Natural width'],
+    ]
+    const current = this.d.tabSizing()
+    const picker = document.createElement('div'); picker.className = 'tab-sizing-picker'
+    const trigger = document.createElement('button'); trigger.type = 'button'; trigger.className = 'tab-sizing-select'
+    const value = document.createElement('span'); value.className = 'tab-sizing-value'
+    value.textContent = choices.find(([choice]) => choice === current)?.[1] ?? 'Bounded'
+    const chevron = document.createElement('span'); chevron.className = 'tab-sizing-chevron'
+    chevron.textContent = '▾'; chevron.setAttribute('aria-hidden', 'true')
+    trigger.append(value, chevron)
+
+    const row = this.labelledRow('Tab sizing', trigger)
+    value.id = `${trigger.id}-value`; trigger.setAttribute('aria-describedby', value.id)
+    const list = document.createElement('div'); list.className = 'tab-sizing-options'; list.hidden = true
+    list.id = `${trigger.id}-options`; list.setAttribute('role', 'listbox'); list.setAttribute('aria-label', 'Tab sizing')
+    trigger.setAttribute('aria-haspopup', 'listbox'); trigger.setAttribute('aria-expanded', 'false')
+    trigger.setAttribute('aria-controls', list.id)
+
+    const options: HTMLElement[] = []
+    const close = (restoreFocus = false): void => {
+      this.box.removeEventListener('scroll', closeForGeometryChange, true)
+      window.removeEventListener('resize', closeForGeometryChange)
+      this.tabSizingOverlay.release()
+      if (this.closeTabSizing === close) this.closeTabSizing = undefined
+      list.hidden = true
+      trigger.setAttribute('aria-expanded', 'false')
+      for (const option of options) option.tabIndex = -1
+      if (restoreFocus) trigger.focus({ preventScroll: true })
+    }
+    const closeForGeometryChange = (): void => close(true)
+    const open = (): void => {
+      list.hidden = false
+      trigger.setAttribute('aria-expanded', 'true')
+      const triggerRect = trigger.getBoundingClientRect()
+      list.style.left = `${triggerRect.left}px`
+      list.style.width = `${triggerRect.width}px`
+      const listHeight = list.getBoundingClientRect().height
+      const below = triggerRect.bottom + 2
+      list.style.top = `${below + listHeight <= window.innerHeight - 8 ? below : Math.max(8, triggerRect.top - listHeight - 2)}px`
+      const selected = options.find(option => option.getAttribute('aria-selected') === 'true') ?? options[0]
+      for (const option of options) option.tabIndex = option === selected ? 0 : -1
+      selected?.focus()
+      this.closeTabSizing = close
+      this.tabSizingOverlay.open(() => close(true))
+      this.box.addEventListener('scroll', closeForGeometryChange, true)
+      window.addEventListener('resize', closeForGeometryChange)
+    }
+    const choose = (choice: TabSizing, label: string): void => {
+      value.textContent = label
+      for (const option of options) option.setAttribute('aria-selected', String(option.dataset.value === choice))
+      this.d.setTabSizing(choice)
+      close(true)
+    }
+
+    for (const [choice, label] of choices) {
+      const option = document.createElement('div'); option.className = 'tab-sizing-option'
+      option.setAttribute('role', 'option'); option.setAttribute('aria-selected', String(choice === current))
+      option.dataset.value = choice; option.textContent = label; option.tabIndex = -1
+      option.onclick = () => choose(choice, label)
+      option.onkeydown = event => {
+        const index = options.indexOf(option)
+        let next: number | null = null
+        if (event.key === 'ArrowDown') next = (index + 1) % options.length
+        else if (event.key === 'ArrowUp') next = (index - 1 + options.length) % options.length
+        else if (event.key === 'Home') next = 0
+        else if (event.key === 'End') next = options.length - 1
+        else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); option.click(); return }
+        else if (event.key === 'Escape') { event.preventDefault(); close(true); return }
+        if (next === null) return
+        event.preventDefault()
+        for (const [optionIndex, candidate] of options.entries()) candidate.tabIndex = optionIndex === next ? 0 : -1
+        options[next].focus()
+      }
+      options.push(option); list.appendChild(option)
+    }
+
+    trigger.onclick = () => { if (list.hidden) open(); else close() }
+    trigger.onkeydown = event => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); open() }
+      else if (event.key === 'Escape' && !list.hidden) { event.preventDefault(); close(true) }
+    }
+    picker.addEventListener('focusout', event => {
+      const next = event.relatedTarget
+      if (!(next instanceof Node) || !picker.contains(next)) close()
+    })
+    picker.append(trigger, list); row.appendChild(picker)
+    return row
   }
 
   private renderAppearance(): HTMLElement {
@@ -224,14 +320,7 @@ export class SettingsPanel {
     }
     const tabGroup = document.createElement('div'); tabGroup.className = 'settings-group'
     const tabHeading = document.createElement('h3'); tabHeading.textContent = 'Tabs'
-    const tabSizing = document.createElement('select'); tabSizing.className = 'tab-sizing-select'
-    for (const [value, label] of [['bounded', 'Bounded'], ['natural', 'Natural width']] as const) {
-      const option = document.createElement('option'); option.value = value; option.textContent = label
-      tabSizing.appendChild(option)
-    }
-    tabSizing.value = this.d.tabSizing()
-    tabSizing.onchange = () => this.d.setTabSizing(tabSizing.value as TabSizing)
-    tabGroup.append(tabHeading, this.labelledRow('Tab sizing', tabSizing))
+    tabGroup.append(tabHeading, this.tabSizingRow())
     wrap.append(th, grid, head, sw, tabGroup)
     return wrap
   }
@@ -410,6 +499,7 @@ export class SettingsPanel {
   }
 
   private render(focusKey?: string): void {
+    this.closeTabSizing?.(false)
     this.nav.replaceChildren()
     for (const category of CATEGORIES) {
       const tab = document.createElement('button')
