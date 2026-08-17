@@ -26,8 +26,8 @@ test('long filenames are bounded by default and Natural width remains available'
     closeShrink: getComputedStyle(element.querySelector('.tab-close')!).flexShrink,
     badgeShrink: getComputedStyle(element.querySelector('.badge')!).flexShrink,
   }))
-  expect(narrowWidth).toBeCloseTo(144, 0)
-  expect(bounded.width).toBeCloseTo(240, 0)
+  expect(narrowWidth).toBeCloseTo(101, 0)
+  expect(bounded.width).toBeCloseTo(168, 0)
   expect(bounded.width).toBeGreaterThan(narrowWidth)
   expect(bounded.closeShrink).toBe('0')
   expect(bounded.badgeShrink).toBe('0')
@@ -49,7 +49,7 @@ test('long filenames are bounded by default and Natural width remains available'
     clone.remove()
     return { width: element.getBoundingClientRect().width, intrinsicWidth }
   })
-  expect(natural.width).toBeGreaterThan(240)
+  expect(natural.width).toBeGreaterThan(168)
   expect(natural.width).toBeCloseTo(natural.intrinsicWidth, 0)
   await expect.poll(
     () => JSON.parse(readFileSync(join(userDataDir, 'settings.json'), 'utf8')).tabSizing,

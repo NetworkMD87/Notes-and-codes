@@ -57,8 +57,9 @@ describe('SettingsPanel', () => {
       .find(candidate => candidate.textContent === 'Tab sizing')
     const select = label ? document.getElementById(label.htmlFor) as HTMLSelectElement | null : null
     expect(select?.value).toBe('bounded')
+    expect(select?.className).toBe('tab-sizing-select')
     expect([...select!.options].map(option => [option.value, option.textContent])).toEqual([
-      ['bounded', 'Bounded (recommended)'],
+      ['bounded', 'Bounded'],
       ['natural', 'Natural width'],
     ])
 
