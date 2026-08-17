@@ -199,6 +199,7 @@ export class FindInFiles {
     b.setAttribute('aria-pressed', String(this.opts[key]))
     b.onclick = () => {
       this.opts = { ...this.opts, [key]: !this.opts[key] }
+      this.active = 0
       b.classList.toggle('on', this.opts[key])
       b.setAttribute('aria-pressed', String(this.opts[key]))
       clearTimeout(this.timer)
@@ -229,10 +230,9 @@ export class FindInFiles {
     if (this.workspaceSuspended) return
     const query = this.query
     const workspaceGeneration = this.workspaceGeneration
-    // Arrow-key position only survives a re-run of the SAME query (reopen with a carried-over
-    // query, or toggling case/whole-word). A changed query means a different result set, so row
-    // N of the old list has nothing to do with row N of the new one — reset before results even
-    // arrive, so a stale `active` can't be used mid-flight.
+    // A changed query means a different result set, so row N of the old list has nothing to do
+    // with row N of the new one. Option and scope handlers reset `active` before reaching here;
+    // only a refresh/reopen of the same search may preserve its arrow-key position.
     if (query !== this.resultsQuery) this.active = 0
     this.resultsQuery = query
     if (query.length < MIN_QUERY_LENGTH) {

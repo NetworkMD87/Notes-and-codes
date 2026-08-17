@@ -1,7 +1,10 @@
+import { resolve } from 'node:path'
+
 /**
  * Pick the file-to-open argument out of a process argv. Pure + dependency-injected so it
  * can be unit-tested without electron or the real filesystem: the caller passes
- * `app.isPackaged` and an `exists` predicate (`fs.existsSync` in production).
+ * `app.isPackaged`, an `exists` predicate (`fs.existsSync` in production), and the
+ * launching process's working directory.
  *
  * Packaged:   argv = [exe, ...args]
  * Unpackaged: argv = [electronExe, entryScript, ...args]  (dev / `electron <script>`)
@@ -14,12 +17,14 @@
 export function pickFileArg(
   argv: string[],
   isPackaged: boolean,
-  exists: (p: string) => boolean
+  exists: (p: string) => boolean,
+  workingDirectory: string,
 ): string | null {
   const args = isPackaged ? argv.slice(1) : argv.slice(2)
   const looksLikePath = (a: string) => !a.startsWith('-') && /[\\/.]/.test(a)
-  const reversed = [...args].reverse()
-  return reversed.find(a => looksLikePath(a) && exists(a))
-    ?? reversed.find(looksLikePath)
-    ?? null
+  const reversed = args
+    .filter(looksLikePath)
+    .map(arg => resolve(workingDirectory, arg))
+    .reverse()
+  return reversed.find(exists) ?? reversed[0] ?? null
 }

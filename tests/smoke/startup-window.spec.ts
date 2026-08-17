@@ -65,7 +65,7 @@ test('one rejected startup read preserves other state and reaches booted', async
   await expect(win.locator('.ph-picker')).toContainText('preserved clip')
 })
 
-test('a real second process forwards its file arg and shows the hidden window', async ({ smoke }) => {
+test('a real second process normalises its relative file arg, shows the window, and avoids duplicate search results', async ({ smoke }) => {
   // The previous version of this test faked the handoff with
   // `app.emit('second-instance', {}, ['electron', '.'])`, which reached exactly one line of
   // production code (showWindow()). This spawns a genuine second OS process against the SAME
@@ -75,13 +75,18 @@ test('a real second process forwards its file arg and shows the hidden window', 
   // red on the tab-count assertion (2 -> 1, all retries) while the visibility poll still passes.
   test.setTimeout(90000)
   const userDataDir = smoke.tempDir('notes-2proc-')
-  const notePath = join(userDataDir, 'note.txt')
+  const projectDir = smoke.tempDir('notes-2proc-project-')
+  const notePath = join(projectDir, 'note.txt')
   const payload = 'delivered by the second instance'
   writeFileSync(notePath, payload, 'utf8')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true, lastFolder: projectDir, sidebarVisible: true,
+  }))
 
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   const win = await app.firstWindow()
   await expect(win.locator('#tabbar')).toBeVisible()
+  await expect(win.locator('#sidebar')).toBeVisible()
   await expect(win.locator('.tab')).toHaveCount(1)
 
   // Resting state: X hides to tray (does not quit). This is the load-bearing part —
@@ -95,8 +100,8 @@ test('a real second process forwards its file arg and shows the hidden window', 
   const second = smoke.trackChild(
     spawn(
       electronPath as unknown as string,
-      ['out/main/index.js', `--user-data-dir=${userDataDir}`, notePath],
-      { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] },
+      [join(process.cwd(), 'out/main/index.js'), `--user-data-dir=${userDataDir}`, 'note.txt'],
+      { cwd: projectDir, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] },
     ),
     'second-instance',
   )
@@ -126,6 +131,14 @@ test('a real second process forwards its file arg and shows the hidden window', 
   await expect(win.locator('.tab.active')).toContainText('note.txt')
   await expect(win.locator('.tab')).not.toContainText('Untitled-1')
   await expect(win.locator('#paneA .view-lines')).toContainText(payload)
+
+  // Removing relative-path normalisation makes the open buffer path disagree with the disk
+  // index path, so the same file appears once as a live buffer and again as a disk result.
+  await win.keyboard.press('Control+Shift+F')
+  await win.getByRole('searchbox', { name: 'Find in Files' }).fill(payload)
+  await expect(win.locator('.fif-note')).toHaveText('1 match in 1 file')
+  await expect(win.locator('.fif-file')).toHaveCount(1)
+  await expect(win.locator('.fif-row')).toHaveCount(1)
 })
 
 test('--hidden starts the window parked in the tray, and it can still be shown', async ({ smoke }) => {

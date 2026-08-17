@@ -50,8 +50,8 @@ function notifyRenderer(msg: string): void {
   else wc.send('app:notify', msg)
 }
 
-function fileArgFrom(argv: string[]): string | null {
-  return pickFileArg(argv, app.isPackaged, existsSync)
+function fileArgFrom(argv: string[], workingDirectory = process.cwd()): string | null {
+  return pickFileArg(argv, app.isPackaged, existsSync, workingDirectory)
 }
 
 function requestQuit(): void {
@@ -236,8 +236,8 @@ const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
-  app.on('second-instance', (_e, argv) => {
-    const f = fileArgFrom(argv)
+  app.on('second-instance', (_e, argv, workingDirectory) => {
+    const f = fileArgFrom(argv, workingDirectory)
     // Resting state is hidden-to-tray; restore()/focus() don't show a hidden window.
     // showWindow() does (and recreates the window if it was closed), so the opened
     // file is never delivered to an invisible window.
