@@ -2,31 +2,30 @@
 
 Living roadmap. Status is deliberately separate from shipping history so the next work is visible at a glance.
 
-**Legend:** ✅ shipped · 🔜 next · ⬜ planned · 🐛 open defect · 🧊 parked / deferred · 💡 someday · **S** small · **M** medium · **L** large
+**Legend:** ✅ shipped · 🚧 in review · 🔜 next · ⬜ planned · 🐛 open defect · 🧊 parked / deferred · 💡 someday · **S** small · **M** medium · **L** large
 
 ---
 
-## 🔜 Next — resolve the installed taskbar identity-icon regression
+## 🚧 In review — Find in Files correctness cleanup
 
-- 🐛 **Installed taskbar identity icon** (**M**) — an installed packaged build can still show `{N&C}` on the Windows taskbar at 125% / dark theme where the small `{&}` identity is required. Both the in-place and clean-install experiments failed; do not repeat artifact-only, `WM_GETICON`, Alt+Tab, or `win-unpacked` checks as though they close this.
-  - Trace the taskbar’s live identity source and selected ICO frame while retaining the small-size `{&}` / large-size `{N&C}` contract.
-  - Acceptance: observe the exact installed packaged build at 100%, 125%, and above-125% DPI in light and dark taskbar themes. Automated/artifact evidence is supporting evidence only.
-  - Do this before another icon claim is marked fixed and before advancing to MSIX, unless the work is explicitly re-scoped.
+- 🚧 **Find in Files correctness cleanup** (**S**) — implementation completed and locally verified on 2026-08-17; awaiting review and merge.
+  - **Path normalisation:** `pickFileArg` now returns a normalised absolute path, so a file opened through a relative shell argument cannot also appear as a separate disk-search result.
+  - **Selection reset:** query, match-case, whole-word, and scope changes now select the first current result.
+  - Verification: the build, all 918 unit tests, and focused Electron smoke guards for both regressions pass.
+
+---
+
+## 🔜 Next — CI renderer smoke support
+
+- 🔜 **CI renderer smoke support** (**S**, before MSIX; trial, not a release blocker) — automatic push/PR CI currently runs build + unit tests, while the hosted Electron smoke job is manual-only because Monaco did not reliably paint on GitHub’s Windows runners.
+  - Retry the manual hosted suite with software rendering (`--use-gl=swiftshader` and/or `--disable-gpu`) supplied through the Electron launch arguments.
+  - Promote smoke to the automatic push/PR gate only if repeated hosted runs are reliable; otherwise record the new evidence and retain the manual hosted job plus the local pre-release gate.
 
 ---
 
 ## ⬜ Planned
 
-- 🐛 **Find in Files correctness cleanup** (**S**, after the taskbar gate) — close the two small result-consistency defects in one focused pass.
-  - **Path normalisation:** make `pickFileArg` return a normalised absolute path so a file opened through a relative shell argument cannot also appear as a separate disk-search result. Preserve the existing argument-selection behaviour and tests.
-  - **Selection reset:** reset the selected result row when match-case or whole-word changes, just as a query or scope change already does.
-  - Acceptance: a relative shell-opened file appears once in results; query, match-case, whole-word, and scope changes all select the first current result; focused unit and Electron smoke guards cover both regressions.
-
-- ⬜ **CI renderer smoke support** (**S**, before MSIX; trial, not a release blocker) — automatic push/PR CI currently runs build + unit tests, while the hosted Electron smoke job is manual-only because Monaco did not reliably paint on GitHub’s Windows runners.
-  - Retry the manual hosted suite with software rendering (`--use-gl=swiftshader` and/or `--disable-gpu`) supplied through the Electron launch arguments.
-  - Promote smoke to the automatic push/PR gate only if repeated hosted runs are reliable; otherwise record the new evidence and retain the manual hosted job plus the local pre-release gate.
-
-- ⬜ **Microsoft Store release via MSIX** (**M**, after the taskbar and small cleanup gates) — a design-and-trial pass, not a repackage-and-submit exercise.
+- ⬜ **Microsoft Store release via MSIX** (**M**, after the small cleanup gate) — a design-and-trial pass, not a repackage-and-submit exercise.
   - MSIX virtualises registry writes. Explorer context-menu registration and launch-on-login must therefore use Store manifest declarations or be hidden in Store builds; a packaged-only gate would silently no-op.
   - Use `process.windowsStore` as the Store-specific branch. Decide the Explorer integration and startup-task behaviour, then configure the `appx` target, account/identity, IARC rating, privacy-policy URL, Store listing/screenshots, and certification submission.
   - The Store channel is Microsoft-signed; direct downloads remain a separate signing decision.
@@ -43,6 +42,10 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 ### Platform and design
 
+- 🧊 **Installed taskbar identity icon** (**M**) — parked by the owner on 2026-08-17 as a low-priority cosmetic defect. An installed packaged build can still show `{N&C}` on the Windows taskbar at 125% / dark theme where the small `{&}` identity is required. Both the in-place and clean-install experiments failed; do not repeat artifact-only, `WM_GETICON`, Alt+Tab, or `win-unpacked` checks as though they close this.
+  - When revisited, trace the taskbar’s live identity source and selected ICO frame while retaining the small-size `{&}` / large-size `{N&C}` contract.
+  - Acceptance: observe the exact installed packaged build at 100%, 125%, and above-125% DPI in light and dark taskbar themes. Automated/artifact evidence is supporting evidence only.
+  - This no longer blocks MSIX, but must be resolved before another taskbar-icon claim is marked fixed.
 - 🧊 **Purchased code-signing certificate** (**M**) — only revisit for the unsigned direct-download channel after the Store path is live or if direct downloads remain primary.
 - 🧊 **Native Windows 11 top-level “Open with”** (**L**) — `IExplorerCommand` integration so it is not under “Show more options”.
 - 🧊 **Re-harmonize theme chrome hues** — avoid altering canonical upstream theme colours without a compelling design reason.

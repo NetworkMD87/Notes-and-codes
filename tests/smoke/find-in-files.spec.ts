@@ -278,6 +278,49 @@ test('closing Find in Files cancels main traversal and never repaints', async ({
   await expect(win.locator('.fif-row')).toHaveCount(0)
 })
 
+test('query, match-case, and whole-word changes reset result selection', async ({ smoke }) => {
+  const { userDataDir, projectDir } = seededFolder(smoke)
+  writeFileSync(join(projectDir, 'a.txt'), 'needle')
+  writeFileSync(join(projectDir, 'b.txt'), 'needle')
+  writeFileSync(join(projectDir, 'c.txt'), 'needle')
+
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('#sidebar')).toBeVisible()
+  await win.keyboard.press('Control+Shift+F')
+  const searchbox = win.getByRole('searchbox', { name: 'Find in Files' })
+  const note = win.locator('.fif-note')
+  const rows = win.locator('.fif-row')
+  const host = win.locator('#find-in-files')
+
+  const changeAndWait = async (change: () => Promise<unknown>) => {
+    const previousSearchId = await host.getAttribute('data-last-search-id')
+    expect(previousSearchId).toMatch(/^\d+$/)
+    await change()
+    await expect.poll(() => host.getAttribute('data-last-search-id')).not.toBe(previousSearchId)
+    await expect(note).toHaveText('3 matches in 3 files')
+  }
+
+  await searchbox.fill('need')
+  await expect(note).toHaveText('3 matches in 3 files')
+  await searchbox.press('ArrowDown')
+  await expect(rows.nth(1)).toHaveClass(/active/)
+
+  await changeAndWait(() => searchbox.fill('needle'))
+  await expect(rows.first()).toHaveClass(/active/)
+
+  await searchbox.press('ArrowDown')
+  await expect(rows.nth(1)).toHaveClass(/active/)
+  await changeAndWait(() => win.getByRole('button', { name: 'Match case' }).click())
+  await expect(rows.first()).toHaveClass(/active/)
+
+  await searchbox.press('ArrowDown')
+  await expect(rows.nth(1)).toHaveClass(/active/)
+  await changeAndWait(() => win.getByRole('button', { name: 'Whole word' }).click())
+  // Removing the option-toggle reset leaves row 1 active and makes this assertion fail.
+  await expect(rows.first()).toHaveClass(/active/)
+})
+
 test('editing scope cancels the active traversal before debounce and resets result selection', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-searchscope-cancel-')
   const projectDir = smoke.tempDir('notes-searchscope-cancelproj-')
