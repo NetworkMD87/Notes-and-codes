@@ -17,7 +17,16 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 ## ⬜ Planned
 
-- ⬜ **Microsoft Store release via MSIX** (**M**, after the taskbar gate) — a design-and-trial pass, not a repackage-and-submit exercise.
+- 🐛 **Find in Files correctness cleanup** (**S**, after the taskbar gate) — close the two small result-consistency defects in one focused pass.
+  - **Path normalisation:** make `pickFileArg` return a normalised absolute path so a file opened through a relative shell argument cannot also appear as a separate disk-search result. Preserve the existing argument-selection behaviour and tests.
+  - **Selection reset:** reset the selected result row when match-case or whole-word changes, just as a query or scope change already does.
+  - Acceptance: a relative shell-opened file appears once in results; query, match-case, whole-word, and scope changes all select the first current result; focused unit and Electron smoke guards cover both regressions.
+
+- ⬜ **CI renderer smoke support** (**S**, before MSIX; trial, not a release blocker) — automatic push/PR CI currently runs build + unit tests, while the hosted Electron smoke job is manual-only because Monaco did not reliably paint on GitHub’s Windows runners.
+  - Retry the manual hosted suite with software rendering (`--use-gl=swiftshader` and/or `--disable-gpu`) supplied through the Electron launch arguments.
+  - Promote smoke to the automatic push/PR gate only if repeated hosted runs are reliable; otherwise record the new evidence and retain the manual hosted job plus the local pre-release gate.
+
+- ⬜ **Microsoft Store release via MSIX** (**M**, after the taskbar and small cleanup gates) — a design-and-trial pass, not a repackage-and-submit exercise.
   - MSIX virtualises registry writes. Explorer context-menu registration and launch-on-login must therefore use Store manifest declarations or be hidden in Store builds; a packaged-only gate would silently no-op.
   - Use `process.windowsStore` as the Store-specific branch. Decide the Explorer integration and startup-task behaviour, then configure the `appx` target, account/identity, IARC rating, privacy-policy URL, Store listing/screenshots, and certification submission.
   - The Store channel is Microsoft-signed; direct downloads remain a separate signing decision.
@@ -39,12 +48,6 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 - 🧊 **Re-harmonize theme chrome hues** — avoid altering canonical upstream theme colours without a compelling design reason.
 - 🧊 **One gradient moment** — low-value visual experiment.
 
-### Open defects and infrastructure follow-ups
-
-- 🐛 **Find in Files path normalisation** (**S**) — a relative file argument from a shell can bypass case-folded absolute-path de-duplication and appear twice in results. Normalise `pickFileArg`’s contract without breaking its tests.
-- 🐛 **Find in Files selection reset** (**S**) — changing match-case or whole-word should reset the selected result row, as changing the query already does.
-- 🧊 **CI renderer smoke support** — retry the GitHub-hosted Electron smoke suite with software rendering (`--use-gl=swiftshader` / `--disable-gpu`); current CI is build + unit only because rendered Monaco assertions do not paint reliably.
-
 ### Deferred extensions to shipped features
 
 - 🧊 **File History:** prune orphaned deleted/renamed-file history; add restore confirmation. (The proposed status-bar entry was superseded by the shipped toolbar command.)
@@ -54,6 +57,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 - 🧊 **Folder mode:** drag-to-move; cut/copy/paste; multi-root; `.gitignore` awareness.
 - 🧊 **Text highlighter:** re-anchor after external edits; highlights panel; export highlights to HTML/PDF; custom colour picker; Edit-menu command; keyboard-only painting.
 - 🧊 **Tab animation:** live-shift / FLIP animation for neighbouring tabs while reordering.
+- 🧊 **TXT tab badge colour** (**S**) — give the existing `TXT` language badge a restrained shared-palette colour matching the other file-type badges; do not colour the full tab. Verify contrast across light, dark, and high-contrast themes.
 - 🧊 **Find in Files:** regex search only after its safety/performance model is designed; streaming results if measurements still justify it.
 - 🧊 **In-app Help:** dedicated hotkey (without conflicting with Monaco); clickable commands; generated content; shared shortcut constants.
 
@@ -62,7 +66,8 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 - 💡 **Large-file mode** — lazy load / feature degradation above a size threshold (**M**).
 - 💡 **Cloud sync** for session, snippets, and settings (**L**).
 - 💡 **Plugin / extension hooks** (**L**).
-- 💡 **macOS / Linux builds** (**M–L**).
+- 💡 **Linux distribution and installer support** (**L**) — choose supported architectures, distributions, and package formats; audit case-sensitive path handling and gate or replace Windows-only integrations; add Linux build, unit, smoke, and installed-package validation before calling Linux supported.
+- 💡 **macOS build and distribution** (**M–L**).
 
 ---
 
