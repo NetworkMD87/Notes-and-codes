@@ -98,13 +98,17 @@ describe('keyboard focus rings', () => {
 })
 
 describe('tab sizing polish', () => {
-  it('uses a themed custom selector for tab sizing', () => {
+  it('uses an in-app themed selector with comfortable text spacing', () => {
     const rule = ruleFor('.settings .tab-sizing-select')
-    expect(rule).toContain('appearance:none')
     expect(rule).toContain('border-radius:var(--radius)')
-    expect(rule).toContain('background-color:var(--bar)')
-    expect(rule).toContain('var(--muted)')
-    expect(rule).toContain('padding:6px 30px 6px 12px')
+    expect(rule).toContain('padding:6px 10px 6px 12px')
+    expect(rule).toContain('background:var(--bar)')
+    expect(rule).toContain('color:var(--panel-text)')
+    expect(ruleFor('.tab-sizing-options')).toContain('background:var(--bar)')
+    expect(ruleFor('.tab-sizing-options')).toContain('color:var(--panel-text)')
+    expect(ruleFor('.tab-sizing-option[aria-selected=true]')).toContain('background:var(--accent)')
+    expect(ruleFor('.tab-sizing-option:focus-visible')).toContain('outline:2px solid var(--accent)')
+    expect(ruleFor('.tab-sizing-option[aria-selected=true]:focus-visible')).toContain('outline-color:var(--accent-text)')
     expect(ruleFor('.settings .tab-sizing-select:hover')).toContain('border-color:var(--accent)')
   })
 })

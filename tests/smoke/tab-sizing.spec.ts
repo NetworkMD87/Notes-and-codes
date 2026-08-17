@@ -10,7 +10,7 @@ test('long filenames are bounded by default and Natural width remains available'
   const filePath = join(userDataDir, filename)
   writeFileSync(filePath, 'export const answer = 42')
   const app = await smoke.launch({
-    args: ['out/main/index.js', filePath, `--user-data-dir=${userDataDir}`],
+    args: ['out/main/index.js', '--hidden', filePath, `--user-data-dir=${userDataDir}`],
   })
   const win = await app.firstWindow()
   await waitForBoot(win)
@@ -37,9 +37,31 @@ test('long filenames are bounded by default and Natural width remains available'
   await expect(select).toHaveAttribute('aria-label', filename)
 
   await openSettings(win, 'Appearance')
-  const sizing = win.getByLabel('Tab sizing')
-  await expect(sizing).toHaveValue('bounded')
-  await sizing.selectOption('natural')
+  const sizing = win.getByRole('button', { name: 'Tab sizing' })
+  await expect(sizing).toContainText('Bounded')
+  await expect(sizing).toHaveAttribute('aria-expanded', 'false')
+  await sizing.click()
+  await expect(sizing).toHaveAttribute('aria-expanded', 'true')
+  const sizingOptions = win.getByRole('listbox', { name: 'Tab sizing' })
+  await expect(sizingOptions).toBeVisible()
+  const optionTheme = await sizingOptions.evaluate(element => {
+    const probe = document.createElement('div')
+    probe.style.cssText = 'position:fixed;background:var(--bar);color:var(--panel-text)'
+    document.body.appendChild(probe)
+    const actual = getComputedStyle(element)
+    const expected = getComputedStyle(probe)
+    const colours = {
+      background: actual.backgroundColor,
+      foreground: actual.color,
+      expectedBackground: expected.backgroundColor,
+      expectedForeground: expected.color,
+    }
+    probe.remove()
+    return colours
+  })
+  expect(optionTheme.background).toBe(optionTheme.expectedBackground)
+  expect(optionTheme.foreground).toBe(optionTheme.expectedForeground)
+  await win.getByRole('option', { name: 'Natural width' }).click()
   await expect(win.locator('#tabbar')).toHaveAttribute('data-tab-sizing', 'natural')
   const natural = await tab.evaluate(element => {
     const clone = element.cloneNode(true) as HTMLElement

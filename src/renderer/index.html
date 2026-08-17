@@ -245,8 +245,17 @@
       .settings h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
       .settings select,.settings input[type=number],.settings input[type=text]{background:var(--bar);color:var(--panel-text);border:1px solid var(--border);padding:4px}
       .settings select{min-width:150px}
-      .settings .tab-sizing-select{min-width:168px;appearance:none;border-radius:var(--radius);font:inherit;cursor:pointer;padding:6px 30px 6px 12px;background-color:var(--bar);background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 13px) 50%,calc(100% - 9px) 50%;background-size:4px 4px,4px 4px;background-repeat:no-repeat}
+      .tab-sizing-picker{position:relative;min-width:168px}
+      .settings .tab-sizing-select{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border);border-radius:var(--radius);font:inherit;cursor:pointer;padding:6px 10px 6px 12px;background:var(--bar);color:var(--panel-text)}
       .settings .tab-sizing-select:hover{border-color:var(--accent);background-color:var(--bar-hover)}
+      .tab-sizing-chevron{color:var(--muted);font-size:12px;line-height:1}
+      .tab-sizing-options{position:fixed;z-index:200;display:flex;flex-direction:column;padding:2px 0;background:var(--bar);color:var(--panel-text);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+      .tab-sizing-options[hidden]{display:none}
+      .tab-sizing-option{border:0;background:transparent;color:inherit;font:inherit;text-align:left;padding:6px 12px;cursor:pointer}
+      .tab-sizing-option:hover,.tab-sizing-option:focus-visible{background:var(--bar-hover)}
+      .tab-sizing-option:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+      .tab-sizing-option[aria-selected=true]{background:var(--accent);color:var(--accent-text)}
+      .tab-sizing-option[aria-selected=true]:focus-visible{outline-color:var(--accent-text)}
       .hk-chips{display:flex;gap:4px;align-items:center}
       .hk-chip{background:var(--bar);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px;font-family:inherit}
       .hk-none{color:var(--muted);font-size:12px}

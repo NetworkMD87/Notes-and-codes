@@ -55,18 +55,55 @@ describe('SettingsPanel', () => {
 
     const label = [...document.querySelectorAll<HTMLLabelElement>('label')]
       .find(candidate => candidate.textContent === 'Tab sizing')
-    const select = label ? document.getElementById(label.htmlFor) as HTMLSelectElement | null : null
-    expect(select?.value).toBe('bounded')
-    expect(select?.className).toBe('tab-sizing-select')
-    expect([...select!.options].map(option => [option.value, option.textContent])).toEqual([
+    const trigger = label ? document.getElementById(label.htmlFor) as HTMLButtonElement | null : null
+    expect(trigger?.className).toBe('tab-sizing-select')
+    expect(trigger?.querySelector('.tab-sizing-value')?.textContent).toBe('Bounded')
+    expect(trigger?.getAttribute('aria-haspopup')).toBe('listbox')
+    expect(trigger?.getAttribute('aria-expanded')).toBe('false')
+    const valueId = trigger?.getAttribute('aria-describedby')
+    expect(valueId).toBeTruthy()
+    expect(document.getElementById(valueId!)?.textContent).toBe('Bounded')
+
+    trigger!.click()
+    expect(trigger?.getAttribute('aria-expanded')).toBe('true')
+    const list = document.querySelector<HTMLElement>('.tab-sizing-options')
+    expect(list?.hidden).toBe(false)
+    const options = [...list!.querySelectorAll<HTMLElement>('[role="option"]')]
+    expect(options.map(option => [option.dataset.value, option.textContent])).toEqual([
       ['bounded', 'Bounded'],
       ['natural', 'Natural width'],
     ])
+    expect(options.map(option => option.tabIndex)).toEqual([0, -1])
 
-    select!.value = 'natural'
-    select!.dispatchEvent(new Event('change'))
+    const escape = { key: 'Escape', preventDefault: vi.fn(), stopPropagation: vi.fn() }
+    handleEscape(escape)
+    expect(escape.preventDefault).toHaveBeenCalledOnce()
+    expect(list?.hidden).toBe(true)
+    expect(document.querySelector('.settings')?.classList.contains('hidden')).toBe(false)
+    expect(openCount()).toBe(1)
+
+    trigger!.click()
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+    options[0].dispatchEvent(tab)
+    expect(tab.defaultPrevented).toBe(true)
+    expect(document.querySelector('.settings')?.contains(document.activeElement)).toBe(true)
+    expect(list?.hidden).toBe(true)
+
+    trigger!.click()
+    document.querySelector('.settings-box')?.dispatchEvent(new Event('scroll'))
+    expect(list?.hidden).toBe(true)
+    expect(trigger?.getAttribute('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(trigger)
+    expect(openCount()).toBe(1)
+
+    trigger!.click()
+
+    options[1].click()
 
     expect(d.setTabSizing).toHaveBeenCalledWith('natural')
+    expect(trigger?.querySelector('.tab-sizing-value')?.textContent).toBe('Natural width')
+    expect(trigger?.getAttribute('aria-expanded')).toBe('false')
+    expect(list?.hidden).toBe(true)
   })
 
   it('labels and explains the workspace exclusion editor', () => {

@@ -4,6 +4,12 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [Unreleased]
+
+### Fixed
+- The **Appearance ▸ Tab sizing** menu now uses the active app theme when opened instead of
+  falling back to a white Windows menu in dark themes.
+
 ## [1.19.3] — 2026-08-17
 
 _A calmer tab strip for long filenames, with the original layout still available._
@@ -12,7 +18,7 @@ _A calmer tab strip for long filenames, with the original layout still available
 - Long filenames no longer force tabs to grow without limit. Tabs now use responsive bounded
   widths, shorten overflowing titles with an ellipsis, and keep the language badge and close
   button visible; the complete filename remains available as a tooltip and accessible label.
-- **Appearance ▸ Tab width** lets users retain the recommended bounded layout or switch back to
+- **Appearance ▸ Tab sizing** lets users retain the bounded layout or switch back to
   natural-width tabs. The choice persists across restarts.
 
 ## [1.19.2] — 2026-08-15
