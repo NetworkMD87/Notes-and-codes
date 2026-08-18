@@ -6,7 +6,8 @@ describe('fileType', () => {
   it('maps common extensions to a label + a palette colour', () => {
     expect(fileType('index.js')).toEqual({ label: 'js', colour: 'amber' })
     expect(fileType('App.tsx')).toEqual({ label: 'tsx', colour: 'blue' })
-    expect(fileType('readme.md')).toEqual({ label: 'md', colour: 'slate' })
+    expect(fileType('readme.md')).toEqual({ label: 'md', colour: 'lime' })
+    expect(fileType('notes.txt')).toEqual({ label: 'txt', colour: 'slate' })
     expect(fileType('package.json')).toEqual({ label: 'json', colour: 'yellow' })
   })
   it('is case-insensitive on the extension', () => {
@@ -35,13 +36,13 @@ describe('fileType', () => {
 describe('langBadge', () => {
   it('maps Monaco languages to the same label + colour as the extension', () => {
     expect(langBadge('typescript')).toEqual({ label: 'ts', colour: 'blue' })
-    expect(langBadge('markdown')).toEqual({ label: 'md', colour: 'slate' })
+    expect(langBadge('markdown')).toEqual({ label: 'md', colour: 'lime' })
     expect(langBadge('python')).toEqual({ label: 'py', colour: 'green' })
     expect(langBadge('json')).toEqual({ label: 'json', colour: 'yellow' })
     expect(langBadge('csharp')).toEqual({ label: 'cs', colour: 'fuchsia' })
   })
-  it('gives plaintext a muted txt badge', () => {
-    expect(langBadge('plaintext')).toEqual({ label: 'txt', colour: null })
+  it('gives plaintext a slate txt badge', () => {
+    expect(langBadge('plaintext')).toEqual({ label: 'txt', colour: 'slate' })
   })
   it('falls back to a muted short label for an unknown language', () => {
     expect(langBadge('brainfuck')).toEqual({ label: 'brai', colour: null })

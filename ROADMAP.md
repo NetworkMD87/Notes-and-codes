@@ -60,7 +60,6 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 - 🧊 **Folder mode:** drag-to-move; cut/copy/paste; multi-root; `.gitignore` awareness.
 - 🧊 **Text highlighter:** re-anchor after external edits; highlights panel; export highlights to HTML/PDF; custom colour picker; Edit-menu command; keyboard-only painting.
 - 🧊 **Tab animation:** live-shift / FLIP animation for neighbouring tabs while reordering.
-- 🧊 **TXT tab badge colour** (**S**) — give the existing `TXT` language badge a restrained shared-palette colour matching the other file-type badges; do not colour the full tab. Verify contrast across light, dark, and high-contrast themes.
 - 🧊 **Find in Files:** regex search only after its safety/performance model is designed; streaming results if measurements still justify it.
 - 🧊 **In-app Help:** dedicated hotkey (without conflicting with Monaco); clickable commands; generated content; shared shortcut constants.
 
