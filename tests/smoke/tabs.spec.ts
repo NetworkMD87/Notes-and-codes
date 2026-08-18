@@ -1,6 +1,45 @@
 import { test, expect } from './smokeTest'
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { openSettings } from './settingsHelper'
+
+async function expectBadgeColours(win: import('@playwright/test').Page): Promise<void> {
+  await expect(win.getByRole('tab', { name: 'Untitled-1' }).locator('.badge'))
+    .toHaveCSS('color', 'rgb(100, 116, 139)')
+  await expect(win.getByRole('tab', { name: 'README.md' }).locator('.badge'))
+    .toHaveCSS('color', 'rgb(101, 163, 13)')
+}
+
+test('TXT and Markdown tab badges retain their palette colours across themes', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-badge-colours-')
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ themeId: 'dark' }))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [
+      { id: 'text', title: 'Untitled-1', filePath: null, content: '', language: 'plaintext', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'markdown', title: 'README.md', filePath: null, content: '# Readme', language: 'markdown', eol: 'LF', encoding: 'utf8', dirty: false },
+    ],
+    activeId: 'text',
+  }))
+
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  await expect(win.locator('body')).toHaveAttribute('data-theme', 'dark')
+  await expectBadgeColours(win)
+
+  await openSettings(win, 'Appearance')
+  await win.getByRole('radio', { name: 'Light', exact: true }).click()
+  await win.keyboard.press('Escape')
+  await expect(win.locator('body')).toHaveAttribute('data-theme', 'light')
+  await expectBadgeColours(win)
+
+  await openSettings(win, 'Appearance')
+  await win.getByRole('radio', { name: 'High Contrast', exact: true }).click()
+  await win.keyboard.press('Escape')
+  await expect(win.locator('body')).toHaveAttribute('data-theme', 'high-contrast')
+  await expectBadgeColours(win)
+})
 
 test('a file tab shows its language badge; a scratch tab shows a badge too', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
