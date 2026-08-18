@@ -47,6 +47,9 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.19.5](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.5):** adds a
+  **Settings ▸ Editor ▸ Show minimap** preference and keeps wrapped text clear of an enabled
+  minimap, including after font changes and app startup.
 - **[v1.19.4](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.4):** fits more
   bounded tabs into the strip, gives Tab sizing a themed keyboard-friendly picker, keeps relative
   shell opens unique in Find in Files, resets changed searches to their first result, and gives
