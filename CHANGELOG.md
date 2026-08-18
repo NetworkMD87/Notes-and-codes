@@ -6,9 +6,22 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 
 ## [Unreleased]
 
+## [1.19.4] — 2026-08-18
+
+_A more polished tab strip and more dependable Find in Files._
+
+### Changed
+- Bounded tabs now use tighter responsive widths, fitting more open files while preserving their
+  language badge and close control.
+- **Appearance ▸ Tab sizing** now uses a themed, keyboard-accessible picker instead of a
+  Windows-native menu that could appear white in dark themes.
+- Plain-text and TXT badges use Slate, while Markdown badges use Lime, consistently in tabs, the
+  sidebar, and Find in Files.
+
 ### Fixed
-- The **Appearance ▸ Tab sizing** menu now uses the active app theme when opened instead of
-  falling back to a white Windows menu in dark themes.
+- Files opened through relative shell paths no longer appear twice in Find in Files results.
+- Find in Files now returns to the first current result when the query, match-case, whole-word, or
+  scope setting changes.
 
 ## [1.19.3] — 2026-08-17
 

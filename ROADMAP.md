@@ -8,13 +8,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 ## 🟢 Merged — awaiting release
 
-- 🟢 **Find in Files correctness cleanup** (**S**) — merged through PR #22 on 2026-08-17; queued for the next release.
-  - **Path normalisation:** `pickFileArg` now returns a normalised absolute path, so a file opened through a relative shell argument cannot also appear as a separate disk-search result.
-  - **Selection reset:** query, match-case, whole-word, and scope changes now select the first current result.
-  - Verification: the build, all 918 unit tests, and focused Electron smoke guards for both regressions pass.
-
-- 🟢 **TXT and Markdown badge colours** (**S**) — merged on 2026-08-18; plaintext/TXT and new untitled buffers use Slate, while Markdown uses the previously unused Lime badge colour. The shared mapping covers tabs, the sidebar, and Find in Files without colouring the full tab.
-  - Verification: the build, all 918 unit tests, and all 152 Electron smoke tests pass under the suite's configured retries; the focused Dark, Light, and High Contrast guard passed first-run.
+_Nothing currently queued._
 
 ---
 
@@ -80,6 +74,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 | Release | Outcome |
 | --- | --- |
+| **v1.19.4** · 2026-08-18 | Tighter and fully themed tab sizing; Find in Files path and selection correctness; distinct Slate TXT and Lime Markdown badges. |
 | **v1.19.3** · 2026-08-17 | Responsive bounded tabs keep long filenames, badges, and close controls usable; natural-width tabs remain available in Appearance settings. |
 | **v1.19.2** · 2026-08-15 | Electron and build-toolchain security update; offline PDF exports; guarded app navigation; reliable external-change warnings after **Keep mine**. |
 | **v1.19.1** · 2026-08-13 | Explorer opens replace only a disposable blank placeholder; the highlighter persists its active colour. |
