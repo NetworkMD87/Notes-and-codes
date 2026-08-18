@@ -47,9 +47,13 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.19.4](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.4):** fits more
+  bounded tabs into the strip, gives Tab sizing a themed keyboard-friendly picker, keeps relative
+  shell opens unique in Find in Files, resets changed searches to their first result, and gives
+  TXT and Markdown distinct Slate and Lime badges.
 - **[v1.19.3](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.3):** long
   filenames now stay within responsive tab bounds while badges and close buttons remain visible.
-  The full filename remains accessible, and **Appearance ▸ Tab width** can restore natural-width
+  The full filename remains accessible, and **Appearance ▸ Tab sizing** can restore natural-width
   tabs for users who prefer the original layout.
 - **[v1.19.2](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.2):** upgrades
   the Electron runtime and build toolchain to audit-clean releases, keeps PDF exports offline,
