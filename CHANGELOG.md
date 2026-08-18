@@ -6,6 +6,18 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 
 ## [Unreleased]
 
+## [1.19.5] — 2026-08-18
+
+_Wrapped text stays clear of the minimap, with a simple control to hide it._
+
+### Added
+- **Settings ▸ Editor ▸ Show minimap** lets users show or hide Monaco's document overview. The
+  choice persists across restarts and defaults to hidden for new users.
+
+### Fixed
+- Wrapped text no longer renders beneath an enabled minimap, including after editor-font changes
+  and app startup.
+
 ## [1.19.4] — 2026-08-18
 
 _A more polished tab strip and more dependable Find in Files._
