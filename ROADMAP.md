@@ -13,6 +13,9 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
   - **Selection reset:** query, match-case, whole-word, and scope changes now select the first current result.
   - Verification: the build, all 918 unit tests, and focused Electron smoke guards for both regressions pass.
 
+- 🟢 **TXT and Markdown badge colours** (**S**) — merged on 2026-08-18; plaintext/TXT and new untitled buffers use Slate, while Markdown uses the previously unused Lime badge colour. The shared mapping covers tabs, the sidebar, and Find in Files without colouring the full tab.
+  - Verification: the build, all 918 unit tests, and all 152 Electron smoke tests pass under the suite's configured retries; the focused Dark, Light, and High Contrast guard passed first-run.
+
 ---
 
 ## 🔜 Next — CI renderer smoke support
