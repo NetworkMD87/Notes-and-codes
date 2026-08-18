@@ -10,6 +10,7 @@ function deps(): SettingsDeps {
     tabSizing: () => 'bounded', setTabSizing: vi.fn(),
     fontFamily: () => 'JetBrains Mono', setFontFamily: vi.fn(), fontLigatures: () => true, setLigatures: vi.fn(),
     uiFontFamily: () => 'System', setUiFontFamily: vi.fn(), fontSize: () => 14, setFontSize: vi.fn(),
+    showMinimap: () => false, setShowMinimap: vi.fn(),
     showAllFiles: () => false, setShowAllFiles: vi.fn(), restoreFolder: () => true, setRestoreFolder: vi.fn(),
     workspaceExcludes: () => ['**/dist/**'], setWorkspaceExcludes: vi.fn(async () => {}),
     restoreWorkspaceExcludes: vi.fn(async () => {}),
@@ -33,6 +34,22 @@ describe('SettingsPanel', () => {
   afterEach(() => {
     while (openCount() > baseline) handleEscape({ key: 'Escape', preventDefault: vi.fn(), stopPropagation: vi.fn() })
     document.body.replaceChildren()
+  })
+
+  it('shows the minimap preference in Editor and applies the toggle', () => {
+    const d = deps()
+    const panel = new SettingsPanel(document.body, d)
+    panel.open('editor')
+
+    const checkbox = [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+      .find(candidate => candidate.parentElement?.textContent?.includes('Show minimap'))
+    expect(checkbox).toBeDefined()
+    expect(checkbox?.checked).toBe(false)
+
+    checkbox!.checked = true
+    checkbox!.dispatchEvent(new Event('change'))
+
+    expect(d.setShowMinimap).toHaveBeenCalledWith(true)
   })
 
   it('groups the summon hotkey value and actions under the visible caption', () => {

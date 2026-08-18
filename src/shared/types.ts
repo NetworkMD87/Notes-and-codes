@@ -126,6 +126,7 @@ export interface Settings {
   fontFamily: string
   uiFontFamily: string
   fontLigatures: boolean
+  showMinimap: boolean
   showAllFiles: boolean
   workspaceExcludes: string[]
   restoreFolderOnLaunch: boolean
@@ -154,6 +155,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fontFamily: 'JetBrains Mono',
   uiFontFamily: 'System',
   fontLigatures: true,
+  showMinimap: false,
   showAllFiles: false,
   workspaceExcludes: [...DEFAULT_WORKSPACE_EXCLUDES],
   restoreFolderOnLaunch: true,

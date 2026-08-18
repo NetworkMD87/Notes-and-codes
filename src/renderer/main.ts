@@ -11,7 +11,7 @@ import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
 import { TabBar } from './tabBar'
 import { SplitView } from './splitView'
-import { registerFormatKeybinding } from './editorPane'
+import { registerFormatKeybinding, remeasureEditorFonts } from './editorPane'
 import { ThemeController } from './theme'
 import { CommandPalette } from './commandPalette'
 import { StatusBar } from './statusBar'
@@ -278,11 +278,13 @@ let alwaysOnTop = false
 let fontSize = 14
 function applyFontSize(): void { view.paneA.setFontSize(fontSize); view.paneB.setFontSize(fontSize) }
 function persistFontSize(): void { void window.api.updateSettings({ fontSize }) }
-function zoomBy(delta: number): void { fontSize = Math.min(40, Math.max(6, fontSize + delta)); applyFontSize(); persistFontSize() }
-function zoomReset(): void { fontSize = 14; applyFontSize(); persistFontSize() }
+function zoomBy(delta: number): void { fontSize = Math.min(40, Math.max(6, fontSize + delta)); persistFontSize(); void applySettledEditorFont() }
+function zoomReset(): void { fontSize = 14; persistFontSize(); void applySettledEditorFont() }
 
 let fontFamily = 'JetBrains Mono'
 let fontLigatures = true
+let fontMeasurementRevision = 0
+let showMinimap = false
 let showAllFiles = false
 let workspaceExcludes: string[] = [...DEFAULT_WORKSPACE_EXCLUDES]
 const workspaceFilter = (): WorkspaceFilter => ({
@@ -305,11 +307,35 @@ function applyFont(): void {
   view.paneA.setFontFamily(fontStack(fontFamily)); view.paneB.setFontFamily(fontStack(fontFamily))
   view.paneA.setLigatures(fontLigatures); view.paneB.setLigatures(fontLigatures)
 }
+async function applySettledEditorFont(): Promise<void> {
+  const revision = ++fontMeasurementRevision
+  try {
+    await document.fonts.load(`${fontSize}px "${fontFamily}"`)
+    await document.fonts.ready
+  } catch {
+    // A missing custom/system face falls through to the CSS font stack. Monaco still needs to
+    // discard the measurements it took before that fallback settled.
+  }
+  if (revision !== fontMeasurementRevision) return
+  // Keep the previous, correctly measured face on screen while the replacement loads. Applying
+  // the new options and clearing Monaco's cache in this same task prevents an intervening paint
+  // where wrapped glyphs could use stale widths underneath an enabled minimap.
+  applyFont()
+  applyFontSize()
+  remeasureEditorFonts()
+  view.paneA.layout(); view.paneB.layout()
+}
 function persistFont(): void { void window.api.updateSettings({ fontFamily, fontLigatures }) }
 
-function setFontFamilyState(name: string): void { fontFamily = name; applyFont(); persistFont() }
-function setLigaturesState(on: boolean): void { fontLigatures = on; applyFont(); persistFont() }
-function setFontSizeState(px: number): void { fontSize = Math.min(40, Math.max(6, px)); applyFontSize(); persistFontSize() }
+function setFontFamilyState(name: string): void { fontFamily = name; persistFont(); void applySettledEditorFont() }
+function setLigaturesState(on: boolean): void { fontLigatures = on; persistFont(); void applySettledEditorFont() }
+function setFontSizeState(px: number): void { fontSize = Math.min(40, Math.max(6, px)); persistFontSize(); void applySettledEditorFont() }
+function setShowMinimapState(on: boolean): void {
+  showMinimap = on
+  view.paneA.setMinimap(on); view.paneB.setMinimap(on)
+  view.paneA.layout(); view.paneB.layout()
+  void window.api.updateSettings({ showMinimap: on })
+}
 
 let uiFontFamily = 'System'
 function applyUiFont(): void { document.body.style.setProperty('--ui-font', uiFontStack(uiFontFamily)) }
@@ -366,6 +392,7 @@ async function boot(): Promise<void> {
   fontFamily = settings.fontFamily ?? 'JetBrains Mono'
   uiFontFamily = settings.uiFontFamily ?? 'System'
   fontLigatures = settings.fontLigatures ?? true
+  showMinimap = settings.showMinimap
   showAllFiles = settings.showAllFiles
   workspaceExcludes = [...settings.workspaceExcludes]
   restoreFolder = settings.restoreFolderOnLaunch
@@ -375,9 +402,11 @@ async function boot(): Promise<void> {
   tabBar.setSizing(tabSizing)
   highlights.setColour(settings.lastHighlightColour)
   syncHighlightChrome(highlights.isOn(), settings.lastHighlightColour)
-  applyFont()
   applyUiFont()
-  fontSize = settings.fontSize ?? 14; applyFontSize()
+  fontSize = settings.fontSize ?? 14
+  await applySettledEditorFont()
+  view.paneA.setMinimap(showMinimap); view.paneB.setMinimap(showMinimap)
+  view.paneA.layout(); view.paneB.layout()
   alwaysOnTop = settings.alwaysOnTop; await window.api.setAlwaysOnTop(alwaysOnTop)
   pasteHistory.load(startup.clipboardHistory)
   snippets.load(startup.snippets)
@@ -806,6 +835,7 @@ const settingsDeps: SettingsDeps = {
   fontLigatures: () => fontLigatures, setLigatures: setLigaturesState,
   uiFontFamily: () => uiFontFamily, setUiFontFamily: setUiFontFamilyState,
   fontSize: () => fontSize, setFontSize: setFontSizeState,
+  showMinimap: () => showMinimap, setShowMinimap: setShowMinimapState,
   showAllFiles: () => showAllFiles,
   setShowAllFiles: async (on) => {
     const saved = await window.api.updateSettings({ showAllFiles: on })

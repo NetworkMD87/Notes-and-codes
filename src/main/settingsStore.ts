@@ -12,6 +12,9 @@ function normalizeSettings(value: unknown): Settings {
   return {
     ...DEFAULT_SETTINGS,
     ...stored,
+    showMinimap: typeof stored.showMinimap === 'boolean'
+      ? stored.showMinimap
+      : DEFAULT_SETTINGS.showMinimap,
     tabSizing: isTabSizing(stored.tabSizing) ? stored.tabSizing : DEFAULT_SETTINGS.tabSizing,
     workspaceExcludes: normalizePathGlobs(rawExcludes),
     lastHighlightColour: isHighlightColour(stored.lastHighlightColour)
