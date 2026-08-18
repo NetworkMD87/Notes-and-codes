@@ -44,6 +44,10 @@ export function registerFormatKeybinding(run: () => void): void {
   }])
 }
 
+export function remeasureEditorFonts(): void {
+  monaco.editor.remeasureFonts()
+}
+
 export class EditorPane {
   private editor: monaco.editor.IStandaloneCodeEditor
   private container: HTMLElement
@@ -77,7 +81,7 @@ export class EditorPane {
       automaticLayout: true,
       lineNumbers: 'on',
       wordWrap: 'on',
-      minimap: { enabled: true },
+      minimap: { enabled: false },
       fontSize: 14,
       mouseWheelZoom: true,
       fontFamily: "'JetBrains Mono', Consolas, monospace",
@@ -261,6 +265,7 @@ export class EditorPane {
   }
   toggleWordWrap(): boolean { this.setWordWrap(!this.wordWrapOn); return this.wordWrapOn }
   wordWrapEnabled(): boolean { return this.wordWrapOn }
+  setMinimap(on: boolean): void { this.editor.updateOptions({ minimap: { enabled: on } }) }
   setFontSize(px: number): void { this.editor.updateOptions({ fontSize: px }) }
   setFontFamily(css: string): void { this.editor.updateOptions({ fontFamily: css }) }
   setLigatures(on: boolean): void { this.editor.updateOptions({ fontLigatures: on }) }

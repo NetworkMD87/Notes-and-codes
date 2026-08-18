@@ -19,6 +19,27 @@ describe('SettingsStore', () => {
     expect(s.theme).toBe('dark')
     expect(s.autoSaveSession).toBe(true) // default preserved
   })
+  it('defaults the minimap off for settings written before the preference existed', async () => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ themeId: 'nord' }))
+
+    const settings = await new SettingsStore(dir).load()
+
+    expect(settings.showMinimap).toBe(false)
+    expect(settings.themeId).toBe('nord')
+  })
+  it.each(['yes', 1, null])('rejects an invalid persisted minimap preference: %j', async (showMinimap) => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ showMinimap }))
+
+    expect((await new SettingsStore(dir).load()).showMinimap).toBe(false)
+  })
+  it.each([true, false])('persists the minimap preference through an update: %j', async (showMinimap) => {
+    const store = new SettingsStore(dir)
+    await store.update({ showMinimap: !showMinimap })
+
+    await store.update({ showMinimap })
+
+    expect((await new SettingsStore(dir).load()).showMinimap).toBe(showMinimap)
+  })
   it('saves and reloads', async () => {
     const store = new SettingsStore(dir)
     await store.save({ ...DEFAULT_SETTINGS, theme: 'light', autoSaveSession: false })

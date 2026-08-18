@@ -23,6 +23,8 @@ export interface SettingsDeps {
   setUiFontFamily: (name: string) => void
   fontSize: () => number
   setFontSize: (px: number) => void
+  showMinimap: () => boolean
+  setShowMinimap: (on: boolean) => void
   showAllFiles: () => boolean
   setShowAllFiles: (on: boolean) => void
   workspaceExcludes: () => string[]
@@ -386,7 +388,7 @@ export class SettingsPanel {
       spell.appendChild(resolved)
     }
     spell.appendChild(dictionary)
-    wrap.append(eh, this.checkboxRow('Auto-save changes to disk (named files)', this.d.autoSaveToDisk(), on => this.d.setAutoSaveToDisk(on)), this.checkboxRow('Format on save (named files)', this.d.formatOnSave(), on => this.d.setFormatOnSave(on)), spell)
+    wrap.append(eh, this.checkboxRow('Show minimap', this.d.showMinimap(), on => this.d.setShowMinimap(on)), this.checkboxRow('Auto-save changes to disk (named files)', this.d.autoSaveToDisk(), on => this.d.setAutoSaveToDisk(on)), this.checkboxRow('Format on save (named files)', this.d.formatOnSave(), on => this.d.setFormatOnSave(on)), spell)
     return wrap
   }
 
