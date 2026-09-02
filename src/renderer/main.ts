@@ -21,6 +21,7 @@ import { toast, toastGlyph } from './notify'
 import { registerCommands } from './commands'
 import { migrateThemeId } from './themes'
 import { MarkdownPreview } from './markdownPreview'
+import { MarkdownPreviewLayout } from './markdownPreviewLayout'
 import { PasteHistoryList } from './pasteHistory'
 import { PasteHistoryPicker } from './pasteHistoryPicker'
 import { installDropOpen } from './dropOpen'
@@ -75,22 +76,43 @@ const statusBar = new StatusBar(document.getElementById('statusbar')!, {
 const diff = new DiffView(document.getElementById('diff')!)
 const diffPicker = new DiffPicker(document.getElementById('app')!, focusActiveEditor)
 const phPicker = new PasteHistoryPicker(document.getElementById('app')!, focusActiveEditor)
-const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, {
-  onLayout: () => { view.paneA.layout(); view.paneB.layout() },
-})
+const mdPreview = new MarkdownPreview(document.getElementById('mdpreview')!, {})
+const previewLayout = new MarkdownPreviewLayout(
+  document.getElementById('panes')!,
+  document.getElementById('editor-group')!,
+  document.getElementById('mdpreview')!,
+  {
+    focusEditor: focusActiveEditor,
+    layoutEditors: () => { view.paneA.layout(); view.paneB.layout() },
+    persist: async state => {
+      await window.api.updateSettings({
+        rememberMarkdownPreviewMode: state.remember,
+        markdownPreviewMode: state.requestedMode,
+        markdownPreviewLastVisibleMode: state.lastVisibleMode,
+        markdownPreviewWidthPercent: state.previewWidthPercent,
+      })
+    },
+    warn: message => toast(message, 'warning'),
+  },
+)
 
-function previewSnapshot(): { bufferId: string; content: string } {
+function previewContext(): { bufferId: string; content: string; isMarkdown: boolean } {
   const pane = paneFor(view.focusedPane())
   const bufferId = pane.currentBufferId()
-  if (bufferId) return { bufferId, content: pane.getContent() }
   const active = manager.activeId ? manager.get(manager.activeId) : undefined
-  return { bufferId: active?.id ?? '', content: active?.content ?? '' }
+  const buffer = bufferId ? manager.get(bufferId) : active
+  return {
+    bufferId: buffer?.id ?? '',
+    content: bufferId ? pane.getContent() : buffer?.content ?? '',
+    isMarkdown: buffer?.language === 'markdown',
+  }
 }
 
-function syncVisiblePreview(): void {
-  if (!mdPreview.isVisible()) return
-  const snapshot = previewSnapshot()
-  mdPreview.switchBuffer(snapshot.bufferId, snapshot.content)
+function syncPreviewContext(): void {
+  const current = previewContext()
+  previewLayout.setBufferIsMarkdown(current.isMarkdown)
+  mdPreview.setActive(previewLayout.effectiveMode() !== 'off', current.bufferId, current.content)
+  refreshToolbar()
 }
 
 const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) => {
@@ -99,7 +121,7 @@ const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) =>
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
 function focusActiveEditor(): void { paneFor(view.focusedPane()).focus() }
-view.onFocusChange(() => syncVisiblePreview())
+view.onFocusChange(() => syncPreviewContext())
 
 function applyHighlightsToPanes(bufferId: string, hs: Highlight[]): void {
   for (const which of ['A', 'B'] as const) {
@@ -196,8 +218,7 @@ function showActive(): void {
   void loadHighlightsFor(active)
   tabBar.render(manager.list(), manager.activeId)
   refreshStatus()
-  mdPreview.switchBuffer(active.id, active.content)
-  refreshToolbar()
+  syncPreviewContext()
   folder.setActiveFile(active.filePath ?? null) // highlight the open file's row in the sidebar
   syncWatch()
   autosave.flushNow()
@@ -412,6 +433,8 @@ async function boot(): Promise<void> {
   snippets.load(startup.snippets)
   if (startup.session.buffers.length > 0) manager.restore(startup.session)
   await finishStartupBuffers()
+  previewLayout.restore(settings, previewContext().isMarkdown)
+  syncPreviewContext()
   // Main only adds this query under NC_HEADLESS plus the dedicated smoke-test environment flag.
   // Keeping the stalled port here exercises boot behavior without exposing a production IPC seam.
   const spellTestParams = new URLSearchParams(window.location.search)
@@ -575,7 +598,7 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
   if (opts.recent) window.api.addRecentFile(path)
   if (pane && manager.get(id)!.language !== oldLang) {
     pane.refreshBuffer(manager.get(id)!)
-    syncVisiblePreview()
+    syncPreviewContext()
     spell?.refreshNow()
   }
   syncWatch()
@@ -728,9 +751,11 @@ function startDiff(): void {
 }
 
 const togglePreview = () => {
-  const snapshot = previewSnapshot()
-  mdPreview.toggle(snapshot.bufferId, snapshot.content)
-  refreshToolbar()
+  if (!previewLayout.toggle()) {
+    toast('Markdown Preview is available for Markdown files.', 'info')
+    return
+  }
+  syncPreviewContext()
 }
 
 async function exportActive(format: ExportFormat): Promise<void> {
@@ -944,7 +969,7 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
     window.api.snapshotHistory(b.filePath, paneFor(view.focusedPane()).getContent(), b.eol, b.encoding)
     manager.update(id, v.content)
     paneFor(view.focusedPane()).refreshBuffer(b)
-    syncVisiblePreview()
+    syncPreviewContext()
     spell?.refreshNow()
     tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
     toast('Restored an earlier version — unsaved, Save to keep it.', 'success')
@@ -991,7 +1016,7 @@ async function openFolderFromDialog(): Promise<void> {
 }
 
 function refreshToolbar(): void {
-  toolbar.syncToggles({ split: view.isSplit(), preview: mdPreview.isVisible(), pin: alwaysOnTop })
+  toolbar.syncToggles({ split: view.isSplit(), preview: previewLayout.effectiveMode() !== 'off', pin: alwaysOnTop })
 }
 
 const palette = new CommandPalette(focusActiveEditor)
@@ -1094,7 +1119,7 @@ async function reloadBuffer(id: string): Promise<void> {
   conflicts.delete(id)
   if (paneFor(view.focusedPane()).currentBufferId() === id) {
     paneFor(view.focusedPane()).refreshBuffer(b)
-    syncVisiblePreview()
+    syncPreviewContext()
     spell?.refreshNow()
   }
   refreshStatus(); tabBar.render(manager.list(), manager.activeId)
@@ -1257,6 +1282,7 @@ const historyTimer = setInterval(() => {
 // Clear on unload so HMR dev reloads don't stack duplicate timers.
 window.addEventListener('beforeunload', () => {
   clearInterval(historyTimer)
+  previewLayout.dispose()
   mdPreview.dispose()
   spell?.dispose()
   spell = null

@@ -36,7 +36,11 @@ test('launches, creates tabs, splits, toggles theme', async ({ smoke }) => {
 
 test('markdown preview toggles and paste-history picker opens', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
-  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const markdownPath = join(userDataDir, 'preview.md')
+  writeFileSync(markdownPath, '# preview')
+  const app = await smoke.launch({
+    args: ['out/main/index.js', markdownPath, `--user-data-dir=${userDataDir}`],
+  })
     const win = await app.firstWindow()
     await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
@@ -124,7 +128,11 @@ test('visible Markdown preview follows split-pane focus without an edit or tab a
 
 test('toolbar split and preview buttons work and show active state', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
-  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const markdownPath = join(userDataDir, 'preview.md')
+  writeFileSync(markdownPath, '# preview')
+  const app = await smoke.launch({
+    args: ['out/main/index.js', markdownPath, `--user-data-dir=${userDataDir}`],
+  })
     const win = await app.firstWindow()
     await expect(win.locator('#toolbar')).toBeVisible()
 

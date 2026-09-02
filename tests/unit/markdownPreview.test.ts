@@ -12,12 +12,11 @@ describe('MarkdownPreview', () => {
     vi.useFakeTimers()
     const panel = document.createElement('div')
     const render = vi.fn((markdown: string) => `<p>${markdown}</p>`)
-    const onLayout = vi.fn()
-    const preview = new MarkdownPreview(panel, { onLayout, render })
+    const preview = new MarkdownPreview(panel, { render })
 
-    expect(preview.toggle('a', 'first')).toBe(true)
+    expect(preview.setActive(true, 'a', 'first')).toBe(true)
+    expect(preview.isActive()).toBe(true)
     expect(render).toHaveBeenLastCalledWith('first')
-    expect(onLayout).toHaveBeenCalledTimes(1)
 
     preview.update('a', 'middle')
     preview.update('a', 'newest')
@@ -32,9 +31,9 @@ describe('MarkdownPreview', () => {
     vi.useFakeTimers()
     const panel = document.createElement('div')
     const render = vi.fn((markdown: string) => markdown)
-    const preview = new MarkdownPreview(panel, { onLayout: vi.fn(), render })
+    const preview = new MarkdownPreview(panel, { render })
 
-    preview.toggle('a', 'a0')
+    preview.setActive(true, 'a', 'a0')
     preview.update('a', 'stale-a')
     preview.switchBuffer('b', 'fresh-b')
     expect(render).toHaveBeenLastCalledWith('fresh-b')
@@ -42,11 +41,11 @@ describe('MarkdownPreview', () => {
     expect(render).not.toHaveBeenCalledWith('stale-a')
 
     preview.update('b', 'hidden-work')
-    expect(preview.toggle('b', 'hidden-work')).toBe(false)
+    expect(preview.setActive(false, 'b', 'hidden-work')).toBe(true)
     await vi.advanceTimersByTimeAsync(150)
     expect(render).not.toHaveBeenCalledWith('hidden-work')
 
-    expect(preview.toggle('b', 'visible-again')).toBe(true)
+    expect(preview.setActive(true, 'b', 'visible-again')).toBe(true)
     preview.update('b', 'disposed-work')
     preview.dispose()
     await vi.advanceTimersByTimeAsync(150)
@@ -58,7 +57,6 @@ describe('MarkdownPreview', () => {
     const panel = document.createElement('div')
     const render = vi.fn((markdown: string) => markdown)
     const preview = new MarkdownPreview(panel, {
-      onLayout: vi.fn(),
       render,
       setTimer: (callback) => {
         callbacks.push(callback)
@@ -68,7 +66,7 @@ describe('MarkdownPreview', () => {
       clearTimer: vi.fn(),
     })
 
-    preview.toggle('a', 'a0')
+    preview.setActive(true, 'a', 'a0')
     preview.update('a', 'stale-a')
     preview.switchBuffer('b', 'fresh-b')
     preview.switchBuffer('a', 'fresh-a')
@@ -83,7 +81,6 @@ describe('MarkdownPreview', () => {
     const panel = document.createElement('div')
     const render = vi.fn((markdown: string) => markdown)
     const preview = new MarkdownPreview(panel, {
-      onLayout: vi.fn(),
       render,
       setTimer: (callback) => {
         callbacks.push(callback)
@@ -93,7 +90,7 @@ describe('MarkdownPreview', () => {
       clearTimer: vi.fn(),
     })
 
-    preview.toggle('a', 'a0')
+    preview.setActive(true, 'a', 'a0')
     preview.update('a', 'old-edit')
     preview.update('a', 'newest-edit')
     callbacks[0]()
@@ -107,7 +104,6 @@ describe('MarkdownPreview', () => {
     const callbacks: Array<() => void> = []
     const clearTimer = vi.fn()
     const preview = new MarkdownPreview(document.createElement('div'), {
-      onLayout: vi.fn(),
       render: markdown => markdown,
       setTimer: (callback) => {
         callbacks.push(callback)
@@ -116,7 +112,7 @@ describe('MarkdownPreview', () => {
       clearTimer,
     })
 
-    preview.toggle('a', 'a0')
+    preview.setActive(true, 'a', 'a0')
     preview.update('a', 'old-edit')
     preview.update('a', 'newest-edit')
     callbacks[0]()
@@ -131,7 +127,6 @@ describe('MarkdownPreview', () => {
     const clearTimer = vi.fn()
     const render = vi.fn((markdown: string) => markdown)
     const preview = new MarkdownPreview(panel, {
-      onLayout: vi.fn(),
       render,
       setTimer: (callback) => {
         callbacks.push(callback)
@@ -140,7 +135,7 @@ describe('MarkdownPreview', () => {
       clearTimer,
     })
 
-    preview.toggle('a', 'shown')
+    preview.setActive(true, 'a', 'shown')
     const anchor = document.createElement('a')
     panel.appendChild(anchor)
     const beforeDispose = new MouseEvent('click', { bubbles: true, cancelable: true })
@@ -156,7 +151,7 @@ describe('MarkdownPreview', () => {
 
     expect(clearTimer).toHaveBeenCalledTimes(1)
     expect(afterDispose.defaultPrevented).toBe(false)
-    expect(preview.toggle('a', 'after-dispose')).toBe(false)
+    expect(preview.setActive(true, 'a', 'after-dispose')).toBe(false)
     expect(render.mock.calls.map(([markdown]) => markdown)).toEqual(['shown'])
   })
 })

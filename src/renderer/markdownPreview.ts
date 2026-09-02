@@ -1,14 +1,13 @@
 import { renderMarkdown } from './markdownRender'
 
 export interface MarkdownPreviewDeps {
-  onLayout: () => void
   render?: (markdown: string) => string
   setTimer?: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
   clearTimer?: (timer: ReturnType<typeof setTimeout>) => void
 }
 
 export class MarkdownPreview {
-  private visible = false
+  private active = false
   private bufferId: string | null = null
   private timer: ReturnType<typeof setTimeout> | null = null
   private generation = 0
@@ -22,36 +21,34 @@ export class MarkdownPreview {
     if (anchor) event.preventDefault()
   }
 
-  constructor(private panel: HTMLElement, private deps: MarkdownPreviewDeps) {
+  constructor(private panel: HTMLElement, deps: MarkdownPreviewDeps) {
     this.render = deps.render ?? renderMarkdown
     this.setTimer = deps.setTimer ?? ((callback, delay) => setTimeout(callback, delay))
     this.clearTimer = deps.clearTimer ?? (timer => clearTimeout(timer))
     this.panel.addEventListener('click', this.handlePanelClick)
   }
 
-  isVisible(): boolean { return this.visible }
+  isActive(): boolean { return this.active }
 
-  toggle(bufferId: string, markdown: string): boolean {
+  setActive(active: boolean, bufferId: string, markdown: string): boolean {
     if (this.disposed) return false
-    this.visible = !this.visible
-    this.panel.classList.toggle('hidden', !this.visible)
+    this.active = active
     this.cancelPending()
     this.bufferId = bufferId
-    if (this.visible) this.renderNow(markdown)
-    this.deps.onLayout()
-    return this.visible
+    if (active) this.renderNow(markdown)
+    return true
   }
 
   switchBuffer(bufferId: string, markdown: string): void {
     if (this.disposed) return
     this.cancelPending()
     this.bufferId = bufferId
-    if (this.visible) this.renderNow(markdown)
+    if (this.active) this.renderNow(markdown)
   }
 
   update(bufferId: string, markdown: string): void {
     const revision = ++this.revision
-    if (this.disposed || !this.visible) return
+    if (this.disposed || !this.active) return
     if (bufferId !== this.bufferId) {
       this.switchBuffer(bufferId, markdown)
       return
@@ -61,7 +58,7 @@ export class MarkdownPreview {
     let timer!: ReturnType<typeof setTimeout>
     timer = this.setTimer(() => {
       if (this.timer === timer) this.timer = null
-      if (!this.disposed && this.visible && generation === this.generation
+      if (!this.disposed && this.active && generation === this.generation
         && revision === this.revision && this.bufferId === bufferId) {
         this.renderNow(markdown)
       }
@@ -72,8 +69,7 @@ export class MarkdownPreview {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
-    this.visible = false
-    this.panel.classList.add('hidden')
+    this.active = false
     this.cancelPending()
     this.panel.removeEventListener('click', this.handlePanelClick)
   }
