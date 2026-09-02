@@ -67,7 +67,7 @@ test('visible Markdown preview renders only the newest rapid edit', async ({ smo
   const win = await app.firstWindow()
   await waitForBoot(win)
 
-  await win.locator('.tb-btn[title="Toggle markdown preview"]').click()
+  await win.locator('[data-toolbar="markdown-preview-toggle"]').click()
   await expect(win.locator('#mdpreview h1')).toHaveText('prior preview')
   await win.locator('#mdpreview').evaluate((panel) => {
     const seen: string[] = []
@@ -99,7 +99,9 @@ test('visible Markdown preview renders only the newest rapid edit', async ({ smo
 test('visible Markdown preview follows split-pane focus without an edit or tab activation', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-previewfocus-')
   const markdownPath = join(userDataDir, 'pane-a.md')
+  const paneBPath = join(userDataDir, 'pane-b.md')
   writeFileSync(markdownPath, '# pane a')
+  writeFileSync(paneBPath, '# pane b')
   const app = await smoke.launch({
     args: ['out/main/index.js', markdownPath, `--user-data-dir=${userDataDir}`]
   })
@@ -107,18 +109,15 @@ test('visible Markdown preview follows split-pane focus without an edit or tab a
   await waitForBoot(win)
   const initialTabCount = await win.locator('.tab').count()
 
-  await win.locator('.tb-btn[title="Toggle markdown preview"]').click()
+  await win.locator('[data-toolbar="markdown-preview-toggle"]').click()
   await expect(win.locator('#mdpreview h1')).toHaveText('pane a')
   await win.locator('.tb-btn[title="Toggle split pane"]').click()
   await win.locator('#paneB .monaco-editor').click()
   await expect(win.locator('#mdpreview h1')).toHaveText('pane a')
-  await win.keyboard.press('Control+Shift+P')
-  await win.locator('#palette input').fill('New Tab')
-  await win.keyboard.press('Enter')
+  await app.evaluate(({ BrowserWindow }, path) =>
+    BrowserWindow.getAllWindows()[0].webContents.send('open-file', path), paneBPath)
   await expect(win.locator('.tab')).toHaveCount(initialTabCount + 1)
   await win.locator('#paneB .monaco-editor').click()
-  await win.keyboard.type('# pane b')
-
   await expect(win.locator('#mdpreview h1')).toHaveText('pane b')
   await win.locator('#paneA .monaco-editor').click()
   await expect(win.locator('#mdpreview h1')).toHaveText('pane a')
@@ -143,7 +142,7 @@ test('toolbar split and preview buttons work and show active state', async ({ sm
     await expect(splitBtn).toHaveClass(/tb-active/)
 
     // Preview button -> preview panel visible + button active
-    const previewBtn = win.locator('.tb-btn[title="Toggle markdown preview"]')
+    const previewBtn = win.locator('[data-toolbar="markdown-preview-toggle"]')
     await previewBtn.click()
     await expect(win.locator('#mdpreview')).toBeVisible()
     await expect(previewBtn).toHaveClass(/tb-active/)
@@ -692,10 +691,11 @@ test('toolbar File History button opens the panel and the regroup keeps all butt
     await expect(win.locator('#toolbar')).toBeVisible()
 
     // Regroup regression: every pre-existing button must still be present (located by title).
-    for (const title of ['Open file', 'Save', 'Toggle split pane', 'Toggle markdown preview',
+    for (const title of ['Open file', 'Save', 'Toggle split pane',
                          'Toggle always on top', 'Start diff', 'Paste from history']) {
       await expect(win.locator(`.tb-btn[title="${title}"]`)).toHaveCount(1)
     }
+    await expect(win.locator('[data-toolbar="markdown-preview-toggle"]')).toHaveCount(1)
     // The highlighter (the button that moves groups) survives — its title is dynamic, match partial.
     await expect(win.locator('.tb-btn[title*="Highlighter"]')).toHaveCount(1)
 
@@ -762,7 +762,7 @@ test('Revert File discards unsaved edits and reloads from disk', async ({ smoke 
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#paneA .view-lines')).toContainText('original disk content')
-    await win.locator('.tb-btn[title="Toggle markdown preview"]').click()
+    await win.locator('[data-toolbar="markdown-preview-toggle"]').click()
     await expect(win.locator('#mdpreview h1')).toHaveText('original disk content')
 
     // Make an unsaved edit → the buffer is dirty.

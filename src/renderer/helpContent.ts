@@ -46,7 +46,11 @@ export const HELP_SECTIONS: HelpCategory[] = [
   ] },
   { title: 'View', entries: [
     { label: 'Toggle Split',          keys: 'Ctrl+\\', desc: 'Show two editors side by side.' },
-    { label: 'Toggle Markdown Preview', desc: 'See formatted Markdown (headings, lists, links) as it will look.' },
+    { label: 'Toggle Markdown Preview', desc: 'Show or hide formatted Markdown, returning to the last visible mode.' },
+    { label: 'Markdown Preview: Off', desc: 'Hide the Markdown preview.' },
+    { label: 'Markdown Preview: Side by side', desc: 'Show the editor and formatted Markdown next to each other.' },
+    { label: 'Markdown Preview: Focus', desc: 'Show formatted Markdown on its own.' },
+    { label: 'Remember Markdown preview mode', desc: 'Keep the chosen preview mode for future Markdown files — Settings ▸ Editor.' },
     { label: 'Toggle Word Wrap',      desc: 'Wrap long lines so nothing runs off the right edge.' },
     { label: 'Toggle Line Numbers',   desc: 'Show or hide line numbers down the left side.' },
     { label: 'Toggle Sidebar',        desc: 'Show or hide the sidebar — the folder tree, or recent folders when none is open.' },

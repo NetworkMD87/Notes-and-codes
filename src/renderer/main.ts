@@ -5,7 +5,7 @@ import '@fontsource/fira-code/400.css'
 import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/700.css'
 import { installMenuCommands } from './menuCommands'
-import type { Api, Encoding, OpenedFile, SessionData, Settings, WorkspaceFilter } from '../shared/types'
+import type { Api, Encoding, MarkdownPreviewMode, OpenedFile, SessionData, Settings, WorkspaceFilter } from '../shared/types'
 import { DEFAULT_WORKSPACE_EXCLUDES, normalizePathGlobs } from '../shared/pathGlob'
 import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
@@ -758,6 +758,14 @@ const togglePreview = () => {
   syncPreviewContext()
 }
 
+function selectPreviewMode(mode: MarkdownPreviewMode): void {
+  if (!previewLayout.selectMode(mode)) {
+    toast('Markdown Preview is available for Markdown files.', 'info')
+    return
+  }
+  syncPreviewContext()
+}
+
 async function exportActive(format: ExportFormat): Promise<void> {
   const content = paneFor(view.focusedPane()).getContent()
   if (!content.trim()) { toast('Nothing to export.', 'warning'); return }
@@ -838,6 +846,7 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
   openHistory: () => void fileHistory.open(),
   toggleSplit: () => { view.setSplit(!view.isSplit()); showActive(); spell?.refreshNow() },
   togglePreview,
+  setPreviewMode: selectPreviewMode,
   togglePin: toggleAlwaysOnTop,
   startDiff,
   pasteFromHistory,
@@ -1016,7 +1025,12 @@ async function openFolderFromDialog(): Promise<void> {
 }
 
 function refreshToolbar(): void {
-  toolbar.syncToggles({ split: view.isSplit(), preview: previewLayout.effectiveMode() !== 'off', pin: alwaysOnTop })
+  toolbar.syncToggles({ split: view.isSplit(), pin: alwaysOnTop })
+  toolbar.syncPreview({
+    available: previewLayout.isAvailable(),
+    mode: previewLayout.effectiveMode(),
+    lastVisibleMode: previewLayout.state().lastVisibleMode,
+  })
 }
 
 const palette = new CommandPalette(focusActiveEditor)
@@ -1043,7 +1057,7 @@ registerCommands({
   saveActive, saveAll, openFromDisk, startDiff, diffClipboard, diffFiles,
   revert: () => void revertActive(),
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
-  togglePreview, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
+  togglePreview, setPreviewMode: selectPreviewMode, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
   toggleAlwaysOnTop,
   zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset,
   openAppearance,
