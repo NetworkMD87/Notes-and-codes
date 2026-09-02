@@ -190,4 +190,62 @@ describe('SettingsStore', () => {
     expect((await new SettingsStore(dir).load()).workspaceExcludes)
       .toEqual(DEFAULT_SETTINGS.workspaceExcludes)
   })
+
+  it('defaults Markdown preview preferences for a pre-feature settings file', async () => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ themeId: 'nord' }))
+
+    const settings = await new SettingsStore(dir).load()
+
+    expect(settings.rememberMarkdownPreviewMode).toBe(true)
+    expect(settings.markdownPreviewMode).toBe('off')
+    expect(settings.markdownPreviewLastVisibleMode).toBe('side-by-side')
+    expect(settings.markdownPreviewWidthPercent).toBe(50)
+    expect(settings.themeId).toBe('nord')
+  })
+
+  it.each(['wide', 7, null])('rejects invalid Markdown preview modes: %j', async (markdownPreviewMode) => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ markdownPreviewMode }))
+    expect((await new SettingsStore(dir).load()).markdownPreviewMode).toBe('off')
+  })
+
+  it.each(['yes', 1, null])('rejects invalid Markdown preview remember values: %j', async (rememberMarkdownPreviewMode) => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ rememberMarkdownPreviewMode }))
+    expect((await new SettingsStore(dir).load()).rememberMarkdownPreviewMode).toBe(true)
+  })
+
+  it.each(['off', 'wide', 7, null])('rejects invalid visible Markdown preview modes: %j', async (markdownPreviewLastVisibleMode) => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ markdownPreviewLastVisibleMode }))
+    expect((await new SettingsStore(dir).load()).markdownPreviewLastVisibleMode).toBe('side-by-side')
+  })
+
+  it.each([['low', 4, 20], ['high', 96, 80], ['nan', 'wide', 50]] as const)(
+    'normalizes the Markdown preview width: %s',
+    async (_label, markdownPreviewWidthPercent, expected) => {
+      writeFileSync(join(dir, 'settings.json'), JSON.stringify({ markdownPreviewWidthPercent }))
+      expect((await new SettingsStore(dir).load()).markdownPreviewWidthPercent).toBe(expected)
+    },
+  )
+
+  it('rejects a non-finite Markdown preview width passed through update', async () => {
+    const store = new SettingsStore(dir)
+    await store.update({ markdownPreviewWidthPercent: Number.NaN })
+    expect((await store.load()).markdownPreviewWidthPercent).toBe(50)
+  })
+
+  it('persists explicit Markdown preview preferences through update', async () => {
+    const store = new SettingsStore(dir)
+    await store.update({
+      rememberMarkdownPreviewMode: false,
+      markdownPreviewMode: 'focus',
+      markdownPreviewLastVisibleMode: 'focus',
+      markdownPreviewWidthPercent: 63,
+    })
+
+    expect(await store.load()).toMatchObject({
+      rememberMarkdownPreviewMode: false,
+      markdownPreviewMode: 'focus',
+      markdownPreviewLastVisibleMode: 'focus',
+      markdownPreviewWidthPercent: 63,
+    })
+  })
 })
