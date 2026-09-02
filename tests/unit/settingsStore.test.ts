@@ -232,6 +232,17 @@ describe('SettingsStore', () => {
     expect((await store.load()).markdownPreviewWidthPercent).toBe(50)
   })
 
+  it.each([[4, 20], [96, 80]] as const)(
+    'clamps finite Markdown preview width through update before persistence: %d to %d',
+    async (markdownPreviewWidthPercent, expected) => {
+      const store = new SettingsStore(dir)
+      await store.update({ markdownPreviewWidthPercent })
+
+      expect(JSON.parse(readFileSync(join(dir, 'settings.json'), 'utf8')).markdownPreviewWidthPercent)
+        .toBe(expected)
+    },
+  )
+
   it('persists explicit Markdown preview preferences through update', async () => {
     const store = new SettingsStore(dir)
     await store.update({

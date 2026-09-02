@@ -90,9 +90,10 @@ export class SettingsStore {
    *  every other write so two concurrent field updates can't clobber each other. */
   update(partial: Partial<Settings>): Promise<Settings> {
     const next = this.chain.then(async () => {
-      const merged = normalizeSettings({ ...(await this.load()), ...partial })
-      await atomicWrite(this.file, JSON.stringify(merged, null, 2))
-      return merged
+      const merged = { ...(await this.load()), ...partial }
+      const normalized = normalizeSettings(merged)
+      await atomicWrite(this.file, JSON.stringify(normalized, null, 2))
+      return normalized
     })
     this.chain = next.catch(() => {})
     return next
