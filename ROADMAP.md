@@ -31,7 +31,7 @@ _Nothing currently queued._
 
 - ⬜ **Snippet placeholders / tabstops** (**M–L**, after Safe Replace) — VS Code-style `$1` and abbreviation expansion. Prefer Monaco’s snippet support; design placeholder syntax, malformed-snippet behaviour, and keyboard navigation before implementation.
 
-- ⬜ **Markdown Preview layout modes** (**M**) — add an outer editor-group/Preview split while keeping the A/B editor split inside the editor group. Provide a draggable gutter, minimum sizes, and explicit `off | side-by-side | focus` modes; preserve focused-pane content selection, live refresh, and focus return. Smoke-test dragging, limits, and mode transitions.
+- ⬜ **Markdown Preview layout modes** (**M**) — add an outer editor-group/Preview split while keeping the A/B editor split inside the editor group. Provide a draggable, keyboard-accessible gutter, minimum sizes, and explicit `off | side-by-side | focus` modes for Markdown buffers; preserve focused-pane content selection, live refresh, and focus return. Remember the selected mode, last visible mode, and divider position across restarts behind a default-on Settings ▸ Editor checkbox. Smoke-test dragging, limits, mode/file transitions, accessibility, opt-out, and restart restoration.
 
 ---
 
