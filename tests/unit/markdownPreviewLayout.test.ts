@@ -115,7 +115,7 @@ describe('MarkdownPreviewLayout', () => {
     })
   })
 
-  it('enters preview focus and restores editor focus when leaving it', async () => {
+  it('enters preview focus and returns focus to the editor when leaving it', async () => {
     const h = harness()
     h.layout.restore(DEFAULT_SETTINGS, true)
     await flush()

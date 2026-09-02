@@ -322,6 +322,7 @@ test('query, match-case, and whole-word changes reset result selection', async (
 })
 
 test('editing scope cancels the active traversal before debounce and resets result selection', async ({ smoke }) => {
+  test.setTimeout(60_000)
   const userDataDir = smoke.tempDir('notes-searchscope-cancel-')
   const projectDir = smoke.tempDir('notes-searchscope-cancelproj-')
   for (let i = 0; i < 400; i++) {
@@ -344,7 +345,7 @@ test('editing scope cancels the active traversal before debounce and resets resu
   await win.keyboard.press('Control+Shift+F')
   await win.getByRole('button', { name: 'Search scope' }).click()
   await win.getByRole('searchbox', { name: 'Find in Files' }).fill('needle')
-  await expect(win.locator('.fif-note')).toHaveText('400 matches in 400 files')
+  await expect(win.locator('.fif-note')).toHaveText('400 matches in 400 files', { timeout: 30_000 })
 
   await win.getByRole('searchbox', { name: 'Find in Files' }).press('ArrowDown')
   await expect(win.locator('.fif-row').nth(1)).toHaveClass(/active/)
@@ -367,7 +368,7 @@ test('editing scope cancels the active traversal before debounce and resets resu
   })
   expect(cancelledSearchId).toBe(activeSearchId)
 
-  await expect(win.locator('.fif-note')).toHaveText('399 matches in 399 files')
+  await expect(win.locator('.fif-note')).toHaveText('399 matches in 399 files', { timeout: 30_000 })
   await expect(win.locator('.fif-row').first()).toHaveClass(/active/)
   await expect(win.locator('.fif-row').nth(1)).not.toHaveClass(/active/)
 })

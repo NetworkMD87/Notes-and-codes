@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from './smokeTest'
+import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
@@ -191,7 +192,7 @@ test('editor clips to its pane and word-wraps long lines', async ({ smoke }) => 
 
     // Type one long logical line; with word wrap on it renders as multiple visual lines.
     await win.locator('#paneA .monaco-editor').click()
-    await win.keyboard.type('lorem ipsum dolor sit amet '.repeat(40))
+    await win.keyboard.insertText('lorem ipsum dolor sit amet '.repeat(40))
     await win.waitForTimeout(200)
     const visualLines = await win.locator('#paneA .view-line').count()
     expect(visualLines).toBeGreaterThan(1)
@@ -247,12 +248,9 @@ test('snippets save/insert/manage and always-on-top toggle', async ({ smoke }) =
     await win.keyboard.press('Escape')
 
     // Always on top -> reflected in the window state
-    await win.keyboard.press('Control+Shift+P')
-    await win.locator('#palette input').fill('Toggle Always on Top')
-    await win.keyboard.press('Enter')
-    await win.waitForTimeout(100)
-    const onTop = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isAlwaysOnTop())
-    expect(onTop).toBe(true)
+    await win.locator('.tb-btn[title="Toggle always on top"]').click()
+    await expect(win.locator('.tb-btn[title="Toggle always on top"]')).toHaveClass(/tb-active/)
+    await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isAlwaysOnTop())).toBe(true)
 })
 
 test('zoom changes font size and the app menu exists', async ({ smoke }) => {
@@ -318,7 +316,7 @@ test('file history captures versions and restores in-editor', async ({ smoke }) 
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
     await expect(win.locator('#paneA .view-lines')).toContainText('version-one')
-    await win.locator('.tb-btn[title="Toggle markdown preview"]').click()
+    await win.locator('[data-toolbar="markdown-preview-toggle"]').click()
     await expect(win.locator('#mdpreview h1')).toHaveText('version-one')
 
     const runCmd = async (label: string) => {
@@ -326,12 +324,20 @@ test('file history captures versions and restores in-editor', async ({ smoke }) 
       await win.locator('#palette input').fill(label)
       await win.keyboard.press('Enter')
     }
+    const historyPath = join(userDataDir, 'file-history', createHash('sha256').update(filePath).digest('hex') + '.json')
+    const historyVersionCount = () => {
+      try { return JSON.parse(readFileSync(historyPath, 'utf8')).versions.length as number }
+      catch { return 0 }
+    }
     // Save v1 via palette (Ctrl+S is a native-menu accelerator Playwright can't trigger)
     await runCmd('Save')
+    await expect.poll(historyVersionCount).toBe(1)
     // edit → v2
     await win.locator('#paneA .monaco-editor').click()
     await win.keyboard.press('Control+A'); await win.keyboard.type('# version-two')
+    await expect(win.locator('#statusbar .sb-dirty')).toContainText('unsaved')
     await runCmd('Save')
+    await expect.poll(historyVersionCount).toBe(2)
 
     await runCmd('File History')
     await expect(win.locator('#file-history .fh-row')).toHaveCount(2)
