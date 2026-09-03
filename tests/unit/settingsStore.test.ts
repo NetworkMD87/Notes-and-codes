@@ -249,14 +249,16 @@ describe('SettingsStore', () => {
       rememberMarkdownPreviewMode: false,
       markdownPreviewMode: 'focus',
       markdownPreviewLastVisibleMode: 'focus',
-      markdownPreviewWidthPercent: 63,
+      markdownPreviewWidthPercent: 63.6,
     })
 
     expect(await store.load()).toMatchObject({
       rememberMarkdownPreviewMode: false,
       markdownPreviewMode: 'focus',
       markdownPreviewLastVisibleMode: 'focus',
-      markdownPreviewWidthPercent: 63,
+      markdownPreviewWidthPercent: 64,
     })
+    expect(JSON.parse(readFileSync(join(dir, 'settings.json'), 'utf8')).markdownPreviewWidthPercent)
+      .toBe(64)
   })
 })

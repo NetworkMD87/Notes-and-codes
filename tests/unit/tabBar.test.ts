@@ -73,6 +73,31 @@ describe('TabBar', () => {
     expect(document.activeElement?.id).toBe('tab-a')
   })
 
+  it('does not steal focus when tab activation deliberately moves it outside the tablist', async () => {
+    const host = document.createElement('div')
+    const focusTarget = document.createElement('button')
+    document.body.append(host, focusTarget)
+    const items = ['a', 'b'].map(buffer)
+    let bar!: TabBar
+    bar = new TabBar(host, {
+      onSelect: id => {
+        bar.render(items, id)
+        focusTarget.focus()
+      },
+      onClose: vi.fn(), onNew: vi.fn(), onReorder: vi.fn(),
+    })
+    bar.render(items, 'a')
+    const first = host.querySelector<HTMLElement>('.tab-select')
+    expect(first).not.toBeNull()
+    first!.focus()
+
+    first!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+    await Promise.resolve()
+
+    expect(document.activeElement).toBe(focusTarget)
+    expect(host.querySelector('.tab-select[data-id="b"]')?.getAttribute('aria-selected')).toBe('true')
+  })
+
   it('keeps only the selected close button in the sequential tab order', () => {
     const host = document.createElement('div')
     const bar = new TabBar(host, { onSelect: vi.fn(), onClose: vi.fn(), onNew: vi.fn(), onReorder: vi.fn() })

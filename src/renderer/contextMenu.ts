@@ -56,10 +56,22 @@ export function showContextMenu(
     row.type = 'button'
     row.className = 'ctx-item'
     row.setAttribute('role', item.checked === undefined ? 'menuitem' : 'menuitemradio')
-    if (item.checked !== undefined) row.setAttribute('aria-checked', String(item.checked))
+    if (item.checked !== undefined) {
+      row.classList.add('ctx-item-radio')
+      row.setAttribute('aria-checked', String(item.checked))
+    }
     row.tabIndex = -1
     row.disabled = item.disabled ?? false
-    row.textContent = item.label
+    if (item.checked === undefined) row.textContent = item.label
+    else {
+      const marker = document.createElement('span')
+      marker.className = 'ctx-check'
+      marker.setAttribute('aria-hidden', 'true')
+      marker.textContent = item.checked ? '✓' : ''
+      const label = document.createElement('span')
+      label.textContent = item.label
+      row.append(marker, label)
+    }
     row.onclick = () => { close(); item.run() }
     menu.appendChild(row)
   }

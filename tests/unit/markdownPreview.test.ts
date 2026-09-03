@@ -27,6 +27,21 @@ describe('MarkdownPreview', () => {
     expect(panel.innerHTML).toBe('<p>newest</p>')
   })
 
+  it('does not replace preview content or disturb scroll when active state is unchanged', () => {
+    const panel = document.createElement('div')
+    const render = vi.fn((markdown: string) => `<p>${markdown}</p>`)
+    const preview = new MarkdownPreview(panel, { render })
+    preview.setActive(true, 'a', 'same content')
+    const renderedNode = panel.firstElementChild
+    panel.scrollTop = 37
+
+    expect(preview.setActive(true, 'a', 'same content')).toBe(true)
+
+    expect(render).toHaveBeenCalledTimes(1)
+    expect(panel.firstElementChild).toBe(renderedNode)
+    expect(panel.scrollTop).toBe(37)
+  })
+
   it('cancels pending work on hide, buffer switch, and dispose', async () => {
     vi.useFakeTimers()
     const panel = document.createElement('div')

@@ -108,9 +108,10 @@ function previewContext(): { bufferId: string; content: string; isMarkdown: bool
   }
 }
 
-function syncPreviewContext(): void {
+function syncPreviewContext(bufferActivated = false): void {
   const current = previewContext()
-  previewLayout.setBufferIsMarkdown(current.isMarkdown)
+  if (bufferActivated) previewLayout.activateBuffer(current.isMarkdown)
+  else previewLayout.setBufferIsMarkdown(current.isMarkdown)
   mdPreview.setActive(previewLayout.effectiveMode() !== 'off', current.bufferId, current.content)
   refreshToolbar()
 }
@@ -218,7 +219,7 @@ function showActive(): void {
   void loadHighlightsFor(active)
   tabBar.render(manager.list(), manager.activeId)
   refreshStatus()
-  syncPreviewContext()
+  syncPreviewContext(true)
   folder.setActiveFile(active.filePath ?? null) // highlight the open file's row in the sidebar
   syncWatch()
   autosave.flushNow()
@@ -230,7 +231,8 @@ function switchRelativeTab(direction: -1 | 1): void {
   if (buffers.length < 2) return
   const current = Math.max(0, buffers.findIndex(buffer => buffer.id === manager.activeId))
   const next = (current + direction + buffers.length) % buffers.length
-  manager.setActive(buffers[next].id); showActive(); scheduleSessionSave(); focusActiveEditor()
+  manager.setActive(buffers[next].id); showActive(); scheduleSessionSave()
+  if (previewLayout.effectiveMode() !== 'focus') focusActiveEditor()
 }
 
 for (const which of ['A', 'B'] as const) paneFor(which).onCursor(() => refreshStatus())

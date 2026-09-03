@@ -54,6 +54,33 @@ describe('Toolbar Markdown preview split control', () => {
     toolbar.syncPreview({ available: false, mode: 'off', lastVisibleMode: 'focus' })
     expect(preview.disabled).toBe(true)
     expect(chooser.disabled).toBe(true)
-    expect(preview.title).toBe('Markdown preview is available for Markdown files')
+    expect(preview.title).toBe('Markdown preview is unavailable for non-Markdown files')
+  })
+
+  it.each([
+    ['side-by-side', 'Show Markdown preview side by side'],
+    ['focus', 'Show Markdown preview in Focus mode'],
+  ] as const)('names the remembered %s mode in the Off main action', (lastVisibleMode, copy) => {
+    const toolbar = new Toolbar(document.body, createHandlers())
+    const preview = document.querySelector<HTMLButtonElement>('[data-toolbar="markdown-preview-toggle"]')!
+
+    toolbar.syncPreview({ available: true, mode: 'off', lastVisibleMode })
+
+    expect(preview.title).toBe(copy)
+    expect(preview.getAttribute('aria-label')).toBe(copy)
+  })
+
+  it('explains Markdown unavailability on both disabled control halves', () => {
+    const toolbar = new Toolbar(document.body, createHandlers())
+    const preview = document.querySelector<HTMLButtonElement>('[data-toolbar="markdown-preview-toggle"]')!
+    const chooser = document.querySelector<HTMLButtonElement>('.tb-preview-wrap .tb-caret')!
+    const copy = 'Markdown preview is unavailable for non-Markdown files'
+
+    toolbar.syncPreview({ available: false, mode: 'off', lastVisibleMode: 'focus' })
+
+    expect(preview.title).toBe(copy)
+    expect(preview.getAttribute('aria-label')).toBe(copy)
+    expect(chooser.title).toBe(copy)
+    expect(chooser.getAttribute('aria-label')).toBe(copy)
   })
 })

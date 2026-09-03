@@ -61,13 +61,15 @@ export class Toolbar {
     }
 
     this.splitBtn = mk('Toggle split pane', ICONS.split, h.toggleSplit)
-    this.previewBtn = mk('Show Markdown preview', ICONS.preview, h.togglePreview)
+    this.previewBtn = mk('Show Markdown preview side by side', ICONS.preview, h.togglePreview)
     this.previewBtn.dataset.toolbar = 'markdown-preview-toggle'
+    this.previewBtn.setAttribute('aria-label', 'Show Markdown preview side by side')
     this.previewBtn.setAttribute('aria-pressed', 'false')
     const previewWrap = document.createElement('div')
     previewWrap.className = 'tb-preview-wrap'
     this.previewCaret = document.createElement('button')
     this.previewCaret.className = 'tb-btn tb-caret'
+    this.previewCaret.dataset.toolbar = 'markdown-preview-mode'
     this.previewCaret.title = 'Choose Markdown preview mode'
     this.previewCaret.textContent = '▾'
     this.previewCaret.setAttribute('aria-label', 'Choose Markdown preview mode')
@@ -136,9 +138,19 @@ export class Toolbar {
     const active = state.available && state.mode !== 'off'
     this.previewBtn.classList.toggle('tb-active', active)
     this.previewBtn.setAttribute('aria-pressed', String(active))
-    this.previewBtn.title = !state.available
-      ? 'Markdown preview is available for Markdown files'
-      : state.mode === 'off' ? 'Show Markdown preview' : 'Turn Markdown preview off'
+    const unavailable = 'Markdown preview is unavailable for non-Markdown files'
+    const mainAction = !state.available
+      ? unavailable
+      : state.mode !== 'off'
+        ? 'Turn Markdown preview off'
+        : state.lastVisibleMode === 'focus'
+          ? 'Show Markdown preview in Focus mode'
+          : 'Show Markdown preview side by side'
+    const chooserAction = state.available ? 'Choose Markdown preview mode' : unavailable
+    this.previewBtn.title = mainAction
+    this.previewBtn.setAttribute('aria-label', mainAction)
+    this.previewCaret.title = chooserAction
+    this.previewCaret.setAttribute('aria-label', chooserAction)
   }
 
   syncHighlighter(on: boolean, colour: HighlightColour): void {

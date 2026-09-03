@@ -9,6 +9,7 @@ export interface MarkdownPreviewDeps {
 export class MarkdownPreview {
   private active = false
   private bufferId: string | null = null
+  private markdown = ''
   private timer: ReturnType<typeof setTimeout> | null = null
   private generation = 0
   private revision = 0
@@ -32,9 +33,11 @@ export class MarkdownPreview {
 
   setActive(active: boolean, bufferId: string, markdown: string): boolean {
     if (this.disposed) return false
+    if (this.active === active && this.bufferId === bufferId && this.markdown === markdown) return true
     this.active = active
     this.cancelPending()
     this.bufferId = bufferId
+    this.markdown = markdown
     if (active) this.renderNow(markdown)
     return true
   }
@@ -43,6 +46,7 @@ export class MarkdownPreview {
     if (this.disposed) return
     this.cancelPending()
     this.bufferId = bufferId
+    this.markdown = markdown
     if (this.active) this.renderNow(markdown)
   }
 
@@ -53,6 +57,7 @@ export class MarkdownPreview {
       this.switchBuffer(bufferId, markdown)
       return
     }
+    this.markdown = markdown
     this.cancelTimer()
     const generation = this.generation
     let timer!: ReturnType<typeof setTimeout>

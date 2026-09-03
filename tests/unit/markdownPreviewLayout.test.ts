@@ -26,10 +26,21 @@ function harness() {
   const focusEditor = vi.fn()
   const layoutEditors = vi.fn()
   const warn = vi.fn()
-  const layout = new MarkdownPreviewLayout(root, editor, preview, {
-    createSplit, persist, focusEditor, layoutEditors, warn,
+  let resize = (): void => undefined
+  const resizeObserver = { observe: vi.fn(), disconnect: vi.fn() }
+  const createResizeObserver = vi.fn((callback: () => void) => {
+    resize = callback
+    return resizeObserver
   })
-  return { layout, root, editor, preview, createSplit, instance, persist, focusEditor, layoutEditors, warn, options: () => options }
+  const deps = {
+    createSplit, persist, focusEditor, layoutEditors, warn, createResizeObserver,
+  }
+  const layout = new MarkdownPreviewLayout(root, editor, preview, deps)
+  return {
+    layout, root, editor, preview, createSplit, instance, persist, focusEditor,
+    layoutEditors, warn, options: () => options, resize: () => resize(),
+    createResizeObserver, resizeObserver,
+  }
 }
 
 async function flush(): Promise<void> {
@@ -98,6 +109,30 @@ describe('MarkdownPreviewLayout', () => {
     expect(h.persist).toHaveBeenCalledTimes(1)
   })
 
+  it('returns Focus to the preview on a Markdown buffer activation without reapplying layout', () => {
+    const h = harness()
+    h.layout.restore({
+      ...DEFAULT_SETTINGS,
+      markdownPreviewMode: 'focus',
+      markdownPreviewLastVisibleMode: 'focus',
+    }, true)
+    const outside = document.createElement('button')
+    document.body.appendChild(outside)
+    outside.focus()
+    h.layoutEditors.mockClear()
+    h.persist.mockClear()
+
+    const activation = (h.layout as unknown as {
+      activateBuffer?: (isMarkdown: boolean) => void
+    }).activateBuffer
+    expect(activation).toBeTypeOf('function')
+    activation!.call(h.layout, true)
+
+    expect(document.activeElement).toBe(h.preview)
+    expect(h.layoutEditors).not.toHaveBeenCalled()
+    expect(h.persist).not.toHaveBeenCalled()
+  })
+
   it('persists changes only while Remember is on, including its enabled baseline', () => {
     const h = harness()
     h.layout.restore(DEFAULT_SETTINGS, true)
@@ -142,6 +177,53 @@ describe('MarkdownPreviewLayout', () => {
     h.options().onDragEnd!([95, 5])
     expect(h.instance.setSizes).toHaveBeenLastCalledWith([59.390862944162436, 40.609137055837564])
     expect(h.layout.state().previewWidthPercent).toBeCloseTo(40.609137055837564)
+  })
+
+  it('observes workspace resizes, reclamps the live split, and refreshes ARIA without persisting', () => {
+    const h = harness()
+    h.layout.restore({
+      ...DEFAULT_SETTINGS,
+      markdownPreviewMode: 'side-by-side',
+      markdownPreviewWidthPercent: 80,
+    }, true)
+    const gutter = h.options().gutter!('horizontal', 6)
+
+    expect(h.createResizeObserver).toHaveBeenCalledOnce()
+    expect(h.resizeObserver.observe).toHaveBeenCalledWith(h.root)
+    Object.defineProperty(h.root, 'clientWidth', { configurable: true, value: 400 })
+    h.resize()
+
+    expect(h.instance.setSizes).toHaveBeenLastCalledWith([
+      40.609137055837564,
+      59.390862944162436,
+    ])
+    expect(h.layout.state().previewWidthPercent).toBeCloseTo(59.390862944162436)
+    expect(gutter.getAttribute('aria-valuemin')).toBe('41')
+    expect(gutter.getAttribute('aria-valuemax')).toBe('59')
+    expect(gutter.getAttribute('aria-valuenow')).toBe('59')
+    expect(h.persist).not.toHaveBeenCalled()
+
+    h.layout.dispose()
+    expect(h.resizeObserver.disconnect).toHaveBeenCalledOnce()
+    const resizeCalls = h.instance.setSizes.mock.calls.length
+    h.resize()
+    expect(h.instance.setSizes).toHaveBeenCalledTimes(resizeCalls)
+  })
+
+  it('rounds the accepted preview width only in the persisted snapshot', () => {
+    const h = harness()
+    h.layout.restore({
+      ...DEFAULT_SETTINGS,
+      markdownPreviewMode: 'side-by-side',
+    }, true)
+
+    h.options().onDragEnd!([36.4, 63.6])
+
+    expect(h.instance.setSizes).toHaveBeenLastCalledWith([36.4, 63.6])
+    expect(h.layout.state().previewWidthPercent).toBe(63.6)
+    expect(h.persist).toHaveBeenLastCalledWith(expect.objectContaining({
+      previewWidthPercent: 64,
+    }))
   })
 
   it('supports keyboard resize, Home and End with ARIA values', () => {

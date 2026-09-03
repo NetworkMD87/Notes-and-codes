@@ -82,6 +82,8 @@
       .diff-close:hover{background:var(--accent);color:var(--accent-text)}
       #ctx-menu{position:fixed;z-index:100;min-width:150px;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:4px 0;font-size:13px}
       .ctx-item{display:block;width:100%;padding:6px 14px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;white-space:nowrap}
+      .ctx-item-radio{display:flex;align-items:center;gap:8px}
+      .ctx-check{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1em;height:1em;color:inherit;font-weight:700}
       .ctx-item:hover,.ctx-item:focus-visible{background:var(--accent);color:var(--accent-text);outline:none}
       .ctx-item:disabled{opacity:.5;cursor:default}
       .ctx-sep{height:1px;margin:4px 6px;background:var(--border)}
@@ -161,7 +163,7 @@
       .toast--success{--toast-accent:var(--success)}
       .toast--warning{--toast-accent:var(--warning)}
       .toast--error{--toast-accent:var(--danger)}
-      #mdpreview{flex:1;min-width:0;overflow:auto;padding:0 16px;background:var(--editorbg);color:var(--bartext)}
+      #mdpreview{box-sizing:border-box;flex:1;min-width:0;overflow:auto;padding:0 16px;background:var(--editorbg);color:var(--bartext)}
       #mdpreview.hidden{display:none}
       .markdown-preview-gutter{flex:0 0 6px;cursor:col-resize}
       .markdown-preview-gutter:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}

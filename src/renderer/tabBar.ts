@@ -94,7 +94,9 @@ export class TabBar {
     const id = destination.dataset.id
     if (!id) return
     this.handlers.onSelect(id)
-    queueMicrotask(() => this.focusTab(id))
+    queueMicrotask(() => {
+      if (document.activeElement === document.body) this.focusTab(id)
+    })
   }
 
   private async closeFromKeyboard(id: string, oldIndex: number): Promise<void> {

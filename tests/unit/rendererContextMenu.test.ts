@@ -53,6 +53,10 @@ describe('showContextMenu', () => {
       'menuitemradio', 'menuitemradio', 'menuitemradio',
     ])
     expect(rows.map(row => row.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false'])
+    const markers = rows.map(row => row.querySelector<HTMLElement>('.ctx-check'))
+    expect(markers.every(marker => marker !== null)).toBe(true)
+    expect(markers.map(marker => marker?.textContent)).toEqual(['', '✓', ''])
+    expect(markers.map(marker => marker?.getAttribute('aria-hidden'))).toEqual(['true', 'true', 'true'])
     document.querySelector('#ctx-menu')!.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'ArrowDown', bubbles: true,
     }))

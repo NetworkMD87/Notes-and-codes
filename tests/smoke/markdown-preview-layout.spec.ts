@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test, expect } from './smokeTest'
 import { openSettings } from './settingsHelper'
@@ -71,7 +71,7 @@ async function quickOpen(win: Page, fileName: string): Promise<void> {
 test('Markdown preview keeps the nested A/B split resizable and persists the outer width', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-preview-layout-')
   const markdownPath = join(userDataDir, 'nested.md')
-  writeFileSync(markdownPath, '# Nested layout')
+  writeFileSync(markdownPath, `# Nested layout\n\n${'A long preview paragraph.\n\n'.repeat(100)}`)
   const app = await smoke.launch({
     args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, markdownPath],
   })
@@ -81,6 +81,21 @@ test('Markdown preview keeps the nested A/B split resizable and persists the out
   await chooseToolbarMode(win, 'Side by side')
   await expect(win.locator('#mdpreview h1')).toHaveText('Nested layout')
   await expect(win.locator('.markdown-preview-gutter')).toHaveCount(1)
+
+  const preview = win.locator('#mdpreview')
+  const retainedScroll = await preview.evaluate(panel => {
+    const state = window as typeof window & { __retainedPreviewNode?: Element | null }
+    state.__retainedPreviewNode = panel.firstElementChild
+    panel.scrollTop = 120
+    return panel.scrollTop
+  })
+  expect(retainedScroll).toBeGreaterThan(0)
+  await chooseToolbarMode(win, 'Side by side')
+  expect(await preview.evaluate(panel => {
+    const state = window as typeof window & { __retainedPreviewNode?: Element | null }
+    return panel.firstElementChild === state.__retainedPreviewNode
+  })).toBe(true)
+  expect(await preview.evaluate(panel => panel.scrollTop)).toBe(retainedScroll)
 
   const editorGroup = win.locator('#editor-group')
   await expect(editorGroup.locator('#paneA')).toHaveCount(1)
@@ -95,9 +110,10 @@ test('Markdown preview keeps the nested A/B split resizable and persists the out
   await dragPreviewGutter(win, 2_000)
   await expectBothSurfacesAtLeast160(win)
   await expect.poll(() => Number(settings(userDataDir).markdownPreviewWidthPercent)).not.toBe(50)
+  await expect.poll(() => Number.isInteger(Number(settings(userDataDir).markdownPreviewWidthPercent))).toBe(true)
 })
 
-test('Markdown preview keyboard separator exposes bounds and enforces both minimum surface sizes', async ({ smoke }) => {
+test('Markdown preview separator reclamps after window and sidebar resizes', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-preview-layout-')
   const markdownPath = join(userDataDir, 'keyboard.md')
   writeFileSync(markdownPath, '# Keyboard layout')
@@ -106,6 +122,7 @@ test('Markdown preview keyboard separator exposes bounds and enforces both minim
   })
   const win = await app.firstWindow()
   await waitForBoot(win)
+  await win.setViewportSize({ width: 900, height: 600 })
 
   await chooseToolbarMode(win, 'Side by side')
   await expect(win.locator('#mdpreview h1')).toHaveText('Keyboard layout')
@@ -126,6 +143,54 @@ test('Markdown preview keyboard separator exposes bounds and enforces both minim
   await gutter.press('End')
   await expect(gutter).toHaveAttribute('aria-valuenow', await gutter.getAttribute('aria-valuemax') ?? '')
   await expectBothSurfacesAtLeast160(win)
+
+  await win.setViewportSize({ width: 520, height: 600 })
+  await expect.poll(async () => Number(await gutter.getAttribute('aria-valuemax'))).toBeLessThan(80)
+  await expect(gutter).toHaveAttribute('aria-valuenow', await gutter.getAttribute('aria-valuemax') ?? '')
+  await expectBothSurfacesAtLeast160(win)
+
+  await win.setViewportSize({ width: 900, height: 600 })
+  await gutter.press('End')
+  await win.locator('.sb-toggle').click()
+  await expect(win.locator('#sidebar')).toBeVisible()
+  await expect.poll(async () => Number(await gutter.getAttribute('aria-valuemax'))).toBeLessThan(80)
+  await expect(gutter).toHaveAttribute('aria-valuenow', await gutter.getAttribute('aria-valuemax') ?? '')
+  await expectBothSurfacesAtLeast160(win)
+})
+
+test('Markdown preview Focus keeps preview focus across mouse and keyboard Markdown tab activation', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-preview-layout-')
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    markdownPreviewMode: 'focus',
+    markdownPreviewLastVisibleMode: 'focus',
+  }))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({
+    buffers: [
+      { id: 'a', title: 'a.md', filePath: null, content: '# Preview A', language: 'markdown', eol: 'LF', encoding: 'utf8', dirty: false },
+      { id: 'b', title: 'b.md', filePath: null, content: '# Preview B', language: 'markdown', eol: 'LF', encoding: 'utf8', dirty: false },
+    ],
+    activeId: 'a',
+  }))
+  const app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+  })
+  const win = await app.firstWindow()
+  await waitForBoot(win)
+  const preview = win.locator('#mdpreview')
+
+  await win.getByRole('tab', { name: 'b.md' }).click()
+  await expect(preview.locator('h1')).toHaveText('Preview B')
+  await expect(preview).toBeFocused()
+
+  await win.getByRole('tab', { name: 'b.md' }).focus()
+  await win.keyboard.press('ArrowLeft')
+  await expect(preview.locator('h1')).toHaveText('Preview A')
+  await expect(preview).toBeFocused()
+
+  await win.keyboard.press('Control+PageDown')
+  await expect(preview.locator('h1')).toHaveText('Preview B')
+  await expect(preview).toBeFocused()
 })
 
 test('Markdown preview Focus returns focus to pane B when switched Off', async ({ smoke }) => {
@@ -319,6 +384,15 @@ test('Markdown preview controls, commands, and unavailable toggle keep one saved
       await expect(win.getByRole('menuitemradio', { name: radioLabel }))
         .toHaveAttribute('aria-checked', String(radioMode === mode))
     }
+    const selected = win.getByRole('menuitemradio', { name: label })
+    await expect(selected.locator('.ctx-check')).toBeVisible()
+    await expect(selected.locator('.ctx-check')).toHaveText('✓')
+    expect(await selected.locator('.ctx-check').evaluate(marker =>
+      getComputedStyle(marker).color === getComputedStyle(marker.parentElement!).color
+    )).toBe(true)
+    expect(await win.getByRole('menuitemradio').evaluateAll(rows =>
+      rows.every(row => (row.querySelector('.ctx-check')?.getBoundingClientRect().width ?? 0) > 0)
+    )).toBe(true)
     await win.keyboard.press('Escape')
   }
 
@@ -342,7 +416,13 @@ test('Markdown preview controls, commands, and unavailable toggle keep one saved
   await quickOpen(win, 'controls.ts')
   await expectMode(win, 'off')
   await expect(toggle).toBeDisabled()
-  await expect(win.getByRole('button', { name: 'Choose Markdown preview mode' })).toBeDisabled()
+  const chooser = win.locator('.tb-preview-wrap .tb-caret')
+  const unavailable = 'Markdown preview is unavailable for non-Markdown files'
+  await expect(chooser).toBeDisabled()
+  await expect(toggle).toHaveAttribute('title', unavailable)
+  await expect(toggle).toHaveAttribute('aria-label', unavailable)
+  await expect(chooser).toHaveAttribute('title', unavailable)
+  await expect(chooser).toHaveAttribute('aria-label', unavailable)
   await runCommand(win, 'Markdown Preview: Focus')
   const toasts = win.locator('#toast-host .toast')
   await expect(toasts).toHaveCount(1)

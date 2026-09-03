@@ -57,7 +57,7 @@ function normalizePreviewWidth(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return DEFAULT_SETTINGS.markdownPreviewWidthPercent
   }
-  return Math.min(80, Math.max(20, value))
+  return Math.round(Math.min(80, Math.max(20, value)))
 }
 
 function isHighlightColour(value: unknown): value is HighlightColour {

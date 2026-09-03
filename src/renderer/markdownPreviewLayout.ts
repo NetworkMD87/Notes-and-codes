@@ -28,6 +28,7 @@ export interface MarkdownPreviewLayoutDeps {
   persist(state: MarkdownPreviewLayoutState): Promise<void>
   warn(message: string): void
   createSplit?: typeof Split
+  createResizeObserver?: (callback: () => void) => Pick<ResizeObserver, 'observe' | 'disconnect'>
 }
 
 export class MarkdownPreviewLayout {
@@ -42,6 +43,7 @@ export class MarkdownPreviewLayout {
   private appliedMode: MarkdownPreviewMode | null = null
   private split: Split.Instance | null = null
   private gutter: HTMLElement | null = null
+  private readonly resizeObserver: Pick<ResizeObserver, 'observe' | 'disconnect'>
   private disposed = false
 
   constructor(
@@ -51,6 +53,9 @@ export class MarkdownPreviewLayout {
     private readonly deps: MarkdownPreviewLayoutDeps,
   ) {
     this.createSplit = deps.createSplit ?? Split
+    this.resizeObserver = deps.createResizeObserver?.(this.onRootResize)
+      ?? new ResizeObserver(this.onRootResize)
+    this.resizeObserver.observe(this.root)
   }
 
   restore(settings: Pick<Settings,
@@ -94,6 +99,12 @@ export class MarkdownPreviewLayout {
     this.apply()
   }
 
+  activateBuffer(isMarkdown: boolean): void {
+    const availabilityChanged = this.bufferIsMarkdown !== isMarkdown
+    this.setBufferIsMarkdown(isMarkdown)
+    if (!availabilityChanged && this.effectiveMode() === 'focus') this.focusPreview()
+  }
+
   selectMode(mode: MarkdownPreviewMode): boolean {
     if (!this.isAvailable()) return false
     if (this.stateValue.requestedMode === mode) return true
@@ -119,6 +130,7 @@ export class MarkdownPreviewLayout {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
+    this.resizeObserver.disconnect()
     this.destroySplit()
     this.appliedMode = null
   }
@@ -134,10 +146,8 @@ export class MarkdownPreviewLayout {
     this.preview.classList.toggle('hidden', next === 'off')
 
     if (next === 'side-by-side') this.createOuterSplit()
-    if (next === 'focus') {
-      this.preview.tabIndex = 0
-      this.preview.focus({ preventScroll: true })
-    } else {
+    if (next === 'focus') this.focusPreview()
+    else {
       this.preview.removeAttribute('tabindex')
       if (restoreEditorFocus) queueMicrotask(() => this.deps.focusEditor())
     }
@@ -197,6 +207,18 @@ export class MarkdownPreviewLayout {
     this.acceptPreviewWidth(clamp(width, minimum, maximum))
   }
 
+  private readonly onRootResize = (): void => {
+    if (this.disposed || this.appliedMode !== 'side-by-side' || !this.split) return
+    const [minimum, maximum] = this.runtimeBounds()
+    const accepted = clamp(this.stateValue.previewWidthPercent, minimum, maximum)
+    if (accepted !== this.stateValue.previewWidthPercent) {
+      this.stateValue.previewWidthPercent = accepted
+      this.split.setSizes([100 - accepted, accepted])
+    }
+    this.syncGutterAria()
+    this.deps.layoutEditors()
+  }
+
   private runtimeBounds(): [number, number] {
     const availableWidth = this.root.clientWidth - GUTTER_SIZE
     if (availableWidth < MIN_PIXELS * 2) return [DEFAULT_WIDTH, DEFAULT_WIDTH]
@@ -227,12 +249,19 @@ export class MarkdownPreviewLayout {
     this.gutter.setAttribute('aria-valuetext', `${Math.round(width)}% preview`)
   }
 
+  private focusPreview(): void {
+    this.preview.tabIndex = 0
+    this.preview.focus({ preventScroll: true })
+  }
+
   private persistIfRemembering(): void {
     if (this.stateValue.remember) this.persistSnapshot()
   }
 
   private persistSnapshot(): void {
-    void this.deps.persist(this.state()).catch(() => {
+    const snapshot = this.state()
+    snapshot.previewWidthPercent = Math.round(snapshot.previewWidthPercent)
+    void this.deps.persist(snapshot).catch(() => {
       this.deps.warn('Could not save the Markdown preview preference.')
     })
   }
