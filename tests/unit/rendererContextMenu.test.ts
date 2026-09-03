@@ -41,6 +41,28 @@ describe('showContextMenu', () => {
     expect(menu.querySelector('[role="separator"]')).not.toBeNull()
   })
 
+  it('renders checked choices as keyboard-navigable menuitemradio rows', () => {
+    showContextMenu(0, 0, [
+      { label: 'Side by side', checked: false, run: vi.fn() },
+      { label: 'Focus', checked: true, run: vi.fn() },
+      { label: 'Off', checked: false, run: vi.fn() },
+    ], { focusFirst: true })
+
+    const rows = [...document.querySelectorAll<HTMLButtonElement>('.ctx-item')]
+    expect(rows.map(row => row.getAttribute('role'))).toEqual([
+      'menuitemradio', 'menuitemradio', 'menuitemradio',
+    ])
+    expect(rows.map(row => row.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false'])
+    const markers = rows.map(row => row.querySelector<HTMLElement>('.ctx-check'))
+    expect(markers.every(marker => marker !== null)).toBe(true)
+    expect(markers.map(marker => marker?.textContent)).toEqual(['', '✓', ''])
+    expect(markers.map(marker => marker?.getAttribute('aria-hidden'))).toEqual(['true', 'true', 'true'])
+    document.querySelector('#ctx-menu')!.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'ArrowDown', bubbles: true,
+    }))
+    expect(document.activeElement).toBe(rows[1])
+  })
+
   it('activates with Enter or Space and restores a connected keyboard opener', () => {
     const opener = document.createElement('button'); document.body.appendChild(opener); opener.focus()
     const run = vi.fn()

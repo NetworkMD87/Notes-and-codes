@@ -69,7 +69,7 @@ test('the active highlighter colour persists across a relaunch', async ({ smoke 
     try {
       const win1 = await app1.firstWindow()
       await waitForBoot(win1)
-      await win1.locator('.tb-caret').click()
+      await win1.locator('.tb-btn[title="Highlight colour"]').click()
       await win1.locator('.tb-swatch[title="blue"]').click()
       await expect(win1.locator('.tb-btn[title^="Highlighter (blue)"]')).toBeVisible()
       selectedCursor = await win1.locator('body').evaluate((body) =>
@@ -95,7 +95,7 @@ test('highlight colour popup shows 18 swatches (3x6)', async ({ smoke }) => {
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#tabbar')).toBeVisible()
-    await win.locator('.tb-caret').click()
+    await win.locator('.tb-btn[title="Highlight colour"]').click()
     await expect(win.locator('.tb-hl-pop')).toBeVisible()
     await expect(win.locator('.tb-hl-pop .tb-swatch')).toHaveCount(18)
 })
@@ -114,7 +114,7 @@ test('highlight mode uses the pen cursor and updates with the colour', async ({ 
     expect(yellow).toContain('data:image/svg+xml')
 
     // pick Blue from the toolbar popup (swatch order = HIGHLIGHT_COLOURS)
-    await win.locator('.tb-caret').click()
+    await win.locator('.tb-btn[title="Highlight colour"]').click()
     await win.locator('.tb-hl-pop .tb-swatch').nth(7).click()
     await expect.poll(cursorOf).not.toBe(yellow)
 })

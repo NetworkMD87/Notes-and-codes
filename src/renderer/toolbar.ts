@@ -1,4 +1,5 @@
-import { HIGHLIGHT_COLOURS, HL_HEX, type HighlightColour } from '../shared/types'
+import { HIGHLIGHT_COLOURS, HL_HEX, type HighlightColour, type MarkdownPreviewMode, type MarkdownPreviewVisibleMode } from '../shared/types'
+import { showContextMenu } from './contextMenu'
 
 export interface ToolbarHandlers {
   open: () => void
@@ -6,6 +7,7 @@ export interface ToolbarHandlers {
   openHistory: () => void
   toggleSplit: () => void
   togglePreview: () => void
+  setPreviewMode: (mode: MarkdownPreviewMode) => void
   togglePin: () => void
   startDiff: () => void
   pasteFromHistory: () => void
@@ -35,6 +37,8 @@ export class Toolbar {
   private el: HTMLDivElement
   private splitBtn: HTMLButtonElement
   private previewBtn: HTMLButtonElement
+  private previewCaret: HTMLButtonElement
+  private previewMode: MarkdownPreviewMode = 'off'
   private pinBtn: HTMLButtonElement
   private hlBtn!: HTMLButtonElement
 
@@ -57,7 +61,28 @@ export class Toolbar {
     }
 
     this.splitBtn = mk('Toggle split pane', ICONS.split, h.toggleSplit)
-    this.previewBtn = mk('Toggle markdown preview', ICONS.preview, h.togglePreview)
+    this.previewBtn = mk('Show Markdown preview side by side', ICONS.preview, h.togglePreview)
+    this.previewBtn.dataset.toolbar = 'markdown-preview-toggle'
+    this.previewBtn.setAttribute('aria-label', 'Show Markdown preview side by side')
+    this.previewBtn.setAttribute('aria-pressed', 'false')
+    const previewWrap = document.createElement('div')
+    previewWrap.className = 'tb-preview-wrap'
+    this.previewCaret = document.createElement('button')
+    this.previewCaret.className = 'tb-btn tb-caret'
+    this.previewCaret.dataset.toolbar = 'markdown-preview-mode'
+    this.previewCaret.title = 'Choose Markdown preview mode'
+    this.previewCaret.textContent = '▾'
+    this.previewCaret.setAttribute('aria-label', 'Choose Markdown preview mode')
+    this.previewCaret.setAttribute('aria-haspopup', 'menu')
+    this.previewCaret.onclick = () => {
+      const rect = this.previewCaret.getBoundingClientRect()
+      showContextMenu(rect.left, rect.bottom, [
+        { label: 'Side by side', checked: this.previewMode === 'side-by-side', run: () => h.setPreviewMode('side-by-side') },
+        { label: 'Focus', checked: this.previewMode === 'focus', run: () => h.setPreviewMode('focus') },
+        { label: 'Off', checked: this.previewMode === 'off', run: () => h.setPreviewMode('off') },
+      ], { opener: this.previewCaret, focusFirst: true })
+    }
+    previewWrap.append(this.previewBtn, this.previewCaret)
     this.pinBtn = mk('Toggle always on top', ICONS.pin, h.togglePin)
     this.hlBtn = mk('Highlighter — drag to paint, re-stroke same colour to erase', ICONS.highlighter, h.toggleHighlighter)
     const hlWrap = document.createElement('div')
@@ -85,7 +110,7 @@ export class Toolbar {
       mk('File History', ICONS.history, h.openHistory),
       sep(),
       this.splitBtn,
-      this.previewBtn,
+      previewWrap,
       this.pinBtn,
       sep(),
       hlWrap,
@@ -97,10 +122,35 @@ export class Toolbar {
     host.appendChild(this.el)
   }
 
-  syncToggles(state: { split: boolean; preview: boolean; pin: boolean }): void {
+  syncToggles(state: { split: boolean; pin: boolean }): void {
     this.splitBtn.classList.toggle('tb-active', state.split)
-    this.previewBtn.classList.toggle('tb-active', state.preview)
     this.pinBtn.classList.toggle('tb-active', state.pin)
+  }
+
+  syncPreview(state: {
+    available: boolean
+    mode: MarkdownPreviewMode
+    lastVisibleMode: MarkdownPreviewVisibleMode
+  }): void {
+    this.previewMode = state.mode
+    this.previewBtn.disabled = !state.available
+    this.previewCaret.disabled = !state.available
+    const active = state.available && state.mode !== 'off'
+    this.previewBtn.classList.toggle('tb-active', active)
+    this.previewBtn.setAttribute('aria-pressed', String(active))
+    const unavailable = 'Markdown preview is unavailable for non-Markdown files'
+    const mainAction = !state.available
+      ? unavailable
+      : state.mode !== 'off'
+        ? 'Turn Markdown preview off'
+        : state.lastVisibleMode === 'focus'
+          ? 'Show Markdown preview in Focus mode'
+          : 'Show Markdown preview side by side'
+    const chooserAction = state.available ? 'Choose Markdown preview mode' : unavailable
+    this.previewBtn.title = mainAction
+    this.previewBtn.setAttribute('aria-label', mainAction)
+    this.previewCaret.title = chooserAction
+    this.previewCaret.setAttribute('aria-label', chooserAction)
   }
 
   syncHighlighter(on: boolean, colour: HighlightColour): void {

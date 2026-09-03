@@ -14,7 +14,9 @@
       #main{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;position:relative}
       #header{height:34px;display:flex;align-items:center;background:var(--bar);border-bottom:1px solid var(--border)}
       #tabbar{flex:1;min-width:0;height:100%;display:flex;align-items:center;overflow-x:auto;overflow-y:hidden}
-      #panes{flex:1;display:flex;min-height:0}
+      #panes{flex:1;display:flex;min-width:0;min-height:0}
+      #editor-group{flex:1;display:flex;min-width:0;min-height:0}
+      #editor-group.hidden{display:none}
       .pane{flex:1;min-width:0;overflow:hidden}
       .pane.hidden{display:none}
       #statusbar{height:22px;background:var(--statusbar-bg);color:var(--muted);border-top:1px solid var(--border);font-size:12px;display:flex;align-items:center;gap:12px;padding:0 8px}
@@ -53,6 +55,9 @@
       .hl-orange{background:#ea580c59}.hl-slate{background:#64748b59}
       .hl-mode .view-lines{cursor:var(--hl-cursor,crosshair)}
       .tb-hl-wrap{position:relative;display:flex;align-items:center}
+      .tb-preview-wrap{display:flex;align-items:center}
+      .tb-preview-wrap .tb-btn:first-child{border-top-right-radius:0;border-bottom-right-radius:0}
+      .tb-preview-wrap .tb-caret{border-top-left-radius:0;border-bottom-left-radius:0}
       .tb-caret{padding:4px 2px;font-size:10px}
       .tb-hl-pop{position:absolute;top:100%;right:0;display:grid;grid-template-columns:repeat(6,18px);gap:6px;padding:6px;margin-top:4px;background:var(--bar);border:1px solid var(--accent);border-radius:var(--radius-lg);box-shadow:var(--shadow);z-index:100}
       .tb-hl-pop.hidden{display:none}
@@ -77,6 +82,8 @@
       .diff-close:hover{background:var(--accent);color:var(--accent-text)}
       #ctx-menu{position:fixed;z-index:100;min-width:150px;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:4px 0;font-size:13px}
       .ctx-item{display:block;width:100%;padding:6px 14px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;white-space:nowrap}
+      .ctx-item-radio{display:flex;align-items:center;gap:8px}
+      .ctx-check{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1em;height:1em;color:inherit;font-weight:700}
       .ctx-item:hover,.ctx-item:focus-visible{background:var(--accent);color:var(--accent-text);outline:none}
       .ctx-item:disabled{opacity:.5;cursor:default}
       .ctx-sep{height:1px;margin:4px 6px;background:var(--border)}
@@ -156,8 +163,10 @@
       .toast--success{--toast-accent:var(--success)}
       .toast--warning{--toast-accent:var(--warning)}
       .toast--error{--toast-accent:var(--danger)}
-      #mdpreview{flex:1;min-width:0;overflow:auto;padding:0 16px;background:var(--editorbg);color:var(--bartext)}
+      #mdpreview{box-sizing:border-box;flex:1;min-width:0;overflow:auto;padding:0 16px;background:var(--editorbg);color:var(--bartext)}
       #mdpreview.hidden{display:none}
+      .markdown-preview-gutter{flex:0 0 6px;cursor:col-resize}
+      .markdown-preview-gutter:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
       #mdpreview pre{background:var(--bar-hover);padding:8px;border-radius:var(--radius);overflow:auto}
       #mdpreview code{font-family:'JetBrains Mono',Consolas,monospace}
       .ph-picker,.snip-picker,.input-overlay,.snip-mgr,.settings,.personal-dictionary{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding-top:80px;z-index:100}
@@ -229,7 +238,7 @@
       .workspace-excludes textarea{box-sizing:border-box;width:100%;min-height:128px;resize:vertical;font:12px/1.45 var(--editor-font,monospace)}
       .workspace-excludes-restore{font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bar);color:var(--panel-text);cursor:pointer}
       .workspace-excludes-restore:hover{background:var(--bar-hover)}
-      .spell-settings-note,.spell-settings-resolved{margin:8px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
+      .spell-settings-note,.spell-settings-resolved,.settings-note{margin:8px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
       .spell-settings-resolved{margin-top:3px}
       .personal-dictionary-open{margin-top:10px}
       .personal-dictionary-open:disabled,.spell-settings select:disabled{opacity:.5;cursor:default}
@@ -328,7 +337,7 @@
       <div id="sidebar" class="hidden"></div>
       <div id="main">
         <div id="header"><div id="tabbar"></div></div>
-        <div id="panes"><div id="paneA" class="pane"></div><div id="paneB" class="pane hidden"></div><div id="mdpreview" class="hidden"></div></div>
+        <div id="panes"><div id="editor-group"><div id="paneA" class="pane"></div><div id="paneB" class="pane hidden"></div></div><div id="mdpreview" class="hidden" role="region" aria-label="Markdown preview"></div></div>
         <div id="diff" class="hidden"></div>
         <div id="change-bar" class="hidden"></div>
         <div id="statusbar"></div>

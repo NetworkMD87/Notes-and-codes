@@ -1,7 +1,7 @@
 import { OverlayRegistration } from './overlayManager'
 import { moveRovingIndex } from './rovingIndex'
 
-export interface ContextMenuItem { label: string; run: () => void; disabled?: boolean }
+export interface ContextMenuItem { label: string; run: () => void; disabled?: boolean; checked?: boolean }
 /** A menu row, or a hairline between groups. */
 export type ContextMenuEntry = ContextMenuItem | { separator: true }
 export interface ContextMenuOptions {
@@ -55,10 +55,23 @@ export function showContextMenu(
     const row = document.createElement('button')
     row.type = 'button'
     row.className = 'ctx-item'
-    row.setAttribute('role', 'menuitem')
+    row.setAttribute('role', item.checked === undefined ? 'menuitem' : 'menuitemradio')
+    if (item.checked !== undefined) {
+      row.classList.add('ctx-item-radio')
+      row.setAttribute('aria-checked', String(item.checked))
+    }
     row.tabIndex = -1
     row.disabled = item.disabled ?? false
-    row.textContent = item.label
+    if (item.checked === undefined) row.textContent = item.label
+    else {
+      const marker = document.createElement('span')
+      marker.className = 'ctx-check'
+      marker.setAttribute('aria-hidden', 'true')
+      marker.textContent = item.checked ? '✓' : ''
+      const label = document.createElement('span')
+      label.textContent = item.label
+      row.append(marker, label)
+    }
     row.onclick = () => { close(); item.run() }
     menu.appendChild(row)
   }
@@ -87,7 +100,7 @@ export function showContextMenu(
     if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) close()
   }
   function move(key: string): void {
-    const rows = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+    const rows = [...menu.querySelectorAll<HTMLButtonElement>('.ctx-item')]
     const next = moveRovingIndex(
       Math.max(0, rows.indexOf(document.activeElement as HTMLButtonElement)),
       rows.map(row => !row.disabled), key, 'vertical',

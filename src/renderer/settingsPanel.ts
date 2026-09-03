@@ -25,6 +25,8 @@ export interface SettingsDeps {
   setFontSize: (px: number) => void
   showMinimap: () => boolean
   setShowMinimap: (on: boolean) => void
+  rememberMarkdownPreviewMode: () => boolean
+  setRememberMarkdownPreviewMode: (remember: boolean) => void
   showAllFiles: () => boolean
   setShowAllFiles: (on: boolean) => void
   workspaceExcludes: () => string[]
@@ -388,7 +390,23 @@ export class SettingsPanel {
       spell.appendChild(resolved)
     }
     spell.appendChild(dictionary)
-    wrap.append(eh, this.checkboxRow('Show minimap', this.d.showMinimap(), on => this.d.setShowMinimap(on)), this.checkboxRow('Auto-save changes to disk (named files)', this.d.autoSaveToDisk(), on => this.d.setAutoSaveToDisk(on)), this.checkboxRow('Format on save (named files)', this.d.formatOnSave(), on => this.d.setFormatOnSave(on)), spell)
+    const previewSettings = document.createElement('div')
+    previewSettings.className = 'settings-group markdown-preview-settings'
+    const previewHeading = document.createElement('h3')
+    previewHeading.textContent = 'Markdown preview'
+    const rememberRow = this.checkboxRow(
+      'Remember Markdown preview mode',
+      this.d.rememberMarkdownPreviewMode(),
+      remember => this.d.setRememberMarkdownPreviewMode(remember),
+    )
+    const checkbox = rememberRow.querySelector<HTMLInputElement>('input')!
+    const previewNote = document.createElement('p')
+    previewNote.id = 'markdown-preview-remember-note'
+    previewNote.className = 'settings-note'
+    previewNote.textContent = 'Restore Off, Side by side, or Focus when reopening the app.'
+    checkbox.setAttribute('aria-describedby', previewNote.id)
+    previewSettings.append(previewHeading, rememberRow, previewNote)
+    wrap.append(eh, this.checkboxRow('Show minimap', this.d.showMinimap(), on => this.d.setShowMinimap(on)), this.checkboxRow('Auto-save changes to disk (named files)', this.d.autoSaveToDisk(), on => this.d.setAutoSaveToDisk(on)), this.checkboxRow('Format on save (named files)', this.d.formatOnSave(), on => this.d.setFormatOnSave(on)), previewSettings, spell)
     return wrap
   }
 

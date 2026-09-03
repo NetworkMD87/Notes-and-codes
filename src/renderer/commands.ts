@@ -3,6 +3,7 @@ import type { BufferManager } from './bufferManager'
 import type { SplitView } from './splitView'
 import type { DiffView } from './diffView'
 import type { SettingsCategory } from './settingsPanel'
+import type { MarkdownPreviewMode } from '../shared/types'
 import { toast } from './notify'
 
 export interface CommandDeps {
@@ -23,6 +24,7 @@ export interface CommandDeps {
   diffClipboard: () => Promise<void>
   diffFiles: () => Promise<void>
   togglePreview: () => void
+  setPreviewMode: (mode: MarkdownPreviewMode) => void
   pasteFromHistory: () => void
   clearPasteHistory: () => void
   saveSelectionAsSnippet: () => void
@@ -87,6 +89,9 @@ export function registerCommands(d: CommandDeps): void {
   } })
   p.register({ id: 'autosave-disk', label: 'Toggle Auto-Save to Disk', run: () => d.toggleAutoSaveToDisk() })
   p.register({ id: 'mdpreview', label: 'Toggle Markdown Preview', run: () => d.togglePreview() })
+  p.register({ id: 'mdpreview-off', label: 'Markdown Preview: Off', run: () => d.setPreviewMode('off') })
+  p.register({ id: 'mdpreview-side', label: 'Markdown Preview: Side by side', run: () => d.setPreviewMode('side-by-side') })
+  p.register({ id: 'mdpreview-focus', label: 'Markdown Preview: Focus', run: () => d.setPreviewMode('focus') })
   p.register({ id: 'format-doc', label: 'Format Document', hint: 'Shift+Alt+F', run: () => d.formatDocument() })
   p.register({ id: 'format-selection', label: 'Format Selection', run: () => d.formatSelection() })
   p.register({ id: 'format-on-save', label: 'Toggle Format on Save', run: () => d.toggleFormatOnSave() })

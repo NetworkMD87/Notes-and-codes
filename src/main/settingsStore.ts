@@ -1,6 +1,14 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import { DEFAULT_SETTINGS, HIGHLIGHT_COLOURS, type HighlightColour, type Settings, type TabSizing } from '../shared/types'
+import {
+  DEFAULT_SETTINGS,
+  HIGHLIGHT_COLOURS,
+  type HighlightColour,
+  type MarkdownPreviewMode,
+  type MarkdownPreviewVisibleMode,
+  type Settings,
+  type TabSizing,
+} from '../shared/types'
 import { normalizePathGlobs } from '../shared/pathGlob'
 import { atomicWrite } from './atomicWrite'
 
@@ -16,6 +24,16 @@ function normalizeSettings(value: unknown): Settings {
       ? stored.showMinimap
       : DEFAULT_SETTINGS.showMinimap,
     tabSizing: isTabSizing(stored.tabSizing) ? stored.tabSizing : DEFAULT_SETTINGS.tabSizing,
+    rememberMarkdownPreviewMode: typeof stored.rememberMarkdownPreviewMode === 'boolean'
+      ? stored.rememberMarkdownPreviewMode
+      : DEFAULT_SETTINGS.rememberMarkdownPreviewMode,
+    markdownPreviewMode: isMarkdownPreviewMode(stored.markdownPreviewMode)
+      ? stored.markdownPreviewMode
+      : DEFAULT_SETTINGS.markdownPreviewMode,
+    markdownPreviewLastVisibleMode: isMarkdownPreviewVisibleMode(stored.markdownPreviewLastVisibleMode)
+      ? stored.markdownPreviewLastVisibleMode
+      : DEFAULT_SETTINGS.markdownPreviewLastVisibleMode,
+    markdownPreviewWidthPercent: normalizePreviewWidth(stored.markdownPreviewWidthPercent),
     workspaceExcludes: normalizePathGlobs(rawExcludes),
     lastHighlightColour: isHighlightColour(stored.lastHighlightColour)
       ? stored.lastHighlightColour
@@ -25,6 +43,21 @@ function normalizeSettings(value: unknown): Settings {
 
 function isTabSizing(value: unknown): value is TabSizing {
   return value === 'bounded' || value === 'natural'
+}
+
+function isMarkdownPreviewMode(value: unknown): value is MarkdownPreviewMode {
+  return value === 'off' || value === 'side-by-side' || value === 'focus'
+}
+
+function isMarkdownPreviewVisibleMode(value: unknown): value is MarkdownPreviewVisibleMode {
+  return value === 'side-by-side' || value === 'focus'
+}
+
+function normalizePreviewWidth(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_SETTINGS.markdownPreviewWidthPercent
+  }
+  return Math.round(Math.min(80, Math.max(20, value)))
 }
 
 function isHighlightColour(value: unknown): value is HighlightColour {
@@ -57,9 +90,10 @@ export class SettingsStore {
    *  every other write so two concurrent field updates can't clobber each other. */
   update(partial: Partial<Settings>): Promise<Settings> {
     const next = this.chain.then(async () => {
-      const merged = normalizeSettings({ ...(await this.load()), ...partial })
-      await atomicWrite(this.file, JSON.stringify(merged, null, 2))
-      return merged
+      const merged = { ...(await this.load()), ...partial }
+      const normalized = normalizeSettings(merged)
+      await atomicWrite(this.file, JSON.stringify(normalized, null, 2))
+      return normalized
     })
     this.chain = next.catch(() => {})
     return next

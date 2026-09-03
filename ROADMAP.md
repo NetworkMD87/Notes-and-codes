@@ -8,7 +8,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 ## 🟢 Merged — awaiting release
 
-_Nothing currently queued._
+- 🟢 **Markdown Preview layout modes** (**M**) — Markdown buffers can use an outer editor-group/Preview split while keeping the A/B editor split inside the editor group. The draggable, keyboard-accessible gutter enforces minimum sizes, and explicit `off | side-by-side | focus` modes preserve focused-pane content selection, live refresh, and focus return. A default-on Settings ▸ Editor option remembers the selected mode, last visible mode, and divider position across restarts.
 
 ---
 
@@ -30,8 +30,6 @@ _Nothing currently queued._
 - ⬜ **Safe Replace in Files** (**L**, after MSIX) — preview the change set; let users opt files in/out; snapshot history before writes; use atomic writes and stale-mtime conflict checks; make destructive scope unmistakable. Keep it separate from Find in Files.
 
 - ⬜ **Snippet placeholders / tabstops** (**M–L**, after Safe Replace) — VS Code-style `$1` and abbreviation expansion. Prefer Monaco’s snippet support; design placeholder syntax, malformed-snippet behaviour, and keyboard navigation before implementation.
-
-- ⬜ **Markdown Preview layout modes** (**M**) — add an outer editor-group/Preview split while keeping the A/B editor split inside the editor group. Provide a draggable gutter, minimum sizes, and explicit `off | side-by-side | focus` modes; preserve focused-pane content selection, live refresh, and focus return. Smoke-test dragging, limits, and mode transitions.
 
 ---
 

@@ -110,6 +110,8 @@ export interface BufferState {
 
 export type ThemeMode = 'light' | 'dark' | 'follow-os'
 export type TabSizing = 'bounded' | 'natural'
+export type MarkdownPreviewMode = 'off' | 'side-by-side' | 'focus'
+export type MarkdownPreviewVisibleMode = Exclude<MarkdownPreviewMode, 'off'>
 
 export interface Settings {
   theme: ThemeMode
@@ -123,6 +125,10 @@ export interface Settings {
   themeId: string
   accent: string | null
   tabSizing: TabSizing
+  rememberMarkdownPreviewMode: boolean
+  markdownPreviewMode: MarkdownPreviewMode
+  markdownPreviewLastVisibleMode: MarkdownPreviewVisibleMode
+  markdownPreviewWidthPercent: number
   fontFamily: string
   uiFontFamily: string
   fontLigatures: boolean
@@ -152,6 +158,10 @@ export const DEFAULT_SETTINGS: Settings = {
   themeId: 'dark',
   accent: null,
   tabSizing: 'bounded',
+  rememberMarkdownPreviewMode: true,
+  markdownPreviewMode: 'off',
+  markdownPreviewLastVisibleMode: 'side-by-side',
+  markdownPreviewWidthPercent: 50,
   fontFamily: 'JetBrains Mono',
   uiFontFamily: 'System',
   fontLigatures: true,
