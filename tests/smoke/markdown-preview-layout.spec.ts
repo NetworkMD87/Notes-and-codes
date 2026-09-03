@@ -34,9 +34,10 @@ async function dragPreviewGutter(win: Page, deltaX: number): Promise<void> {
   if (!box) throw new Error('Markdown preview gutter has no bounding box')
   const x = box.x + box.width / 2
   const y = box.y + box.height / 2
+  const viewportWidth = await win.evaluate(() => window.innerWidth)
   await win.mouse.move(x, y)
   await win.mouse.down()
-  await win.mouse.move(x + deltaX, y, { steps: 8 })
+  await win.mouse.move(Math.max(0, Math.min(viewportWidth - 1, x + deltaX)), y, { steps: 8 })
   await win.mouse.up()
 }
 
@@ -47,6 +48,16 @@ async function expectBothSurfacesAtLeast160(win: Page): Promise<void> {
   ])
   expect(editor?.width).toBeGreaterThanOrEqual(160)
   expect(preview?.width).toBeGreaterThanOrEqual(160)
+}
+
+async function livePreviewWidthPercent(win: Page): Promise<number> {
+  const [root, gutter] = await Promise.all([
+    win.locator('#panes').boundingBox(),
+    win.locator('.markdown-preview-gutter').boundingBox(),
+  ])
+  if (!root || !gutter) throw new Error('Markdown preview layout has no bounding boxes')
+  const gutterCentre = gutter.x + gutter.width / 2
+  return (root.x + root.width - gutterCentre) / root.width * 100
 }
 
 async function quickOpen(win: Page, fileName: string): Promise<void> {
@@ -79,7 +90,9 @@ test('Markdown preview keeps the nested A/B split resizable and persists the out
   await expect(editorGroup.locator('#paneB')).toBeVisible()
   await expect(win.locator('.markdown-preview-gutter')).toHaveCount(1)
 
-  await dragPreviewGutter(win, -120)
+  await dragPreviewGutter(win, -2_000)
+  await expectBothSurfacesAtLeast160(win)
+  await dragPreviewGutter(win, 2_000)
   await expectBothSurfacesAtLeast160(win)
   await expect.poll(() => Number(settings(userDataDir).markdownPreviewWidthPercent)).not.toBe(50)
 })
@@ -168,8 +181,11 @@ test('Markdown preview restart restoration reapplies Focus and a saved side-by-s
   await chooseToolbarMode(win, 'Side by side')
   await expect(win.locator('#mdpreview h1')).toHaveText('Restart restoration')
   await dragPreviewGutter(win, -110)
-  await expect.poll(() => Number(settings(userDataDir).markdownPreviewWidthPercent)).not.toBe(50)
-  const savedWidth = Number(settings(userDataDir).markdownPreviewWidthPercent)
+  const draggedWidth = await livePreviewWidthPercent(win)
+  expect(Math.abs(draggedWidth - 50)).toBeGreaterThan(5)
+  await expect.poll(() =>
+    Math.abs(Number(settings(userDataDir).markdownPreviewWidthPercent) - draggedWidth)
+  ).toBeLessThanOrEqual(2)
   await app.close()
 
   app = await smoke.launch({
@@ -179,12 +195,8 @@ test('Markdown preview restart restoration reapplies Focus and a saved side-by-s
   await waitForBoot(win)
   await expectMode(win, 'side-by-side')
   await expect(win.locator('#mdpreview h1')).toHaveText('Restart restoration')
-  const restoredWidth = await win.evaluate(() => {
-    const editor = document.getElementById('editor-group')!.getBoundingClientRect().width
-    const preview = document.getElementById('mdpreview')!.getBoundingClientRect().width
-    return preview / (editor + preview) * 100
-  })
-  expect(Math.abs(restoredWidth - savedWidth)).toBeLessThanOrEqual(2)
+  const restoredWidth = await livePreviewWidthPercent(win)
+  expect(Math.abs(restoredWidth - draggedWidth)).toBeLessThanOrEqual(2)
 })
 
 test('Markdown preview temporarily shows the editor for plain text and returns to Focus for Markdown', async ({ smoke }) => {
@@ -295,12 +307,19 @@ test('Markdown preview controls, commands, and unavailable toggle keep one saved
     ['Focus', 'focus'],
     ['Off', 'off'],
   ] as const) {
-    await win.getByRole('button', { name: 'Choose Markdown preview mode' }).click()
-    const items = win.getByRole('menuitemradio')
-    await expect(items).toHaveCount(3)
-    await expect(win.locator('[role="menuitemradio"][aria-checked="true"]')).toHaveCount(1)
-    await win.getByRole('menuitemradio', { name: label }).click()
+    await chooseToolbarMode(win, label)
     await expectMode(win, mode)
+    await win.getByRole('button', { name: 'Choose Markdown preview mode' }).click()
+    await expect(win.getByRole('menuitemradio')).toHaveCount(3)
+    for (const [radioLabel, radioMode] of [
+      ['Side by side', 'side-by-side'],
+      ['Focus', 'focus'],
+      ['Off', 'off'],
+    ] as const) {
+      await expect(win.getByRole('menuitemradio', { name: radioLabel }))
+        .toHaveAttribute('aria-checked', String(radioMode === mode))
+    }
+    await win.keyboard.press('Escape')
   }
 
   await chooseToolbarMode(win, 'Focus')
@@ -316,19 +335,26 @@ test('Markdown preview controls, commands, and unavailable toggle keep one saved
   await expectMode(win, 'side-by-side')
   await runCommand(win, 'Markdown Preview: Focus')
   await expectMode(win, 'focus')
-  await expect.poll(() => settings(userDataDir).markdownPreviewMode).toBe('focus')
+  await runCommand(win, 'Markdown Preview: Side by side')
+  await expectMode(win, 'side-by-side')
+  await expect.poll(() => settings(userDataDir).markdownPreviewMode).toBe('side-by-side')
 
   await quickOpen(win, 'controls.ts')
   await expectMode(win, 'off')
   await expect(toggle).toBeDisabled()
   await expect(win.getByRole('button', { name: 'Choose Markdown preview mode' })).toBeDisabled()
   await runCommand(win, 'Markdown Preview: Focus')
-  await expect(win.locator('#toast-host')).toContainText('Markdown Preview is available for Markdown files.')
+  const toasts = win.locator('#toast-host .toast')
+  await expect(toasts).toHaveCount(1)
+  await expect(toasts.first()).toContainText('Markdown Preview is available for Markdown files.')
   await expectMode(win, 'off')
-  expect(settings(userDataDir).markdownPreviewMode).toBe('focus')
+  await expect(toasts).toHaveCount(0)
 
   await runCommand(win, 'Toggle Markdown Preview')
-  await expect(win.locator('#toast-host')).toContainText('Markdown Preview is available for Markdown files.')
+  await expect(toasts).toHaveCount(1)
+  await expect(toasts.first()).toContainText('Markdown Preview is available for Markdown files.')
   await expectMode(win, 'off')
-  expect(settings(userDataDir).markdownPreviewMode).toBe('focus')
+  await quickOpen(win, 'controls.md')
+  await expectMode(win, 'side-by-side')
+  await expect(win.locator('#mdpreview h1')).toHaveText('Controls')
 })

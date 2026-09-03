@@ -248,7 +248,9 @@ test('snippets save/insert/manage and always-on-top toggle', async ({ smoke }) =
     await win.keyboard.press('Escape')
 
     // Always on top -> reflected in the window state
-    await win.locator('.tb-btn[title="Toggle always on top"]').click()
+    await win.keyboard.press('Control+Shift+P')
+    await win.locator('#palette input').fill('Toggle Always on Top')
+    await win.keyboard.press('Enter')
     await expect(win.locator('.tb-btn[title="Toggle always on top"]')).toHaveClass(/tb-active/)
     await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isAlwaysOnTop())).toBe(true)
 })
