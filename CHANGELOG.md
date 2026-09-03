@@ -6,6 +6,8 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 
 ## [Unreleased]
 
+## [1.20.0] — 2026-09-03
+
 _Markdown preview can now share the workspace or take focus—and remember that choice for next time._
 
 ### Added

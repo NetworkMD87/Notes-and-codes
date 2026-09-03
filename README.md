@@ -47,6 +47,9 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.20.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.20.0):** adds
+  **Off**, **Side by side**, and **Focus** layouts for Markdown Preview, with accessible resizing
+  and an optional setting to restore the chosen mode and divider position after restarting.
 - **[v1.19.5](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.19.5):** adds a
   **Settings ▸ Editor ▸ Show minimap** preference and keeps wrapped text clear of an enabled
   minimap, including after font changes and app startup.
