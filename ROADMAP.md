@@ -8,7 +8,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 ## 🟢 Merged — awaiting release
 
-- 🟢 **Markdown Preview layout modes** (**M**) — Markdown buffers can use an outer editor-group/Preview split while keeping the A/B editor split inside the editor group. The draggable, keyboard-accessible gutter enforces minimum sizes, and explicit `off | side-by-side | focus` modes preserve focused-pane content selection, live refresh, and focus return. A default-on Settings ▸ Editor option remembers the selected mode, last visible mode, and divider position across restarts.
+_Nothing currently queued._
 
 ---
 
@@ -72,6 +72,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 | Release | Outcome |
 | --- | --- |
+| **v1.20.0** · 2026-09-03 | Markdown Preview Off, Side by side, and Focus layouts; accessible resizing and focus; optional restoration of mode and divider position across restarts. |
 | **v1.19.5** · 2026-08-18 | Optional persistent minimap; wrapped text stays clear of it at startup and after editor-font changes. |
 | **v1.19.4** · 2026-08-18 | Tighter and fully themed tab sizing; Find in Files path and selection correctness; distinct Slate TXT and Lime Markdown badges. |
 | **v1.19.3** · 2026-08-17 | Responsive bounded tabs keep long filenames, badges, and close controls usable; natural-width tabs remain available in Appearance settings. |
