@@ -6,6 +6,20 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 
 ## [Unreleased]
 
+_Markdown preview can now share the workspace or take focus—and remember that choice for next time._
+
+### Added
+- Markdown files now offer **Off**, **Side by side**, and **Focus** preview layouts from a toolbar
+  split button and the Command Palette.
+- **Settings ▸ Editor ▸ Remember Markdown preview mode** restores the selected layout and divider
+  position after restarting the app; it is enabled by default and can be turned off.
+
+### Changed
+- The side-by-side Markdown preview has a draggable, keyboard-accessible divider with protected
+  minimum editor and preview widths, including after resizing the window or sidebar.
+- Focus mode keeps keyboard focus in the preview while moving between Markdown tabs and returns
+  focus to the editor when preview mode is turned off.
+
 ## [1.19.5] — 2026-08-18
 
 _Wrapped text stays clear of the minimap, with a simple control to hide it._
