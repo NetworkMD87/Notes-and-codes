@@ -190,6 +190,7 @@ test('Settings: Editor groups controls and stacks safely at narrow widths', asyn
   const dialog = win.getByRole('dialog', { name: 'Settings' })
   const groups = dialog.getByRole('region')
   await expect(groups).toHaveCount(3)
+  await expect(dialog.getByRole('heading', { name: 'Editor' })).toHaveCount(0)
   await expect(groups.nth(0)).toHaveAccessibleName('General')
   await expect(groups.nth(1)).toHaveAccessibleName('Markdown')
   await expect(groups.nth(2)).toHaveAccessibleName('Spelling')
@@ -205,6 +206,7 @@ test('Settings: Editor groups controls and stacks safely at narrow widths', asyn
   await expect(spelling.getByLabel('Check spelling in plain text and Markdown')).toBeVisible()
   await expect(spelling.getByLabel('Spell check language')).toBeVisible()
   await expect(spelling).toContainText('Works fully offline. Markdown code and technical syntax are ignored.')
+  await expect(spelling.locator('.spell-settings-resolved')).toContainText('Currently using English (UK).')
   await expect(spelling.getByRole('button', { name: 'Personal dictionary…' })).toBeVisible()
 
   const defaultLayout = await dialog.evaluate(box => {
@@ -215,7 +217,7 @@ test('Settings: Editor groups controls and stacks safely at narrow widths', asyn
       box: rect(box),
       nav: rect(nav),
       detail: rect(detail),
-      controls: [...detail.querySelectorAll('input, select, button')].map(rect),
+      controls: [...box.querySelectorAll('button, input, select')].map(rect),
     }
   })
   expect(defaultLayout.box.width).toBeGreaterThanOrEqual(780)
@@ -225,6 +227,8 @@ test('Settings: Editor groups controls and stacks safely at narrow widths', asyn
     expect(control.height).toBeGreaterThan(0)
     expect(control.left).toBeGreaterThanOrEqual(defaultLayout.box.left)
     expect(control.right).toBeLessThanOrEqual(defaultLayout.box.right)
+    expect(control.top).toBeGreaterThanOrEqual(defaultLayout.box.top)
+    expect(control.bottom).toBeLessThanOrEqual(defaultLayout.box.bottom)
   }
 
   await win.setViewportSize({ width: 620, height: 720 })
@@ -237,17 +241,28 @@ test('Settings: Editor groups controls and stacks safely at narrow widths', asyn
       box: rect(box),
       nav: rect(nav),
       detail: rect(detail),
-      controls: [...box.querySelectorAll('.settings-nav button, .settings-detail input, .settings-detail select, .settings-detail button')].map(rect),
+      close: rect(box.querySelector('.settings-close')!),
+      navControls: [...nav.querySelectorAll('button')].map(rect),
+      controls: [...box.querySelectorAll('button, input, select')].map(rect),
     }
   })
   expect(narrowLayout.nav.bottom).toBeLessThanOrEqual(narrowLayout.detail.top)
   expect(narrowLayout.nav.right).toBeLessThanOrEqual(narrowLayout.box.right)
   expect(narrowLayout.detail.right).toBeLessThanOrEqual(narrowLayout.box.right)
+  for (const category of narrowLayout.navControls) {
+    const overlapsClose = category.left < narrowLayout.close.right
+      && category.right > narrowLayout.close.left
+      && category.top < narrowLayout.close.bottom
+      && category.bottom > narrowLayout.close.top
+    expect(overlapsClose).toBe(false)
+  }
   for (const control of narrowLayout.controls) {
     expect(control.width).toBeGreaterThan(0)
     expect(control.height).toBeGreaterThan(0)
     expect(control.left).toBeGreaterThanOrEqual(narrowLayout.box.left)
     expect(control.right).toBeLessThanOrEqual(narrowLayout.box.right)
+    expect(control.top).toBeGreaterThanOrEqual(narrowLayout.box.top)
+    expect(control.bottom).toBeLessThanOrEqual(narrowLayout.box.bottom)
   }
 })
 
