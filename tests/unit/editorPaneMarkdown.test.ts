@@ -21,6 +21,7 @@ vi.mock('monaco-editor', () => ({
 }))
 
 import { EditorPane } from '../../src/renderer/editorPane'
+import { KeyCode } from 'monaco-editor'
 
 describe('EditorPane Markdown tools', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -72,7 +73,7 @@ describe('EditorPane Markdown tools', () => {
     const preventDefault = vi.fn()
     const stopPropagation = vi.fn()
 
-    editor.onKeyDown.mock.calls[0][0]({ keyCode: 3, shiftKey: false, preventDefault, stopPropagation })
+    editor.onKeyDown.mock.calls[0][0]({ keyCode: KeyCode.Enter, shiftKey: false, preventDefault, stopPropagation })
 
     expect(preventDefault).toHaveBeenCalledOnce()
     expect(stopPropagation).toHaveBeenCalledOnce()
@@ -83,5 +84,58 @@ describe('EditorPane Markdown tools', () => {
     }])
     expect(editor.pushUndoStop).toHaveBeenCalledTimes(2)
     expect(editor.setSelection).toHaveBeenCalledWith({ start: positionAt(8), end: positionAt(8) })
+  })
+
+  it('intercepts Tab and Shift+Tab on Markdown list items as undoable indent edits', () => {
+    let source = '- one'
+    const positionAt = (offset: number) => ({ lineNumber: 1, column: offset + 1 })
+    const model = {
+      getLanguageId: () => 'markdown',
+      getValue: () => source,
+      getOffsetAt: (position: { column: number }) => position.column - 1,
+      getPositionAt: positionAt,
+    }
+    editor.getModel.mockReturnValue(model)
+    editor.getSelection.mockReturnValue({
+      getStartPosition: () => positionAt(0),
+      getEndPosition: () => positionAt(5),
+    })
+    new EditorPane(document.createElement('div'))
+    const onKeyDown = editor.onKeyDown.mock.calls[0][0]
+    editor.executeEdits.mockImplementation((_origin, edits) => {
+      const edit = edits[0]
+      const start = edit.range.start.column - 1
+      const end = edit.range.end.column - 1
+      source = source.slice(0, start) + edit.text + source.slice(end)
+    })
+    const tabPreventDefault = vi.fn()
+    const tabStopPropagation = vi.fn()
+
+    onKeyDown({ keyCode: KeyCode.Tab, shiftKey: false, preventDefault: tabPreventDefault, stopPropagation: tabStopPropagation })
+
+    expect(source).toBe('  - one')
+    expect(tabPreventDefault).toHaveBeenCalledOnce()
+    expect(tabStopPropagation).toHaveBeenCalledOnce()
+    expect(editor.executeEdits).toHaveBeenCalledOnce()
+    expect(editor.executeEdits).toHaveBeenCalledWith('markdown-list-indent', [{
+      range: { start: positionAt(0), end: positionAt(5) },
+      text: '  - one',
+      forceMoveMarkers: true,
+    }])
+    expect(editor.pushUndoStop).toHaveBeenCalledTimes(2)
+
+    editor.getSelection.mockReturnValue({
+      getStartPosition: () => positionAt(0),
+      getEndPosition: () => positionAt(7),
+    })
+    const outdentPreventDefault = vi.fn()
+    const outdentStopPropagation = vi.fn()
+    onKeyDown({ keyCode: KeyCode.Tab, shiftKey: true, preventDefault: outdentPreventDefault, stopPropagation: outdentStopPropagation })
+
+    expect(source).toBe('- one')
+    expect(outdentPreventDefault).toHaveBeenCalledOnce()
+    expect(outdentStopPropagation).toHaveBeenCalledOnce()
+    expect(editor.executeEdits).toHaveBeenCalledTimes(2)
+    expect(editor.pushUndoStop).toHaveBeenCalledTimes(4)
   })
 })
