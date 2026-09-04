@@ -1,5 +1,6 @@
 import { HIGHLIGHT_COLOURS, HL_HEX, type HighlightColour, type MarkdownPreviewMode, type MarkdownPreviewVisibleMode } from '../shared/types'
 import { showContextMenu } from './contextMenu'
+import type { MarkdownAction } from './markdownEditing'
 
 export interface ToolbarHandlers {
   open: () => void
@@ -8,6 +9,7 @@ export interface ToolbarHandlers {
   toggleSplit: () => void
   togglePreview: () => void
   setPreviewMode: (mode: MarkdownPreviewMode) => void
+  applyMarkdown: (action: MarkdownAction) => void
   togglePin: () => void
   startDiff: () => void
   pasteFromHistory: () => void
@@ -39,6 +41,7 @@ export class Toolbar {
   private previewBtn: HTMLButtonElement
   private previewCaret: HTMLButtonElement
   private previewMode: MarkdownPreviewMode = 'off'
+  private markdownTools: HTMLButtonElement
   private pinBtn: HTMLButtonElement
   private hlBtn!: HTMLButtonElement
 
@@ -83,6 +86,25 @@ export class Toolbar {
       ], { opener: this.previewCaret, focusFirst: true })
     }
     previewWrap.append(this.previewBtn, this.previewCaret)
+    this.markdownTools = document.createElement('button')
+    this.markdownTools.className = 'tb-btn'
+    this.markdownTools.dataset.toolbar = 'markdown-tools'
+    this.markdownTools.title = 'Markdown tools'
+    this.markdownTools.textContent = 'MD ▾'
+    this.markdownTools.setAttribute('aria-label', 'Markdown tools')
+    this.markdownTools.setAttribute('aria-haspopup', 'menu')
+    this.markdownTools.onclick = () => {
+      const rect = this.markdownTools.getBoundingClientRect()
+      const actions: Array<[string, MarkdownAction]> = [
+        ['Heading', 'heading'], ['Bold', 'bold'], ['Italic', 'italic'], ['Link', 'link'],
+        ['Inline code', 'inline-code'], ['Code block', 'code-block'], ['Quote', 'quote'],
+        ['Bulleted list', 'bulleted-list'], ['Numbered list', 'numbered-list'], ['Task list', 'task-list'],
+      ]
+      showContextMenu(rect.left, rect.bottom, actions.map(([label, action]) => ({ label, run: () => h.applyMarkdown(action) })), {
+        opener: this.markdownTools,
+        focusFirst: true,
+      })
+    }
     this.pinBtn = mk('Toggle always on top', ICONS.pin, h.togglePin)
     this.hlBtn = mk('Highlighter — drag to paint, re-stroke same colour to erase', ICONS.highlighter, h.toggleHighlighter)
     const hlWrap = document.createElement('div')
@@ -111,6 +133,7 @@ export class Toolbar {
       sep(),
       this.splitBtn,
       previewWrap,
+      this.markdownTools,
       this.pinBtn,
       sep(),
       hlWrap,
@@ -151,6 +174,10 @@ export class Toolbar {
     this.previewBtn.setAttribute('aria-label', mainAction)
     this.previewCaret.title = chooserAction
     this.previewCaret.setAttribute('aria-label', chooserAction)
+  }
+
+  syncMarkdownTools(available: boolean): void {
+    this.markdownTools.hidden = !available
   }
 
   syncHighlighter(on: boolean, colour: HighlightColour): void {

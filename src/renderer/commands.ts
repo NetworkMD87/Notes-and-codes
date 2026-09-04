@@ -5,6 +5,7 @@ import type { DiffView } from './diffView'
 import type { SettingsCategory } from './settingsPanel'
 import type { MarkdownPreviewMode } from '../shared/types'
 import { toast } from './notify'
+import type { MarkdownAction } from './markdownEditing'
 
 export interface CommandDeps {
   palette: CommandPalette
@@ -25,6 +26,7 @@ export interface CommandDeps {
   diffFiles: () => Promise<void>
   togglePreview: () => void
   setPreviewMode: (mode: MarkdownPreviewMode) => void
+  applyMarkdown: (action: MarkdownAction) => void
   pasteFromHistory: () => void
   clearPasteHistory: () => void
   saveSelectionAsSnippet: () => void
@@ -92,6 +94,14 @@ export function registerCommands(d: CommandDeps): void {
   p.register({ id: 'mdpreview-off', label: 'Markdown Preview: Off', run: () => d.setPreviewMode('off') })
   p.register({ id: 'mdpreview-side', label: 'Markdown Preview: Side by side', run: () => d.setPreviewMode('side-by-side') })
   p.register({ id: 'mdpreview-focus', label: 'Markdown Preview: Focus', run: () => d.setPreviewMode('focus') })
+  const markdownActions: Array<[MarkdownAction, string]> = [
+    ['heading', 'Heading'], ['bold', 'Bold'], ['italic', 'Italic'], ['link', 'Link'],
+    ['inline-code', 'Inline code'], ['code-block', 'Code block'], ['quote', 'Quote'],
+    ['bulleted-list', 'Bulleted list'], ['numbered-list', 'Numbered list'], ['task-list', 'Task list'],
+  ]
+  for (const [action, label] of markdownActions) {
+    p.register({ id: `markdown-${action}`, label: `Markdown: ${label}`, run: () => d.applyMarkdown(action) })
+  }
   p.register({ id: 'format-doc', label: 'Format Document', hint: 'Shift+Alt+F', run: () => d.formatDocument() })
   p.register({ id: 'format-selection', label: 'Format Selection', run: () => d.formatSelection() })
   p.register({ id: 'format-on-save', label: 'Toggle Format on Save', run: () => d.toggleFormatOnSave() })

@@ -849,6 +849,7 @@ const toolbar = new Toolbar(document.getElementById('header')!, {
   toggleSplit: () => { view.setSplit(!view.isSplit()); showActive(); spell?.refreshNow() },
   togglePreview,
   setPreviewMode: selectPreviewMode,
+  applyMarkdown: action => paneFor(view.focusedPane()).applyMarkdown(action),
   togglePin: toggleAlwaysOnTop,
   startDiff,
   pasteFromHistory,
@@ -1035,6 +1036,7 @@ function refreshToolbar(): void {
     mode: previewLayout.effectiveMode(),
     lastVisibleMode: previewLayout.state().lastVisibleMode,
   })
+  toolbar.syncMarkdownTools(previewContext().isMarkdown)
 }
 
 const palette = new CommandPalette(focusActiveEditor)
@@ -1062,6 +1064,7 @@ registerCommands({
   revert: () => void revertActive(),
   getAutoSave: () => autoSave, setAutoSave: (v) => { autoSave = v },
   togglePreview, setPreviewMode: selectPreviewMode, pasteFromHistory, clearPasteHistory, saveSelectionAsSnippet, insertSnippet, manageSnippets,
+  applyMarkdown: action => paneFor(view.focusedPane()).applyMarkdown(action),
   toggleAlwaysOnTop,
   zoomIn: () => zoomBy(1), zoomOut: () => zoomBy(-1), zoomReset,
   openAppearance,
