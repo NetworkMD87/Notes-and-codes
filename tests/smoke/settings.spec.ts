@@ -179,6 +179,78 @@ test('Settings: nav lists categories, detail shows the active one', async ({ smo
     await expect(win.locator('.settings-detail .appearance-sw')).toBeVisible()
 })
 
+test('Settings: Editor groups controls and stacks safely at narrow widths', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-settings-editor-layout-')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  await win.setViewportSize({ width: 1100, height: 720 })
+  await openSettings(win, 'Editor')
+
+  const dialog = win.getByRole('dialog', { name: 'Settings' })
+  const groups = dialog.getByRole('region')
+  await expect(groups).toHaveCount(3)
+  await expect(groups.nth(0)).toHaveAccessibleName('General')
+  await expect(groups.nth(1)).toHaveAccessibleName('Markdown')
+  await expect(groups.nth(2)).toHaveAccessibleName('Spelling')
+
+  const general = dialog.getByRole('region', { name: 'General' })
+  const markdown = dialog.getByRole('region', { name: 'Markdown' })
+  const spelling = dialog.getByRole('region', { name: 'Spelling' })
+  await expect(general.getByLabel('Show minimap')).toBeVisible()
+  await expect(general.getByLabel('Auto-save changes to disk (named files)')).toBeVisible()
+  await expect(general.getByLabel('Format on save (named files)')).toBeVisible()
+  await expect(markdown.getByLabel('Remember Markdown preview mode')).toBeVisible()
+  await expect(markdown).toContainText('Restore Off, Side by side, or Focus when reopening the app.')
+  await expect(spelling.getByLabel('Check spelling in plain text and Markdown')).toBeVisible()
+  await expect(spelling.getByLabel('Spell check language')).toBeVisible()
+  await expect(spelling).toContainText('Works fully offline. Markdown code and technical syntax are ignored.')
+  await expect(spelling.getByRole('button', { name: 'Personal dictionary…' })).toBeVisible()
+
+  const defaultLayout = await dialog.evaluate(box => {
+    const rect = (element: Element) => element.getBoundingClientRect()
+    const nav = box.querySelector('.settings-nav')!
+    const detail = box.querySelector('.settings-detail')!
+    return {
+      box: rect(box),
+      nav: rect(nav),
+      detail: rect(detail),
+      controls: [...detail.querySelectorAll('input, select, button')].map(rect),
+    }
+  })
+  expect(defaultLayout.box.width).toBeGreaterThanOrEqual(780)
+  expect(defaultLayout.nav.right).toBeLessThanOrEqual(defaultLayout.detail.left)
+  for (const control of defaultLayout.controls) {
+    expect(control.width).toBeGreaterThan(0)
+    expect(control.height).toBeGreaterThan(0)
+    expect(control.left).toBeGreaterThanOrEqual(defaultLayout.box.left)
+    expect(control.right).toBeLessThanOrEqual(defaultLayout.box.right)
+  }
+
+  await win.setViewportSize({ width: 620, height: 720 })
+  await expect.poll(async () => dialog.evaluate(box => box.getBoundingClientRect().width)).toBeLessThanOrEqual(620)
+  const narrowLayout = await dialog.evaluate(box => {
+    const rect = (element: Element) => element.getBoundingClientRect()
+    const nav = box.querySelector('.settings-nav')!
+    const detail = box.querySelector('.settings-detail')!
+    return {
+      box: rect(box),
+      nav: rect(nav),
+      detail: rect(detail),
+      controls: [...box.querySelectorAll('.settings-nav button, .settings-detail input, .settings-detail select, .settings-detail button')].map(rect),
+    }
+  })
+  expect(narrowLayout.nav.bottom).toBeLessThanOrEqual(narrowLayout.detail.top)
+  expect(narrowLayout.nav.right).toBeLessThanOrEqual(narrowLayout.box.right)
+  expect(narrowLayout.detail.right).toBeLessThanOrEqual(narrowLayout.box.right)
+  for (const control of narrowLayout.controls) {
+    expect(control.width).toBeGreaterThan(0)
+    expect(control.height).toBeGreaterThan(0)
+    expect(control.left).toBeGreaterThanOrEqual(narrowLayout.box.left)
+    expect(control.right).toBeLessThanOrEqual(narrowLayout.box.right)
+  }
+})
+
 test('Settings: spell controls show offline defaults and persist enablement and language', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-settings-spell-')
   let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
