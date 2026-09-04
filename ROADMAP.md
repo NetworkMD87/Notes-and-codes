@@ -8,7 +8,9 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 ## 🟢 Merged — awaiting release
 
-_Nothing currently queued._
+- 🟢 **Markdown authoring and unsaved preview** — untitled tabs can enter Markdown before Save As;
+  a compact tools menu and smart bullet, numbered, and task-list behaviour support authoring; task
+  checkboxes render safely; and Editor settings use a clearer responsive three-section layout.
 
 ---
 
