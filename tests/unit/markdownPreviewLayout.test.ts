@@ -263,6 +263,32 @@ describe('MarkdownPreviewLayout', () => {
     expect(h.layout.state().requestedMode).toBe('off')
   })
 
+  it('allows an untitled plaintext buffer to request preview without rendering it before conversion', () => {
+    const h = harness()
+    h.layout.restore({
+      ...DEFAULT_SETTINGS,
+      markdownPreviewMode: 'focus',
+      markdownPreviewLastVisibleMode: 'focus',
+    }, false, true)
+
+    expect(h.layout.isAvailable()).toBe(true)
+    expect(h.layout.effectiveMode()).toBe('off')
+    expect(h.layout.selectMode('focus')).toBe(true)
+    expect(h.layout.effectiveMode()).toBe('off')
+  })
+
+  it('uses the remembered visible mode when toggled from an untitled plaintext buffer', () => {
+    const h = harness()
+    h.layout.restore({
+      ...DEFAULT_SETTINGS,
+      markdownPreviewMode: 'focus',
+      markdownPreviewLastVisibleMode: 'focus',
+    }, false, true)
+
+    expect(h.layout.toggle()).toBe(true)
+    expect(h.layout.state().requestedMode).toBe('focus')
+  })
+
   it('destroys the outer split and gutter listener exactly once', () => {
     const h = harness()
     h.layout.restore(DEFAULT_SETTINGS, true)

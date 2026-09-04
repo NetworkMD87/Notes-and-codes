@@ -5,6 +5,13 @@ import { formatText, UnsupportedLanguageError, type FormatRange } from './format
 import { toast } from './notify'
 import type { ContextMenuEntry } from './contextMenu'
 import { buildEditorContextEntries, type EditorContextMenuTarget } from './editorContextMenu'
+import {
+  applyMarkdownAction,
+  indentMarkdownList,
+  smartListEnter,
+  type MarkdownAction,
+  type MarkdownEdit,
+} from './markdownEditing'
 
 export const FORMAT_DOC_COMMAND = 'notesAndCodes.formatDocument'
 
@@ -97,6 +104,7 @@ export class EditorPane {
     this.editor.onDidChangeModelContent(() => {
       this.changeCb?.(this.editor.getValue())
     })
+    this.editor.onKeyDown(event => this.handleMarkdownListKey(event))
     // Shift+Alt+F is registered ONCE, app-wide, by registerFormatKeybinding() — never per pane.
     // See the note there for why.
   }
@@ -128,6 +136,12 @@ export class EditorPane {
       this.editor.setModel(model)
     }
     old?.dispose()
+  }
+
+  /** Change syntax services without replacing the model, so content, undo, and view state survive. */
+  setBufferLanguage(id: string, language: string): void {
+    const model = this.models.get(id)
+    if (model && !model.isDisposed()) monaco.editor.setModelLanguage(model, language)
   }
 
   /** Drop a closed buffer's cached model + view state. */
@@ -358,6 +372,16 @@ export class EditorPane {
     this.editor.executeEdits('paste-history', [{ range: sel, text, forceMoveMarkers: true }])
     this.editor.focus()
   }
+  applyMarkdown(action: MarkdownAction): void {
+    const model = this.editor.getModel()
+    const selection = this.editor.getSelection()
+    if (!model || !selection || model.getLanguageId() !== 'markdown') return
+    const edit = applyMarkdownAction(action, model.getValue(), {
+      start: model.getOffsetAt(selection.getStartPosition()),
+      end: model.getOffsetAt(selection.getEndPosition()),
+    })
+    this.applyMarkdownEdit(edit, 'markdown-tools')
+  }
   getSelectionText(): string {
     const sel = this.editor.getSelection()
     return sel ? this.editor.getModel()?.getValueInRange(sel) ?? '' : ''
@@ -415,6 +439,49 @@ export class EditorPane {
     this.editor.focus()
     this.editor.getAction('actions.findWithSelection')?.run()
   }
+
+  private handleMarkdownListKey(event: monaco.IKeyboardEvent): void {
+    const model = this.editor.getModel()
+    const selection = this.editor.getSelection()
+    if (!model || !selection || model.getLanguageId() !== 'markdown') return
+    const selected = {
+      start: model.getOffsetAt(selection.getStartPosition()),
+      end: model.getOffsetAt(selection.getEndPosition()),
+    }
+    const hasCommandModifier = event.ctrlKey || event.altKey || event.metaKey
+    if (event.keyCode === monaco.KeyCode.Enter && !event.shiftKey && !hasCommandModifier && selected.start === selected.end) {
+      const edit = smartListEnter(model.getValue(), selected.start)
+      if (!edit) return
+      event.preventDefault()
+      event.stopPropagation()
+      this.applyMarkdownEdit(edit, 'markdown-list-enter')
+      return
+    }
+    if (event.keyCode !== monaco.KeyCode.Tab || hasCommandModifier) return
+    const edit = indentMarkdownList(model.getValue(), selected, event.shiftKey)
+    if (edit.text === model.getValue().slice(edit.range.start, edit.range.end)) return
+    event.preventDefault()
+    event.stopPropagation()
+    this.applyMarkdownEdit(edit, 'markdown-list-indent')
+  }
+
+  private applyMarkdownEdit(edit: MarkdownEdit, source: string): void {
+    const model = this.editor.getModel()
+    if (!model) return
+    const range = monaco.Range.fromPositions(
+      model.getPositionAt(edit.range.start),
+      model.getPositionAt(edit.range.end),
+    )
+    this.editor.pushUndoStop()
+    this.editor.executeEdits(source, [{ range, text: edit.text, forceMoveMarkers: true }])
+    this.editor.pushUndoStop()
+    this.editor.setSelection(monaco.Range.fromPositions(
+      model.getPositionAt(edit.selection.start),
+      model.getPositionAt(edit.selection.end),
+    ))
+    this.editor.focus()
+  }
+
 
   layout(): void { this.editor.layout() }
   dispose(): void {

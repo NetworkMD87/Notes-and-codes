@@ -367,10 +367,26 @@ export class SettingsPanel {
 
   private renderEditor(): HTMLElement {
     const wrap = document.createElement('div')
-    const eh = document.createElement('h3'); eh.textContent = 'Editor'
+    const editorGroup = (name: string): HTMLElement => {
+      const group = document.createElement('section')
+      group.className = 'settings-group editor-settings-group'
+      const heading = document.createElement('h3')
+      heading.id = `editor-settings-${name.toLowerCase()}`
+      heading.textContent = name
+      group.setAttribute('aria-labelledby', heading.id)
+      group.appendChild(heading)
+      return group
+    }
+
+    const general = editorGroup('General')
+    general.append(
+      this.checkboxRow('Show minimap', this.d.showMinimap(), on => this.d.setShowMinimap(on)),
+      this.checkboxRow('Auto-save changes to disk (named files)', this.d.autoSaveToDisk(), on => this.d.setAutoSaveToDisk(on)),
+      this.checkboxRow('Format on save (named files)', this.d.formatOnSave(), on => this.d.setFormatOnSave(on)),
+    )
+
     const enabled = this.d.spellCheckEnabled()
-    const spell = document.createElement('div'); spell.className = 'settings-group spell-settings'
-    const heading = document.createElement('h3'); heading.textContent = 'Spelling'
+    const spell = editorGroup('Spelling'); spell.classList.add('spell-settings')
     const toggle = this.checkboxRow('Check spelling in plain text and Markdown', enabled, on => { void this.d.setSpellCheckEnabled(on).then(() => this.render('spell-enabled')) }, 'spell-enabled')
     const language = document.createElement('select')
     for (const [value, label] of [['system', 'Follow Windows'], ['en-GB', 'English (UK)'], ['en-US', 'English (US)']] as const) {
@@ -383,17 +399,14 @@ export class SettingsPanel {
     language.onchange = () => { void this.d.setSpellCheckLanguage(language.value as SpellCheckLanguage).then(() => this.render('spell-language')) }
     const dictionary = document.createElement('button'); dictionary.type = 'button'; dictionary.className = 'personal-dictionary-open'
     dictionary.textContent = 'Personal dictionary…'; dictionary.disabled = !enabled; dictionary.onclick = () => this.d.openPersonalDictionary()
-    spell.append(heading, toggle, this.labelledRow('Spell check language', language), note)
+    spell.append(toggle, this.labelledRow('Spell check language', language), note)
     if (this.d.spellCheckLanguage() === 'system') {
       const resolved = document.createElement('p'); resolved.className = 'spell-settings-resolved'
       resolved.textContent = this.d.resolvedSpellLocale() === 'en-US' ? 'Currently using English (US).' : 'Currently using English (UK).'
       spell.appendChild(resolved)
     }
     spell.appendChild(dictionary)
-    const previewSettings = document.createElement('div')
-    previewSettings.className = 'settings-group markdown-preview-settings'
-    const previewHeading = document.createElement('h3')
-    previewHeading.textContent = 'Markdown preview'
+    const previewSettings = editorGroup('Markdown'); previewSettings.classList.add('markdown-preview-settings')
     const rememberRow = this.checkboxRow(
       'Remember Markdown preview mode',
       this.d.rememberMarkdownPreviewMode(),
@@ -405,8 +418,8 @@ export class SettingsPanel {
     previewNote.className = 'settings-note'
     previewNote.textContent = 'Restore Off, Side by side, or Focus when reopening the app.'
     checkbox.setAttribute('aria-describedby', previewNote.id)
-    previewSettings.append(previewHeading, rememberRow, previewNote)
-    wrap.append(eh, this.checkboxRow('Show minimap', this.d.showMinimap(), on => this.d.setShowMinimap(on)), this.checkboxRow('Auto-save changes to disk (named files)', this.d.autoSaveToDisk(), on => this.d.setAutoSaveToDisk(on)), this.checkboxRow('Format on save (named files)', this.d.formatOnSave(), on => this.d.setFormatOnSave(on)), previewSettings, spell)
+    previewSettings.append(rememberRow, previewNote)
+    wrap.append(general, previewSettings, spell)
     return wrap
   }
 

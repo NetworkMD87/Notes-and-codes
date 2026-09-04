@@ -37,9 +37,11 @@ export interface IpcDeps {
   startupReadFailure: 'snippets' | null
   fileWriteFailure: boolean
   highlightSaveFailure: boolean
+  saveAsTestPaths: string[]
 }
 
 export function registerIpc(deps: IpcDeps): void {
+  const saveAsTestPaths = [...deps.saveAsTestPaths]
   const session = new SessionStore(deps.baseDir)
   const settings = deps.settings
   const clip = new ClipboardHistoryStore(deps.baseDir)
@@ -113,6 +115,8 @@ export function registerIpc(deps: IpcDeps): void {
   handle('loginitem:set', (_e, enabled: boolean) => deps.setLoginItem(enabled))
   handle('hotkey:set', (_e, accel: string) => deps.setGlobalHotkey(accel))
   handle('dialog:saveAs', async () => {
+    const testPath = saveAsTestPaths.shift()
+    if (testPath) return testPath
     const r = await dialog.showSaveDialog({ title: 'Save As' })
     return r.canceled ? null : r.filePath ?? null
   })

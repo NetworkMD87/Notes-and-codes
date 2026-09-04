@@ -40,6 +40,7 @@ export class MarkdownPreviewLayout {
     previewWidthPercent: DEFAULT_WIDTH,
   }
   private bufferIsMarkdown = false
+  private bufferIsUntitled = false
   private appliedMode: MarkdownPreviewMode | null = null
   private split: Split.Instance | null = null
   private gutter: HTMLElement | null = null
@@ -62,9 +63,10 @@ export class MarkdownPreviewLayout {
     | 'rememberMarkdownPreviewMode'
     | 'markdownPreviewMode'
     | 'markdownPreviewLastVisibleMode'
-    | 'markdownPreviewWidthPercent'>, isMarkdown: boolean): void {
+    | 'markdownPreviewWidthPercent'>, isMarkdown: boolean, isUntitled = false): void {
     this.disposed = false
     this.bufferIsMarkdown = isMarkdown
+    this.bufferIsUntitled = isUntitled
     this.stateValue = settings.rememberMarkdownPreviewMode
       ? {
           remember: true,
@@ -86,22 +88,23 @@ export class MarkdownPreviewLayout {
   }
 
   effectiveMode(): MarkdownPreviewMode {
-    return this.isAvailable() ? this.stateValue.requestedMode : 'off'
+    return this.bufferIsMarkdown ? this.stateValue.requestedMode : 'off'
   }
 
   isAvailable(): boolean {
-    return this.bufferIsMarkdown
+    return this.bufferIsMarkdown || this.bufferIsUntitled
   }
 
-  setBufferIsMarkdown(isMarkdown: boolean): void {
-    if (this.bufferIsMarkdown === isMarkdown) return
+  setBufferIsMarkdown(isMarkdown: boolean, isUntitled = false): void {
+    if (this.bufferIsMarkdown === isMarkdown && this.bufferIsUntitled === isUntitled) return
     this.bufferIsMarkdown = isMarkdown
+    this.bufferIsUntitled = isUntitled
     this.apply()
   }
 
-  activateBuffer(isMarkdown: boolean): void {
-    const availabilityChanged = this.bufferIsMarkdown !== isMarkdown
-    this.setBufferIsMarkdown(isMarkdown)
+  activateBuffer(isMarkdown: boolean, isUntitled = false): void {
+    const availabilityChanged = this.bufferIsMarkdown !== isMarkdown || this.bufferIsUntitled !== isUntitled
+    this.setBufferIsMarkdown(isMarkdown, isUntitled)
     if (!availabilityChanged && this.effectiveMode() === 'focus') this.focusPreview()
   }
 
@@ -116,7 +119,7 @@ export class MarkdownPreviewLayout {
   }
 
   toggle(): boolean {
-    return this.selectMode(this.stateValue.requestedMode === 'off'
+    return this.selectMode(this.effectiveMode() === 'off'
       ? this.stateValue.lastVisibleMode
       : 'off')
   }

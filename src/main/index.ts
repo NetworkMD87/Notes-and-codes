@@ -54,6 +54,13 @@ function fileArgFrom(argv: string[], workingDirectory = process.cwd()): string |
   return pickFileArg(argv, app.isPackaged, existsSync, workingDirectory)
 }
 
+function parseSaveAsTestPaths(value: string | undefined): string[] {
+  try {
+    const parsed: unknown = JSON.parse(value ?? '[]')
+    return Array.isArray(parsed) ? parsed.filter((path): path is string => typeof path === 'string') : []
+  } catch { return [] }
+}
+
 function requestQuit(): void {
   if (!mainWindow) { isQuitting = true; app.quit(); return }
   if (unsavedCount === 0) {
@@ -270,6 +277,9 @@ if (!gotLock) {
       && process.env.NC_TEST_FAIL_FILE_WRITE === '1'
     const highlightSaveFailure = process.env.NC_HEADLESS === '1'
       && process.env.NC_TEST_FAIL_HIGHLIGHT_SAVE === '1'
+    const saveAsTestPaths = process.env.NC_HEADLESS === '1'
+      ? parseSaveAsTestPaths(process.env.NC_TEST_SAVE_AS_PATHS)
+      : []
     registerIpc({
       baseDir: app.getPath('userData'),
       settings: settingsStore,
@@ -287,6 +297,7 @@ if (!gotLock) {
       startupReadFailure,
       fileWriteFailure,
       highlightSaveFailure,
+      saveAsTestPaths,
     })
     pendingFile = fileArgFrom(process.argv)
 

@@ -6,6 +6,20 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 
 ## [Unreleased]
 
+### Added
+- Untitled tabs can enter Markdown mode before they are saved, opening Side by side or Focus
+  preview immediately while saved non-Markdown files remain unavailable.
+- A compact Markdown tools menu adds headings, emphasis, links, code, quotes, bullet and numbered
+  lists, and task lists without adding a permanent second toolbar.
+- Smart Markdown lists continue, increment, indent, outdent, toggle, and exit empty items while
+  task-list previews render safe, disabled checkboxes.
+
+### Changed
+- **Settings ▸ Editor** is organised into General, Markdown, and Spelling sections, with a wider
+  default layout that stacks cleanly in narrow windows.
+- Markdown line tools preserve useful selections and caret positions, including indented lists and
+  Windows CRLF documents, while leaving modified Monaco keyboard shortcuts untouched.
+
 ## [1.20.0] — 2026-09-03
 
 _Markdown preview can now share the workspace or take focus—and remember that choice for next time._

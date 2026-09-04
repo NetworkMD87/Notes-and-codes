@@ -25,6 +25,15 @@ describe('helpContent', () => {
     expect(entries.filter(entry => entry.label === 'Next tab' && entry.keys === 'Ctrl+PageDown')).toHaveLength(1)
   })
 
+  it('documents each Markdown formatting command offered by the tools menu', () => {
+    const labels = HELP_SECTIONS.flatMap(category => category.entries.map(entry => entry.label))
+    expect(labels).toEqual(expect.arrayContaining([
+      'Markdown: Heading', 'Markdown: Bold', 'Markdown: Italic', 'Markdown: Link',
+      'Markdown: Inline code', 'Markdown: Code block', 'Markdown: Quote',
+      'Markdown: Bulleted list', 'Markdown: Numbered list', 'Markdown: Task list',
+    ]))
+  })
+
   it('descriptions, where present, are non-empty', () => {
     for (const cat of HELP_SECTIONS) {
       for (const e of cat.entries) {

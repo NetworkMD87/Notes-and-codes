@@ -10,6 +10,7 @@ const createHandlers = (): ToolbarHandlers => ({
   toggleSplit: vi.fn(),
   togglePreview: vi.fn(),
   setPreviewMode: vi.fn(),
+  applyMarkdown: vi.fn(),
   togglePin: vi.fn(),
   startDiff: vi.fn(),
   pasteFromHistory: vi.fn(),
@@ -82,5 +83,23 @@ describe('Toolbar Markdown preview split control', () => {
     expect(preview.getAttribute('aria-label')).toBe(copy)
     expect(chooser.title).toBe(copy)
     expect(chooser.getAttribute('aria-label')).toBe(copy)
+  })
+
+  it('shows one Markdown tools menu only for Markdown buffers and runs its selected action', () => {
+    const handlers = createHandlers()
+    const toolbar = new Toolbar(document.body, handlers)
+    const tools = document.querySelector<HTMLButtonElement>('[data-toolbar="markdown-tools"]')!
+
+    toolbar.syncMarkdownTools(false)
+    expect(tools.hidden).toBe(true)
+
+    toolbar.syncMarkdownTools(true)
+    expect(tools.hidden).toBe(false)
+    expect(tools.getAttribute('aria-haspopup')).toBe('menu')
+    tools.click()
+    expect(document.querySelectorAll('[role="menuitem"]').length).toBe(10)
+    expect(document.querySelector<HTMLButtonElement>('[role="menuitem"]')!.textContent).toBe('Heading')
+    document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')[1].click()
+    expect(handlers.applyMarkdown).toHaveBeenCalledWith('bold')
   })
 })
