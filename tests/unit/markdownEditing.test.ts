@@ -140,5 +140,10 @@ describe('Markdown list decisions', () => {
     expect(indentMarkdownList('  - two', selection(2), true)).toEqual({
       range: selection(0, 7), text: '- two', selection: selection(0),
     })
+    expect(indentMarkdownList('  - two', selection(0), false).selection).toEqual(selection(2))
+    expect(indentMarkdownList('  - two', selection(1), false).selection).toEqual(selection(3))
+    expect(indentMarkdownList('    - two', selection(1), true).selection).toEqual(selection(0))
+    expect(indentMarkdownList('    - two', selection(2), true).selection).toEqual(selection(0))
+    expect(indentMarkdownList('    - two', selection(3), true).selection).toEqual(selection(1))
   })
 })

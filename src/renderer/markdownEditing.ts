@@ -53,10 +53,17 @@ const translateCaret = (before: string, after: string, offset: number): number =
   return prefix
 }
 
+const translateIndentCaret = (before: string, after: string, offset: number): number => {
+  if (after.endsWith(before)) return offset + after.length - before.length
+  if (before.endsWith(after)) return Math.max(0, offset - (before.length - after.length))
+  return translateCaret(before, after, offset)
+}
+
 const editLines = (
   source: string,
   selection: TextSelection,
   transform: (lines: string[]) => string[],
+  translate = translateCaret,
 ): MarkdownEdit => {
   const span = lineRange(source, selection)
   const range: TextSelection = { start: span.start, end: span.end }
@@ -69,7 +76,7 @@ const editLines = (
   const offset = selection.start - range.start
   const before = lines[0]
   const after = nextLines[0]
-  const caret = translateCaret(before, after, offset)
+  const caret = translate(before, after, offset)
   return { range, text, selection: { start: range.start + caret, end: range.start + caret } }
 }
 
@@ -174,5 +181,5 @@ export function indentMarkdownList(
   return editLines(source, selection, lines => lines.map(line => {
     if (!/^(\s*)(?:[-+*]\s+|\d+\.\s+|-\s+\[[ xX]\]\s+)/.test(line)) return line
     return outdent ? line.replace(/^ {1,2}/, '') : `  ${line}`
-  }))
+  }), translateIndentCaret)
 }
