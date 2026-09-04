@@ -78,6 +78,16 @@ describe('Markdown editing transforms', () => {
     expect(applyMarkdownAction('task-list', 'note', selection(0)).selection).toEqual(selection(6))
     expect(applyMarkdownAction('bulleted-list', 'one\ntwo', selection(0, 7)).selection).toEqual(selection(0, 11))
   })
+
+  it('keeps a collapsed caret aligned when removing indented line markers', () => {
+    expect(applyMarkdownAction('heading', '  # note', selection(5))).toEqual({
+      range: selection(0, 8), text: '  note', selection: selection(3),
+    })
+    expect(applyMarkdownAction('quote', '  > note', selection(5)).selection).toEqual(selection(3))
+    expect(applyMarkdownAction('bulleted-list', '  - note', selection(5)).selection).toEqual(selection(3))
+    expect(applyMarkdownAction('numbered-list', '  1. note', selection(6)).selection).toEqual(selection(3))
+    expect(applyMarkdownAction('task-list', '  - [ ] note', selection(9)).selection).toEqual(selection(3))
+  })
 })
 
 describe('Markdown list decisions', () => {

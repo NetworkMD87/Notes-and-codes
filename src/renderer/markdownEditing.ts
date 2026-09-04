@@ -35,6 +35,24 @@ const lineRange = (source: string, selection: TextSelection): LineRange => {
   return { start, end, separator }
 }
 
+const translateCaret = (before: string, after: string, offset: number): number => {
+  let prefix = 0
+  while (prefix < before.length && prefix < after.length && before[prefix] === after[prefix]) prefix++
+
+  let suffix = 0
+  while (
+    suffix < before.length - prefix &&
+    suffix < after.length - prefix &&
+    before[before.length - suffix - 1] === after[after.length - suffix - 1]
+  ) suffix++
+
+  const beforeChangedEnd = before.length - suffix
+  const afterChangedEnd = after.length - suffix
+  if (offset >= beforeChangedEnd) return afterChangedEnd + offset - beforeChangedEnd
+  if (offset <= prefix) return offset
+  return prefix
+}
+
 const editLines = (
   source: string,
   selection: TextSelection,
@@ -51,11 +69,7 @@ const editLines = (
   const offset = selection.start - range.start
   const before = lines[0]
   const after = nextLines[0]
-  const caret = after.endsWith(before)
-    ? offset + after.length - before.length
-    : before.endsWith(after)
-      ? Math.max(0, offset - (before.length - after.length))
-      : Math.min(offset, after.length)
+  const caret = translateCaret(before, after, offset)
   return { range, text, selection: { start: range.start + caret, end: range.start + caret } }
 }
 

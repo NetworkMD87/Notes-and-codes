@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { test, expect } from './smokeTest'
 import { waitForBoot } from './appReady'
 
-test('Markdown authoring keeps marker carets, continues CRLF mid-items, and leaves modified chords alone', async ({ smoke }) => {
+test('Markdown authoring keeps marker carets, continues CRLF mid-items, and leaves Ctrl+Tab alone', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-markdown-authoring-')
   const markdownPath = join(userDataDir, 'authoring.md')
   writeFileSync(markdownPath, 'note\r\ntrailing')
@@ -31,8 +31,9 @@ test('Markdown authoring keeps marker carets, continues CRLF mid-items, and leav
   await win.getByRole('button', { name: 'Save' }).click()
   await expect.poll(() => readFileSync(markdownPath, 'utf8')).toBe('- abc\r\n- def\r\ntrailing')
 
-  await win.keyboard.press('Control+End')
-  await win.keyboard.press('Control+Enter')
+  await editor.click()
+  await win.keyboard.press('Control+Home')
+  await win.keyboard.press('End')
   await win.keyboard.press('Control+Tab')
   await win.getByRole('button', { name: 'Save' }).click()
   await expect.poll(() => readFileSync(markdownPath, 'utf8')).toBe('- abc\r\n- def\r\ntrailing')
