@@ -13,10 +13,13 @@ md.core.ruler.after('inline', 'task-list-checkboxes', (state) => {
     if (item.type !== 'list_item_open') continue
     let inline: typeof item | undefined
     for (let child = index + 1; child < state.tokens.length && state.tokens[child].type !== 'list_item_close'; child++) {
-      if (state.tokens[child].type === 'inline') { inline = state.tokens[child]; break }
+      if (state.tokens[child].type === 'inline' && state.tokens[child].level === item.level + 2) {
+        inline = state.tokens[child]
+        break
+      }
     }
     const first = inline?.children?.[0]
-    const match = first?.type === 'text' ? /^\[([ xX])\]\s+/.exec(first.content) : null
+    const match = first?.type === 'text' ? /^\[([ xX])\](?:\s+|$)/.exec(first.content) : null
     if (!inline || !first || !match) continue
     item.attrJoin('class', 'task-list-item')
     first.content = first.content.slice(match[0].length)

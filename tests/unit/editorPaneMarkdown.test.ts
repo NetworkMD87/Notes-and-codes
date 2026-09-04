@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const editor = {
   onMouseUp: vi.fn(),
@@ -17,11 +17,14 @@ const editor = {
 vi.mock('monaco-editor', () => ({
   editor: { create: () => editor },
   Range: { fromPositions: (start: unknown, end: unknown = start) => ({ start, end }) },
+  KeyCode: { Enter: 3, Tab: 2 },
 }))
 
 import { EditorPane } from '../../src/renderer/editorPane'
 
 describe('EditorPane Markdown tools', () => {
+  beforeEach(() => vi.clearAllMocks())
+
   it('applies a Markdown transform as one Monaco edit and retains the inner selection', () => {
     const source = 'word'
     const positionAt = (offset: number) => ({ lineNumber: 1, column: offset + 1 })
@@ -48,5 +51,37 @@ describe('EditorPane Markdown tools', () => {
     }])
     expect(editor.pushUndoStop).toHaveBeenCalledTimes(2)
     expect(editor.setSelection).toHaveBeenCalledWith({ start: positionAt(2), end: positionAt(6) })
+  })
+
+  it('intercepts Enter on a Markdown list item as one undoable continuation edit', () => {
+    let source = '- one'
+    const positionAt = (offset: number) => ({ lineNumber: 1, column: offset + 1 })
+    const model = {
+      getLanguageId: () => 'markdown',
+      getValue: () => source,
+      getOffsetAt: (position: { column: number }) => position.column - 1,
+      getPositionAt: positionAt,
+    }
+    editor.getModel.mockReturnValue(model)
+    editor.getSelection.mockReturnValue({
+      getStartPosition: () => positionAt(5),
+      getEndPosition: () => positionAt(5),
+    })
+    new EditorPane(document.createElement('div'))
+    expect(editor.onKeyDown).toHaveBeenCalledOnce()
+    const preventDefault = vi.fn()
+    const stopPropagation = vi.fn()
+
+    editor.onKeyDown.mock.calls[0][0]({ keyCode: 3, shiftKey: false, preventDefault, stopPropagation })
+
+    expect(preventDefault).toHaveBeenCalledOnce()
+    expect(stopPropagation).toHaveBeenCalledOnce()
+    expect(editor.executeEdits).toHaveBeenCalledWith('markdown-list-enter', [{
+      range: { start: positionAt(5), end: positionAt(5) },
+      text: '\n- ',
+      forceMoveMarkers: true,
+    }])
+    expect(editor.pushUndoStop).toHaveBeenCalledTimes(2)
+    expect(editor.setSelection).toHaveBeenCalledWith({ start: positionAt(8), end: positionAt(8) })
   })
 })
