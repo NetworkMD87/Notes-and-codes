@@ -47,6 +47,10 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.21.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.0):** lets
+  untitled tabs enter Markdown preview before saving, adds a compact menu for common Markdown
+  formatting, and makes bullet, numbered, and task lists smarter while you type. Editor settings
+  also use a clearer responsive layout.
 - **[v1.20.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.20.0):** adds
   **Off**, **Side by side**, and **Focus** layouts for Markdown Preview, with accessible resizing
   and an optional setting to restore the chosen mode and divider position after restarting.

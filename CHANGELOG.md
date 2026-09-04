@@ -6,6 +6,10 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 
 ## [Unreleased]
 
+## [1.21.0] — 2026-09-04
+
+_Write and preview Markdown before saving, with fast formatting tools and smarter lists._
+
 ### Added
 - Untitled tabs can enter Markdown mode before they are saved, opening Side by side or Focus
   preview immediately while saved non-Markdown files remain unavailable.
@@ -18,7 +22,7 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 - **Settings ▸ Editor** is organised into General, Markdown, and Spelling sections, with a wider
   default layout that stacks cleanly in narrow windows.
 - Markdown line tools preserve useful selections and caret positions, including indented lists and
-  Windows CRLF documents, while leaving modified Monaco keyboard shortcuts untouched.
+  Windows line endings, while leaving existing editor keyboard shortcuts untouched.
 
 ## [1.20.0] — 2026-09-03
 
