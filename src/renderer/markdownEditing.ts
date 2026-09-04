@@ -17,13 +17,22 @@ export interface MarkdownEdit {
   selection: TextSelection
 }
 
-const lineRange = (source: string, selection: TextSelection): TextSelection => {
+interface LineRange extends TextSelection { separator: string }
+
+const lineRange = (source: string, selection: TextSelection): LineRange => {
   const start = source.lastIndexOf('\n', Math.max(0, selection.start - 1)) + 1
   const selectionEnd = selection.end > selection.start && source[selection.end - 1] === '\n'
     ? selection.end - 1
     : selection.end
   const nextBreak = source.indexOf('\n', selectionEnd)
-  return { start, end: nextBreak === -1 ? source.length : nextBreak }
+  const rawEnd = nextBreak === -1 ? source.length : nextBreak
+  const end = rawEnd > start && source[rawEnd - 1] === '\r' ? rawEnd - 1 : rawEnd
+  const separator = source.startsWith('\r\n', end)
+    ? '\r\n'
+    : source[end] === '\n'
+      ? '\n'
+      : source.includes('\r\n') ? '\r\n' : '\n'
+  return { start, end, separator }
 }
 
 const editLines = (
@@ -31,9 +40,23 @@ const editLines = (
   selection: TextSelection,
   transform: (lines: string[]) => string[],
 ): MarkdownEdit => {
-  const range = lineRange(source, selection)
-  const text = transform(source.slice(range.start, range.end).split('\n')).join('\n')
-  return { range, text, selection: { start: range.start, end: range.start + text.length } }
+  const span = lineRange(source, selection)
+  const range: TextSelection = { start: span.start, end: span.end }
+  const lines = source.slice(range.start, range.end).split(/\r?\n/)
+  const nextLines = transform(lines)
+  const text = nextLines.join(span.separator)
+  if (selection.start !== selection.end) {
+    return { range, text, selection: { start: range.start, end: range.start + text.length } }
+  }
+  const offset = selection.start - range.start
+  const before = lines[0]
+  const after = nextLines[0]
+  const caret = after.endsWith(before)
+    ? offset + after.length - before.length
+    : before.endsWith(after)
+      ? Math.max(0, offset - (before.length - after.length))
+      : Math.min(offset, after.length)
+  return { range, text, selection: { start: range.start + caret, end: range.start + caret } }
 }
 
 const inline = (
@@ -77,7 +100,8 @@ export function applyMarkdownAction(
   if (action === 'link') return inline(source, selection, '[', '](https://)', 'link text')
 
   if (action === 'code-block') {
-    const range = lineRange(source, selection)
+    const span = lineRange(source, selection)
+    const range: TextSelection = { start: span.start, end: span.end }
     const content = source.slice(range.start, range.end)
     const text = `\`\`\`\n${content}\n\`\`\``
     return {
@@ -92,7 +116,7 @@ export function applyMarkdownAction(
     const markerPattern = action === 'heading' ? /^(\s*)#\s+/ : /^(\s*)>\s+/
     return editLines(source, selection, lines => {
       const remove = lines.every(line => markerPattern.test(line))
-      return lines.map(line => remove ? line.replace(markerPattern, '$1') : line ? marker + line : marker.trimEnd())
+      return lines.map(line => remove ? line.replace(markerPattern, '$1') : marker + line)
     })
   }
 
@@ -110,19 +134,21 @@ export function applyMarkdownAction(
 }
 
 export function smartListEnter(source: string, cursor: number): MarkdownEdit | null {
-  const range = lineRange(source, { start: cursor, end: cursor })
-  if (cursor !== range.end) return null
+  const span = lineRange(source, { start: cursor, end: cursor })
+  const range: TextSelection = { start: span.start, end: span.end }
+  if (cursor < range.start || cursor > range.end) return null
   const line = source.slice(range.start, range.end)
-  const task = /^(\s*)-\s+\[[ xX]\]\s*(.*)$/.exec(line)
-  const ordered = /^(\s*)(\d+)\.\s*(.*)$/.exec(line)
-  const bullet = /^(\s*)[-+*]\s*(.*)$/.exec(line)
+  const task = /^(\s*)-\s+\[[ xX]\]\s*/.exec(line)
+  const ordered = /^(\s*)(\d+)\.\s*/.exec(line)
+  const bullet = /^(\s*)[-+*]\s*/.exec(line)
   const match = task ?? ordered ?? bullet
   if (!match) return null
   const indent = match[1]
-  const content = match[match.length - 1]
+  if (cursor - range.start < match[0].length) return null
+  const content = line.slice(match[0].length)
   if (!content) return { range, text: indent, selection: { start: range.start + indent.length, end: range.start + indent.length } }
   const marker = task ? '- [ ] ' : ordered ? `${Number(ordered[2]) + 1}. ` : '- '
-  const text = `\n${indent}${marker}`
+  const text = `${span.separator}${indent}${marker}`
   return { range: { start: cursor, end: cursor }, text, selection: { start: cursor + text.length, end: cursor + text.length } }
 }
 

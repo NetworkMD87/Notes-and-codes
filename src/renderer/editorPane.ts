@@ -448,7 +448,8 @@ export class EditorPane {
       start: model.getOffsetAt(selection.getStartPosition()),
       end: model.getOffsetAt(selection.getEndPosition()),
     }
-    if (event.keyCode === monaco.KeyCode.Enter && selected.start === selected.end) {
+    const hasCommandModifier = event.ctrlKey || event.altKey || event.metaKey
+    if (event.keyCode === monaco.KeyCode.Enter && !event.shiftKey && !hasCommandModifier && selected.start === selected.end) {
       const edit = smartListEnter(model.getValue(), selected.start)
       if (!edit) return
       event.preventDefault()
@@ -456,7 +457,7 @@ export class EditorPane {
       this.applyMarkdownEdit(edit, 'markdown-list-enter')
       return
     }
-    if (event.keyCode !== monaco.KeyCode.Tab) return
+    if (event.keyCode !== monaco.KeyCode.Tab || hasCommandModifier) return
     const edit = indentMarkdownList(model.getValue(), selected, event.shiftKey)
     if (edit.text === model.getValue().slice(edit.range.start, edit.range.end)) return
     event.preventDefault()

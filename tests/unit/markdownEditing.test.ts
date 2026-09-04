@@ -64,6 +64,20 @@ describe('Markdown editing transforms', () => {
       selection: selection(4, 15),
     })
   })
+
+  it('keeps a zero-width caret after inserted line markers without losing multiline selections', () => {
+    expect(applyMarkdownAction('heading', 'note', selection(0))).toEqual({
+      range: selection(0, 4), text: '# note', selection: selection(2),
+    })
+    expect(applyMarkdownAction('heading', '', selection(0))).toEqual({
+      range: selection(0), text: '# ', selection: selection(2),
+    })
+    expect(applyMarkdownAction('quote', 'note', selection(0)).selection).toEqual(selection(2))
+    expect(applyMarkdownAction('bulleted-list', 'note', selection(0)).selection).toEqual(selection(2))
+    expect(applyMarkdownAction('numbered-list', 'note', selection(0)).selection).toEqual(selection(3))
+    expect(applyMarkdownAction('task-list', 'note', selection(0)).selection).toEqual(selection(6))
+    expect(applyMarkdownAction('bulleted-list', 'one\ntwo', selection(0, 7)).selection).toEqual(selection(0, 11))
+  })
 })
 
 describe('Markdown list decisions', () => {
@@ -78,6 +92,27 @@ describe('Markdown list decisions', () => {
     expect(smartListEnter('3. ', 3)).toEqual({ range: selection(0, 3), text: '', selection: selection(0) })
   })
 
+  it('preserves CRLF and splits list content at the Enter caret', () => {
+    expect(smartListEnter('- alpha\r\nnext', 7)).toEqual({
+      range: selection(7), text: '\r\n- ', selection: selection(11),
+    })
+    expect(smartListEnter('- alpha\r\n', 7)).toEqual({
+      range: selection(7), text: '\r\n- ', selection: selection(11),
+    })
+    expect(smartListEnter('- abcdef', 5)).toEqual({
+      range: selection(5), text: '\n- ', selection: selection(8),
+    })
+    expect(smartListEnter('9. item', 7)).toEqual({
+      range: selection(7), text: '\n10. ', selection: selection(12),
+    })
+    expect(smartListEnter('- [x] done', 10)).toEqual({
+      range: selection(10), text: '\n- [ ] ', selection: selection(17),
+    })
+    expect(smartListEnter('  - \r\n', 4)).toEqual({
+      range: selection(0, 4), text: '  ', selection: selection(2),
+    })
+  })
+
   it('indents and outdents only Markdown list lines in the selection', () => {
     expect(indentMarkdownList('one\n- two\n  3. three', selection(0, 20), false)).toEqual({
       range: selection(0, 20),
@@ -86,5 +121,14 @@ describe('Markdown list decisions', () => {
     })
     expect(indentMarkdownList('  - two\n    3. three', selection(0, 20), true).text)
       .toBe('- two\n  3. three')
+  })
+
+  it('translates a zero-width caret through list indentation', () => {
+    expect(indentMarkdownList('- two', selection(0), false)).toEqual({
+      range: selection(0, 5), text: '  - two', selection: selection(2),
+    })
+    expect(indentMarkdownList('  - two', selection(2), true)).toEqual({
+      range: selection(0, 7), text: '- two', selection: selection(0),
+    })
   })
 })
