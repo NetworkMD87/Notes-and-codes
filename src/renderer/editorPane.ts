@@ -138,6 +138,12 @@ export class EditorPane {
     old?.dispose()
   }
 
+  /** Change syntax services without replacing the model, so content, undo, and view state survive. */
+  setBufferLanguage(id: string, language: string): void {
+    const model = this.models.get(id)
+    if (model && !model.isDisposed()) monaco.editor.setModelLanguage(model, language)
+  }
+
   /** Drop a closed buffer's cached model + view state. */
   forgetBuffer(id: string): void {
     if (id === this.bufferId) return // still on screen — keep the live model

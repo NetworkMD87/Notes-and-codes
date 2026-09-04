@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test, expect } from './smokeTest'
 import { openSettings } from './settingsHelper'
@@ -437,4 +437,82 @@ test('Markdown preview controls, commands, and unavailable toggle keep one saved
   await quickOpen(win, 'controls.md')
   await expectMode(win, 'side-by-side')
   await expect(win.locator('#mdpreview h1')).toHaveText('Controls')
+})
+
+test('an untitled buffer converts for preview, persists Markdown mode, and follows Save As extensions', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-untitled-markdown-')
+  const markdownPath = join(userDataDir, 'kept.md')
+  const plaintextPath = join(userDataDir, 'closed.txt')
+  const env = {
+    ...process.env,
+    NC_HEADLESS: '1',
+    NC_TEST_SAVE_AS_PATHS: JSON.stringify([markdownPath, plaintextPath]),
+  } as Record<string, string>
+  mkdirSync(userDataDir, { recursive: true })
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    rememberMarkdownPreviewMode: true,
+    markdownPreviewMode: 'focus',
+    markdownPreviewLastVisibleMode: 'focus',
+  }))
+
+  let app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+    env,
+  })
+  let win = await app.firstWindow()
+  await waitForBoot(win)
+
+  let toggle = win.locator('[data-toolbar="markdown-preview-toggle"]')
+  let markdownTools = win.locator('[data-toolbar="markdown-tools"]')
+  await expect(toggle).toBeEnabled()
+  await win.locator('#paneA .monaco-editor').click()
+  await win.keyboard.insertText('# Untitled heading')
+  await toggle.click()
+  await expectMode(win, 'focus')
+  await expect(win.locator('#mdpreview h1')).toHaveText('Untitled heading')
+  await chooseToolbarMode(win, 'Off')
+  await expectMode(win, 'off')
+  await expect(win.locator('#statusbar')).toContainText('markdown')
+  await expect(markdownTools).toBeVisible()
+  await expect(toggle).toBeEnabled()
+  await expect.poll(() => {
+    const sessionPath = join(userDataDir, 'session', 'session.json')
+    return existsSync(sessionPath)
+      ? JSON.parse(readFileSync(sessionPath, 'utf8')).buffers[0].language
+      : null
+  }).toBe('markdown')
+  await app.close()
+
+  app = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+    env,
+  })
+  win = await app.firstWindow()
+  await waitForBoot(win)
+  toggle = win.locator('[data-toolbar="markdown-preview-toggle"]')
+  markdownTools = win.locator('[data-toolbar="markdown-tools"]')
+  await expect(win.locator('#statusbar')).toContainText('markdown')
+  await expect(toggle).toBeEnabled()
+  await chooseToolbarMode(win, 'Side by side')
+  await expect(win.locator('#mdpreview h1')).toHaveText('Untitled heading')
+
+  await app.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.webContents.send('menu:command', 'save-as')
+  })
+  await expect.poll(() => existsSync(markdownPath) ? readFileSync(markdownPath, 'utf8') : null)
+    .toBe('# Untitled heading')
+  await expect(win.locator('.tab', { hasText: 'kept.md' })).toBeVisible()
+  await expectMode(win, 'side-by-side')
+  await expect(toggle).toBeEnabled()
+
+  await app.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.webContents.send('menu:command', 'save-as')
+  })
+  await expect.poll(() => existsSync(plaintextPath) ? readFileSync(plaintextPath, 'utf8') : null)
+    .toBe('# Untitled heading')
+  await expect(win.locator('.tab', { hasText: 'closed.txt' })).toBeVisible()
+  await expectMode(win, 'off')
+  await expect(win.locator('#statusbar')).toContainText('plaintext')
+  await expect(markdownTools).toBeHidden()
+  await expect(toggle).toBeDisabled()
 })

@@ -96,7 +96,7 @@ const previewLayout = new MarkdownPreviewLayout(
   },
 )
 
-function previewContext(): { bufferId: string; content: string; isMarkdown: boolean } {
+function previewContext(): { bufferId: string; content: string; isMarkdown: boolean; isUntitled: boolean } {
   const pane = paneFor(view.focusedPane())
   const bufferId = pane.currentBufferId()
   const active = manager.activeId ? manager.get(manager.activeId) : undefined
@@ -105,13 +105,14 @@ function previewContext(): { bufferId: string; content: string; isMarkdown: bool
     bufferId: buffer?.id ?? '',
     content: bufferId ? pane.getContent() : buffer?.content ?? '',
     isMarkdown: buffer?.language === 'markdown',
+    isUntitled: buffer?.filePath === null,
   }
 }
 
 function syncPreviewContext(bufferActivated = false): void {
   const current = previewContext()
-  if (bufferActivated) previewLayout.activateBuffer(current.isMarkdown)
-  else previewLayout.setBufferIsMarkdown(current.isMarkdown)
+  if (bufferActivated) previewLayout.activateBuffer(current.isMarkdown, current.isUntitled)
+  else previewLayout.setBufferIsMarkdown(current.isMarkdown, current.isUntitled)
   mdPreview.setActive(previewLayout.effectiveMode() !== 'off', current.bufferId, current.content)
   refreshToolbar()
 }
@@ -435,7 +436,8 @@ async function boot(): Promise<void> {
   snippets.load(startup.snippets)
   if (startup.session.buffers.length > 0) manager.restore(startup.session)
   await finishStartupBuffers()
-  previewLayout.restore(settings, previewContext().isMarkdown)
+  const initialPreview = previewContext()
+  previewLayout.restore(settings, initialPreview.isMarkdown, initialPreview.isUntitled)
   syncPreviewContext()
   // Main only adds this query under NC_HEADLESS plus the dedicated smoke-test environment flag.
   // Keeping the stalled port here exercises boot behavior without exposing a production IPC seam.
@@ -757,6 +759,7 @@ const togglePreview = () => {
     toast('Markdown Preview is available for Markdown files.', 'info')
     return
   }
+  enableUntitledMarkdownForVisiblePreview()
   syncPreviewContext()
 }
 
@@ -765,7 +768,23 @@ function selectPreviewMode(mode: MarkdownPreviewMode): void {
     toast('Markdown Preview is available for Markdown files.', 'info')
     return
   }
+  enableUntitledMarkdownForVisiblePreview()
   syncPreviewContext()
+}
+
+function enableUntitledMarkdownForVisiblePreview(): void {
+  if (previewLayout.state().requestedMode === 'off') return
+  const pane = paneFor(view.focusedPane())
+  const id = pane.currentBufferId()
+  const buffer = id ? manager.get(id) : undefined
+  if (!buffer || buffer.filePath !== null || buffer.language === 'markdown') return
+
+  manager.setLanguage(buffer.id, 'markdown')
+  for (const candidate of [view.paneA, view.paneB]) candidate.setBufferLanguage(buffer.id, 'markdown')
+  tabBar.render(manager.list(), manager.activeId)
+  refreshStatus()
+  spell?.refreshNow()
+  scheduleSessionSave()
 }
 
 async function exportActive(format: ExportFormat): Promise<void> {
