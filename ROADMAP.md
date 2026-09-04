@@ -8,9 +8,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 ## 🟢 Merged — awaiting release
 
-- 🟢 **Markdown authoring and unsaved preview** — untitled tabs can enter Markdown before Save As;
-  a compact tools menu and smart bullet, numbered, and task-list behaviour support authoring; task
-  checkboxes render safely; and Editor settings use a clearer responsive three-section layout.
+_Nothing currently queued._
 
 ---
 
@@ -74,6 +72,7 @@ Living roadmap. Status is deliberately separate from shipping history so the nex
 
 | Release | Outcome |
 | --- | --- |
+| **v1.21.0** · 2026-09-04 | Markdown authoring tools and smart lists; preview before Save As; safe task checkboxes; clearer responsive Editor settings. |
 | **v1.20.0** · 2026-09-03 | Markdown Preview Off, Side by side, and Focus layouts; accessible resizing and focus; optional restoration of mode and divider position across restarts. |
 | **v1.19.5** · 2026-08-18 | Optional persistent minimap; wrapped text stays clear of it at startup and after editor-font changes. |
 | **v1.19.4** · 2026-08-18 | Tighter and fully themed tab sizing; Find in Files path and selection correctness; distinct Slate TXT and Lime Markdown badges. |
