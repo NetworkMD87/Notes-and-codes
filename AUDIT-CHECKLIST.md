@@ -17,6 +17,32 @@ L4. Both passed; the evidence is recorded inline on each item.
 The original `AUDIT.md` / `AUDIT-v1.12.0.md` were folded into this file and deleted; their full
 verbatim text stays recoverable from git history if ever needed.
 
+## 2026-09-08 backlog review
+
+**Historical findings remain closed at their recorded scope. New v1.21.0 findings are open in
+[ROADMAP.md](ROADMAP.md#1-reliability--fix-first).** The review below checked residual work against
+current source; it does not claim a fresh run of the historical packaged/manual checks.
+
+- **Already done:** orphaned history/highlight cleanup (M6). Both stores implement `sweep()`,
+  called at startup from `src/main/ipc.ts`. Removed the stale pruning item from the roadmap.
+- **Still deferred:** history/highlight migration across renames (M6), an optional total history
+  storage budget (M6), and pruning unused `saveSettings` IPC (H5). These remain parked in the roadmap.
+- **Historical UX follow-up:** Save / Don't Save / Cancel on tab close is still absent, as noted
+  in the original v1.7 triage plan. Retained as a decision-dependent parked idea, not an approved feature.
+- **Not reopened:** L3's deliberately rejected `fsync`, R1's completed clean-quit flush, and the
+  original plan's conditional Windows rename-retry suggestion. No new failure evidence supports retry work.
+- **Other records:** the original triage plan, theme review-fix report, and taskbar clean-install
+  audit are historical evidence, not fresh implementation instructions. The worktree checklist
+  duplicates this checklist; the remaining taskbar defect is already parked in the roadmap.
+- **Dependency-plan checkboxes:** the recorded DOMPurify/linkify-it floors and regression guard
+  are present in the current lockfile/tests, and the later smoke-cleanup harness is implemented.
+  Old unmarked plan steps are not a new backlog; this review is not a fresh vulnerability scan.
+
+The old `[x]` entries, original line references, test counts, and manual evidence below are retained
+as history. Their **zero open** total applies to these audit phases, not to the whole current app.
+
+---
+
 **How to work this:** same flow as the v1.7 triage — first **verify each finding against the
 code** ("audit the audit"), then fix. Each item is a small isolated diff unless flagged.
 Gate every change on `npm run build` (strict `tsc`, the real gate) + `npm test`; manual checks
@@ -347,7 +373,7 @@ heavier phases.
 | 3 | Store integrity & write races | ~~H5~~✅, ~~M4~~✅, ~~M5~~✅, ~~M6~~✅ **— DONE** | 1 High, 3 Med |
 | 4 | Editor correctness & content fidelity | ~~M2~~✅, ~~M3~~✅, ~~M7~~✅ **— DONE** | 3 Med |
 | 5 | Hardening & cleanups | ~~L1~~✅, ~~L2~~✅, ~~L3~~✅, ~~L4~~✅, ~~L5~~✅, ~~L6~~✅, ~~L7~~✅, ~~L8~~✅, ~~L9~~✅ **— DONE** | 9 Low |
-| — | **Total open** | **0** | **All phases complete** — every v1.12.0 audit finding is resolved (5 High + 7 Med + 9 Low + R1). L3's fsync sub-part verified-but-rejected with rationale; the rest fixed. |
+| — | **Total open in these historical phases** | **0** | **All phases complete** — every v1.12.0 audit finding is resolved (5 High + 7 Med + 9 Low + R1). L3's fsync sub-part verified-but-rejected with rationale; the rest fixed. Current findings are tracked in [ROADMAP.md](ROADMAP.md). |
 
 ---
 

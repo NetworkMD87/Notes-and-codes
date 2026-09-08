@@ -1,28 +1,71 @@
 # Notes & Codes — Roadmap
 
-Living roadmap. Status is deliberately separate from shipping history so the next work is visible at a glance.
+Open work first; shipped history and settled decisions last. Updated after the **2026-09-08 audit of v1.21.0**.
 
-**Legend:** ✅ shipped · 🟢 merged / awaiting release · 🔜 next · ⬜ planned · 🐛 open defect · 🧊 parked / deferred · 💡 someday · **S** small · **M** medium · **L** large
+**Legend:** 🐛 open defect · ⬜ planned · ❓ decision required · 🧊 parked / deferred · 💡 someday · ✅ shipped · **S / M / L** effort where already estimated.
+
+| At a glance | Status / order |
+| --- | --- |
+| [Reliability](#1-reliability--fix-first) | Four open defects; protect edits first. |
+| [UI and performance](#2-ui-and-performance--planned) | Five improvements; agree material UX choices before implementation. |
+| [Delivery and existing features](#3-delivery-and-existing-features) | CI smoke trial → MSIX → Safe Replace → snippet placeholders. |
+| [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
+| [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
+| Awaiting release | Nothing currently queued. |
 
 ---
 
-## 🟢 Merged — awaiting release
+## 1. Reliability — fix first
 
-_Nothing currently queued._
+These are open findings, not implemented fixes. Reproduce each affected flow before changing it; retain the smallest fix that protects the user's edits.
+
+- 🐛 **R1 — Split panes can save stale content.** The same file has independent pane models, while Save prefers pane A. Editing B can therefore save A's older text. Keep one authoritative buffer state across panes, saves, and external reloads.
+  - **Accept when:** edits from either pane are reflected in both; Save from either pane writes the latest content; reloading cannot leave a stale peer model. [Source](src/renderer/editorPane.ts), [save/reload wiring](src/renderer/main.ts).
+
+- 🐛 **R2 — Edits made during a save can be marked saved.** A completed write clears dirty state even if the buffer changed while I/O was pending. Track the saved revision and order writes so newer edits remain dirty and eligible for autosave.
+  - **Accept when:** delayed-write tests preserve newer edits, dirty state, autosave eligibility, and the close warning; overlapping saves cannot leave older content on disk. [Source](src/renderer/main.ts), [buffer state](src/renderer/bufferManager.ts).
+
+- 🐛 **R3 — Rename leaves open tabs saving to the old path.** Renaming an open file can cause its old filename to reappear on Save; folder renames strand descendant paths. Update affected open-buffer identities and watchers after a successful rename.
+  - **Accept when:** file and parent-folder renames preserve edits, update tab paths, and save only to the new location. Stored history/highlight migration remains separately tracked below. [Source](src/renderer/folderMode.ts), [file writes](src/main/fileService.ts).
+
+- 🐛 **R4 — Delayed history restore can replace the wrong tab.** Restore currently resolves its destination after the history read finishes. Bind it to the originating buffer and invalidate stale actions after dismissal or context changes.
+  - **Accept when:** Restore A → dismiss → switch to B during a delayed read never changes B or applies a cancelled restore. Check the delayed Diff action too. [Source](src/renderer/fileHistoryPanel.ts), [restore wiring](src/renderer/main.ts).
+
+**Audit evidence:** typecheck and 994 unit tests across 92 files passed. R2 was reproduced with the current save function and delayed mocked I/O; the other findings were traced through source. Live Electron reproduction and regression checks remain part of implementation acceptance.
 
 ---
 
-## 🔜 Next — CI renderer smoke support
+## 2. UI and performance — planned
 
-- 🔜 **CI renderer smoke support** (**S**, before MSIX; trial, not a release blocker) — automatic push/PR CI currently runs build + unit tests, while the hosted Electron smoke job is manual-only because Monaco did not reliably paint on GitHub’s Windows runners.
+### UI / keyboard access
+
+- ⬜ **U1 — Keep context menus inside the window.** Clamp or flip placement at window edges and bound oversized menus with scrolling. Verify editor, spelling, and folder menus near every edge, including keyboard opening. [Source](src/renderer/contextMenu.ts).
+- ⬜ **U2 — Keyboard-accessible folder tree.** Add focusable tree items, arrow navigation, expansion state, and keyboard context-menu access. Verify that browsing and New/Rename/Delete work without a pointer. [Source](src/renderer/sidebar.ts).
+- ⬜ **U3 — Distinguish same-named tabs.** Agree full-path tooltips/accessibility labels and minimal parent-folder disambiguation for duplicate filenames; expose unsaved status to assistive technology. Verify bounded tabs remain readable. [Source](src/renderer/tabBar.ts).
+
+---
+
+### Performance
+
+- ⬜ **P1 — Avoid rebuilding every tab on each keystroke.** Update the changed tab's state in place; reserve structural rendering for tab-list changes. Measure typing with many tabs and preserve focus, scrolling, and drag/reorder behavior. [Edit wiring](src/renderer/main.ts), [tab rendering](src/renderer/tabBar.ts).
+- ⬜ **P2 — Bound large Markdown preview work.** Profile parsing, sanitization, and full DOM replacement in Electron before choosing an optimization. Consider a size-based preview policy only after UX approval; preserve sanitization, task rendering, focus, and scroll behavior. [Source](src/renderer/markdownPreview.ts).
+  - **Evidence limit:** a synthetic 500 KiB document took about 2.4 seconds through rendering and DOM replacement in Node/jsdom. This is not an Electron responsiveness measurement. The existing debounce is already shipped; this item addresses work remaining after it fires. Broader large-file mode remains a separate someday idea.
+
+---
+
+## 3. Delivery and existing features
+
+Existing sequence retained below the reliability work. The CI experiment is not a release blocker.
+
+- ⬜ **CI renderer smoke support** (**S**, before MSIX; trial) — automatic push/PR CI currently runs build + unit tests, while the hosted Electron smoke job is manual-only because Monaco did not reliably paint on GitHub’s Windows runners.
   - Retry the manual hosted suite with software rendering (`--use-gl=swiftshader` and/or `--disable-gpu`) supplied through the Electron launch arguments.
   - Promote smoke to the automatic push/PR gate only if repeated hosted runs are reliable; otherwise record the new evidence and retain the manual hosted job plus the local pre-release gate.
 
 ---
 
-## ⬜ Planned
+### Microsoft Store and feature delivery
 
-- ⬜ **Microsoft Store release via MSIX** (**M**, after the small cleanup gate) — a design-and-trial pass, not a repackage-and-submit exercise.
+- ⬜ **Microsoft Store release via MSIX** (**M**, after the reliability work and CI trial) — a design-and-trial pass, not a repackage-and-submit exercise.
   - MSIX virtualises registry writes. Explorer context-menu registration and launch-on-login must therefore use Store manifest declarations or be hidden in Store builds; a packaged-only gate would silently no-op.
   - Use `process.windowsStore` as the Store-specific branch. Decide the Explorer integration and startup-task behaviour, then configure the `appx` target, account/identity, IARC rating, privacy-policy URL, Store listing/screenshots, and certification submission.
   - The Store channel is Microsoft-signed; direct downloads remain a separate signing decision.
@@ -33,7 +76,20 @@ _Nothing currently queued._
 
 ---
 
-## 🧊 Parked and deferred — retained, not removed
+## 4. Feature ideas — decision required
+
+**Each idea needs its own owner decision: adopt, defer, or reject. None is approved, planned for implementation, or assigned a release.** The suggested behavior below is for discussion; agree scope and acceptance before moving any item into planned work.
+
+| Idea | Potential value | Decision needed |
+| --- | --- | --- |
+| ❓ **Reopen closed tab** | Recover accidentally closed scratch notes, potentially through `Ctrl+Shift+T`. | Whether to add it; retention limits, unsaved-content recovery, selection restoration, and restart behavior. |
+| ❓ **Markdown heading picker** | Search headings and jump to their source without a permanent panel. | Whether to add it; entry point, shortcut, and source/preview navigation behavior. |
+| ❓ **Command-palette text utilities** | Insert timestamps, copy file paths, sort lines, or remove duplicate lines without more toolbar clutter. | Whether to add any; approve each utility and its selection/document behavior separately. |
+| ❓ **Compare buffer with saved file** | Inspect unsaved changes using the existing diff experience. | Whether to add it; command placement and handling of untitled, missing, or externally changed files. |
+
+---
+
+## 5. Parked and deferred
 
 ### Platform and design
 
@@ -46,9 +102,13 @@ _Nothing currently queued._
 - 🧊 **Re-harmonize theme chrome hues** — avoid altering canonical upstream theme colours without a compelling design reason.
 - 🧊 **One gradient moment** — low-value visual experiment.
 
+---
+
 ### Deferred extensions to shipped features
 
-- 🧊 **File History:** prune orphaned deleted/renamed-file history; add restore confirmation. (The proposed status-bar entry was superseded by the shipped toolbar command.)
+- 🧊 **File History:** add restore confirmation; consider a total storage budget beyond the existing 50 versions per file. Orphan cleanup is already shipped; the proposed status-bar entry was superseded by the toolbar command.
+- 🧊 **Preserve history/highlights across rename:** migrate stored records to the new path, including folder descendants. Separate from R3's open-tab/save-path fix; startup cleanup currently removes confirmed-missing source records instead of migrating them.
+- 🧊 **Save before closing a tab:** decide whether to offer Save / Don't Save / Cancel instead of the current discard confirmation. This historical UX suggestion is not approved for implementation.
 - 🧊 **Markdown export:** relative-image embedding; custom page size/margins; batch export; code syntax highlighting.
 - 🧊 **Autosave:** untitled-buffer support; per-file opt-out; configurable delay.
 - 🧊 **Format Document:** configurable options UI; more languages; `.prettierrc` discovery.
@@ -57,6 +117,8 @@ _Nothing currently queued._
 - 🧊 **Tab animation:** live-shift / FLIP animation for neighbouring tabs while reordering.
 - 🧊 **Find in Files:** regex search only after its safety/performance model is designed; streaming results if measurements still justify it.
 - 🧊 **In-app Help:** dedicated hotkey (without conflicting with Monaco); clickable commands; generated content; shared shortcut constants.
+
+---
 
 ### Long-horizon ideas
 
@@ -68,7 +130,15 @@ _Nothing currently queued._
 
 ---
 
-## ✅ Shipped
+### Small maintenance follow-up
+
+- 🧊 **Unused full-settings-save IPC:** consider removing `saveSettings` from the renderer API, preload, and handler; renderer callers already use `updateSettings`. Preserve the store's internal save behavior and tests. This is cleanup, not an open settings-write defect.
+
+**Audit-record reconciliation (2026-09-08):** the historical checklist has no unchecked findings. The valid deferred items above were checked against current source; stale orphan-pruning work was removed. Rejected `fsync` and speculative Windows rename retries are not queued. See [the audit review note](AUDIT-CHECKLIST.md#2026-09-08-backlog-review) for scope and evidence.
+
+---
+
+## 6. Shipped and settled
 
 | Release | Outcome |
 | --- | --- |
@@ -86,11 +156,15 @@ _Nothing currently queued._
 | **v1.9.0–v1.13.0** · 2026-07 | In-app Help, drag-reorder tabs, visual/token polish, file-type badges, highlighter cursor, taskbar/Explorer identity work, and the completed audit remediation. |
 | **v1.0.0–v1.7.0** | Core editor: tabs and splits, themes, recovery and encoding, diffs, snippets and paste history, tray/hotkey, file routing, safety prompts, zoom, file watching, history, Markdown export, autosave, Format Document, folder mode, and highlighting. |
 
+---
+
 ### Durable shipped decisions
 
 - ✅ **Hybrid identity:** a fast scratchpad by default; optional folder sidebar and `Ctrl+P` quick-open for project work.
 - ✅ **Phase 4.6 verification:** automated checks plus the reported installed-build Narrator, keyboard, pointer, large-workspace, tray/hotkey/login, and Markdown/session validation are complete.
-- ✅ **Release record:** the public `AUDIT-CHECKLIST.md` is fully resolved; release history is recorded here and published releases are tagged on `master`.
+- ✅ **Historical audit record:** the v1.7/v1.12 checklist in [AUDIT-CHECKLIST.md](AUDIT-CHECKLIST.md) is closed at its recorded scope. This does not close the newer findings above. Release history is recorded here and published releases are tagged on `master`.
+
+---
 
 ### ❌ Closed decision
 
