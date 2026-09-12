@@ -1062,6 +1062,8 @@ folder = new FolderMode({
   focusEditor: focusActiveEditor,
   filter: workspaceFilter,
   onWorkspaceChanged: (rerun) => findInFiles.workspaceChanged(rerun),
+  withPathSaveLock: (path, isDirectory, operation) =>
+    saveCoordinator.run(manager.idsAtPath(path, isDirectory), operation),
   onPathRenamed: (from, to, isDirectory) => {
     const changed = manager.renamePath(from, to, isDirectory)
     if (changed.length === 0) return

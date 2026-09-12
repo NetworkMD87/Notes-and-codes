@@ -86,6 +86,32 @@ describe('BufferManager', () => {
     expect(m.get(buffer.id)?.filePath).toBe('C:/notes/foobar/keep.txt')
   })
 
+  it.each(['open', 'openExternal'] as const)('%s reuses a renamed file across casing and separators without losing edits', method => {
+    const buffer = m.open({ ...externalFile, filePath: 'C:\\Notes\\draft.txt' })
+    m.update(buffer.id, 'edits to keep')
+    m.renamePath('c:/notes/draft.txt', 'C:\\Notes/final.md', false)
+
+    const reopened = m[method]({ ...externalFile, filePath: 'c:\\notes\\FINAL.MD', content: 'stale disk text' })
+
+    expect(reopened.id).toBe(buffer.id)
+    expect(m.list()).toHaveLength(1)
+    expect(reopened).toMatchObject({ content: 'edits to keep', dirty: true, language: 'markdown' })
+  })
+
+  it('reuses a renamed UNC folder descendant without collapsing its network prefix', () => {
+    const buffer = m.open({ ...externalFile, filePath: '\\\\Server\\Share\\Old\\Nested\\note.txt' })
+    m.update(buffer.id, 'network edits')
+    m.renamePath('//server/share/old', '\\\\Server\\Share/New', true)
+
+    const reopened = m.open({ ...externalFile, filePath: '//SERVER/SHARE/NEW/NESTED/NOTE.TXT' })
+
+    expect(reopened.id).toBe(buffer.id)
+    expect(m.list()).toHaveLength(1)
+    expect(reopened).toMatchObject({ filePath: '\\\\Server\\Share/New/Nested/note.txt', content: 'network edits', dirty: true })
+    // A rooted local path must not alias a UNC path with the same remaining segments.
+    expect(m.open({ ...externalFile, filePath: '/server/share/new/nested/note.txt' }).id).not.toBe(buffer.id)
+  })
+
   it('keeps newer edits dirty when an older save completes', () => {
     const b = m.create()
     m.update(b.id, 'content being saved')

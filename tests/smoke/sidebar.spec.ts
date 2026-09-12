@@ -285,3 +285,77 @@ test('saving an open file after rename writes only the renamed path', async ({ s
     renamedContent: existsSync(newPath) ? readFileSync(newPath, 'utf8') : null,
   })).toEqual({ oldExists: false, renamedContent: '# Renamed heading\n\n- first\n- ' })
 })
+
+test('an in-flight save and a later save stay on the renamed file, and reopening preserves its buffer', async ({ smoke }) => {
+  test.setTimeout(60000)
+  const { userDataDir, projectDir } = seededFolder(smoke)
+  const oldPath = join(projectDir, 'pending.txt')
+  const newPath = join(projectDir, 'finished.txt')
+  writeFileSync(oldPath, 'on disk')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  const row = win.locator('.sb-row').filter({ has: win.getByText('pending.txt', { exact: true }) })
+  await row.click()
+  await expect(win.locator('#paneA .view-lines')).toContainText('on disk')
+  const bufferId = await win.locator('.tab.active').getAttribute('data-id')
+  const tabCount = await win.locator('.tab').count()
+
+  // Hold the real atomic write before its commit. The rename IPC and all other filesystem
+  // operations still run normally, so releasing this gate cannot hide a recreated old file.
+  await app.evaluate((_electron, path) => {
+    const fs = process.getBuiltinModule('node:fs').promises
+    const originalRename = fs.rename
+    const state = globalThis as typeof globalThis & { releaseRenameWrite?: () => void; renameWriteWaiting?: boolean }
+    const gate = new Promise<void>(resolve => { state.releaseRenameWrite = resolve })
+    fs.rename = async (from, to) => {
+      if (String(to) === path && String(from).endsWith('.tmp')) {
+        fs.rename = originalRename
+        state.renameWriteWaiting = true
+        await gate
+      }
+      return originalRename(from, to)
+    }
+  }, oldPath)
+
+  const editor = win.locator('#paneA .monaco-editor')
+  await editor.click()
+  await win.keyboard.press('Control+A')
+  await win.keyboard.type('first save')
+  await chooseFileCommand(app, 'Save')
+  await expect.poll(() => app.evaluate(() => Boolean(
+    (globalThis as typeof globalThis & { renameWriteWaiting?: boolean }).renameWriteWaiting,
+  ))).toBe(true)
+
+  await editor.click()
+  await win.keyboard.press('Control+A')
+  await win.keyboard.type('latest content')
+  await row.click({ button: 'right' })
+  await win.getByRole('menuitem', { name: 'Rename…' }).click()
+  const renameField = win.locator('.input-overlay input')
+  await renameField.fill('finished.txt')
+  await renameField.press('Enter')
+  await expect(win.locator('.input-overlay')).toHaveCount(0)
+  // The renderer completed the Rename event; a later Save must queue behind that rename.
+  await chooseFileCommand(app, 'Save')
+  await app.evaluate(() => {
+    (globalThis as typeof globalThis & { releaseRenameWrite?: () => void }).releaseRenameWrite!()
+  })
+
+  await expect(win.locator('body')).toHaveAttribute('data-save-write-completion-count', '2')
+  await expect(win.locator('.sb-state')).toHaveText('● saved')
+  await expect.poll(() => ({
+    oldExists: existsSync(oldPath),
+    renamedContent: existsSync(newPath) ? readFileSync(newPath, 'utf8') : null,
+  })).toEqual({ oldExists: false, renamedContent: 'latest content' })
+  await expect(win.locator('.tab.active')).toHaveAttribute('data-id', bufferId!)
+  await expect(win.locator('.tab.active .tab-title')).toHaveText('finished.txt')
+
+  await editor.click()
+  await win.keyboard.press('Control+A')
+  await win.keyboard.type('new unsaved edits')
+  await win.locator('.sb-row', { hasText: 'finished.txt' }).click()
+  await expect(win.locator('.tab')).toHaveCount(tabCount)
+  await expect(win.locator('.tab.active')).toHaveAttribute('data-id', bufferId!)
+  await expect(win.locator('#paneA .view-lines')).toContainText('new unsaved edits')
+  await expect(win.locator('.sb-state')).toHaveText('● unsaved')
+})

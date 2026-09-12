@@ -46,6 +46,7 @@ function mount(
     focusEditor: vi.fn(),
     filter,
     onWorkspaceChanged,
+    withPathSaveLock: (_path, _isDirectory, operation) => operation(),
     onPathRenamed,
   })
 }
