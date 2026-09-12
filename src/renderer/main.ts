@@ -1059,6 +1059,15 @@ folder = new FolderMode({
   focusEditor: focusActiveEditor,
   filter: workspaceFilter,
   onWorkspaceChanged: (rerun) => findInFiles.workspaceChanged(rerun),
+  onPathRenamed: (from, to, isDirectory) => {
+    if (manager.renamePath(from, to, isDirectory).length === 0) return
+    tabBar.render(manager.list(), manager.activeId)
+    const id = paneFor(view.focusedPane()).currentBufferId() ?? manager.activeId
+    folder.setActiveFile(id ? manager.get(id)?.filePath ?? null : null)
+    refreshStatus()
+    syncWatch()
+    scheduleSessionSave()
+  },
   pickFolder: () => openFolderFromDialog(),
   activePath: () => {
     const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null

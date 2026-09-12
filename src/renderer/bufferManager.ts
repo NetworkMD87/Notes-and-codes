@@ -54,6 +54,32 @@ export class BufferManager {
 
   setActive(id: string): void { if (this.get(id)) this._activeId = id }
 
+  renamePath(from: string, to: string, isDirectory: boolean): string[] {
+    const canonical = (path: string) => path.replace(/[\\/]+/g, '/').replace(/\/+$/, '')
+    const fromPath = canonical(from)
+    const fromKey = fromPath.toLowerCase()
+    const target = canonical(to)
+    const targetSeparator = to.includes('/') ? '/' : '\\'
+    const changed: string[] = []
+
+    for (const buffer of this.buffers) {
+      if (!buffer.filePath) continue
+      const current = canonical(buffer.filePath)
+      const currentKey = current.toLowerCase()
+      const isExact = currentKey === fromKey
+      const isDescendant = isDirectory && currentKey.startsWith(fromKey + '/')
+      if (!isExact && !isDescendant) continue
+
+      const suffix = isExact ? '' : current.slice(fromPath.length)
+      buffer.filePath = target + suffix.replaceAll('/', targetSeparator)
+      buffer.title = buffer.filePath.split(/[\\/]/).pop() ?? buffer.filePath
+      buffer.language = languageFromPath(buffer.filePath)
+      changed.push(buffer.id)
+    }
+
+    return changed
+  }
+
   captureRevision(id: string): number | undefined {
     if (!this.get(id)) return undefined
     return this.editRevisions.get(id) ?? 0

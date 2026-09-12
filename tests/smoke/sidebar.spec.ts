@@ -1,6 +1,7 @@
 import { test, expect } from './smokeTest'
+import type { ElectronApplication } from '@playwright/test'
 import type { SmokeResources } from './smokeCleanup'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, basename } from 'node:path'
 import { openSettings } from './settingsHelper'
 
@@ -14,6 +15,13 @@ function seededFolder(smoke: SmokeResources) {
     restoreFolderOnLaunch: true, lastFolder: projectDir, sidebarVisible: true,
   }))
   return { userDataDir, projectDir }
+}
+
+async function chooseFileCommand(app: ElectronApplication, label: string): Promise<void> {
+  await app.evaluate(({ Menu }, commandLabel) => {
+    const file = Menu.getApplicationMenu()!.items.find(item => item.label === 'File')!
+    file.submenu!.items.find(item => item.label === commandLabel)!.click()
+  }, label)
 }
 
 test('sidebar shows a header caption with the open folder name', async ({ smoke }) => {
@@ -240,4 +248,32 @@ test('opening a file highlights (marks active) its row in the sidebar', async ({
     await expect(row).not.toHaveClass(/(^|\s)active(\s|$)/) // nothing selected on launch
     await row.click()                                       // open the file
     await expect(row).toHaveClass(/(^|\s)active(\s|$)/)      // its row is now marked active
+})
+
+test('saving an open file after rename writes only the renamed path', async ({ smoke }) => {
+  const { userDataDir, projectDir } = seededFolder(smoke)
+  const oldPath = join(projectDir, 'rename-me.txt')
+  const newPath = join(projectDir, 'renamed.txt')
+  writeFileSync(oldPath, 'before rename')
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  const row = win.locator('.sb-row', { hasText: 'rename-me.txt' })
+  await row.click()
+  await expect(win.locator('#paneA .view-lines')).toContainText('before rename')
+  await win.locator('#paneA .monaco-editor').click()
+  await win.keyboard.press('Control+A')
+  await win.keyboard.type('saved after rename')
+
+  await row.click({ button: 'right' })
+  await win.getByRole('menuitem', { name: 'Rename…' }).click()
+  const renameField = win.locator('.input-overlay input')
+  await renameField.fill('renamed.txt')
+  await renameField.press('Enter')
+  await expect(win.locator('.sb-row', { hasText: 'renamed.txt' })).toBeVisible()
+
+  await chooseFileCommand(app, 'Save')
+  await expect.poll(() => ({
+    oldExists: existsSync(oldPath),
+    renamedContent: existsSync(newPath) ? readFileSync(newPath, 'utf8') : null,
+  })).toEqual({ oldExists: false, renamedContent: 'saved after rename' })
 })
