@@ -63,6 +63,20 @@ describe('BufferManager', () => {
     expect(m.toSession().buffers[0]).not.toHaveProperty('editRevision')
   })
 
+  it('advances the save revision for EOL and encoding changes', () => {
+    const b = m.create()
+    const before = m.captureRevision(b.id)
+
+    m.setEol(b.id, 'CRLF')
+    const eolRevision = m.captureRevision(b.id)
+    m.setEncoding(b.id, 'utf16le')
+    m.markSaved(b.id, 'C:/x/note.txt', 1234, before)
+
+    expect(b).toMatchObject({ eol: 'CRLF', encoding: 'utf16le', dirty: true })
+    expect(eolRevision).toBe((before ?? 0) + 1)
+    expect(m.captureRevision(b.id)).toBe((eolRevision ?? 0) + 1)
+  })
+
   it('open activates an existing buffer with the same path instead of duplicating', () => {
     const first = m.open({ filePath: 'C:/a.ts', content: 'a', eol: 'LF' })
     const again = m.open({ filePath: 'C:/a.ts', content: 'a', eol: 'LF' })

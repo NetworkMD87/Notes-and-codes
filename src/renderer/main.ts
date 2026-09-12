@@ -55,9 +55,11 @@ import { LatestWriteScheduler } from './latestWriteScheduler'
 import { settleQuitWrites } from './settleQuitWrites'
 import { snapshotSession } from './sessionSnapshot'
 import { loadStartupState } from './startupReads'
+import { BufferSaveCoordinator } from './bufferSaveCoordinator'
 declare global { interface Window { api: Api } }
 
 const manager = new BufferManager(() => crypto.randomUUID())
+const saveCoordinator = new BufferSaveCoordinator()
 const view = new SplitView(document.getElementById('paneA')!, document.getElementById('paneB')!)
 let spell: SpellCheckController | null = null
 let spellSettings: Pick<Settings, 'spellCheckEnabled' | 'spellCheckLanguage'> = {
@@ -70,8 +72,8 @@ const highlights = new HighlightManager()
 const hlLoaded = new Set<string>()
 const ENC_LABEL: Record<Encoding, string> = { utf8: 'UTF-8', utf8bom: 'UTF-8-BOM', utf16le: 'UTF-16 LE', utf16be: 'UTF-16 BE' }
 const statusBar = new StatusBar(document.getElementById('statusbar')!, {
-  onEol: (eol) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.eol = eol; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave(); toast('Line endings: ' + eol) } },
-  onEncoding: (enc) => { const id = paneFor(view.focusedPane()).currentBufferId(); const b = id && manager.get(id); if (b) { b.encoding = enc; b.dirty = true; refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave(); toast('Encoding: ' + ENC_LABEL[enc]) } }
+  onEol: (eol) => { const id = paneFor(view.focusedPane()).currentBufferId(); if (id && manager.get(id)) { manager.setEol(id, eol); refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave(); toast('Line endings: ' + eol) } },
+  onEncoding: (enc) => { const id = paneFor(view.focusedPane()).currentBufferId(); if (id && manager.get(id)) { manager.setEncoding(id, enc); refreshStatus(); tabBar.render(manager.list(), manager.activeId); scheduleSessionSave(); toast('Encoding: ' + ENC_LABEL[enc]) } }
 })
 const diff = new DiffView(document.getElementById('diff')!)
 const diffPicker = new DiffPicker(document.getElementById('app')!, focusActiveEditor)
@@ -526,6 +528,10 @@ interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean; f
 const MANUAL_SAVE: SaveOpts = { snapshot: true, recent: true, allowDialog: true, format: true, forceDialog: false }
 
 async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boolean> {
+  return saveCoordinator.run(id, () => saveBufferNow(id, opts))
+}
+
+async function saveBufferNow(id: string, opts: SaveOpts): Promise<boolean> {
   const b = manager.get(id); if (!b) return false
   const pane = view.paneA.currentBufferId() === id ? view.paneA
     : view.paneB.currentBufferId() === id ? view.paneB : null
@@ -541,17 +547,23 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
       catch { /* leave unformatted — never block a save */ }
     }
   }
-  const content = pane ? pane.getContent() : b.content
   const oldLang = b.language
   let path = b.filePath
   if (!path || opts.forceDialog) {
     if (!opts.allowDialog) return false
     path = await window.api.saveAsDialog(); if (!path) return false
   }
+  // This snapshot is deliberately captured inside the per-buffer queue, immediately before I/O.
+  // A later queued save therefore writes any edits made while an earlier write was in flight.
+  const content = pane ? pane.getContent() : b.content
+  const eol = b.eol
+  const encoding = b.encoding
+  const savedRevision = manager.captureRevision(id)
+  if (savedRevision === undefined) return false
   // Only guard a write back to the file this buffer already tracks. A Save-As onto a *different*
   // path has no baseline, and the OS save dialog has already asked its own "replace?" question.
   const sameFile = path === b.filePath
-  let r = await window.api.writeFile(path, content, b.eol, b.encoding, sameFile ? b.diskMtime : undefined)
+  let r = await window.api.writeFile(path, content, eol, encoding, sameFile ? b.diskMtime : undefined)
   if (!r.ok) {
     // The file changed on disk and the watcher never told us: the app was restarted (boot()
     // restores session content without re-reading disk), the watcher failed, or the change
@@ -581,12 +593,12 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
     if (!opts.allowDialog) return false // autosave: never modal. Buffer stays dirty; the bar tells the story.
     const ok = await confirmDialog(`"${b.title}" changed on disk since you opened it. Overwrite those changes?`, { confirmLabel: 'Overwrite', focusFallback: focusActiveEditor })
     if (!ok) return false
-    r = await window.api.writeFile(path, content, b.eol, b.encoding) // unchecked — the user chose to overwrite
+    r = await window.api.writeFile(path, content, eol, encoding) // unchecked — the user chose to overwrite
   }
   if (!r.ok) return false // narrowing only: a write with no expectedMtime cannot refuse
   selfWrites.set(path, Date.now())
-  if (opts.snapshot) window.api.snapshotHistory(path, content, b.eol, b.encoding)
-  manager.markSaved(id, path, r.mtimeMs)
+  if (opts.snapshot) window.api.snapshotHistory(path, content, eol, encoding)
+  manager.markSaved(id, path, r.mtimeMs, savedRevision)
   acknowledgedDiskVersions.delete(id)
   conflictDiskVersions.delete(id)
   // markSaved changes path/title/language/dirty/mtime. Persist it before highlight I/O, which can

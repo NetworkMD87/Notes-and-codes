@@ -63,8 +63,21 @@ export class BufferManager {
     const b = this.get(id)
     if (!b) return
     b.content = content
-    b.dirty = true
-    this.editRevisions.set(id, (this.editRevisions.get(id) ?? 0) + 1)
+    this.markDirty(id)
+  }
+
+  setEol(id: string, eol: EolMode): void {
+    const b = this.get(id)
+    if (!b) return
+    b.eol = eol
+    this.markDirty(id)
+  }
+
+  setEncoding(id: string, encoding: Encoding): void {
+    const b = this.get(id)
+    if (!b) return
+    b.encoding = encoding
+    this.markDirty(id)
   }
 
   markSaved(id: string, filePath: string, diskMtime?: number, savedRevision = this.captureRevision(id)): void {
@@ -81,6 +94,13 @@ export class BufferManager {
 
   setLanguage(id: string, language: string): void {
     const b = this.get(id); if (b) b.language = language
+  }
+
+  private markDirty(id: string): void {
+    const b = this.get(id)
+    if (!b) return
+    b.dirty = true
+    this.editRevisions.set(id, (this.editRevisions.get(id) ?? 0) + 1)
   }
 
   close(id: string): void {
