@@ -69,6 +69,21 @@ describe('FileHistoryPanel delayed actions', () => {
     expect(d.restore).not.toHaveBeenCalled()
   })
 
+  it('ignores Restore from a closed panel after it reopens for the same buffer and path', async () => {
+    const d = setup()
+    await d.panel.open()
+    const read = deferred<FileVersion | null>()
+    d.getHistory.mockReturnValueOnce(read.promise)
+
+    button('Restore').click()
+    document.querySelector<HTMLButtonElement>('.fh-close')!.click()
+    await d.panel.open()
+    read.resolve(version)
+    await settle()
+
+    expect(d.restore).not.toHaveBeenCalled()
+  })
+
   it('ignores Restore when a different buffer becomes current while the version read is pending', async () => {
     const d = setup()
     await d.panel.open()

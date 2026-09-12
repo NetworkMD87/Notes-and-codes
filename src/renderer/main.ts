@@ -33,6 +33,7 @@ import { promptInput, confirmDialog } from './inputOverlay'
 import { SettingsPanel, type SettingsCategory, type SettingsDeps } from './settingsPanel'
 import { penCursor } from './penCursor'
 import { FileHistoryPanel } from './fileHistoryPanel'
+import { restoreFileHistoryVersion } from './fileHistoryRestore'
 import { FolderMode } from './folderMode'
 import { applyReloadIfCurrent, isCurrentBufferPath, isCurrentFileChange } from './fileChangeGuard'
 import { buildExportHtml, suggestExportName, type ExportFormat } from './exportDoc'
@@ -1039,19 +1040,18 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
     { title: `${cur.title} — ${new Date(v.ts).toLocaleString()}`, content: v.content, language: cur.language },
     { title: `${cur.title} (current)`, content: cur.content, language: cur.language }
   ),
-  restore: (v, origin) => {
-    const b = manager.get(origin.id); if (!b || b.filePath !== origin.path) return
-    const displayed = paneDisplaying(origin.id)
-    window.api.snapshotHistory(origin.path, displayed?.getContent() ?? b.content, b.eol, b.encoding)
-    manager.update(origin.id, v.content)
-    displayed?.refreshBuffer(b)
-    if (paneFor(view.focusedPane()).currentBufferId() === origin.id) {
-      syncPreviewContext()
-      spell?.refreshNow()
-    }
-    tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
-    toast('Restored an earlier version — unsaved, Save to keep it.', 'success')
-  }
+  restore: (v, origin) => restoreFileHistoryVersion({
+    manager,
+    paneDisplaying,
+    focusedBufferId: () => paneFor(view.focusedPane()).currentBufferId(),
+    snapshotHistory: (path, content, eol, encoding) => window.api.snapshotHistory(path, content, eol, encoding),
+    syncPreview: syncPreviewContext,
+    refreshSpell: () => spell?.refreshNow(),
+    renderTabs: () => tabBar.render(manager.list(), manager.activeId),
+    refreshStatus,
+    scheduleSessionSave,
+    notifyRestored: () => toast('Restored an earlier version — unsaved, Save to keep it.', 'success'),
+  }, v, origin)
 }, focusActiveEditor)
 const openHistory = () => void fileHistory.open()
 
