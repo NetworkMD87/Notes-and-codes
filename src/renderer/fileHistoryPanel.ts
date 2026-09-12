@@ -2,10 +2,18 @@ import type { FileVersion } from '../shared/types'
 import { DialogController } from './dialogController'
 import { emptyState, EMPTY_ICONS } from './emptyState'
 
+export interface FileHistoryContext {
+  id: string
+  path: string
+  title: string
+  content: string
+  language: string
+}
+
 export interface FileHistoryDeps {
-  current: () => { path: string; title: string; content: string; language: string } | null
-  openDiff: (version: FileVersion, current: { title: string; content: string; language: string }) => void
-  restore: (version: FileVersion) => void
+  current: () => FileHistoryContext | null
+  openDiff: (version: FileVersion, current: FileHistoryContext) => void
+  restore: (version: FileVersion, current: FileHistoryContext) => void
 }
 
 function relativeTime(ts: number): string {
@@ -73,16 +81,29 @@ export class FileHistoryPanel {
       when.textContent = relative; when.title = new Date(ts).toLocaleString()
       const diffBtn = document.createElement('button'); diffBtn.type = 'button'; diffBtn.textContent = 'Diff'; diffBtn.setAttribute('aria-label', `Diff version from ${relative}`)
       diffBtn.onclick = async () => {
+        const actionEpoch = this.openEpoch
         const v = await window.api.getHistory(cur.path, ts)
-        if (v) { this.close(); this.d.openDiff(v, cur) }
+        if (!this.canApplyAction(cur, actionEpoch, v)) return
+        this.close(); this.d.openDiff(v, cur)
       }
       const restoreBtn = document.createElement('button'); restoreBtn.type = 'button'; restoreBtn.textContent = 'Restore'; restoreBtn.setAttribute('aria-label', `Restore version from ${relative}`)
       restoreBtn.onclick = async () => {
+        const actionEpoch = this.openEpoch
         const v = await window.api.getHistory(cur.path, ts)
-        if (v) { this.close(); this.d.restore(v) }
+        if (!this.canApplyAction(cur, actionEpoch, v)) return
+        this.close(); this.d.restore(v, cur)
       }
       row.append(when, diffBtn, restoreBtn); ul.appendChild(row)
     }
     this.body.appendChild(ul)
+  }
+
+  private canApplyAction(origin: FileHistoryContext, epoch: number, version: FileVersion | null): version is FileVersion {
+    const current = this.d.current()
+    return version !== null
+      && epoch === this.openEpoch
+      && !this.host.classList.contains('hidden')
+      && current?.id === origin.id
+      && current.path === origin.path
   }
 }

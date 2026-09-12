@@ -7,6 +7,9 @@ vi.mock('split.js', () => ({
   default: vi.fn(() => ({ destroy: vi.fn() })),
 }))
 
+const inputOverlay = vi.hoisted(() => ({ promptInput: vi.fn(), confirmDialog: vi.fn() }))
+vi.mock('../../src/renderer/inputOverlay', () => inputOverlay)
+
 import { FolderMode } from '../../src/renderer/folderMode'
 import { FindInFiles } from '../../src/renderer/findInFiles'
 import { handleEscape } from '../../src/renderer/overlayManager'
@@ -30,6 +33,7 @@ function mount(
   api: Partial<Api>,
   filter: () => WorkspaceFilter,
   onWorkspaceChanged: (rerun: boolean) => void = vi.fn(),
+  onPathRenamed: (from: string, to: string, isDirectory: boolean) => void = vi.fn(),
 ): FolderMode {
   document.body.innerHTML = '<div id="app"><div id="shell"><div id="sidebar"></div><div id="main"></div></div></div>'
   Object.defineProperty(window, 'api', { configurable: true, writable: true, value: api as Api })
@@ -42,6 +46,8 @@ function mount(
     focusEditor: vi.fn(),
     filter,
     onWorkspaceChanged,
+    withPathSaveLock: (_path, _isDirectory, operation) => operation(),
+    onPathRenamed,
   })
 }
 
@@ -73,6 +79,31 @@ describe('FolderMode refresh integration', () => {
     HTMLElement.prototype.scrollIntoView = vi.fn()
   })
   afterEach(() => document.body.replaceChildren())
+
+  it('retargets open buffers only after a successful file rename', async () => {
+    const onPathRenamed = vi.fn()
+    const api = baseApi({ renamePath: vi.fn(async () => true) })
+    const mode = mount(api, () => ({ showAll: false, excludePatterns: [] }), vi.fn(), onPathRenamed)
+    inputOverlay.promptInput.mockResolvedValueOnce('renamed.txt')
+
+    await (mode as unknown as { rename(entry: DirEntry): Promise<void> }).rename(entry('original.txt'))
+
+    expect(onPathRenamed).toHaveBeenCalledTimes(1)
+    expect(onPathRenamed).toHaveBeenCalledWith(
+      'C:\\workspace\\original.txt', 'C:\\workspace/renamed.txt', false,
+    )
+  })
+
+  it('does not retarget open buffers when a rename fails', async () => {
+    const onPathRenamed = vi.fn()
+    const api = baseApi({ renamePath: vi.fn(async () => false) })
+    const mode = mount(api, () => ({ showAll: false, excludePatterns: [] }), vi.fn(), onPathRenamed)
+    inputOverlay.promptInput.mockResolvedValueOnce('renamed.txt')
+
+    await (mode as unknown as { rename(entry: DirEntry): Promise<void> }).rename(entry('original.txt'))
+
+    expect(onPathRenamed).not.toHaveBeenCalled()
+  })
 
   it('drops stale work and publishes candidates and tree rows from the newest filter snapshot', async () => {
     const oldWalk = deferred<WalkResult>()

@@ -34,6 +34,84 @@ describe('BufferManager', () => {
     expect(m.get(b.id)!.title).toBe('note.txt')
   })
 
+  it('retargets an exact open file and preserves its save state', () => {
+    const buffer = m.open({
+      filePath: 'C:\\notes\\draft.txt', content: 'unsaved text', eol: 'CRLF', encoding: 'utf16le', mtimeMs: 456,
+    })
+    m.update(buffer.id, 'changed after opening')
+
+    expect(m.renamePath('C:/notes/draft.txt', 'C:/notes/final.md', false)).toEqual([buffer.id])
+    expect(m.get(buffer.id)).toMatchObject({
+      id: buffer.id,
+      filePath: 'C:/notes/final.md',
+      title: 'final.md',
+      language: 'markdown',
+      content: 'changed after opening',
+      dirty: true,
+      eol: 'CRLF',
+      encoding: 'utf16le',
+      diskMtime: 456,
+    })
+  })
+
+  it('retargets every open descendant when a folder is renamed', () => {
+    const direct = m.open({ filePath: 'C:/notes/old/todo.txt', content: 'todo', eol: 'LF', encoding: 'utf8' })
+    const nested = m.open({ filePath: 'C:/notes/old/archive/plan.ts', content: 'plan', eol: 'LF', encoding: 'utf8' })
+    const outside = m.open({ filePath: 'C:/notes/other.txt', content: 'other', eol: 'LF', encoding: 'utf8' })
+
+    expect(m.renamePath('C:/notes/old', 'C:/notes/new', true)).toEqual([direct.id, nested.id])
+    expect(m.get(direct.id)?.filePath).toBe('C:/notes/new/todo.txt')
+    expect(m.get(nested.id)).toMatchObject({ filePath: 'C:/notes/new/archive/plan.ts', language: 'typescript' })
+    expect(m.get(outside.id)?.filePath).toBe('C:/notes/other.txt')
+  })
+
+  it('matches renames case-insensitively across slash styles', () => {
+    const buffer = m.open({ filePath: 'C:\\Notes\\Old\\Readme.TXT', content: 'readme', eol: 'LF', encoding: 'utf8' })
+
+    expect(m.renamePath('c:/notes/old', 'D:/Moved', true)).toEqual([buffer.id])
+    expect(m.get(buffer.id)?.filePath).toBe('D:/Moved/Readme.TXT')
+  })
+
+  it('preserves a UNC target prefix while retargeting an open file', () => {
+    const buffer = m.open({ filePath: '\\\\server\\share\\old.txt', content: 'UNC', eol: 'LF', encoding: 'utf8' })
+
+    expect(m.renamePath('\\\\SERVER/share/old.txt', '\\\\server\\share\\new.txt', false)).toEqual([buffer.id])
+    expect(m.get(buffer.id)?.filePath).toBe('\\\\server\\share\\new.txt')
+  })
+
+  it('does not treat a shared prefix as a renamed folder descendant', () => {
+    const buffer = m.open({ filePath: 'C:/notes/foobar/keep.txt', content: 'keep', eol: 'LF', encoding: 'utf8' })
+
+    expect(m.renamePath('C:/notes/foo', 'C:/notes/new', true)).toEqual([])
+    expect(m.get(buffer.id)?.filePath).toBe('C:/notes/foobar/keep.txt')
+  })
+
+  it.each(['open', 'openExternal'] as const)('%s reuses a renamed file across casing and separators without losing edits', method => {
+    const buffer = m.open({ ...externalFile, filePath: 'C:\\Notes\\draft.txt' })
+    m.update(buffer.id, 'edits to keep')
+    m.renamePath('c:/notes/draft.txt', 'C:\\Notes/final.md', false)
+
+    const reopened = m[method]({ ...externalFile, filePath: 'c:\\notes\\FINAL.MD', content: 'stale disk text' })
+
+    expect(reopened.id).toBe(buffer.id)
+    expect(m.list()).toHaveLength(1)
+    expect(reopened).toMatchObject({ content: 'edits to keep', dirty: true, language: 'markdown' })
+  })
+
+  it('reuses a renamed UNC folder descendant without collapsing its network prefix', () => {
+    const buffer = m.open({ ...externalFile, filePath: '\\\\Server\\Share\\Old\\Nested\\note.txt' })
+    m.update(buffer.id, 'network edits')
+    m.renamePath('//server/share/old', '\\\\Server\\Share/New', true)
+
+    const reopened = m.open({ ...externalFile, filePath: '//SERVER/SHARE/NEW/NESTED/NOTE.TXT' })
+
+    expect(reopened.id).toBe(buffer.id)
+    expect(m.list()).toHaveLength(1)
+    expect(reopened).toMatchObject({ filePath: '\\\\Server\\Share/New/Nested/note.txt', content: 'network edits', dirty: true })
+    // A rooted local path must not alias a UNC path with the same remaining segments.
+    expect(m.open({ ...externalFile, filePath: '/server/share/new/nested/note.txt' }).id).not.toBe(buffer.id)
+  })
+
   it('keeps newer edits dirty when an older save completes', () => {
     const b = m.create()
     m.update(b.id, 'content being saved')

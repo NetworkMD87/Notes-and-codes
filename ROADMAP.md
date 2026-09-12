@@ -2,32 +2,32 @@
 
 Open work first; shipped history and settled decisions last. Updated after the **2026-09-08 audit of v1.21.0**.
 
-**Legend:** 🐛 open defect · ⬜ planned · ❓ decision required · 🧊 parked / deferred · 💡 someday · ✅ shipped · **S / M / L** effort where already estimated.
+**Legend:** 🐛 open defect · 🛠️ fixed, awaiting release · ⬜ planned · ❓ decision required · 🧊 parked / deferred · 💡 someday · ✅ shipped · **S / M / L** effort where already estimated.
 
 | At a glance | Status / order |
 | --- | --- |
-| [Reliability](#1-reliability--fix-first) | Three open defects; protect edits first. |
+| [Reliability](#1-reliability--fix-first) | One open defect; protect edits first. |
 | [UI and performance](#2-ui-and-performance--planned) | Five improvements; agree material UX choices before implementation. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | CI smoke trial → MSIX → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
-| Awaiting release | Nothing currently queued. |
+| Awaiting release | R3 rename/save paths and R4 stale history actions are fixed, awaiting release. |
 
 ---
 
 ## 1. Reliability — fix first
 
-Three open findings remain. Reproduce each affected flow before changing it; retain the smallest fix that protects the user's edits.
+One open finding remains. Reproduce each affected flow before changing it; retain the smallest fix that protects the user's edits.
 
 - 🐛 **R1 — Split panes can save stale content.** The same file has independent pane models, while Save prefers pane A. Editing B can therefore save A's older text. Keep one authoritative buffer state across panes, saves, and external reloads.
   - **Accept when:** edits from either pane are reflected in both; Save from either pane writes the latest content; reloading cannot leave a stale peer model. [Source](src/renderer/editorPane.ts), [save/reload wiring](src/renderer/main.ts).
 
 - ✅ **R2 — Saves during edits preserve newer changes.** Same-buffer saves are serialized; an older completion leaves newer content, EOL, and encoding changes dirty, autosave-eligible, and eligible for the close warning. Local evidence: 27 focused and 1,001 full unit tests passed, the build passed, and the delayed-write Electron smoke confirms newer UTF-16 LE/CRLF content is written last. [Source](src/renderer/main.ts), [buffer state](src/renderer/bufferManager.ts), [save coordinator](src/renderer/bufferSaveCoordinator.ts).
 
-- 🐛 **R3 — Rename leaves open tabs saving to the old path.** Renaming an open file can cause its old filename to reappear on Save; folder renames strand descendant paths. Update affected open-buffer identities and watchers after a successful rename.
+- 🛠️ **R3 — Fixed, awaiting release:** Renaming an open file can cause its old filename to reappear on Save; folder renames strand descendant paths. Update affected open-buffer identities and watchers after a successful rename.
   - **Accept when:** file and parent-folder renames preserve edits, update tab paths, and save only to the new location. Stored history/highlight migration remains separately tracked below. [Source](src/renderer/folderMode.ts), [file writes](src/main/fileService.ts).
 
-- 🐛 **R4 — Delayed history restore can replace the wrong tab.** Restore currently resolves its destination after the history read finishes. Bind it to the originating buffer and invalidate stale actions after dismissal or context changes.
+- 🛠️ **R4 — Fixed, awaiting release:** Restore currently resolves its destination after the history read finishes. Bind it to the originating buffer and invalidate stale actions after dismissal or context changes.
   - **Accept when:** Restore A → dismiss → switch to B during a delayed read never changes B or applies a cancelled restore. Check the delayed Diff action too. [Source](src/renderer/fileHistoryPanel.ts), [restore wiring](src/renderer/main.ts).
 
 **Audit baseline:** typecheck and 994 unit tests across 92 files passed. R2 was reproduced with the pre-fix save function and delayed mocked I/O; the other findings were traced through source. Current R2 implementation evidence is recorded above.

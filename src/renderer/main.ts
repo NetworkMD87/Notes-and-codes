@@ -33,7 +33,9 @@ import { promptInput, confirmDialog } from './inputOverlay'
 import { SettingsPanel, type SettingsCategory, type SettingsDeps } from './settingsPanel'
 import { penCursor } from './penCursor'
 import { FileHistoryPanel } from './fileHistoryPanel'
+import { restoreFileHistoryVersion } from './fileHistoryRestore'
 import { FolderMode } from './folderMode'
+import { applyReloadIfCurrent, isCurrentBufferPath, isCurrentFileChange } from './fileChangeGuard'
 import { buildExportHtml, suggestExportName, type ExportFormat } from './exportDoc'
 import { AutoSaveController, eligibleForAutosave } from './autoSaveController'
 import { formatText, isFormattable } from './formatter'
@@ -1032,23 +1034,24 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
   current: () => {
     const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null
     const b = manager.get(id); if (!b || !b.filePath) return null
-    return { path: b.filePath, title: b.title, content: paneFor(view.focusedPane()).getContent(), language: b.language }
+    return { id: b.id, path: b.filePath, title: b.title, content: paneFor(view.focusedPane()).getContent(), language: b.language }
   },
   openDiff: (v, cur) => diff.show(
     { title: `${cur.title} — ${new Date(v.ts).toLocaleString()}`, content: v.content, language: cur.language },
     { title: `${cur.title} (current)`, content: cur.content, language: cur.language }
   ),
-  restore: (v) => {
-    const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
-    const b = manager.get(id); if (!b || !b.filePath) return
-    window.api.snapshotHistory(b.filePath, paneFor(view.focusedPane()).getContent(), b.eol, b.encoding)
-    manager.update(id, v.content)
-    paneFor(view.focusedPane()).refreshBuffer(b)
-    syncPreviewContext()
-    spell?.refreshNow()
-    tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
-    toast('Restored an earlier version — unsaved, Save to keep it.', 'success')
-  }
+  restore: (v, origin) => restoreFileHistoryVersion({
+    manager,
+    paneDisplaying,
+    focusedBufferId: () => paneFor(view.focusedPane()).currentBufferId(),
+    snapshotHistory: (path, content, eol, encoding) => window.api.snapshotHistory(path, content, eol, encoding),
+    syncPreview: syncPreviewContext,
+    refreshSpell: () => spell?.refreshNow(),
+    renderTabs: () => tabBar.render(manager.list(), manager.activeId),
+    refreshStatus,
+    scheduleSessionSave,
+    notifyRestored: () => toast('Restored an earlier version — unsaved, Save to keep it.', 'success'),
+  }, v, origin)
 }, focusActiveEditor)
 const openHistory = () => void fileHistory.open()
 
@@ -1059,6 +1062,27 @@ folder = new FolderMode({
   focusEditor: focusActiveEditor,
   filter: workspaceFilter,
   onWorkspaceChanged: (rerun) => findInFiles.workspaceChanged(rerun),
+  withPathSaveLock: (path, isDirectory, operation) =>
+    saveCoordinator.run(manager.idsAtPath(path, isDirectory), operation),
+  onPathRenamed: (from, to, isDirectory) => {
+    const changed = manager.renamePath(from, to, isDirectory)
+    if (changed.length === 0) return
+    for (const id of changed) {
+      const buffer = manager.get(id)
+      if (!buffer) continue
+      fileChangeGenerations.set(id, (fileChangeGenerations.get(id) ?? 0) + 1)
+      view.paneA.setBufferLanguage(id, buffer.language)
+      view.paneB.setBufferLanguage(id, buffer.language)
+    }
+    tabBar.render(manager.list(), manager.activeId)
+    const id = paneFor(view.focusedPane()).currentBufferId() ?? manager.activeId
+    folder.setActiveFile(id ? manager.get(id)?.filePath ?? null : null)
+    refreshStatus()
+    syncPreviewContext()
+    syncWatch()
+    scheduleSessionSave()
+    spell?.refreshNow()
+  },
   pickFolder: () => openFolderFromDialog(),
   activePath: () => {
     const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null
@@ -1192,10 +1216,13 @@ function syncWatch(): void { window.api.watchPaths(openPaths()) }
 
 async function reloadBuffer(id: string): Promise<void> {
   const b = manager.get(id); if (!b || !b.filePath) return
-  const r = await window.api.readFile(b.filePath)
-  if (!r.ok) { toast(r.reason, 'error'); return }
-  b.content = r.file.content; b.eol = r.file.eol; b.encoding = r.file.encoding; b.dirty = false
-  b.diskMtime = r.file.mtimeMs // reloading rebases the guard on what we just read
+  const path = b.filePath
+  const r = await window.api.readFile(path)
+  if (!r.ok) {
+    if (isCurrentBufferPath(manager.get(id), b, path)) toast(r.reason, 'error')
+    return
+  }
+  if (!applyReloadIfCurrent(manager.get(id), b, path, r.file)) return
   acknowledgedDiskVersions.delete(id)
   conflictDiskVersions.delete(id)
   conflicts.delete(id)
@@ -1266,7 +1293,7 @@ async function handleFileChanged(path: string): Promise<void> {
       const snapshot = { key: await diskVersionKey(current.file), mtimeMs: current.file.mtimeMs }
       // Concurrent watcher notifications can complete out of order. Only the newest one may
       // decide whether a conflict exists; the newer handler will evaluate the latest disk state.
-      if (fileChangeGenerations.get(b.id) !== generation) return
+      if (!isCurrentFileChange(manager.get(b.id), b, path, generation, fileChangeGenerations)) return
       const acknowledged = acknowledgedDiskVersions.get(b.id)
       if (acknowledged && acknowledged === snapshot.key) return
       acknowledgedDiskVersions.delete(b.id)
@@ -1277,7 +1304,7 @@ async function handleFileChanged(path: string): Promise<void> {
       } else await reloadBuffer(b.id)
       return
     }
-    if (fileChangeGenerations.get(b.id) !== generation) return
+    if (!isCurrentFileChange(manager.get(b.id), b, path, generation, fileChangeGenerations)) return
     acknowledgedDiskVersions.delete(b.id)
     conflictDiskVersions.delete(b.id)
     if (b.dirty) { conflicts.add(b.id); refreshChangeBar() }

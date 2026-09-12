@@ -20,6 +20,8 @@ export interface FolderModeDeps {
   focusEditor: () => void
   filter: () => WorkspaceFilter
   onWorkspaceChanged: (rerun: boolean) => void
+  withPathSaveLock: (path: string, isDirectory: boolean, operation: () => Promise<void>) => Promise<void>
+  onPathRenamed: (from: string, to: string, isDirectory: boolean) => void
 }
 
 interface FolderRefreshSnapshot {
@@ -350,8 +352,14 @@ export class FolderMode {
   private async rename(entry: DirEntry): Promise<void> {
     const name = await promptInput('Rename', { initial: entry.name, focusFallback: this.d.focusEditor }); if (!name || name === entry.name) return
     const parent = entry.path.replace(/[\\/][^\\/]+$/, '')
-    if (await window.api.renamePath(entry.path, parent + '/' + name)) await this.refreshDir(parent)
-    else toast('Could not rename (name in use?).', 'error')
+    const target = parent + '/' + name
+    await this.d.withPathSaveLock(entry.path, entry.isDir, async () => {
+      if (await window.api.renamePath(entry.path, target)) {
+        this.d.onPathRenamed(entry.path, target, entry.isDir)
+        await this.refreshDir(parent)
+      }
+      else toast('Could not rename (name in use?).', 'error')
+    })
   }
   private async remove(entry: DirEntry): Promise<void> {
     if (!await confirmDialog(`Delete "${entry.name}"? It will be moved to the Recycle Bin.`, { focusFallback: this.d.focusEditor })) return

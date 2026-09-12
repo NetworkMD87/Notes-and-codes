@@ -1,6 +1,10 @@
 import type { BufferState, SessionData, EolMode, Encoding } from '../shared/types'
 import { languageFromPath } from '../shared/language'
 
+// Keep the leading // of UNC paths; separator/case differences must not create a second tab.
+const normalizedPath = (path: string): string => path.replaceAll('\\', '/').replace(/\/+$/, '')
+const pathKey = (path: string): string => normalizedPath(path).toLowerCase()
+
 export class BufferManager {
   private buffers: BufferState[] = []
   private editRevisions = new Map<string, number>()
@@ -33,14 +37,14 @@ export class BufferManager {
   }
 
   open(file: { filePath: string; content: string; eol: EolMode; encoding: Encoding; mtimeMs?: number }): BufferState {
-    const existing = this.buffers.find(b => b.filePath === file.filePath)
+    const existing = this.buffers.find(b => b.filePath !== null && pathKey(b.filePath) === pathKey(file.filePath))
     if (existing) { this._activeId = existing.id; return existing }
     const title = file.filePath.split(/[\\/]/).pop() ?? file.filePath
     return this.create({ filePath: file.filePath, content: file.content, eol: file.eol, encoding: file.encoding, title, language: languageFromPath(file.filePath), diskMtime: file.mtimeMs })
   }
 
   openExternal(file: { filePath: string; content: string; eol: EolMode; encoding: Encoding; mtimeMs?: number }): BufferState {
-    const existing = this.buffers.find(b => b.filePath === file.filePath)
+    const existing = this.buffers.find(b => b.filePath !== null && pathKey(b.filePath) === pathKey(file.filePath))
     if (existing) { this._activeId = existing.id; return existing }
 
     const placeholder = this.buffers.length === 1 ? this.buffers[0] : undefined
@@ -53,6 +57,32 @@ export class BufferManager {
   }
 
   setActive(id: string): void { if (this.get(id)) this._activeId = id }
+
+  idsAtPath(path: string, isDirectory: boolean): string[] {
+    const key = pathKey(path)
+    return this.buffers.filter(buffer => {
+      if (!buffer.filePath) return false
+      const current = pathKey(buffer.filePath)
+      return current === key || (isDirectory && current.startsWith(key + '/'))
+    }).map(buffer => buffer.id)
+  }
+
+  renamePath(from: string, to: string, isDirectory: boolean): string[] {
+    const target = to.replace(/[\\/]+$/, '')
+    const fromPath = normalizedPath(from)
+    const targetSeparator = to.includes('/') ? '/' : '\\'
+    const changed = this.idsAtPath(from, isDirectory)
+
+    for (const id of changed) {
+      const buffer = this.get(id)!
+      const suffix = normalizedPath(buffer.filePath!).slice(fromPath.length)
+      buffer.filePath = target + suffix.replaceAll('/', targetSeparator)
+      buffer.title = buffer.filePath.split(/[\\/]/).pop() ?? buffer.filePath
+      buffer.language = languageFromPath(buffer.filePath)
+    }
+
+    return changed
+  }
 
   captureRevision(id: string): number | undefined {
     if (!this.get(id)) return undefined
