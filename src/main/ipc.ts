@@ -35,6 +35,7 @@ export interface IpcDeps {
   searchTestDelayMs: number
   sessionSaveTestDelayMs: number
   fileWriteTestDelayMs: number
+  saveAsTestDelayMs: number
   startupReadFailure: 'snippets' | null
   fileWriteFailure: boolean
   highlightSaveFailure: boolean
@@ -119,6 +120,9 @@ export function registerIpc(deps: IpcDeps): void {
   handle('loginitem:set', (_e, enabled: boolean) => deps.setLoginItem(enabled))
   handle('hotkey:set', (_e, accel: string) => deps.setGlobalHotkey(accel))
   handle('dialog:saveAs', async () => {
+    if (deps.saveAsTestDelayMs > 0) {
+      await new Promise<void>(resolve => setTimeout(resolve, deps.saveAsTestDelayMs))
+    }
     const testPath = saveAsTestPaths.shift()
     if (testPath) return testPath
     const r = await dialog.showSaveDialog({ title: 'Save As' })

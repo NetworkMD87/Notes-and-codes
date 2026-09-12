@@ -124,6 +124,11 @@ const theme = new ThemeController([view.paneA, view.paneB], (themeId, accent) =>
 })
 
 function paneFor(which: 'A' | 'B') { return which === 'A' ? view.paneA : view.paneB }
+function paneDisplaying(id: string) {
+  if (view.paneA.currentBufferId() === id) return view.paneA
+  if (view.paneB.currentBufferId() === id) return view.paneB
+  return null
+}
 function focusActiveEditor(): void { paneFor(view.focusedPane()).focus() }
 view.onFocusChange(() => syncPreviewContext())
 
@@ -549,8 +554,7 @@ async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boo
 
 async function saveBufferNow(id: string, opts: SaveOpts): Promise<boolean> {
   const b = manager.get(id); if (!b) return false
-  const pane = view.paneA.currentBufferId() === id ? view.paneA
-    : view.paneB.currentBufferId() === id ? view.paneB : null
+  const pane = paneDisplaying(id)
   if (opts.format && formatOnSave && isFormattable(b.language)) {
     if (pane) await pane.formatDocument()
     else {
@@ -567,11 +571,15 @@ async function saveBufferNow(id: string, opts: SaveOpts): Promise<boolean> {
   let path = b.filePath
   if (!path || opts.forceDialog) {
     if (!opts.allowDialog) return false
-    path = await window.api.saveAsDialog(); if (!path) return false
+    if (exposeSaveWriteState) document.body.dataset.saveAsState = 'active'
+    try { path = await window.api.saveAsDialog() }
+    finally { if (exposeSaveWriteState) document.body.dataset.saveAsState = 'settled' }
+    if (!path) return false
   }
   // This snapshot is deliberately captured inside the per-buffer queue, immediately before I/O.
   // A later queued save therefore writes any edits made while an earlier write was in flight.
-  const content = pane ? pane.getContent() : b.content
+  const paneAtWrite = paneDisplaying(id)
+  const content = paneAtWrite ? paneAtWrite.getContent() : b.content
   const eol = b.eol
   const encoding = b.encoding
   const savedRevision = manager.captureRevision(id)
@@ -633,8 +641,9 @@ async function saveBufferNow(id: string, opts: SaveOpts): Promise<boolean> {
   conflicts.delete(id)
   refreshChangeBar() // a conflict we just resolved by overwriting must not leave its bar behind
   if (opts.recent) window.api.addRecentFile(path)
-  if (pane && manager.get(id)!.language !== oldLang) {
-    pane.refreshBuffer(manager.get(id)!)
+  const paneAfterSave = paneDisplaying(id)
+  if (paneAfterSave && manager.get(id)!.language !== oldLang) {
+    paneAfterSave.refreshBuffer(manager.get(id)!)
     syncPreviewContext()
     spell?.refreshNow()
   }

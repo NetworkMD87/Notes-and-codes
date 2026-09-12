@@ -86,4 +86,32 @@ describe('BufferSaveCoordinator', () => {
 
     expect(operations).toEqual(['first', 'second'])
   })
+
+  it('keeps a newer pending tail when an older operation settles', async () => {
+    const coordinator = new BufferSaveCoordinator()
+    const firstGate = deferred<void>()
+    const secondGate = deferred<void>()
+    const started: string[] = []
+
+    const first = coordinator.run('buffer-a', async () => {
+      started.push('first')
+      await firstGate.promise
+    })
+    await Promise.resolve()
+    const second = coordinator.run('buffer-a', async () => {
+      started.push('second')
+      await secondGate.promise
+    })
+
+    firstGate.resolve()
+    await first
+    await Promise.resolve()
+    const third = coordinator.run('buffer-a', async () => { started.push('third') })
+    await Promise.resolve()
+
+    expect(started).toEqual(['first', 'second'])
+    secondGate.resolve()
+    await Promise.all([second, third])
+    expect(started).toEqual(['first', 'second', 'third'])
+  })
 })
