@@ -76,4 +76,14 @@ describe('BufferSaveCoordinator', () => {
     await expect(second).resolves.toBe('saved')
     expect(started).toEqual(['first', 'second'])
   })
+
+  it('accepts a new save after a settled buffer tail has been cleaned up', async () => {
+    const coordinator = new BufferSaveCoordinator()
+    const operations: string[] = []
+
+    await coordinator.run('buffer-a', async () => { operations.push('first') })
+    await coordinator.run('buffer-a', async () => { operations.push('second') })
+
+    expect(operations).toEqual(['first', 'second'])
+  })
 })

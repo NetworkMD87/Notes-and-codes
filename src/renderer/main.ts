@@ -5,7 +5,7 @@ import '@fontsource/fira-code/400.css'
 import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/700.css'
 import { installMenuCommands } from './menuCommands'
-import type { Api, Encoding, MarkdownPreviewMode, OpenedFile, SessionData, Settings, WorkspaceFilter } from '../shared/types'
+import type { Api, Encoding, EolMode, MarkdownPreviewMode, OpenedFile, SessionData, Settings, WorkspaceFilter } from '../shared/types'
 import { DEFAULT_WORKSPACE_EXCLUDES, normalizePathGlobs } from '../shared/pathGlob'
 import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
@@ -526,6 +526,22 @@ async function flushPendingWritesBeforeQuit(): Promise<void> {
 
 interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean; format: boolean; forceDialog: boolean }
 const MANUAL_SAVE: SaveOpts = { snapshot: true, recent: true, allowDialog: true, format: true, forceDialog: false }
+const exposeSaveWriteState = new URLSearchParams(window.location.search).get('nc-headless') === '1'
+const saveWriteSnapshots: Array<{ content: string; eol: EolMode; encoding: Encoding; revision: number }> = []
+let saveWriteCompletionCount = 0
+
+async function writeBufferFile(path: string, content: string, eol: EolMode, encoding: Encoding, savedRevision: number, expectedMtime?: number) {
+  if (exposeSaveWriteState) {
+    saveWriteSnapshots.push({ content, eol, encoding, revision: savedRevision })
+    document.body.dataset.saveWriteSnapshots = JSON.stringify(saveWriteSnapshots)
+    document.body.dataset.saveWriteState = 'active'
+  }
+  try {
+    return await window.api.writeFile(path, content, eol, encoding, expectedMtime)
+  } finally {
+    if (exposeSaveWriteState) document.body.dataset.saveWriteState = 'settled'
+  }
+}
 
 async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boolean> {
   return saveCoordinator.run(id, () => saveBufferNow(id, opts))
@@ -563,7 +579,7 @@ async function saveBufferNow(id: string, opts: SaveOpts): Promise<boolean> {
   // Only guard a write back to the file this buffer already tracks. A Save-As onto a *different*
   // path has no baseline, and the OS save dialog has already asked its own "replace?" question.
   const sameFile = path === b.filePath
-  let r = await window.api.writeFile(path, content, eol, encoding, sameFile ? b.diskMtime : undefined)
+  let r = await writeBufferFile(path, content, eol, encoding, savedRevision, sameFile ? b.diskMtime : undefined)
   if (!r.ok) {
     // The file changed on disk and the watcher never told us: the app was restarted (boot()
     // restores session content without re-reading disk), the watcher failed, or the change
@@ -593,12 +609,17 @@ async function saveBufferNow(id: string, opts: SaveOpts): Promise<boolean> {
     if (!opts.allowDialog) return false // autosave: never modal. Buffer stays dirty; the bar tells the story.
     const ok = await confirmDialog(`"${b.title}" changed on disk since you opened it. Overwrite those changes?`, { confirmLabel: 'Overwrite', focusFallback: focusActiveEditor })
     if (!ok) return false
-    r = await window.api.writeFile(path, content, eol, encoding) // unchecked — the user chose to overwrite
+    r = await writeBufferFile(path, content, eol, encoding, savedRevision) // unchecked — the user chose to overwrite
   }
   if (!r.ok) return false // narrowing only: a write with no expectedMtime cannot refuse
   selfWrites.set(path, Date.now())
   if (opts.snapshot) window.api.snapshotHistory(path, content, eol, encoding)
   manager.markSaved(id, path, r.mtimeMs, savedRevision)
+  if (exposeSaveWriteState) {
+    saveWriteCompletionCount += 1
+    document.body.dataset.saveWriteCompletionCount = String(saveWriteCompletionCount)
+    document.body.dataset.saveWriteLastCompletionDirty = String(manager.get(id)?.dirty ?? false)
+  }
   acknowledgedDiskVersions.delete(id)
   conflictDiskVersions.delete(id)
   // markSaved changes path/title/language/dirty/mtime. Persist it before highlight I/O, which can

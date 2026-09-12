@@ -34,6 +34,7 @@ export interface IpcDeps {
   onRecentChanged?: () => void
   searchTestDelayMs: number
   sessionSaveTestDelayMs: number
+  fileWriteTestDelayMs: number
   startupReadFailure: 'snippets' | null
   fileWriteFailure: boolean
   highlightSaveFailure: boolean
@@ -87,7 +88,10 @@ export function registerIpc(deps: IpcDeps): void {
   handle('watch:setPaths', (_e, paths: string[]) => watcher.setPaths(paths))
 
   handle('file:read', (_e, path: string) => readFileForEditor(path))
-  handle('file:write', (_e, path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number) => {
+  handle('file:write', async (_e, path: string, content: string, eol: EolMode, encoding: Encoding, expectedMtime?: number) => {
+    if (deps.fileWriteTestDelayMs > 0) {
+      await new Promise<void>(resolve => setTimeout(resolve, deps.fileWriteTestDelayMs))
+    }
     if (deps.fileWriteFailure) throw new Error('injected file write failure')
     return writeFile(path, content, eol, encoding, expectedMtime)
   })
