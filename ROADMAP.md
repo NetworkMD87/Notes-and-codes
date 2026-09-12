@@ -2,7 +2,7 @@
 
 Open work first; shipped history and settled decisions last. Updated after the **2026-09-08 audit of v1.21.0**.
 
-**Legend:** 🐛 open defect · ⬜ planned · ❓ decision required · 🧊 parked / deferred · 💡 someday · ✅ shipped · **S / M / L** effort where already estimated.
+**Legend:** 🐛 open defect · 🛠️ fixed, awaiting release · ⬜ planned · ❓ decision required · 🧊 parked / deferred · 💡 someday · ✅ shipped · **S / M / L** effort where already estimated.
 
 | At a glance | Status / order |
 | --- | --- |
@@ -11,7 +11,7 @@ Open work first; shipped history and settled decisions last. Updated after the *
 | [Delivery and existing features](#3-delivery-and-existing-features) | CI smoke trial → MSIX → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
-| Awaiting release | Nothing currently queued. |
+| Awaiting release | R3 rename/save paths and R4 stale history actions are fixed, awaiting release. |
 
 ---
 
