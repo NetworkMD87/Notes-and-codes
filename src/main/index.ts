@@ -269,6 +269,12 @@ if (!gotLock) {
     const sessionSaveTestDelayMs = process.env.NC_HEADLESS === '1'
       ? Math.min(MAX_SESSION_SAVE_TEST_DELAY_MS, Math.max(0, Number.parseInt(process.env.NC_TEST_SESSION_SAVE_DELAY_MS ?? '0', 10) || 0))
       : 0
+    const fileWriteTestDelayMs = process.env.NC_HEADLESS === '1'
+      ? Math.min(1000, Math.max(0, Number.parseInt(process.env.NC_TEST_FILE_WRITE_DELAY_MS ?? '0', 10) || 0))
+      : 0
+    const saveAsTestDelayMs = process.env.NC_HEADLESS === '1'
+      ? Math.min(1000, Math.max(0, Number.parseInt(process.env.NC_TEST_SAVE_AS_DELAY_MS ?? '0', 10) || 0))
+      : 0
     const startupReadFailure = process.env.NC_HEADLESS === '1'
       && process.env.NC_TEST_FAIL_STARTUP_READ === 'snippets'
       ? 'snippets' as const
@@ -294,6 +300,8 @@ if (!gotLock) {
       onRecentChanged: () => { void rebuildMenu() },
       searchTestDelayMs,
       sessionSaveTestDelayMs,
+      fileWriteTestDelayMs,
+      saveAsTestDelayMs,
       startupReadFailure,
       fileWriteFailure,
       highlightSaveFailure,
