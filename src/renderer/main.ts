@@ -1033,20 +1033,22 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
   current: () => {
     const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return null
     const b = manager.get(id); if (!b || !b.filePath) return null
-    return { path: b.filePath, title: b.title, content: paneFor(view.focusedPane()).getContent(), language: b.language }
+    return { id: b.id, path: b.filePath, title: b.title, content: paneFor(view.focusedPane()).getContent(), language: b.language }
   },
   openDiff: (v, cur) => diff.show(
     { title: `${cur.title} — ${new Date(v.ts).toLocaleString()}`, content: v.content, language: cur.language },
     { title: `${cur.title} (current)`, content: cur.content, language: cur.language }
   ),
-  restore: (v) => {
-    const id = paneFor(view.focusedPane()).currentBufferId(); if (!id) return
-    const b = manager.get(id); if (!b || !b.filePath) return
-    window.api.snapshotHistory(b.filePath, paneFor(view.focusedPane()).getContent(), b.eol, b.encoding)
-    manager.update(id, v.content)
-    paneFor(view.focusedPane()).refreshBuffer(b)
-    syncPreviewContext()
-    spell?.refreshNow()
+  restore: (v, origin) => {
+    const b = manager.get(origin.id); if (!b || b.filePath !== origin.path) return
+    const displayed = paneDisplaying(origin.id)
+    window.api.snapshotHistory(origin.path, displayed?.getContent() ?? b.content, b.eol, b.encoding)
+    manager.update(origin.id, v.content)
+    displayed?.refreshBuffer(b)
+    if (paneFor(view.focusedPane()).currentBufferId() === origin.id) {
+      syncPreviewContext()
+      spell?.refreshNow()
+    }
     tabBar.render(manager.list(), manager.activeId); refreshStatus(); scheduleSessionSave()
     toast('Restored an earlier version — unsaved, Save to keep it.', 'success')
   }
