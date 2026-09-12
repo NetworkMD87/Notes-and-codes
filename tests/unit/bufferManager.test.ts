@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { BufferManager } from '../../src/renderer/bufferManager'
+import { eligibleForAutosave } from '../../src/renderer/autoSaveController'
 
 let n: number
 const ids = () => `id-${++n}`
@@ -31,6 +32,35 @@ describe('BufferManager', () => {
     m.markSaved(b.id, 'C:/x/note.txt')
     expect(m.get(b.id)!.dirty).toBe(false)
     expect(m.get(b.id)!.title).toBe('note.txt')
+  })
+
+  it('keeps newer edits dirty when an older save completes', () => {
+    const b = m.create()
+    m.update(b.id, 'content being saved')
+    const savedRevision = m.captureRevision(b.id)
+    expect(savedRevision).toBe(1)
+
+    m.update(b.id, 'newer content')
+    m.markSaved(b.id, 'C:/x/note.md', 4321, savedRevision)
+
+    expect(b).toMatchObject({
+      content: 'newer content',
+      dirty: true,
+      filePath: 'C:/x/note.md',
+      title: 'note.md',
+      language: 'markdown',
+      diskMtime: 4321,
+    })
+    expect(eligibleForAutosave([b], new Set())).toEqual([b.id])
+  })
+
+  it('tracks edit revisions at runtime without adding them to session data', () => {
+    const b = m.create()
+
+    expect(m.captureRevision(b.id)).toBe(0)
+    m.update(b.id, 'first edit')
+    expect(m.captureRevision(b.id)).toBe(1)
+    expect(m.toSession().buffers[0]).not.toHaveProperty('editRevision')
   })
 
   it('open activates an existing buffer with the same path instead of duplicating', () => {

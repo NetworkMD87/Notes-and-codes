@@ -3,6 +3,7 @@ import { languageFromPath } from '../shared/language'
 
 export class BufferManager {
   private buffers: BufferState[] = []
+  private editRevisions = new Map<string, number>()
   private _activeId: string | null = null
   private untitledCount = 0
 
@@ -26,6 +27,7 @@ export class BufferManager {
       diskMtime: opts.diskMtime
     }
     this.buffers.push(b)
+    this.editRevisions.set(b.id, 0)
     this._activeId = b.id
     return b
   }
@@ -44,6 +46,7 @@ export class BufferManager {
     const placeholder = this.buffers.length === 1 ? this.buffers[0] : undefined
     if (placeholder && placeholder.filePath === null && placeholder.content === '' && !placeholder.dirty) {
       this.buffers.splice(0, 1)
+      this.editRevisions.delete(placeholder.id)
       this._activeId = null
     }
     return this.open(file)
@@ -51,20 +54,26 @@ export class BufferManager {
 
   setActive(id: string): void { if (this.get(id)) this._activeId = id }
 
+  captureRevision(id: string): number | undefined {
+    if (!this.get(id)) return undefined
+    return this.editRevisions.get(id) ?? 0
+  }
+
   update(id: string, content: string): void {
     const b = this.get(id)
     if (!b) return
     b.content = content
     b.dirty = true
+    this.editRevisions.set(id, (this.editRevisions.get(id) ?? 0) + 1)
   }
 
-  markSaved(id: string, filePath: string, diskMtime?: number): void {
+  markSaved(id: string, filePath: string, diskMtime?: number, savedRevision = this.captureRevision(id)): void {
     const b = this.get(id)
     if (!b) return
     b.filePath = filePath
     b.title = filePath.split(/[\\/]/).pop() ?? filePath
     b.language = languageFromPath(filePath)
-    b.dirty = false
+    if (this.captureRevision(id) === savedRevision) b.dirty = false
     // Always assigned, never merged: an undefined mtime (post-write stat failed) must clear the
     // old baseline, or the next save would compare against a value that no longer describes the file.
     b.diskMtime = diskMtime
@@ -79,6 +88,7 @@ export class BufferManager {
     if (idx === -1) return
     const wasActive = this._activeId === id
     this.buffers.splice(idx, 1)
+    this.editRevisions.delete(id)
     if (this.buffers.length === 0) this.untitledCount = 0
     if (wasActive) {
       const neighbor = this.buffers[idx] ?? this.buffers[idx - 1] ?? null
@@ -98,6 +108,7 @@ export class BufferManager {
 
   restore(data: SessionData): void {
     this.buffers = data.buffers
+    this.editRevisions = new Map(this.buffers.map(b => [b.id, 0]))
     this._activeId = data.activeId
     this.untitledCount = this.buffers.length
     // Backfill any field a session from an older schema may be missing, so downstream
