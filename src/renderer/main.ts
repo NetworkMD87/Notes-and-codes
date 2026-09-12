@@ -34,7 +34,7 @@ import { SettingsPanel, type SettingsCategory, type SettingsDeps } from './setti
 import { penCursor } from './penCursor'
 import { FileHistoryPanel } from './fileHistoryPanel'
 import { FolderMode } from './folderMode'
-import { isCurrentBufferPath, isCurrentFileChange } from './fileChangeGuard'
+import { applyReloadIfCurrent, isCurrentBufferPath, isCurrentFileChange } from './fileChangeGuard'
 import { buildExportHtml, suggestExportName, type ExportFormat } from './exportDoc'
 import { AutoSaveController, eligibleForAutosave } from './autoSaveController'
 import { formatText, isFormattable } from './formatter'
@@ -1214,10 +1214,11 @@ async function reloadBuffer(id: string): Promise<void> {
   const b = manager.get(id); if (!b || !b.filePath) return
   const path = b.filePath
   const r = await window.api.readFile(path)
-  if (!isCurrentBufferPath(manager.get(id), b, path)) return
-  if (!r.ok) { toast(r.reason, 'error'); return }
-  b.content = r.file.content; b.eol = r.file.eol; b.encoding = r.file.encoding; b.dirty = false
-  b.diskMtime = r.file.mtimeMs // reloading rebases the guard on what we just read
+  if (!r.ok) {
+    if (isCurrentBufferPath(manager.get(id), b, path)) toast(r.reason, 'error')
+    return
+  }
+  if (!applyReloadIfCurrent(manager.get(id), b, path, r.file)) return
   acknowledgedDiskVersions.delete(id)
   conflictDiskVersions.delete(id)
   conflicts.delete(id)

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { BufferState } from '../../src/shared/types'
+import type { BufferState, OpenedFile } from '../../src/shared/types'
 import { BufferManager } from '../../src/renderer/bufferManager'
-import { isCurrentBufferPath, isCurrentFileChange } from '../../src/renderer/fileChangeGuard'
+import { applyReloadIfCurrent, isCurrentBufferPath, isCurrentFileChange } from '../../src/renderer/fileChangeGuard'
 
 const buffer: BufferState = {
   id: 'note', title: 'note.txt', filePath: 'C:/notes/note.txt', content: 'dirty',
@@ -21,10 +21,19 @@ describe('isCurrentFileChange', () => {
 
   it('rejects the second reload completion after an in-place rename', () => {
     const manager = new BufferManager(() => buffer.id)
-    const captured = manager.open({ filePath: 'C:/notes/note.txt', content: 'clean', eol: 'LF', encoding: 'utf8' })
+    const captured = manager.open({
+      filePath: 'C:/notes/note.txt', content: 'clean', eol: 'LF', encoding: 'utf8', mtimeMs: 100,
+    })
+    const oldPathRead: OpenedFile = {
+      filePath: 'C:/notes/note.txt', content: 'stale old-path contents', eol: 'CRLF', encoding: 'utf16le', mtimeMs: 200,
+    }
     manager.renamePath('C:/notes/note.txt', 'C:/notes/renamed.txt', false)
 
     expect(isCurrentBufferPath(manager.get(captured.id), captured, 'C:/notes/note.txt')).toBe(false)
+    expect(applyReloadIfCurrent(manager.get(captured.id), captured, 'C:/notes/note.txt', oldPathRead)).toBe(false)
+    expect(manager.get(captured.id)).toMatchObject({
+      filePath: 'C:/notes/renamed.txt', content: 'clean', eol: 'LF', encoding: 'utf8', diskMtime: 100,
+    })
   })
 
   it('accepts the latest watcher completion for the same current path and buffer', () => {
