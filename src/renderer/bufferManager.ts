@@ -56,9 +56,9 @@ export class BufferManager {
 
   renamePath(from: string, to: string, isDirectory: boolean): string[] {
     const canonical = (path: string) => path.replace(/[\\/]+/g, '/').replace(/\/+$/, '')
+    const target = to.replace(/[\\/]+$/, '')
     const fromPath = canonical(from)
     const fromKey = fromPath.toLowerCase()
-    const target = canonical(to)
     const targetSeparator = to.includes('/') ? '/' : '\\'
     const changed: string[] = []
 

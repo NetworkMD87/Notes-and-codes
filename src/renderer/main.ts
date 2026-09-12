@@ -34,6 +34,7 @@ import { SettingsPanel, type SettingsCategory, type SettingsDeps } from './setti
 import { penCursor } from './penCursor'
 import { FileHistoryPanel } from './fileHistoryPanel'
 import { FolderMode } from './folderMode'
+import { isCurrentFileChange } from './fileChangeGuard'
 import { buildExportHtml, suggestExportName, type ExportFormat } from './exportDoc'
 import { AutoSaveController, eligibleForAutosave } from './autoSaveController'
 import { formatText, isFormattable } from './formatter'
@@ -1060,13 +1061,23 @@ folder = new FolderMode({
   filter: workspaceFilter,
   onWorkspaceChanged: (rerun) => findInFiles.workspaceChanged(rerun),
   onPathRenamed: (from, to, isDirectory) => {
-    if (manager.renamePath(from, to, isDirectory).length === 0) return
+    const changed = manager.renamePath(from, to, isDirectory)
+    if (changed.length === 0) return
+    for (const id of changed) {
+      const buffer = manager.get(id)
+      if (!buffer) continue
+      fileChangeGenerations.set(id, (fileChangeGenerations.get(id) ?? 0) + 1)
+      view.paneA.setBufferLanguage(id, buffer.language)
+      view.paneB.setBufferLanguage(id, buffer.language)
+    }
     tabBar.render(manager.list(), manager.activeId)
     const id = paneFor(view.focusedPane()).currentBufferId() ?? manager.activeId
     folder.setActiveFile(id ? manager.get(id)?.filePath ?? null : null)
     refreshStatus()
+    syncPreviewContext()
     syncWatch()
     scheduleSessionSave()
+    spell?.refreshNow()
   },
   pickFolder: () => openFolderFromDialog(),
   activePath: () => {
@@ -1275,7 +1286,7 @@ async function handleFileChanged(path: string): Promise<void> {
       const snapshot = { key: await diskVersionKey(current.file), mtimeMs: current.file.mtimeMs }
       // Concurrent watcher notifications can complete out of order. Only the newest one may
       // decide whether a conflict exists; the newer handler will evaluate the latest disk state.
-      if (fileChangeGenerations.get(b.id) !== generation) return
+      if (!isCurrentFileChange(manager.get(b.id), b, path, generation, fileChangeGenerations)) return
       const acknowledged = acknowledgedDiskVersions.get(b.id)
       if (acknowledged && acknowledged === snapshot.key) return
       acknowledgedDiskVersions.delete(b.id)
@@ -1286,7 +1297,7 @@ async function handleFileChanged(path: string): Promise<void> {
       } else await reloadBuffer(b.id)
       return
     }
-    if (fileChangeGenerations.get(b.id) !== generation) return
+    if (!isCurrentFileChange(manager.get(b.id), b, path, generation, fileChangeGenerations)) return
     acknowledgedDiskVersions.delete(b.id)
     conflictDiskVersions.delete(b.id)
     if (b.dirty) { conflicts.add(b.id); refreshChangeBar() }

@@ -253,27 +253,35 @@ test('opening a file highlights (marks active) its row in the sidebar', async ({
 test('saving an open file after rename writes only the renamed path', async ({ smoke }) => {
   const { userDataDir, projectDir } = seededFolder(smoke)
   const oldPath = join(projectDir, 'rename-me.txt')
-  const newPath = join(projectDir, 'renamed.txt')
-  writeFileSync(oldPath, 'before rename')
+  const newPath = join(projectDir, 'renamed.md')
+  writeFileSync(oldPath, '# Renamed heading\n\n- first')
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({
+    restoreFolderOnLaunch: true, lastFolder: projectDir, sidebarVisible: true,
+    rememberMarkdownPreviewMode: true, markdownPreviewMode: 'side-by-side',
+    markdownPreviewLastVisibleMode: 'side-by-side', markdownPreviewWidthPercent: 50,
+  }))
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   const win = await app.firstWindow()
   const row = win.locator('.sb-row', { hasText: 'rename-me.txt' })
   await row.click()
-  await expect(win.locator('#paneA .view-lines')).toContainText('before rename')
-  await win.locator('#paneA .monaco-editor').click()
-  await win.keyboard.press('Control+A')
-  await win.keyboard.type('saved after rename')
+  await expect(win.locator('#paneA .view-lines')).toContainText('Renamed heading')
 
   await row.click({ button: 'right' })
   await win.getByRole('menuitem', { name: 'Rename…' }).click()
   const renameField = win.locator('.input-overlay input')
-  await renameField.fill('renamed.txt')
+  await renameField.fill('renamed.md')
   await renameField.press('Enter')
-  await expect(win.locator('.sb-row', { hasText: 'renamed.txt' })).toBeVisible()
+  await expect(win.locator('.sb-row', { hasText: 'renamed.md' })).toBeVisible()
+  await expect(win.locator('#statusbar')).toContainText('markdown')
+  await expect(win.locator('#mdpreview h1')).toHaveText('Renamed heading')
+
+  await win.locator('#paneA .monaco-editor').click()
+  await win.keyboard.press('Control+End')
+  await win.keyboard.press('Enter')
 
   await chooseFileCommand(app, 'Save')
   await expect.poll(() => ({
     oldExists: existsSync(oldPath),
     renamedContent: existsSync(newPath) ? readFileSync(newPath, 'utf8') : null,
-  })).toEqual({ oldExists: false, renamedContent: 'saved after rename' })
+  })).toEqual({ oldExists: false, renamedContent: '# Renamed heading\n\n- first\n- ' })
 })

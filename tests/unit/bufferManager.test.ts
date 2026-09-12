@@ -72,6 +72,13 @@ describe('BufferManager', () => {
     expect(m.get(buffer.id)?.filePath).toBe('D:/Moved/Readme.TXT')
   })
 
+  it('preserves a UNC target prefix while retargeting an open file', () => {
+    const buffer = m.open({ filePath: '\\\\server\\share\\old.txt', content: 'UNC', eol: 'LF', encoding: 'utf8' })
+
+    expect(m.renamePath('\\\\SERVER/share/old.txt', '\\\\server\\share\\new.txt', false)).toEqual([buffer.id])
+    expect(m.get(buffer.id)?.filePath).toBe('\\\\server\\share\\new.txt')
+  })
+
   it('does not treat a shared prefix as a renamed folder descendant', () => {
     const buffer = m.open({ filePath: 'C:/notes/foobar/keep.txt', content: 'keep', eol: 'LF', encoding: 'utf8' })
 
