@@ -47,6 +47,9 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.21.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.1):** keeps saves
+  reliable across split panes and continued editing, preserves open-file paths after renames,
+  prevents stale history actions, and avoids rebuilding every tab while typing.
 - **[v1.21.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.0):** lets
   untitled tabs enter Markdown preview before saving, adds a compact menu for common Markdown
   formatting, and makes bullet, numbered, and task lists smarter while you type. Editor settings

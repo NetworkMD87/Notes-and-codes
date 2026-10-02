@@ -4,13 +4,18 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
-## [Unreleased]
+## [1.21.1] — 2026-10-02
+
+_More reliable saves and file actions, with less tab-rendering work while typing._
 
 ### Changed
 - Typing updates only the edited tab instead of rebuilding the entire tab strip. Tab-state updates
   retain existing controls, preserving focus and scrolling when many files are open.
 
 ### Fixed
+- Saving while continuing to edit preserves newer changes and writes overlapping saves in order.
+- Renaming files or parent folders keeps open tabs and subsequent saves pointed at the new path.
+- Delayed file-history Restore and Diff actions stay bound to their original tab and ignore cancelled actions.
 - Editing the same file in both split panes now keeps their content and undo history in sync.
   Saving from either pane writes the latest edits, and reloads and history restores update both views.
 - Spell corrections remain available when a shared split pane is hidden and stay in the pane where
