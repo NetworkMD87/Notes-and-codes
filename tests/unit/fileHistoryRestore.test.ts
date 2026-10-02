@@ -18,7 +18,7 @@ describe('restoreFileHistoryVersion', () => {
   it('restores the originating buffer from its non-focused split pane', async () => {
     const { restoreFileHistoryVersion } = await import('../../src/renderer/fileHistoryRestore')
     const { manager, a, b, origin } = makeBuffers()
-    const targetPane = { getContent: () => 'live pane A', refreshBuffer: vi.fn() }
+    const refreshBuffer = vi.fn()
     const snapshotHistory = vi.fn()
     const syncPreview = vi.fn()
     const refreshSpell = vi.fn()
@@ -29,7 +29,7 @@ describe('restoreFileHistoryVersion', () => {
 
     restoreFileHistoryVersion({
       manager,
-      paneDisplaying: id => id === a.id ? targetPane : null,
+      refreshBuffer,
       focusedBufferId: () => b.id,
       snapshotHistory,
       syncPreview,
@@ -40,10 +40,10 @@ describe('restoreFileHistoryVersion', () => {
       notifyRestored,
     }, version, origin)
 
-    expect(snapshotHistory).toHaveBeenCalledWith(origin.path, 'live pane A', a.eol, a.encoding)
+    expect(snapshotHistory).toHaveBeenCalledWith(origin.path, 'manager A', a.eol, a.encoding)
     expect(manager.get(a.id)).toMatchObject({ content: version.content, dirty: true })
     expect(manager.get(b.id)).toMatchObject({ content: 'focused B', dirty: false })
-    expect(targetPane.refreshBuffer).toHaveBeenCalledWith(a)
+    expect(refreshBuffer).toHaveBeenCalledWith(a)
     expect(syncPreview).not.toHaveBeenCalled()
     expect(refreshSpell).not.toHaveBeenCalled()
     expect(renderTabs).toHaveBeenCalledOnce()
@@ -58,10 +58,11 @@ describe('restoreFileHistoryVersion', () => {
     const snapshotHistory = vi.fn()
     const syncPreview = vi.fn()
     const refreshSpell = vi.fn()
+    const refreshBuffer = vi.fn()
 
     restoreFileHistoryVersion({
       manager,
-      paneDisplaying: () => null,
+      refreshBuffer,
       focusedBufferId: () => a.id,
       snapshotHistory,
       syncPreview,
@@ -74,6 +75,7 @@ describe('restoreFileHistoryVersion', () => {
 
     expect(snapshotHistory).toHaveBeenCalledWith(origin.path, 'manager A', a.eol, a.encoding)
     expect(manager.get(a.id)?.content).toBe(version.content)
+    expect(refreshBuffer).toHaveBeenCalledWith(a)
     expect(syncPreview).toHaveBeenCalledOnce()
     expect(refreshSpell).toHaveBeenCalledOnce()
   })
@@ -85,7 +87,7 @@ describe('restoreFileHistoryVersion', () => {
 
     restoreFileHistoryVersion({
       manager,
-      paneDisplaying: () => null,
+      refreshBuffer: vi.fn(),
       focusedBufferId: () => a.id,
       snapshotHistory,
       syncPreview: vi.fn(),

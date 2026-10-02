@@ -5,7 +5,7 @@ import '@fontsource/fira-code/400.css'
 import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/700.css'
 import { installMenuCommands } from './menuCommands'
-import type { Api, Encoding, EolMode, MarkdownPreviewMode, OpenedFile, SessionData, Settings, WorkspaceFilter } from '../shared/types'
+import type { Api, BufferState, Encoding, EolMode, MarkdownPreviewMode, OpenedFile, SessionData, Settings, WorkspaceFilter } from '../shared/types'
 import { DEFAULT_WORKSPACE_EXCLUDES, normalizePathGlobs } from '../shared/pathGlob'
 import { languageFromPath } from '../shared/language'
 import { BufferManager } from './bufferManager'
@@ -39,6 +39,7 @@ import { applyReloadIfCurrent, isCurrentBufferPath, isCurrentFileChange } from '
 import { buildExportHtml, suggestExportName, type ExportFormat } from './exportDoc'
 import { AutoSaveController, eligibleForAutosave } from './autoSaveController'
 import { formatText, isFormattable } from './formatter'
+import { formatBufferIfCurrent } from './bufferFormatting'
 import { HighlightManager } from './highlightManager'
 import { clampToLength } from './highlights'
 import { HelpOverlay } from './helpOverlay'
@@ -139,6 +140,11 @@ function applyHighlightsToPanes(bufferId: string, hs: Highlight[]): void {
     if (paneFor(which).currentBufferId() === bufferId) paneFor(which).setHighlights(hs)
   }
 }
+function refreshBufferModels(buffer: BufferState): void {
+  view.refreshBuffer(buffer)
+  applyHighlightsToPanes(buffer.id, highlights.get(buffer.id))
+  spell?.refreshNow()
+}
 const hlSaveTimers = new Map<string, number>()
 function scheduleHighlightSave(bufferId: string): void {
   clearTimeout(hlSaveTimers.get(bufferId))
@@ -205,8 +211,12 @@ async function closeTab(id: string): Promise<void> {
   void flushHighlightSave(id) // persist a just-painted highlight before the buffer is gone
   manager.close(id)
   if (manager.list().length === 0) manager.create()
+  const replacement = manager.get(manager.activeId!)!
+  for (const pane of [view.paneA, view.paneB]) {
+    if (pane.currentBufferId() === id) pane.setBuffer(replacement)
+  }
   showActive(); scheduleSessionSave()
-  view.paneA.forgetBuffer(id); view.paneB.forgetBuffer(id)
+  view.forgetBuffer(id)
   highlights.forget(id); hlLoaded.delete(id)
   acknowledgedDiskVersions.delete(id)
   conflictDiskVersions.delete(id)
@@ -260,6 +270,8 @@ for (const which of ['A', 'B'] as const) {
   paneFor(which).onChange(c => {
     const id = paneFor(which).currentBufferId()
     if (!id) return
+    // Both views receive the shared model event. Publish each content change only once.
+    if (manager.get(id)?.content === c) return
     manager.update(id, c)
     if (highlights.get(id).length) {
       highlights.sync(id, paneFor(which).readHighlights())
@@ -470,6 +482,7 @@ async function boot(): Promise<void> {
   spell = new SpellCheckController({
     panes: () => view.visiblePanes(),
     allPanes: () => [view.paneA, view.paneB],
+    focusedPane: () => paneFor(view.focusedPane()),
     worker,
     getSettings: () => spellSettings,
     systemLocale,
@@ -561,7 +574,7 @@ async function saveBufferNow(id: string, opts: SaveOpts): Promise<boolean> {
     if (pane) await pane.formatDocument()
     else {
       try {
-        manager.update(id, await formatText(b.content, b.language))
+        if (await formatBufferIfCurrent(manager, b, formatText)) refreshBufferModels(b)
         // Formatting mutates the background buffer before disk I/O. Snapshot that mutation now:
         // writeFile may reject, but the live manager state must still be the newest session state.
         scheduleSessionSave()
@@ -580,8 +593,7 @@ async function saveBufferNow(id: string, opts: SaveOpts): Promise<boolean> {
   }
   // This snapshot is deliberately captured inside the per-buffer queue, immediately before I/O.
   // A later queued save therefore writes any edits made while an earlier write was in flight.
-  const paneAtWrite = paneDisplaying(id)
-  const content = paneAtWrite ? paneAtWrite.getContent() : b.content
+  const content = b.content
   const eol = b.eol
   const encoding = b.encoding
   const savedRevision = manager.captureRevision(id)
@@ -643,9 +655,8 @@ async function saveBufferNow(id: string, opts: SaveOpts): Promise<boolean> {
   conflicts.delete(id)
   refreshChangeBar() // a conflict we just resolved by overwriting must not leave its bar behind
   if (opts.recent) window.api.addRecentFile(path)
-  const paneAfterSave = paneDisplaying(id)
-  if (paneAfterSave && manager.get(id)!.language !== oldLang) {
-    paneAfterSave.refreshBuffer(manager.get(id)!)
+  if (manager.get(id)!.language !== oldLang) {
+    view.setBufferLanguage(id, manager.get(id)!.language)
     syncPreviewContext()
     spell?.refreshNow()
   }
@@ -1042,7 +1053,7 @@ const fileHistory = new FileHistoryPanel(document.getElementById('app')!, {
   ),
   restore: (v, origin) => restoreFileHistoryVersion({
     manager,
-    paneDisplaying,
+    refreshBuffer: refreshBufferModels,
     focusedBufferId: () => paneFor(view.focusedPane()).currentBufferId(),
     snapshotHistory: (path, content, eol, encoding) => window.api.snapshotHistory(path, content, eol, encoding),
     syncPreview: syncPreviewContext,
@@ -1226,10 +1237,9 @@ async function reloadBuffer(id: string): Promise<void> {
   acknowledgedDiskVersions.delete(id)
   conflictDiskVersions.delete(id)
   conflicts.delete(id)
+  refreshBufferModels(b)
   if (paneFor(view.focusedPane()).currentBufferId() === id) {
-    paneFor(view.focusedPane()).refreshBuffer(b)
     syncPreviewContext()
-    spell?.refreshNow()
   }
   refreshStatus(); tabBar.render(manager.list(), manager.activeId)
   scheduleSessionSave()

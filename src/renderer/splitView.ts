@@ -1,16 +1,19 @@
 import Split from 'split.js'
 import { EditorPane } from './editorPane'
+import { EditorModels } from './editorModels'
+import type { BufferState } from '../shared/types'
 
 export class SplitView {
   readonly paneA: EditorPane
   readonly paneB: EditorPane
+  private models = new EditorModels()
   private split: ReturnType<typeof Split> | null = null
   private focused: 'A' | 'B' = 'A'
   private focusChangeCb: ((which: 'A' | 'B') => void) | null = null
 
   constructor(private aEl: HTMLElement, private bEl: HTMLElement) {
-    this.paneA = new EditorPane(aEl)
-    this.paneB = new EditorPane(bEl)
+    this.paneA = new EditorPane(aEl, this.models)
+    this.paneB = new EditorPane(bEl, this.models)
     aEl.addEventListener('focusin', () => this.setFocused('A'))
     bEl.addEventListener('focusin', () => this.setFocused('B'))
   }
@@ -19,6 +22,9 @@ export class SplitView {
   focusedPane(): 'A' | 'B' { return this.focused }
   onFocusChange(cb: (which: 'A' | 'B') => void): void { this.focusChangeCb = cb }
   visiblePanes(): EditorPane[] { return this.split ? [this.paneA, this.paneB] : [this.paneA] }
+  refreshBuffer(buffer: BufferState): void { this.models.refresh(buffer) }
+  forgetBuffer(id: string): void { this.models.forget(id) }
+  setBufferLanguage(id: string, language: string): void { this.models.setLanguage(id, language) }
 
   setSplit(on: boolean): void {
     if (on && !this.split) {

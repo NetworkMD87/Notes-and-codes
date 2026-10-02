@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor'
 import type { BufferState, Highlight, HighlightColour } from '../shared/types'
 import type { SpellDocument, SpellIssue } from '../shared/spell'
+import { EditorModels } from './editorModels'
 import { formatText, UnsupportedLanguageError, type FormatRange } from './formatter'
 import { toast } from './notify'
 import type { ContextMenuEntry } from './contextMenu'
@@ -65,7 +66,9 @@ export class EditorPane {
   private pasteListener: monaco.IDisposable | null = null
   private copyCutHandler: (() => void) | null = null
   private bufferId: string | null = null
-  private models = new Map<string, monaco.editor.ITextModel>()
+  private models: EditorModels
+  private ownsModels: boolean
+  private modelListener: monaco.IDisposable
   private viewStates = new Map<string, monaco.editor.ICodeEditorViewState>()
   private highlightDecorations!: monaco.editor.IEditorDecorationsCollection
   private spellDecorations!: monaco.editor.IEditorDecorationsCollection
@@ -73,8 +76,10 @@ export class EditorPane {
   private highlighterOn = false
   private paintCb: ((range: { start: number; end: number }) => void) | null = null
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, models?: EditorModels) {
     this.container = container
+    this.models = models ?? new EditorModels()
+    this.ownsModels = !models
     // Monaco options are plain config and are invisible to the CSS prefers-reduced-motion
     // kill-switch in index.html — so the motion options are gated here by hand, or the app's
     // documented global reduced-motion guarantee would only be half true. Read ONCE at
@@ -100,6 +105,15 @@ export class EditorPane {
     })
     this.highlightDecorations = this.editor.createDecorationsCollection()
     this.spellDecorations = this.editor.createDecorationsCollection()
+    this.modelListener = this.models.onReplace((id, model) => {
+      this.viewStates.delete(id)
+      if (this.bufferId !== id) return
+      this.clearSpellIssues()
+      this.highlightDecorations.clear()
+      this.hlColours = []
+      this.editor.setModel(model)
+      if (!model) this.bufferId = null
+    })
     this.editor.onMouseUp(() => this.handleHighlighterMouseUp())
     this.editor.onDidChangeModelContent(() => {
       this.changeCb?.(this.editor.getValue())
@@ -120,37 +134,14 @@ export class EditorPane {
       this.editor.getModel()?.dispose() // drop the throwaway model created in the constructor
     }
     this.bufferId = b.id
-    this.editor.setModel(this.modelFor(b))
+    this.editor.setModel(this.models.get(b))
     const vs = this.viewStates.get(b.id)
     if (vs) this.editor.restoreViewState(vs)
   }
 
-  /** Replace a buffer's model out-of-band (external reload, history restore, post-save language change). */
-  refreshBuffer(b: BufferState): void {
-    const old = this.models.get(b.id)
-    const model = monaco.editor.createModel(b.content, b.language)
-    this.models.set(b.id, model)
-    this.viewStates.delete(b.id)
-    if (this.bufferId === b.id) {
-      this.clearSpellIssues()
-      this.editor.setModel(model)
-    }
-    old?.dispose()
-  }
-
   /** Change syntax services without replacing the model, so content, undo, and view state survive. */
   setBufferLanguage(id: string, language: string): void {
-    const model = this.models.get(id)
-    if (model && !model.isDisposed()) monaco.editor.setModelLanguage(model, language)
-  }
-
-  /** Drop a closed buffer's cached model + view state. */
-  forgetBuffer(id: string): void {
-    if (id === this.bufferId) return // still on screen — keep the live model
-    this.clearSpellIssues()
-    this.models.get(id)?.dispose()
-    this.models.delete(id)
-    this.viewStates.delete(id)
+    this.models.setLanguage(id, language)
   }
 
   /** Render the buffer's highlights as inline decorations (replaces any current set). */
@@ -251,15 +242,6 @@ export class EditorPane {
     if (end <= start) return
     this.paintCb?.({ start, end })
     this.editor.setSelection(monaco.Range.fromPositions(sel.getStartPosition())) // collapse the selection
-  }
-
-  private modelFor(b: BufferState): monaco.editor.ITextModel {
-    let model = this.models.get(b.id)
-    if (!model || model.isDisposed()) {
-      model = monaco.editor.createModel(b.content, b.language)
-      this.models.set(b.id, model)
-    }
-    return model
   }
 
   currentBufferId(): string | null { return this.bufferId }
@@ -492,8 +474,8 @@ export class EditorPane {
     this.cursorListener?.dispose()
     this.pasteListener?.dispose()
     this.clearSpellIssues()
-    for (const m of this.models.values()) m.dispose()
-    this.models.clear()
+    this.modelListener.dispose()
     this.editor.dispose()
+    if (this.ownsModels) this.models.dispose()
   }
 }
