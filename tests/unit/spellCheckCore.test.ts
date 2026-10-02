@@ -46,12 +46,13 @@ const issue = (text = 'speling', start = 0): SpellIssue => ({
 class FakePane implements SpellPane {
   issues: SpellIssue[] = []
   clearCount = 0
+  setCount = 0
   replaceCount = 0
 
   constructor(public snapshot: SpellDocument | null) {}
 
   spellSnapshot(): SpellDocument | null { return this.snapshot }
-  setSpellIssues(issues: SpellIssue[]): void { this.issues = [...issues] }
+  setSpellIssues(issues: SpellIssue[]): void { this.setCount++; this.issues = [...issues] }
   clearSpellIssues(): void { this.clearCount++; this.issues = [] }
 
   replaceSpellIssue(current: SpellIssue, expectedVersion: number, replacement: string): boolean {
@@ -137,6 +138,7 @@ function actionFor(doc: SpellDocument, current = issue()): SpellActionArgs {
 function harness(panes: FakePane[]) {
   const worker = new FakeWorker()
   let visible = [...panes]
+  let focused: FakePane | null = null
   const settings: Pick<Settings, 'spellCheckEnabled' | 'spellCheckLanguage'> = {
     spellCheckEnabled: true,
     spellCheckLanguage: 'system',
@@ -147,6 +149,7 @@ function harness(panes: FakePane[]) {
   const deps: SpellCheckCoreDeps = {
     panes: () => visible,
     allPanes: () => panes,
+    focusedPane: () => focused ?? undefined,
     worker,
     getSettings: () => settings,
     systemLocale: 'en-US',
@@ -161,6 +164,7 @@ function harness(panes: FakePane[]) {
     settings,
     notifications,
     setVisible: (next: FakePane[]) => { visible = next },
+    setFocusedPane: (pane: FakePane | null) => { focused = pane },
     setPersonalWords: (next: string[]) => { personalWords = next },
     setAddResult: (next: SpellDictionaryResult) => { addResult = next },
   }
@@ -184,6 +188,63 @@ describe('SpellCheckCore', () => {
     expect(h.worker.checks[0].batch.documents).toEqual([plain.snapshot])
     expect(typescript.issues).toEqual([])
     expect(hidden.issues).toEqual([])
+  })
+
+  it('keeps a shared model actionable when its hidden pane is visited after the visible pane', async () => {
+    const shared = document('inmemory://shared')
+    const visible = new FakePane(shared)
+    const hidden = new FakePane(shared)
+    const h = harness([visible, hidden])
+    h.setVisible([visible])
+
+    await h.core.initialize([])
+    const check = h.worker.checks[0]
+    expect(check.batch.documents).toEqual([shared])
+    check.result.resolve(checked(check.batch, { [shared.modelUri]: [issue()] }))
+    await flush()
+
+    expect(await h.core.suggestions(actionFor(shared))).toEqual(['spelling'])
+    expect(h.core.currentIssue({
+      modelUri: shared.modelUri,
+      modelVersion: shared.modelVersion,
+      startOffset: 1,
+      endOffset: 1,
+    })).toEqual(issue())
+    expect(hidden.issues).toEqual([])
+  })
+
+  it('routes a shared model correction through the focused pane', async () => {
+    const shared = document('inmemory://focused-shared')
+    const paneA = new FakePane(shared)
+    const paneB = new FakePane(shared)
+    const h = harness([paneA, paneB])
+    h.setFocusedPane(paneB)
+    await h.core.initialize([])
+    const check = h.worker.checks[0]
+    check.result.resolve(checked(check.batch, { [shared.modelUri]: [issue()] }))
+    await flush()
+
+    expect(h.core.replace({ ...actionFor(shared), replacement: 'spelling' })).toBe(true)
+    expect(paneA.replaceCount).toBe(0)
+    expect(paneB.replaceCount).toBe(1)
+  })
+
+  it('does not reapply shared model issues to a hidden pane after removing a word', async () => {
+    const shared = document('inmemory://hidden-shared')
+    const visible = new FakePane(shared)
+    const hidden = new FakePane(shared)
+    const h = harness([visible, hidden])
+    h.setVisible([visible])
+    await h.core.initialize([])
+    const check = h.worker.checks[0]
+    check.result.resolve(checked(check.batch, { [shared.modelUri]: [issue()] }))
+    await flush()
+    const hiddenSetCount = hidden.setCount
+
+    await h.core.ignore(actionFor(shared))
+
+    expect(hidden.issues).toEqual([])
+    expect(hidden.setCount).toBe(hiddenSetCount)
   })
 
   it.each([

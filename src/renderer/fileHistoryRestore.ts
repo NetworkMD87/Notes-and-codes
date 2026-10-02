@@ -2,14 +2,9 @@ import type { BufferState, FileVersion } from '../shared/types'
 import type { BufferManager } from './bufferManager'
 import type { FileHistoryContext } from './fileHistoryPanel'
 
-interface DisplayedPane {
-  getContent: () => string
-  refreshBuffer: (buffer: BufferState) => void
-}
-
 export interface FileHistoryRestoreDeps {
   manager: Pick<BufferManager, 'get' | 'update'>
-  paneDisplaying: (id: string) => DisplayedPane | null
+  refreshBuffer: (buffer: BufferState) => void
   focusedBufferId: () => string | null
   snapshotHistory: (path: string, content: string, eol: BufferState['eol'], encoding: BufferState['encoding']) => void
   syncPreview: () => void
@@ -24,10 +19,9 @@ export function restoreFileHistoryVersion(deps: FileHistoryRestoreDeps, version:
   const buffer = deps.manager.get(origin.id)
   if (!buffer || buffer.filePath !== origin.path) return
 
-  const displayed = deps.paneDisplaying(origin.id)
-  deps.snapshotHistory(origin.path, displayed?.getContent() ?? buffer.content, buffer.eol, buffer.encoding)
+  deps.snapshotHistory(origin.path, buffer.content, buffer.eol, buffer.encoding)
   deps.manager.update(origin.id, version.content)
-  displayed?.refreshBuffer(buffer)
+  deps.refreshBuffer(buffer)
   if (deps.focusedBufferId() === origin.id) {
     deps.syncPreview()
     deps.refreshSpell()

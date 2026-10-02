@@ -6,6 +6,12 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 
 ## [Unreleased]
 
+### Fixed
+- Editing the same file in both split panes now keeps their content and undo history in sync.
+  Saving from either pane writes the latest edits, and reloads and history restores update both views.
+- Spell corrections remain available when a shared split pane is hidden and stay in the pane where
+  the correction was requested.
+
 ## [1.21.0] — 2026-09-04
 
 _Write and preview Markdown before saving, with fast formatting tools and smarter lists._

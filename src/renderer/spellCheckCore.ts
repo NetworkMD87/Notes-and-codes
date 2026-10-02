@@ -30,6 +30,7 @@ export interface SpellWorkerPort {
 export interface SpellCheckCoreDeps {
   panes: () => SpellPane[]
   allPanes: () => SpellPane[]
+  focusedPane?: () => SpellPane | undefined
   worker: SpellWorkerPort
   getSettings: () => Pick<Settings, 'spellCheckEnabled' | 'spellCheckLanguage'>
   systemLocale: string
@@ -255,6 +256,7 @@ export class SpellCheckCore {
     const visible = new Set(this.deps.panes())
     const documents: SpellDocument[] = []
     const currentUris = new Set<string>()
+    const submittedUris = new Set<string>()
 
     for (const pane of this.deps.allPanes()) {
       const current = pane.spellSnapshot()
@@ -264,16 +266,17 @@ export class SpellCheckCore {
       }
       if (!visible.has(pane) || !isSpellEligible(current.languageId)) {
         pane.clearSpellIssues()
-        this.registry.delete(current.modelUri)
         continue
       }
       if (!/\S/.test(current.text)) {
         pane.clearSpellIssues()
-        this.registry.delete(current.modelUri)
         continue
       }
-      documents.push(current)
       currentUris.add(current.modelUri)
+      if (!submittedUris.has(current.modelUri)) {
+        documents.push(current)
+        submittedUris.add(current.modelUri)
+      }
     }
 
     for (const uri of this.registry.keys()) {
@@ -291,13 +294,11 @@ export class SpellCheckCore {
       const current = pane.spellSnapshot()
       if (!current || !visible.has(pane) || !isSpellEligible(current.languageId)) {
         pane.clearSpellIssues()
-        if (current) this.registry.delete(current.modelUri)
         continue
       }
       const document = returned.get(current.modelUri)
       if (!document || document.modelVersion !== current.modelVersion) {
         pane.clearSpellIssues()
-        this.registry.delete(current.modelUri)
         continue
       }
       pane.setSpellIssues(document.issues)
@@ -323,15 +324,18 @@ export class SpellCheckCore {
     ))
     if (!issue) return null
 
-    for (const pane of this.deps.allPanes()) {
+    const candidates: SpellPane[] = []
+    for (const pane of this.deps.panes()) {
       const snapshot = pane.spellSnapshot()
       if (
         snapshot?.modelUri === target.modelUri &&
         snapshot.modelVersion === target.modelVersion &&
         snapshot.text.slice(target.start, target.end) === target.word
-      ) return { pane, issue }
+      ) candidates.push(pane)
     }
-    return null
+    const focused = this.deps.focusedPane?.()
+    const pane = focused && candidates.includes(focused) ? focused : candidates[0]
+    return pane ? { pane, issue } : null
   }
 
   private removeWord(word: string): void {
@@ -342,7 +346,9 @@ export class SpellCheckCore {
       else this.registry.delete(uri)
     }
 
+    const visible = new Set(this.deps.panes())
     for (const pane of this.deps.allPanes()) {
+      if (!visible.has(pane)) { pane.clearSpellIssues(); continue }
       const snapshot = pane.spellSnapshot()
       if (!snapshot) { pane.clearSpellIssues(); continue }
       const entry = this.registry.get(snapshot.modelUri)
