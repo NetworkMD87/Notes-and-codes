@@ -6,6 +6,10 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 
 ## [Unreleased]
 
+### Changed
+- Typing updates only the edited tab instead of rebuilding the entire tab strip. Tab-state updates
+  retain existing controls, preserving focus and scrolling when many files are open.
+
 ### Fixed
 - Editing the same file in both split panes now keeps their content and undo history in sync.
   Saving from either pane writes the latest edits, and reloads and history restores update both views.
