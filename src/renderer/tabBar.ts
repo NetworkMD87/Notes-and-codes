@@ -12,6 +12,7 @@ export interface TabHandlers {
 
 export class TabBar {
   private draggedId: string | null = null
+  private tabs = new Map<string, { tab: HTMLElement; select: HTMLButtonElement; close: HTMLButtonElement; title: HTMLElement; badge: HTMLElement; language: string }>()
 
   constructor(private container: HTMLElement, private handlers: TabHandlers) {
     this.setSizing('bounded')
@@ -29,6 +30,19 @@ export class TabBar {
   }
 
   render(buffers: BufferState[], activeId: string | null): void {
+    const ids = [...this.tabs.keys()]
+    if (buffers.length > 0 && ids.length === buffers.length && buffers.every((b, i) => b.id === ids[i])) {
+      for (const b of buffers) {
+        this.updateTab(b)
+        const { tab, select, close } = this.tabs.get(b.id)!
+        const active = b.id === activeId
+        tab.classList.toggle('active', active)
+        select.setAttribute('aria-selected', String(active))
+        select.tabIndex = close.tabIndex = active ? 0 : -1
+      }
+      return
+    }
+    this.tabs.clear()
     this.container.replaceChildren()
     for (const b of buffers) {
       const tab = document.createElement('div')
@@ -66,12 +80,33 @@ export class TabBar {
         else void this.handlers.onClose(b.id)
       }
       tab.append(select, close)
+      this.tabs.set(b.id, { tab, select, close, title, badge, language: b.language })
       this.container.appendChild(tab)
     }
     const add = document.createElement('button')
     add.textContent = '+'; add.className = 'tab-add'
     add.onclick = () => this.handlers.onNew()
     this.container.appendChild(add)
+  }
+
+  /** Content edits touch only their tab; repeated edits of a dirty tab do no DOM work. */
+  updateTab(buffer: BufferState): void {
+    const entry = this.tabs.get(buffer.id)
+    if (!entry) return
+    const title = (buffer.dirty ? '● ' : '') + buffer.title
+    if (entry.title.textContent !== title) entry.title.textContent = title
+    if (entry.select.title !== buffer.title) {
+      entry.select.title = buffer.title
+      entry.select.setAttribute('aria-label', buffer.title)
+      entry.close.setAttribute('aria-label', `Close ${buffer.title}`)
+    }
+    if (entry.language !== buffer.language) {
+      entry.language = buffer.language
+      const badge = langBadge(buffer.language)
+      entry.badge.textContent = badge.label
+      entry.badge.style.color = badge.colour ? HL_HEX[badge.colour] : 'var(--muted)'
+      entry.badge.style.background = badge.colour ? HL_HEX[badge.colour] + '22' : ''
+    }
   }
 
   focusTab(id: string): boolean {
@@ -95,7 +130,7 @@ export class TabBar {
     if (!id) return
     this.handlers.onSelect(id)
     queueMicrotask(() => {
-      if (document.activeElement === document.body) this.focusTab(id)
+      if (document.activeElement === document.body || document.activeElement === current) this.focusTab(id)
     })
   }
 

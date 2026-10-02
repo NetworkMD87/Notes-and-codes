@@ -7,11 +7,11 @@ Open work first; shipped history and settled decisions last. Based on the **2026
 | At a glance | Status / order |
 | --- | --- |
 | [Reliability](#1-reliability--fix-first) | Audit findings fixed locally; R1, R3, and R4 await release. |
-| [UI and performance](#2-ui-and-performance--planned) | Five improvements; agree material UX choices before implementation. |
+| [UI and performance](#2-ui-and-performance--planned) | P1 fixed locally; four improvements remain. Agree material UX choices before implementation. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | CI smoke trial → MSIX → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
-| Awaiting release | R1 shared split buffers, R3 rename/save paths, and R4 stale history actions are fixed, awaiting release. |
+| Awaiting release | R1 shared split buffers, R3 rename/save paths, R4 stale history actions, and P1 tab-rendering performance are fixed, awaiting release. |
 
 ---
 
@@ -47,7 +47,8 @@ No open finding remains in this audit group. R1, R3, and R4 still require releas
 
 ### Performance
 
-- ⬜ **P1 — Avoid rebuilding every tab on each keystroke.** Update the changed tab's state in place; reserve structural rendering for tab-list changes. Measure typing with many tabs and preserve focus, scrolling, and drag/reorder behavior. [Edit wiring](src/renderer/main.ts), [tab rendering](src/renderer/tabBar.ts).
+- 🛠️ **P1 — Fixed locally, awaiting release:** Typing updates only the edited tab in place; unchanged tab lists retain their controls during state refreshes. Structural rendering is reserved for tab-list changes. [Edit wiring](src/renderer/main.ts), [tab rendering](src/renderer/tabBar.ts).
+  - **Local evidence (2026-10-02):** With 100 open tabs, typing 30 characters previously removed and added 3,000 tab elements; the fixed Electron regression retains all 100 with zero tab additions/removals and unchanged scroll/editor focus. Single-run typing timings (847 ms baseline, 892 ms fixed) include automation overhead and do not establish a wall-clock speedup. Build/typecheck, 44 focused unit tests, and six Electron checks passed, covering tab typing, keyboard navigation/closing, sizing, and drag-order persistence. No release or installed-build acceptance is claimed.
 - ⬜ **P2 — Bound large Markdown preview work.** Profile parsing, sanitization, and full DOM replacement in Electron before choosing an optimization. Consider a size-based preview policy only after UX approval; preserve sanitization, task rendering, focus, and scroll behavior. [Source](src/renderer/markdownPreview.ts).
   - **Evidence limit:** a synthetic 500 KiB document took about 2.4 seconds through rendering and DOM replacement in Node/jsdom. This is not an Electron responsiveness measurement. The existing debounce is already shipped; this item addresses work remaining after it fires. Broader large-file mode remains a separate someday idea.
 

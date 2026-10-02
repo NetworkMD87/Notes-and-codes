@@ -277,7 +277,7 @@ for (const which of ['A', 'B'] as const) {
       highlights.sync(id, paneFor(which).readHighlights())
       scheduleHighlightSave(id)
     }
-    tabBar.render(manager.list(), manager.activeId)
+    tabBar.updateTab(manager.get(id)!)
     refreshStatus()
     scheduleSessionSave()
     autosave.noteEdit()

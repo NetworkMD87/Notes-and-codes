@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TabBar } from '../../src/renderer/tabBar'
 import type { BufferState } from '../../src/shared/types'
 
@@ -9,6 +9,54 @@ const buffer = (id: string): BufferState => ({
 })
 
 describe('TabBar', () => {
+  afterEach(() => document.body.replaceChildren())
+  it('keeps the new-tab control when rendering an empty list', () => {
+    const host = document.createElement('div'); const onNew = vi.fn()
+    const bar = new TabBar(host, { onSelect: vi.fn(), onClose: vi.fn(), onNew, onReorder: vi.fn() })
+    bar.render([], null)
+    host.querySelector<HTMLButtonElement>('.tab-add')!.click()
+    expect(onNew).toHaveBeenCalledOnce()
+  })
+
+  it('moves keyboard focus when activation reuses the current controls', async () => {
+    const host = document.createElement('div'); document.body.append(host)
+    const items = ['a', 'b'].map(buffer)
+    const bar = new TabBar(host, { onSelect: id => bar.render(items, id), onClose: vi.fn(), onNew: vi.fn(), onReorder: vi.fn() })
+    bar.render(items, 'a'); bar.focusTab('a')
+    document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+    await Promise.resolve()
+    expect(document.activeElement?.id).toBe('tab-b')
+  })
+
+  it('updates tab state without replacing controls or disturbing focus and scroll', () => {
+    const host = document.createElement('div'); document.body.append(host)
+    const bar = new TabBar(host, { onSelect: vi.fn(), onClose: vi.fn(), onNew: vi.fn(), onReorder: vi.fn() })
+    const items = ['a', 'b'].map(buffer)
+    bar.render(items, 'a')
+    const controls = [...host.querySelectorAll('button')]
+    controls[0].focus(); host.scrollLeft = 40
+    items[0].dirty = true
+    bar.updateTab(items[0])
+    expect(host.querySelector('.tab-title')?.textContent).toBe('● a.txt')
+    expect([...host.querySelectorAll('button')]).toEqual(controls)
+    expect(document.activeElement).toBe(controls[0])
+    expect(host.scrollLeft).toBe(40)
+    const observer = new MutationObserver(() => {})
+    observer.observe(host, { subtree: true, childList: true, attributes: true, characterData: true })
+    bar.updateTab(items[0])
+    expect(observer.takeRecords()).toHaveLength(0)
+    observer.disconnect()
+    items[0].dirty = false; items[0].title = 'renamed.ts'; items[0].language = 'typescript'
+    bar.render(items, 'b')
+    expect([...host.querySelectorAll('button')]).toEqual(controls)
+    expect(controls[0].title).toBe('renamed.ts')
+    expect(controls[1].getAttribute('aria-label')).toBe('Close renamed.ts')
+    expect(controls[2].getAttribute('aria-selected')).toBe('true')
+    expect(host.querySelector('.tab-title')?.textContent).toBe('renamed.ts')
+    expect(host.querySelector('.badge')?.textContent).toBe('ts')
+    host.remove()
+  })
+
   it('renders a tablist with sibling tab and close buttons and one roving target', () => {
     const host = document.createElement('div'); const onSelect = vi.fn()
     const bar = new TabBar(host, { onSelect, onClose: vi.fn(), onNew: vi.fn(), onReorder: vi.fn() })
