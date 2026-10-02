@@ -1,34 +1,34 @@
 # Notes & Codes — Roadmap
 
-Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; R1 locally validated on **2026-10-02**.
+Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
 **Legend:** 🐛 open defect · 🛠️ fixed, awaiting release · ⬜ planned · ❓ decision required · 🧊 parked / deferred · 💡 someday · ✅ shipped · **S / M / L** effort where already estimated.
 
 | At a glance | Status / order |
 | --- | --- |
-| [Reliability](#1-reliability--fix-first) | Audit findings fixed locally; R1, R3, and R4 await release. |
-| [UI and performance](#2-ui-and-performance--planned) | P1 fixed locally; four improvements remain. Agree material UX choices before implementation. |
+| [Reliability](#1-reliability--fix-first) | R1–R4 released in v1.21.1. |
+| [UI and performance](#2-ui-and-performance--planned) | P1 released in v1.21.1; four improvements remain. Agree material UX choices before implementation. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | CI smoke trial → MSIX → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
-| Awaiting release | R1 shared split buffers, R3 rename/save paths, R4 stale history actions, and P1 tab-rendering performance are fixed, awaiting release. |
+| Latest release | v1.21.1: reliable saves, rename/history fixes, and less tab-rendering work. |
 
 ---
 
 ## 1. Reliability — fix first
 
-No open finding remains in this audit group. R1, R3, and R4 still require release; local validation does not mean they have shipped.
+No open finding remains in this audit group. R1–R4 are included in v1.21.1.
 
-- 🛠️ **R1 — Fixed, awaiting release:** Split panes now share one document model per buffer, and Save snapshots the authoritative buffer content. Reload and history restore refresh visible and cached peers; closing detaches both panes before model disposal. Shared undo, language changes, highlights, and spelling remain usable across panes.
+- ✅ **R1 — Released in v1.21.1:** Split panes now share one document model per buffer, and Save snapshots the authoritative buffer content. Reload and history restore refresh visible and cached peers; closing detaches both panes before model disposal. Shared undo, language changes, highlights, and spelling remain usable across panes.
   - **Accept when:** edits from either pane are reflected in both; Save from either pane writes the latest content; reloading cannot leave a stale peer model. [Source](src/renderer/editorPane.ts), [save/reload wiring](src/renderer/main.ts).
-  - **Local evidence (2026-10-02):** the original pane-B save regression wrote stale disk content on all three baseline attempts. The fixed build passed 1,039 unit tests and eight focused Electron regressions covering A/B saves, cross-pane undo/redo, visible/cached reload, close, history/highlights, Save As, and shared-model spelling. Model-reuse and stale-format guards were also falsified and restored; independent architecture review findings were resolved. No release or installed-build acceptance is claimed.
+  - **Local evidence (2026-10-02):** the original pane-B save regression wrote stale disk content on all three baseline attempts. The fixed build passed 1,039 unit tests and eight focused Electron regressions covering A/B saves, cross-pane undo/redo, visible/cached reload, close, history/highlights, Save As, and shared-model spelling. Model-reuse and stale-format guards were also falsified and restored; independent architecture review findings were resolved. These checks are local development evidence; release validation is recorded separately.
 
-- ✅ **R2 — Saves during edits preserve newer changes.** Same-buffer saves are serialized; an older completion leaves newer content, EOL, and encoding changes dirty, autosave-eligible, and eligible for the close warning. Local evidence: 27 focused and 1,001 full unit tests passed, the build passed, and the delayed-write Electron smoke confirms newer UTF-16 LE/CRLF content is written last. [Source](src/renderer/main.ts), [buffer state](src/renderer/bufferManager.ts), [save coordinator](src/renderer/bufferSaveCoordinator.ts).
+- ✅ **R2 — Released in v1.21.1: saves during edits preserve newer changes.** Same-buffer saves are serialized; an older completion leaves newer content, EOL, and encoding changes dirty, autosave-eligible, and eligible for the close warning. Local evidence: 27 focused and 1,001 full unit tests passed, the build passed, and the delayed-write Electron smoke confirms newer UTF-16 LE/CRLF content is written last. [Source](src/renderer/main.ts), [buffer state](src/renderer/bufferManager.ts), [save coordinator](src/renderer/bufferSaveCoordinator.ts).
 
-- 🛠️ **R3 — Fixed, awaiting release:** Renaming an open file can cause its old filename to reappear on Save; folder renames strand descendant paths. Update affected open-buffer identities and watchers after a successful rename.
+- ✅ **R3 — Released in v1.21.1:** Renaming an open file or its parent folder updates affected open-buffer identities and watchers, so later saves use the new location.
   - **Accept when:** file and parent-folder renames preserve edits, update tab paths, and save only to the new location. Stored history/highlight migration remains separately tracked below. [Source](src/renderer/folderMode.ts), [file writes](src/main/fileService.ts).
 
-- 🛠️ **R4 — Fixed, awaiting release:** Restore currently resolves its destination after the history read finishes. Bind it to the originating buffer and invalidate stale actions after dismissal or context changes.
+- ✅ **R4 — Released in v1.21.1:** Restore and Diff remain bound to the originating buffer; dismissal and context changes invalidate stale actions.
   - **Accept when:** Restore A → dismiss → switch to B during a delayed read never changes B or applies a cancelled restore. Check the delayed Diff action too. [Source](src/renderer/fileHistoryPanel.ts), [restore wiring](src/renderer/main.ts).
 
 **Audit baseline:** typecheck and 994 unit tests across 92 files passed. R2 was reproduced with the pre-fix save function and delayed mocked I/O; the other findings were traced through source. Current R2 implementation evidence is recorded above.
@@ -47,8 +47,8 @@ No open finding remains in this audit group. R1, R3, and R4 still require releas
 
 ### Performance
 
-- 🛠️ **P1 — Fixed locally, awaiting release:** Typing updates only the edited tab in place; unchanged tab lists retain their controls during state refreshes. Structural rendering is reserved for tab-list changes. [Edit wiring](src/renderer/main.ts), [tab rendering](src/renderer/tabBar.ts).
-  - **Local evidence (2026-10-02):** With 100 open tabs, typing 30 characters previously removed and added 3,000 tab elements; the fixed Electron regression retains all 100 with zero tab additions/removals and unchanged scroll/editor focus. Single-run typing timings (847 ms baseline, 892 ms fixed) include automation overhead and do not establish a wall-clock speedup. Build/typecheck, 44 focused unit tests, and six Electron checks passed, covering tab typing, keyboard navigation/closing, sizing, and drag-order persistence. No release or installed-build acceptance is claimed.
+- ✅ **P1 — Released in v1.21.1:** Typing updates only the edited tab in place; unchanged tab lists retain their controls during state refreshes. Structural rendering is reserved for tab-list changes. [Edit wiring](src/renderer/main.ts), [tab rendering](src/renderer/tabBar.ts).
+  - **Local evidence (2026-10-02):** With 100 open tabs, typing 30 characters previously removed and added 3,000 tab elements; the fixed Electron regression retains all 100 with zero tab additions/removals and unchanged scroll/editor focus. Single-run typing timings (847 ms baseline, 892 ms fixed) include automation overhead and do not establish a wall-clock speedup. Build/typecheck, 44 focused unit tests, and six Electron checks passed, covering tab typing, keyboard navigation/closing, sizing, and drag-order persistence. These checks are local development evidence; release validation is recorded separately.
 - ⬜ **P2 — Bound large Markdown preview work.** Profile parsing, sanitization, and full DOM replacement in Electron before choosing an optimization. Consider a size-based preview policy only after UX approval; preserve sanitization, task rendering, focus, and scroll behavior. [Source](src/renderer/markdownPreview.ts).
   - **Evidence limit:** a synthetic 500 KiB document took about 2.4 seconds through rendering and DOM replacement in Node/jsdom. This is not an Electron responsiveness measurement. The existing debounce is already shipped; this item addresses work remaining after it fires. Broader large-file mode remains a separate someday idea.
 
@@ -143,6 +143,7 @@ Existing sequence retained below the reliability work. The CI experiment is not 
 
 | Release | Outcome |
 | --- | --- |
+| **v1.21.1** · 2026-10-02 | Reliable split-pane and overlapping saves; rename/save-path and stale-history fixes; in-place tab updates while typing. |
 | **v1.21.0** · 2026-09-04 | Markdown authoring tools and smart lists; preview before Save As; safe task checkboxes; clearer responsive Editor settings. |
 | **v1.20.0** · 2026-09-03 | Markdown Preview Off, Side by side, and Focus layouts; accessible resizing and focus; optional restoration of mode and divider position across restarts. |
 | **v1.19.5** · 2026-08-18 | Optional persistent minimap; wrapped text stays clear of it at startup and after editor-font changes. |
