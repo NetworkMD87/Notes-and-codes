@@ -4,13 +4,17 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
-## [Unreleased]
+## [1.21.2] — 2026-10-08
 
-_Security updates for Markdown previews and the desktop runtime._
+_Security updates for Markdown previews, the desktop runtime and Windows packaging tools._
 
 ### Fixed
 - Crafted Markdown link text no longer triggers the known excessive-processing issue in previews and exports.
 - Updated the Electron runtime to 43.7.7 to address known security advisories.
+- Updated compatible Windows packaging dependencies for archive matching, YAML/XML parsing,
+  URI validation and HTTP requests; remaining upstream warnings are tracked in the roadmap.
+- Updated Markdown sanitization and supporting test, image-processing and build dependencies
+  to address additional security advisories.
 - Open, Save As and folder dialogs remember their respective folders across restarts after the runtime update.
   The first use starts in Documents; existing Windows picker history is not imported.
 

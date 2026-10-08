@@ -8,13 +8,14 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 
 | At a glance | Status / order |
 | --- | --- |
-| [Security dependencies](#security-dependencies--2026-10-08-follow-up) | S1 Markdown and S2 Electron fixes validated, awaiting release; S3–S4 dependency updates queued. |
+| [Security dependencies](#security-dependencies--2026-10-08-follow-up) | S1–S2 and S4 fixes applied, awaiting release; S3 retains two dependency chains pending upstream/age eligibility. |
 | [Reliability](#1-reliability--completed) | R1–R4 released in v1.21.1. |
 | [UI and performance](#2-ui-and-performance--planned) | P1 released in v1.21.1; four improvements remain. Agree material UX choices before implementation. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | CI smoke trial → MSIX → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
 | Latest release | v1.21.1: reliable saves, rename/history fixes, and less tab-rendering work. |
+| Release candidate | v1.21.2: S1/S2/S4 and compatible S3 patches; PR/CI and final manual acceptance pending. |
 
 ---
 
@@ -25,13 +26,12 @@ Security dependency follow-up added on **2026-10-08** after checking the current
   - **Release gate:** manual native-picker, tray/hotkey and installer acceptance remain outstanding. Local build/typecheck, 1,058 unit tests, 23 focused Electron checks, Windows QA packaging and three packaged-app checks passed. Picker tests mock the OS dialog; no installed-app replacement or release is implied. [Detailed evidence and advisory scope](docs/roadmap-evidence-2026-10-08.md).
   - **Next runtime upgrade:** move to a supported major before [Electron 43 support ends on 2027-01-05](https://releases.electronjs.org/schedule); account for Electron 44's clipboard API migration.
 
-- ⬜ **S3 — Refresh and assess packaging dependencies** — earlier archive/updater fixes are present (`electron-builder` 26.15.3, `tar` 7.5.22, `builder-util-runtime` 9.7.0), but the live audit flags the current packaging tree, including `@electron/get` → `global-agent` → `roarr` → `sprintf-js`, plus affected archive/glob, YAML and XML helpers.
-  - **Accept when:** map current advisories to the actual Windows build paths; update the narrowest compatible dependency set and verify the lockfile, build and approved packaging checks. Record any remaining non-applicable warnings with evidence. Do not blindly apply npm's suggested builder downgrade or use `npm audit fix --force`.
+- 🛠️ **S3 — Packaging dependencies partially remediated locally.** Updated all affected `brace-expansion` copies, `js-yaml`, `@xmldom/xmldom`, `fast-uri` and `undici` within existing compatible ranges. Retained builder 26.15.3, tar 7.5.22 and builder-util-runtime 9.7.0.
+  - **Still open:** `sprintf-js` has no published patch; the compatible HTTP-cache fix is excluded by the seven-day npm release-age safeguard until October 11. The attempted global-agent 4.1.3 replacement failed a trusted-certificate proxy test; owner chose to retain 3.0.0 pending an upstream fix. Inspected build paths do not expose the original advisory preconditions (attacker-controlled log formats or a shared HTTP cache). [Applicability, validation and remaining work](docs/packaging-dependency-evidence-2026-10-08.md).
 
-- ⬜ **S4 — Triage and update remaining flagged dependencies** — track `dompurify`, `vitest` / `@vitest/mocker`, `sharp`, `source-map-js`, `undici`, `http-cache-semantics`, `fast-uri`, `browserslist`, `baseline-browser-mapping`, `brace-expansion`, `js-yaml`, and `@xmldom/xmldom`; coordinate overlapping packages with S3.
-  - **Accept when:** separate shipped runtime exposure from build/test-only and configuration-dependent warnings, choose supported patched versions, and run focused validation for each affected surface. DOMPurify's new warnings concern particular `IN_PLACE` behavior; dependency presence alone does not demonstrate that the app reaches it.
+- 🛠️ **S4 — Remaining compatible dependency fixes applied, awaiting release.** Updated DOMPurify 3.4.16, Vitest/mocker 4.1.11, sharp 0.35.5, source-map-js 1.2.2, browserslist 4.29.3 and baseline-browser-mapping 2.11.26. Production dependency audit reports zero warnings; S3's HTTP-cache and proxy-logging chains remain open. [Validation and rejected proxy candidate](docs/packaging-dependency-evidence-2026-10-08.md#s4-and-proxy-replacement-qualification).
 
-**Evidence boundary:** the pre-fix `npm audit --json --ignore-scripts` reported 23 affected dependency entries (10 high, 12 moderate, 1 low), including indirect warnings. After S1/S2, 21 entries remain (9 high, 11 moderate, 1 low), tracked in S3/S4; Electron and Markdown are no longer flagged. These are dependency warnings, not independently demonstrated app exploits. The screenshot supplied titles without advisory IDs, so the exact historical alert records were not closed. The esbuild cross-origin read, remote renderer override, and document-driven PDF resource-fetch findings remain patched in the inspected source.
+**Evidence boundary:** the pre-fix `npm audit --json --ignore-scripts` reported 23 affected dependency entries (10 high, 12 moderate, 1 low), including indirect warnings. After S1/S2 there were 21, then 16 after S3; after S4, **9 remain (1 high, 8 moderate, 0 low)**, tracked above. Electron and Markdown are no longer flagged. These are dependency warnings, not independently demonstrated app exploits. The screenshot supplied titles without advisory IDs, so the exact historical alert records were not closed. The esbuild cross-origin read, remote renderer override, and document-driven PDF resource-fetch findings remain patched in the inspected source.
 
 ---
 

@@ -47,6 +47,9 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **v1.21.2 (release candidate):** updates Electron and Markdown security dependencies,
+  keeps Markdown sanitization current, and remembers separate Open, Save As and folder-dialog
+  locations across restarts. Packaging and development dependencies also receive compatible fixes.
 - **[v1.21.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.1):** keeps saves
   reliable across split panes and continued editing, preserves open-file paths after renames,
   prevents stale history actions, and avoids rebuilding every tab while typing.
