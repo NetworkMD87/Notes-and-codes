@@ -17,7 +17,7 @@ When work ships (a feature/fix lands on `master`):
 3. **Bump the version when a release is cut.** Update `version` in `package.json`
    (`npm version <x.y.z> --no-git-tag-version`): **patch** for fixes (e.g. 1.0.0 → 1.0.1),
    **minor** for features (1.0.x → 1.1.0). Then `npm run package` to rebuild the installer,
-   and tag `vX.Y.Z` **only after** the manual tray/hotkey checklist passes on the real build.
+   and tag `vX.Y.Z` after the required automated validation passes. Manual tray/hotkey testing is optional and does not gate tagging or release.
    **Bump BEFORE packaging, always** — `npm run package` names its output from `package.json`, so
    packaging at an already-released version silently overwrites that release's artifacts in `dist/`
    with different bytes under the same filename. Re-uploading one later would ship a binary that
