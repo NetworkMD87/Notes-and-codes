@@ -45,8 +45,9 @@ jobs:
   # nothing, which is what rules out slowness as the cause: the text never arrives at all.
   #
   # So the suite is sound and the environment is not. Gating the badge on it would mean a red
-  # master that says nothing about the code — worse than no signal. It stays a local pre-release
-  # gate (see tests/CLAUDE.md) and can still be run here on demand.
+  # master that says nothing about the code — worse than no signal. Relevant UI changes are
+  # checked locally; the release checklist selects focused or broader coverage based on risk.
+  # The full suite can still be run here on demand.
   #
   # Worth revisiting with software rendering (--use-gl=swiftshader / --disable-gpu) on the
   # Electron launch args, which may be what the runner actually needs.
