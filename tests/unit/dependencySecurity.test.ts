@@ -22,10 +22,14 @@ function compareVersions(leftVersion: string, rightVersion: string): number {
   return 0
 }
 
-describe('production dependency security floors', () => {
+describe('shipped dependency security floors', () => {
   it.each([
     { packageName: 'dompurify', patchedMinimum: '3.4.13' },
     { packageName: 'linkify-it', patchedMinimum: '5.0.2' },
+    // GHSA-253c-mchw-3w2r: markdown-it itself also has quadratic linkification paths.
+    { packageName: 'markdown-it', patchedMinimum: '14.3.1' },
+    // Electron is a devDependency but its runtime ships in the packaged app.
+    { packageName: 'electron', patchedMinimum: '43.7.7' },
   ])('$packageName resolves at or above $patchedMinimum', ({ packageName, patchedMinimum }) => {
     const version = lock.packages[`node_modules/${packageName}`]?.version
     expect(version, `${packageName} must be present in package-lock.json`).toBeTypeOf('string')

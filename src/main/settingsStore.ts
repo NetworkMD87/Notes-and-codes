@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import {
   DEFAULT_SETTINGS,
   HIGHLIGHT_COLOURS,
@@ -35,10 +35,17 @@ function normalizeSettings(value: unknown): Settings {
       : DEFAULT_SETTINGS.markdownPreviewLastVisibleMode,
     markdownPreviewWidthPercent: normalizePreviewWidth(stored.markdownPreviewWidthPercent),
     workspaceExcludes: normalizePathGlobs(rawExcludes),
+    lastOpenDirectory: normalizeRememberedDirectory(stored.lastOpenDirectory),
+    lastSaveDirectory: normalizeRememberedDirectory(stored.lastSaveDirectory),
+    lastFolderDirectory: normalizeRememberedDirectory(stored.lastFolderDirectory),
     lastHighlightColour: isHighlightColour(stored.lastHighlightColour)
       ? stored.lastHighlightColour
       : DEFAULT_SETTINGS.lastHighlightColour,
   }
+}
+
+function normalizeRememberedDirectory(value: unknown): string | null {
+  return typeof value === 'string' && isAbsolute(value) ? value : null
 }
 
 function isTabSizing(value: unknown): value is TabSizing {

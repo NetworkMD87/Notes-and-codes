@@ -35,6 +35,17 @@ describe('buildExportHtml', () => {
     const out = buildExportHtml('hi <script>alert(1)</script>', 'doc', 'markdown')
     expect(out).not.toContain('<script>alert')
   })
+  it('preserves Markdown autolinks and unknown schemes inside an offline export', () => {
+    const out = buildExportHtml('a@b.co\nhttps://example.com\na://a://', 'links', 'markdown')
+    const doc = new DOMParser().parseFromString(out, 'text/html')
+
+    expect([...doc.querySelectorAll('a')].map(link => link.getAttribute('href'))).toEqual([
+      'mailto:a@b.co', 'https://example.com',
+    ])
+    expect(doc.body.textContent).toContain('a://a://')
+    expect(doc.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content'))
+      .toBe("default-src 'none'; img-src data:; style-src 'unsafe-inline'")
+  })
   it('exports a non-markdown buffer verbatim in a code block, not as markdown', () => {
     // A .ts file must not be mangled: `#` comments stay literal (no <h1>), `<` is escaped,
     // indentation is preserved inside <pre><code>.

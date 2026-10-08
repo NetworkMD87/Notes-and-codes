@@ -139,6 +139,10 @@ export interface Settings {
   autoSaveToDisk: boolean
   formatOnSave: boolean
   lastFolder: string | null
+  /** Last directories used by the native open, save, and folder dialogs. */
+  lastOpenDirectory: string | null
+  lastSaveDirectory: string | null
+  lastFolderDirectory: string | null
   sidebarVisible: boolean
   sidebarWidth: number
   spellCheckEnabled: boolean
@@ -172,6 +176,9 @@ export const DEFAULT_SETTINGS: Settings = {
   autoSaveToDisk: false,
   formatOnSave: false,
   lastFolder: null,
+  lastOpenDirectory: null,
+  lastSaveDirectory: null,
+  lastFolderDirectory: null,
   sidebarVisible: false,
   sidebarWidth: 240,
   spellCheckEnabled: true,
