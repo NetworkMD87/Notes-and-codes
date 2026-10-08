@@ -68,6 +68,11 @@ jobs:
       - run: npm ci
 
       # The smoke suite launches the BUILT app from out/main/index.js, so this is required.
+      # Electron 42+ no longer downloads its runtime during npm ci. Do this before test
+      # collection so a first-time download cannot consume an Electron launch timeout.
+      - name: Download Electron runtime
+        run: node node_modules/electron/install.js
+
       - name: Build
         run: npm run build
 

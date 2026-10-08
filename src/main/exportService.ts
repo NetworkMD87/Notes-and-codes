@@ -1,22 +1,20 @@
-import { BrowserWindow, dialog, type SaveDialogOptions } from 'electron'
+import { BrowserWindow } from 'electron'
 import { writeFile, unlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { atomicWrite } from './atomicWrite'
 import type { ExportResult } from '../shared/types'
+import type { RememberedDialogs } from './rememberedDialogs'
 
 function defaultPath(sourcePath: string | null, suggestedName: string): string {
   return sourcePath ? join(dirname(sourcePath), suggestedName) : suggestedName
 }
 
-function pickPath(parent: BrowserWindow | null, opts: SaveDialogOptions) {
-  return parent ? dialog.showSaveDialog(parent, opts) : dialog.showSaveDialog(opts)
-}
-
 export async function saveHtml(
-  parent: BrowserWindow | null, html: string, suggestedName: string, sourcePath: string | null
+  parent: BrowserWindow | null, html: string, suggestedName: string, sourcePath: string | null,
+  dialogs: RememberedDialogs
 ): Promise<ExportResult> {
-  const r = await pickPath(parent, {
+  const r = await dialogs.save(parent, {
     title: 'Export to HTML',
     defaultPath: defaultPath(sourcePath, suggestedName),
     filters: [{ name: 'HTML', extensions: ['html'] }]
@@ -34,9 +32,10 @@ export async function saveHtml(
 }
 
 export async function savePdf(
-  parent: BrowserWindow | null, html: string, suggestedName: string, sourcePath: string | null
+  parent: BrowserWindow | null, html: string, suggestedName: string, sourcePath: string | null,
+  dialogs: RememberedDialogs
 ): Promise<ExportResult> {
-  const r = await pickPath(parent, {
+  const r = await dialogs.save(parent, {
     title: 'Export to PDF',
     defaultPath: defaultPath(sourcePath, suggestedName),
     filters: [{ name: 'PDF', extensions: ['pdf'] }]

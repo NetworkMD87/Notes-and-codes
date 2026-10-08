@@ -11,6 +11,19 @@ describe('renderMarkdown', () => {
     const out = renderMarkdown('hi <script>alert(1)</script>')
     expect(out).not.toContain('<script>')
   })
+  it('keeps email and URL autolinks, line breaks, and unknown schemes intact', () => {
+    const container = document.createElement('div')
+    container.innerHTML = renderMarkdown('a@b.co\nhttps://example.com\na://a://\n**bold**')
+
+    const links = [...container.querySelectorAll('a')]
+    expect(links.map(link => link.getAttribute('href'))).toEqual([
+      'mailto:a@b.co', 'https://example.com',
+    ])
+    expect(links.every(link => link.getAttribute('rel') === 'noopener noreferrer')).toBe(true)
+    expect(container.querySelectorAll('br')).toHaveLength(3)
+    expect(container.textContent).toContain('a://a://')
+    expect(container.querySelector('strong')?.textContent).toBe('bold')
+  })
   it('renders Markdown task markers as disabled checkboxes without accepting source HTML', () => {
     const out = renderMarkdown('- [ ] pending\n- [x] finished\n<input onclick="alert(1)">')
 

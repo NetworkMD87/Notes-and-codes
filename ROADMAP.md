@@ -2,11 +2,14 @@
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
+Security dependency follow-up added on **2026-10-08** after checking the current source and live npm advisories. Earlier security fixes remain recorded at their original scope; they do not close newer advisories.
+
 **Legend:** 🐛 open defect · 🛠️ fixed, awaiting release · ⬜ planned · ❓ decision required · 🧊 parked / deferred · 💡 someday · ✅ shipped · **S / M / L** effort where already estimated.
 
 | At a glance | Status / order |
 | --- | --- |
-| [Reliability](#1-reliability--fix-first) | R1–R4 released in v1.21.1. |
+| [Security dependencies](#security-dependencies--2026-10-08-follow-up) | S1 Markdown and S2 Electron fixes validated, awaiting release; S3–S4 dependency updates queued. |
+| [Reliability](#1-reliability--completed) | R1–R4 released in v1.21.1. |
 | [UI and performance](#2-ui-and-performance--planned) | P1 released in v1.21.1; four improvements remain. Agree material UX choices before implementation. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | CI smoke trial → MSIX → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
@@ -15,23 +18,26 @@ Open work first; shipped history and settled decisions last. Based on the **2026
 
 ---
 
-## 1. Reliability — fix first
+## Security dependencies — 2026-10-08 follow-up
 
-No open finding remains in this audit group. R1–R4 are included in v1.21.1.
+- 🛠️ **S1 — Markdown linkification fixed, awaiting release.** Updated `markdown-it` from 14.2.0 to 14.3.1 for [GHSA-253c-mchw-3w2r](https://github.com/markdown-it/markdown-it/security/advisories/GHSA-253c-mchw-3w2r), retaining patched `linkify-it`, sanitization and offline exports. Dependency-floor and linkification regression coverage passed. Broader preview profiling remains P2.
+- 🛠️ **S2 — Electron runtime fixed, awaiting release.** Updated unsupported 41.10.4 to 43.7.7, the newest 43.x patch permitted by the machine's seven-day npm release-age safeguard on 2026-10-08; 43.7.9 was rejected and the safeguard retained. Open, Save As/untitled export and Open Folder remember separate directories across restarts. First use starts in Documents; previous Windows picker history is not imported. CI explicitly downloads the Electron runtime before smoke tests.
+  - **Release gate:** manual native-picker, tray/hotkey and installer acceptance remain outstanding. Local build/typecheck, 1,058 unit tests, 23 focused Electron checks, Windows QA packaging and three packaged-app checks passed. Picker tests mock the OS dialog; no installed-app replacement or release is implied. [Detailed evidence and advisory scope](docs/roadmap-evidence-2026-10-08.md).
+  - **Next runtime upgrade:** move to a supported major before [Electron 43 support ends on 2027-01-05](https://releases.electronjs.org/schedule); account for Electron 44's clipboard API migration.
 
-- ✅ **R1 — Released in v1.21.1:** Split panes now share one document model per buffer, and Save snapshots the authoritative buffer content. Reload and history restore refresh visible and cached peers; closing detaches both panes before model disposal. Shared undo, language changes, highlights, and spelling remain usable across panes.
-  - **Accept when:** edits from either pane are reflected in both; Save from either pane writes the latest content; reloading cannot leave a stale peer model. [Source](src/renderer/editorPane.ts), [save/reload wiring](src/renderer/main.ts).
-  - **Local evidence (2026-10-02):** the original pane-B save regression wrote stale disk content on all three baseline attempts. The fixed build passed 1,039 unit tests and eight focused Electron regressions covering A/B saves, cross-pane undo/redo, visible/cached reload, close, history/highlights, Save As, and shared-model spelling. Model-reuse and stale-format guards were also falsified and restored; independent architecture review findings were resolved. These checks are local development evidence; release validation is recorded separately.
+- ⬜ **S3 — Refresh and assess packaging dependencies** — earlier archive/updater fixes are present (`electron-builder` 26.15.3, `tar` 7.5.22, `builder-util-runtime` 9.7.0), but the live audit flags the current packaging tree, including `@electron/get` → `global-agent` → `roarr` → `sprintf-js`, plus affected archive/glob, YAML and XML helpers.
+  - **Accept when:** map current advisories to the actual Windows build paths; update the narrowest compatible dependency set and verify the lockfile, build and approved packaging checks. Record any remaining non-applicable warnings with evidence. Do not blindly apply npm's suggested builder downgrade or use `npm audit fix --force`.
 
-- ✅ **R2 — Released in v1.21.1: saves during edits preserve newer changes.** Same-buffer saves are serialized; an older completion leaves newer content, EOL, and encoding changes dirty, autosave-eligible, and eligible for the close warning. Local evidence: 27 focused and 1,001 full unit tests passed, the build passed, and the delayed-write Electron smoke confirms newer UTF-16 LE/CRLF content is written last. [Source](src/renderer/main.ts), [buffer state](src/renderer/bufferManager.ts), [save coordinator](src/renderer/bufferSaveCoordinator.ts).
+- ⬜ **S4 — Triage and update remaining flagged dependencies** — track `dompurify`, `vitest` / `@vitest/mocker`, `sharp`, `source-map-js`, `undici`, `http-cache-semantics`, `fast-uri`, `browserslist`, `baseline-browser-mapping`, `brace-expansion`, `js-yaml`, and `@xmldom/xmldom`; coordinate overlapping packages with S3.
+  - **Accept when:** separate shipped runtime exposure from build/test-only and configuration-dependent warnings, choose supported patched versions, and run focused validation for each affected surface. DOMPurify's new warnings concern particular `IN_PLACE` behavior; dependency presence alone does not demonstrate that the app reaches it.
 
-- ✅ **R3 — Released in v1.21.1:** Renaming an open file or its parent folder updates affected open-buffer identities and watchers, so later saves use the new location.
-  - **Accept when:** file and parent-folder renames preserve edits, update tab paths, and save only to the new location. Stored history/highlight migration remains separately tracked below. [Source](src/renderer/folderMode.ts), [file writes](src/main/fileService.ts).
+**Evidence boundary:** the pre-fix `npm audit --json --ignore-scripts` reported 23 affected dependency entries (10 high, 12 moderate, 1 low), including indirect warnings. After S1/S2, 21 entries remain (9 high, 11 moderate, 1 low), tracked in S3/S4; Electron and Markdown are no longer flagged. These are dependency warnings, not independently demonstrated app exploits. The screenshot supplied titles without advisory IDs, so the exact historical alert records were not closed. The esbuild cross-origin read, remote renderer override, and document-driven PDF resource-fetch findings remain patched in the inspected source.
 
-- ✅ **R4 — Released in v1.21.1:** Restore and Diff remain bound to the originating buffer; dismissal and context changes invalidate stale actions.
-  - **Accept when:** Restore A → dismiss → switch to B during a delayed read never changes B or applies a cancelled restore. Check the delayed Diff action too. [Source](src/renderer/fileHistoryPanel.ts), [restore wiring](src/renderer/main.ts).
+---
 
-**Audit baseline:** typecheck and 994 unit tests across 92 files passed. R2 was reproduced with the pre-fix save function and delayed mocked I/O; the other findings were traced through source. Current R2 implementation evidence is recorded above.
+## 1. Reliability — completed
+
+R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserve newer edits, rename-safe open paths, and buffer-bound history actions. See [CHANGELOG.md](CHANGELOG.md#1211--2026-10-02) and [retained validation evidence](docs/roadmap-evidence-2026-10-08.md). Stored history/highlight migration across rename remains parked below.
 
 ---
 
@@ -47,8 +53,6 @@ No open finding remains in this audit group. R1–R4 are included in v1.21.1.
 
 ### Performance
 
-- ✅ **P1 — Released in v1.21.1:** Typing updates only the edited tab in place; unchanged tab lists retain their controls during state refreshes. Structural rendering is reserved for tab-list changes. [Edit wiring](src/renderer/main.ts), [tab rendering](src/renderer/tabBar.ts).
-  - **Local evidence (2026-10-02):** With 100 open tabs, typing 30 characters previously removed and added 3,000 tab elements; the fixed Electron regression retains all 100 with zero tab additions/removals and unchanged scroll/editor focus. Single-run typing timings (847 ms baseline, 892 ms fixed) include automation overhead and do not establish a wall-clock speedup. Build/typecheck, 44 focused unit tests, and six Electron checks passed, covering tab typing, keyboard navigation/closing, sizing, and drag-order persistence. These checks are local development evidence; release validation is recorded separately.
 - ⬜ **P2 — Bound large Markdown preview work.** Profile parsing, sanitization, and full DOM replacement in Electron before choosing an optimization. Consider a size-based preview policy only after UX approval; preserve sanitization, task rendering, focus, and scroll behavior. [Source](src/renderer/markdownPreview.ts).
   - **Evidence limit:** a synthetic 500 KiB document took about 2.4 seconds through rendering and DOM replacement in Node/jsdom. This is not an Electron responsiveness measurement. The existing debounce is already shipped; this item addresses work remaining after it fires. Broader large-file mode remains a separate someday idea.
 
@@ -56,7 +60,7 @@ No open finding remains in this audit group. R1–R4 are included in v1.21.1.
 
 ## 3. Delivery and existing features
 
-Existing sequence retained below the reliability work. The CI experiment is not a release blocker.
+The reliability fixes are released; the remaining delivery sequence follows. The CI experiment is not a release blocker.
 
 - ⬜ **CI renderer smoke support** (**S**, before MSIX; trial) — automatic push/PR CI currently runs build + unit tests, while the hosted Electron smoke job is manual-only because Monaco did not reliably paint on GitHub’s Windows runners.
   - Retry the manual hosted suite with software rendering (`--use-gl=swiftshader` and/or `--disable-gpu`) supplied through the Electron launch arguments.
@@ -152,7 +156,7 @@ Existing sequence retained below the reliability work. The CI experiment is not 
 | **v1.19.2** · 2026-08-15 | Electron and build-toolchain security update; offline PDF exports; guarded app navigation; reliable external-change warnings after **Keep mine**. |
 | **v1.19.1** · 2026-08-13 | Explorer opens replace only a disposable blank placeholder; the highlighter persists its active colour. |
 | **v1.19.0** · 2026-08-09 | Quality, scale, and keyboard-access pass: semantic controls and dialogs, 20k-file responsiveness, workspace exclusions, scoped/cancellable Find in Files, session/preview efficiency, and installed-build accessibility validation. |
-| **v1.18.1** · 2026-08-08 | Markdown dependency hardening and deterministic Windows Electron smoke teardown. Production dependency audit clean. |
+| **v1.18.1** · 2026-08-08 | Markdown dependency hardening and deterministic Windows Electron smoke teardown. Production dependency audit was clean at that release; current warnings are tracked in S3/S4. |
 | **v1.17.0–v1.18.0** · 2026-08-07 | Fully offline UK/US spell checking, settings and personal dictionary, then right-click corrections and startup file-open readiness fixes. |
 | **v1.14.0–v1.16.0** · 2026-07 | Settings home, configurable hotkey, launch-on-login, design polish, Format Document hotkey repair, Find in Files, and sidebar recent folders. |
 | **v1.9.0–v1.13.0** · 2026-07 | In-app Help, drag-reorder tabs, visual/token polish, file-type badges, highlighter cursor, taskbar/Explorer identity work, and the completed audit remediation. |

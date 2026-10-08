@@ -147,6 +147,43 @@ describe('SettingsStore', () => {
     expect(settings.spellCheckLanguage).toBe('en-US')
   })
 
+  it('defaults remembered dialog directories for older settings files', async () => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({ themeId: 'nord' }))
+
+    expect(await new SettingsStore(dir).load()).toMatchObject({
+      lastOpenDirectory: null,
+      lastSaveDirectory: null,
+      lastFolderDirectory: null,
+    })
+  })
+
+  it.each(['relative/path', '', 3, null])('clears invalid remembered directories: %j', async (path) => {
+    writeFileSync(join(dir, 'settings.json'), JSON.stringify({
+      lastOpenDirectory: path,
+      lastSaveDirectory: path,
+      lastFolderDirectory: path,
+    }))
+
+    expect(await new SettingsStore(dir).load()).toMatchObject({
+      lastOpenDirectory: null,
+      lastSaveDirectory: null,
+      lastFolderDirectory: null,
+    })
+  })
+
+  it('persists remembered dialog directories through update', async () => {
+    const store = new SettingsStore(dir)
+    const directories = {
+      lastOpenDirectory: 'C:\\notes',
+      lastSaveDirectory: 'D:\\exports',
+      lastFolderDirectory: 'E:\\projects',
+    }
+
+    await store.update(directories)
+
+    expect(await new SettingsStore(dir).load()).toMatchObject(directories)
+  })
+
   it('defaults workspace exclusions for a settings file written before the field existed', async () => {
     writeFileSync(join(dir, 'settings.json'), JSON.stringify({ themeId: 'nord' }))
     const settings = await new SettingsStore(dir).load()

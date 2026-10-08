@@ -16,6 +16,7 @@ import { FileHistoryStore } from './fileHistoryStore'
 import { HighlightStore } from './highlightStore'
 import { SpellDictionaryStore } from './spellDictionaryStore'
 import { saveHtml, savePdf } from './exportService'
+import { RememberedDialogs } from './rememberedDialogs'
 import type { SessionData, Settings, EolMode, Encoding, HotkeyResult, SearchRequest, WorkspaceFilter } from '../shared/types'
 
 export interface IpcDeps {
@@ -46,6 +47,10 @@ export function registerIpc(deps: IpcDeps): void {
   const saveAsTestPaths = [...deps.saveAsTestPaths]
   const session = new SessionStore(deps.baseDir)
   const settings = deps.settings
+  const dialogs = new RememberedDialogs(settings, app.getPath('documents'), {
+    open: options => dialog.showOpenDialog(options),
+    save: (parent, options) => parent ? dialog.showSaveDialog(parent, options) : dialog.showSaveDialog(options),
+  })
   const clip = new ClipboardHistoryStore(deps.baseDir)
   const snippets = new SnippetStore(deps.baseDir)
   const recent = deps.recent
@@ -125,11 +130,11 @@ export function registerIpc(deps: IpcDeps): void {
     }
     const testPath = saveAsTestPaths.shift()
     if (testPath) return testPath
-    const r = await dialog.showSaveDialog({ title: 'Save As' })
+    const r = await dialogs.save(null, { title: 'Save As' })
     return r.canceled ? null : r.filePath ?? null
   })
   handle('dialog:open', async () => {
-    const r = await dialog.showOpenDialog({ properties: ['openFile'] })
+    const r = await dialogs.openFile()
     return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]
   })
   handle('clipboard:read', () => clipboard.readText())
@@ -158,7 +163,7 @@ export function registerIpc(deps: IpcDeps): void {
     return highlights.save(path, hs)
   })
   handle('dialog:openFolder', async () => {
-    const r = await dialog.showOpenDialog({ properties: ['openDirectory'] })
+    const r = await dialogs.openFolder()
     return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]
   })
   handle('dir:read', (_e, root: string, path: string, filter: WorkspaceFilter) =>
@@ -187,9 +192,9 @@ export function registerIpc(deps: IpcDeps): void {
   handle('dir:watch', (_e, path: string | null) => dirWatcher.watch(path))
   handle('dir:exists', (_e, path: string) => dirExists(path))
   handle('export:html', (_e, html: string, suggestedName: string, sourcePath: string | null) =>
-    saveHtml(deps.getWindow(), html, suggestedName, sourcePath))
+    saveHtml(deps.getWindow(), html, suggestedName, sourcePath, dialogs))
   handle('export:pdf', (_e, html: string, suggestedName: string, sourcePath: string | null) =>
-    savePdf(deps.getWindow(), html, suggestedName, sourcePath))
+    savePdf(deps.getWindow(), html, suggestedName, sourcePath, dialogs))
   on('app:dirtyCount', (_e, n: number) => deps.onDirtyCount(n))
   on('window:hide', () => deps.getWindow()?.hide())
   on('app:quitNow', () => deps.onQuitNow())
