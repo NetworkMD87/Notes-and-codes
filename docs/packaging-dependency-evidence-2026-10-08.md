@@ -1,8 +1,9 @@
 # Packaging dependency follow-up — 2026-10-08
 
-S3 is partially remediated locally. Compatible patches are applied; two installed
-advisory chains remain open with the applicability limits below. No release,
-installed-app replacement, or Git/GitHub mutation is implied.
+Compatible S3/S4 fixes shipped in v1.21.2; two advisory chains remain open with
+the applicability limits below. The historical local receipts are preserved here;
+see [release evidence](release-1.21.2-evidence.md) for publication and final validation.
+No installed-app replacement is implied.
 
 The S3 receipts below preserve the first validation snapshot. The later
 [S4 follow-up](#s4-and-proxy-replacement-qualification) records the final dependency

@@ -16,12 +16,16 @@ When work ships (a feature/fix lands on `master`):
    behaviour they'll notice, not the internals. The GitHub release notes are derived from it.
 3. **Bump the version when a release is cut.** Update `version` in `package.json`
    (`npm version <x.y.z> --no-git-tag-version`): **patch** for fixes (e.g. 1.0.0 → 1.0.1),
-   **minor** for features (1.0.x → 1.1.0). Then `npm run package` to rebuild the installer,
-   and tag `vX.Y.Z` after the required automated validation passes. Manual tray/hotkey testing is optional and does not gate tagging or release.
+   **minor** for features (1.0.x → 1.1.0). Tag `vX.Y.Z` after validation appropriate to the change.
+   Reuse passing build, unit and focused checks when the relevant source has not changed; do not
+   repeat the full UI suite automatically for every release. Broaden checks for cross-cutting
+   changes or unresolved failures. Preserve interrupted/failed results rather than calling them green.
+   Manual tray/hotkey testing is optional and does not gate tagging or release.
    **Bump BEFORE packaging, always** — `npm run package` names its output from `package.json`, so
    packaging at an already-released version silently overwrites that release's artifacts in `dist/`
    with different bytes under the same filename. Re-uploading one later would ship a binary that
    isn't what was tagged. Build eyeball/test copies at the *new* version for the same reason.
-4. **Release from the tagged commit.** Tag first, then `npm run package`, so the uploaded artifacts
+4. **Package once from the tagged commit.** Tag first, then `npm run package`, so the uploaded artifacts
    are built from exactly what `vX.Y.Z` points at — not from a branch build made a few commits
-   earlier.
+   earlier. A separate pre-tag package is only needed when a specific packaging risk needs
+   investigation. Keep heavy local checks and packaging sequential when machine load is a concern.
