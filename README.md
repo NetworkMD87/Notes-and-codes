@@ -47,6 +47,8 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.21.3](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.3):** keeps context menus inside the window
+  and distinguishes same-named saved tabs with folder labels, full-path tooltips and accessible file identities.
 - **[v1.21.2](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.2):** updates Electron and Markdown security dependencies,
   keeps Markdown sanitization current, and remembers separate Open, Save As and folder-dialog
   locations across restarts. Packaging and development dependencies also receive compatible fixes.

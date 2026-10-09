@@ -2,7 +2,7 @@
 
 Last updated: 2026-10-09
 
-**🎯 Next up:** [U1](#u1) and [U3](#u3) are implemented and locally verified, awaiting an executable release. [PR #39](https://github.com/NetworkMD87/Notes-and-codes/pull/39) records Git delivery and CI; packaging and release remain a separate decision.
+**🎯 Next up:** Release [U1](#u1) and [U3](#u3) as **v1.21.3**, authorised on 2026-10-09. Implementation and CI are complete in [PR #39](https://github.com/NetworkMD87/Notes-and-codes/pull/39); version bookkeeping, tagged packaging and publication are next.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
