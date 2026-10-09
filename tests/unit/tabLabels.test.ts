@@ -7,6 +7,12 @@ const file = (id: string, filePath: string | null, title = filePath?.split(/[\\/
 })
 
 describe('tabFolderLabels', () => {
+  it('ignores malformed saved paths admitted by a corrupted session', () => {
+    const valid = [file('a', 'C:\\client\\note.txt'), file('b', 'C:\\server\\note.txt')]
+    const malformed = [42, true, {}, []].map((path, index) =>
+      ({ ...file(`bad-${index}`, null, 'note.txt'), filePath: path }) as unknown as BufferState)
+    expect([...tabFolderLabels([...valid, ...malformed])]).toEqual([['a', 'client'], ['b', 'server']])
+  })
   it('lets shared folder prefixes truncate before the distinguishing characters', () => {
     const labels = ['project-a\\src', 'project-b\\src', 'docs']
     expect(tabFolderPrefix(labels[0], labels)).toBe('project-')

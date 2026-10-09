@@ -10,6 +10,17 @@ const buffer = (id: string): BufferState => ({
 
 describe('TabBar', () => {
   afterEach(() => document.body.replaceChildren())
+  it('renders corrupt-session paths as unsaved identities without losing tab content', () => {
+    const host = document.createElement('div')
+    const bar = new TabBar(host, { onSelect: vi.fn(), onClose: vi.fn(), onNew: vi.fn(), onReorder: vi.fn() })
+    const items = [42, {}].map((path, index) =>
+      ({ ...buffer(`bad-${index}`), title: 'note.txt', filePath: path, content: 'retained text' }) as unknown as BufferState)
+    bar.render(items, items[0].id)
+    expect([...host.querySelectorAll<HTMLButtonElement>('.tab-select')].map(tab => tab.title)).toEqual(['note.txt', 'note.txt'])
+    expect([...host.querySelectorAll('.tab-select')].map(tab => tab.getAttribute('aria-label'))).toEqual(['note.txt', 'note.txt'])
+    expect([...host.querySelectorAll<HTMLElement>('.tab-folder')].every(folder => folder.hidden)).toBe(true)
+    expect(items.map(item => item.content)).toEqual(['retained text', 'retained text'])
+  })
   it('keeps the new-tab control when rendering an empty list', () => {
     const host = document.createElement('div'); const onNew = vi.fn()
     const bar = new TabBar(host, { onSelect: vi.fn(), onClose: vi.fn(), onNew, onReorder: vi.fn() })

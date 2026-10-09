@@ -117,8 +117,9 @@ export class TabBar {
     if (entry.folderKey.textContent !== key) entry.folderKey.textContent = key
     if (entry.folderRest.textContent !== rest) entry.folderRest.textContent = rest
     if (entry.folder.hidden !== !folder) entry.folder.hidden = !folder
-    const identity = buffer.filePath ? `${buffer.title}, ${buffer.filePath}` : buffer.title
-    const tooltip = (buffer.filePath ?? buffer.title) + (buffer.dirty ? '\nUnsaved changes' : '')
+    const filePath = typeof buffer.filePath === 'string' && buffer.filePath ? buffer.filePath : null
+    const identity = filePath ? `${buffer.title}, ${filePath}` : buffer.title
+    const tooltip = (filePath ?? buffer.title) + (buffer.dirty ? '\nUnsaved changes' : '')
     const accessible = identity + (buffer.dirty ? ', Unsaved changes' : '')
     if (entry.select.title !== tooltip) entry.select.title = tooltip
     if (entry.select.getAttribute('aria-label') !== accessible) entry.select.setAttribute('aria-label', accessible)

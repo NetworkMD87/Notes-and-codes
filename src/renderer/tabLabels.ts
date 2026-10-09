@@ -20,7 +20,7 @@ export function tabFolderPrefix(label: string, labels: Iterable<string>): string
 export function tabFolderLabels(buffers: readonly BufferState[]): Map<string, string> {
   const groups = new Map<string, BufferState[]>()
   for (const buffer of buffers) {
-    if (!buffer.filePath) continue
+    if (typeof buffer.filePath !== 'string' || !buffer.filePath) continue
     const key = buffer.title.toLowerCase()
     const group = groups.get(key) ?? []
     group.push(buffer)
