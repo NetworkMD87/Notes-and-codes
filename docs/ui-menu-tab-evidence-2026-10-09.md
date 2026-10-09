@@ -52,4 +52,4 @@ Task-started build/test/Electron processes exited through the normal commands an
 
 ## CI-gated delivery
 
-The owner authorised PR delivery on 2026-10-09, conditional on passing CI before merging and deleting the merged work branch. Automatic Windows CI runs build/typecheck and the full unit suite. Hosted Electron smoke remains manual-only; local focused smoke evidence above is retained separately. Installer packaging, version bump, tag and executable release are outside this delivery scope.
+The owner authorised PR delivery on 2026-10-09, conditional on passing CI before merging and deleting the merged work branch. [PR #39](https://github.com/NetworkMD87/Notes-and-codes/pull/39) records delivery; its Checks and merge record provide the authoritative hosted results. Automatic Windows CI runs build/typecheck and the full unit suite. Hosted Electron smoke remains manual-only; local focused smoke evidence above is retained separately. Installer packaging, version bump, tag and executable release are outside this delivery scope.

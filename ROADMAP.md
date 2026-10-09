@@ -2,7 +2,7 @@
 
 Last updated: 2026-10-09
 
-**🎯 Next up:** [U1](#u1) and [U3](#u3) are implemented and locally verified, awaiting an executable release. Owner authorised CI-gated PR delivery on 2026-10-09; packaging and release remain a separate decision.
+**🎯 Next up:** [U1](#u1) and [U3](#u3) are implemented and locally verified, awaiting an executable release. [PR #39](https://github.com/NetworkMD87/Notes-and-codes/pull/39) records Git delivery and CI; packaging and release remain a separate decision.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -50,11 +50,11 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 
 <a id="u1"></a>
 - [ ] 🛠️ **U1 — Keep context menus inside the window — implemented, awaiting release.** Shared menus flip/clamp with an 8px edge gap, wrap long labels, scroll focused items and close on resize. Opening animation preserves the bounds. [Source](src/renderer/contextMenu.ts).
-  - **2026-10-09:** build/typecheck, focused units and local Electron toolbar/folder/spelling checks passed. [Validation and retained failures](docs/ui-menu-tab-evidence-2026-10-09.md). CI-gated PR delivery authorised; not packaged or released.
+  - **2026-10-09:** build/typecheck, focused units and local Electron toolbar/folder/spelling checks passed. [Validation and retained failures](docs/ui-menu-tab-evidence-2026-10-09.md); [PR #39 and CI](https://github.com/NetworkMD87/Notes-and-codes/pull/39). Not packaged or released.
 - ⬜ **U2 — Keyboard-accessible folder tree.** Add focusable tree items, arrow navigation, expansion state, and keyboard context-menu access. Verify that browsing and New/Rename/Delete work without a pointer. [Source](src/renderer/sidebar.ts).
 <a id="u3"></a>
 - [ ] 🛠️ **U3 — Distinguish same-named tabs — implemented, awaiting release.** Saved-file duplicates show minimal folder suffixes with distinguishing characters retained under truncation. Full-path tooltips and accessible labels expose file identity and unsaved status. [Source](src/renderer/tabBar.ts).
-  - **2026-10-09:** focused local checks passed for narrow/wide layouts, natural sizing, themes, open/close/rename/Save As and 100-tab typing stability. [Validation and retained failures](docs/ui-menu-tab-evidence-2026-10-09.md). CI-gated PR delivery authorised; not packaged or released.
+  - **2026-10-09:** focused local checks passed for narrow/wide layouts, natural sizing, themes, open/close/rename/Save As and 100-tab typing stability. [Validation and retained failures](docs/ui-menu-tab-evidence-2026-10-09.md); [PR #39 and CI](https://github.com/NetworkMD87/Notes-and-codes/pull/39). Not packaged or released.
 
 ---
 
