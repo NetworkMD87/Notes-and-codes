@@ -1,6 +1,6 @@
 # U1/U3 local implementation evidence — 2026-10-09
 
-Owner approved the in-chat behaviour for both items and initially authorised implementation and focused checks with no commit or push. After that local handoff, the owner authorised a PR, CI, merge only if green, and deletion of the merged work branch. Changes remain unreleased; package version stays 1.21.2.
+Owner approved the in-chat behaviour for both items and initially authorised implementation and focused checks with no commit or push. After that local handoff, the owner authorised a PR, CI, merge only if green, and deletion of the merged work branch. That phase retained version 1.21.2; the subsequent approved **v1.21.3** release is recorded in [release evidence](release-1.21.3-evidence.md).
 
 ## Implemented behaviour
 
@@ -53,6 +53,8 @@ Task-started build/test/Electron processes exited through the normal commands an
 ## CI-gated delivery
 
 The owner authorised PR delivery on 2026-10-09, conditional on passing CI before merging and deleting the merged work branch. [PR #39](https://github.com/NetworkMD87/Notes-and-codes/pull/39) records delivery; its Checks and merge record provide the authoritative hosted results. Automatic Windows CI runs build/typecheck and the full unit suite. Hosted Electron smoke remains manual-only; local focused smoke evidence above is retained separately. Installer packaging, version bump, tag and executable release are outside this delivery scope.
+
+PR #39 and merged-master CI passed all 1,091 unit tests; the work branch was deleted. The owner then separately authorised the v1.21.3 executable release, now published with installer and portable assets. [Release verification and remaining limits](release-1.21.3-evidence.md).
 
 - Initial hosted CI passed build/typecheck but failed two existing `chromeCss` guards (1,087 tests passed, 2 failed): `#ctx-menu` appeared twice as a standalone rule. Consolidating its opacity-only animation into the original rule preserves behaviour and the single-rule guard.
 - Automated PR review identified truthy non-string `filePath` values admitted by corrupt session data. Two new regressions failed with `replaceAll is not a function` before the fix. Folder grouping and tab identity now ignore malformed paths without changing buffer content; the 54-case focused run including `chromeCss`, `tabBar`, `tabLabels` and `rendererContextMenu` passed. Independent review found no remaining issue in these corrections.

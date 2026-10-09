@@ -2,7 +2,7 @@
 
 Last updated: 2026-10-09
 
-**🎯 Next up:** Release [U1](#u1) and [U3](#u3) as **v1.21.3**, authorised on 2026-10-09. Implementation and CI are complete in [PR #39](https://github.com/NetworkMD87/Notes-and-codes/pull/39); version bookkeeping, tagged packaging and publication are next.
+**🎯 Next up:** [U1](#u1) and [U3](#u3) are released in **v1.21.3**. The existing delivery sequence continues with the [CI renderer smoke trial](#3-delivery-and-existing-features); U2/P2 remain planned.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -14,11 +14,11 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 | --- | --- |
 | [Security dependencies](#security-dependencies--2026-10-08-follow-up) | S1–S2, S4 and compatible S3 patches released in v1.21.2; S3 retains two dependency chains pending upstream/age eligibility. |
 | [Reliability](#1-reliability--completed) | R1–R4 released in v1.21.1. |
-| [UI and performance](#2-ui-and-performance--planned) | U1/U3 implemented and locally verified, awaiting release; U2/P2 remain planned. P1 released in v1.21.1. |
+| [UI and performance](#2-ui-and-performance--planned) | U1/U3 released in v1.21.3; U2/P2 remain planned. P1 released in v1.21.1. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | CI smoke trial → MSIX → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
-| Latest release | [v1.21.2](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.2): runtime, Markdown and compatible packaging/tooling security fixes; remembered dialog folders. |
+| Latest release | [v1.21.3](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.3): context menus within the window and distinguishing folder labels for same-named tabs. |
 
 ---
 
@@ -49,12 +49,12 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 ### UI / keyboard access
 
 <a id="u1"></a>
-- [ ] 🛠️ **U1 — Keep context menus inside the window — implemented, awaiting release.** Shared menus flip/clamp with an 8px edge gap, wrap long labels, scroll focused items and close on resize. Opening animation preserves the bounds. [Source](src/renderer/contextMenu.ts).
-  - **2026-10-09:** build/typecheck, focused units and local Electron toolbar/folder/spelling checks passed. [Validation and retained failures](docs/ui-menu-tab-evidence-2026-10-09.md); [PR #39 and CI](https://github.com/NetworkMD87/Notes-and-codes/pull/39). Not packaged or released.
+- [x] ✅ **U1 — Keep context menus inside the window — released in v1.21.3.** Shared menus flip/clamp with an 8px edge gap, wrap long labels, scroll focused items and close on resize. Opening animation preserves the bounds. [Source](src/renderer/contextMenu.ts).
+  - **2026-10-09:** build/typecheck, focused units, local Electron toolbar/folder/spelling checks and packaged-app menu checks passed. [Implementation evidence](docs/ui-menu-tab-evidence-2026-10-09.md); [release evidence and limits](docs/release-1.21.3-evidence.md).
 - ⬜ **U2 — Keyboard-accessible folder tree.** Add focusable tree items, arrow navigation, expansion state, and keyboard context-menu access. Verify that browsing and New/Rename/Delete work without a pointer. [Source](src/renderer/sidebar.ts).
 <a id="u3"></a>
-- [ ] 🛠️ **U3 — Distinguish same-named tabs — implemented, awaiting release.** Saved-file duplicates show minimal folder suffixes with distinguishing characters retained under truncation. Full-path tooltips and accessible labels expose file identity and unsaved status. [Source](src/renderer/tabBar.ts).
-  - **2026-10-09:** focused local checks passed for narrow/wide layouts, natural sizing, themes, open/close/rename/Save As and 100-tab typing stability. [Validation and retained failures](docs/ui-menu-tab-evidence-2026-10-09.md); [PR #39 and CI](https://github.com/NetworkMD87/Notes-and-codes/pull/39). Not packaged or released.
+- [x] ✅ **U3 — Distinguish same-named tabs — released in v1.21.3.** Saved-file duplicates show minimal folder suffixes with distinguishing characters retained under truncation. Full-path tooltips and accessible labels expose file identity and unsaved status. [Source](src/renderer/tabBar.ts).
+  - **2026-10-09:** narrow/wide layouts, natural sizing, themes, open/close/rename/Save As, 100-tab typing stability and packaged-app file identity passed focused checks. [Implementation evidence](docs/ui-menu-tab-evidence-2026-10-09.md); [release evidence and limits](docs/release-1.21.3-evidence.md).
 
 ---
 
@@ -154,6 +154,7 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 
 | Release | Outcome |
 | --- | --- |
+| **v1.21.3** · 2026-10-09 | Context menus stay within the window; same-named tabs show distinguishing folder labels and accessible file identities. [Release evidence](docs/release-1.21.3-evidence.md). |
 | **v1.21.2** · 2026-10-08 | Electron and Markdown security updates, compatible packaging/tooling dependency fixes, and remembered dialog folders. [Release evidence](docs/release-1.21.2-evidence.md). |
 | **v1.21.1** · 2026-10-02 | Reliable split-pane and overlapping saves; rename/save-path and stale-history fixes; in-place tab updates while typing. |
 | **v1.21.0** · 2026-09-04 | Markdown authoring tools and smart lists; preview before Save As; safe task checkboxes; clearer responsive Editor settings. |
