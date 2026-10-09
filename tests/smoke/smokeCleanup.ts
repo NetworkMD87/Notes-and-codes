@@ -9,6 +9,16 @@ import { promisify } from 'node:util'
 export type ElectronLaunchOptions = Parameters<typeof electron.launch>[0]
 export type CleanupKind = 'application' | 'child' | 'directory'
 
+// Test-only switch: ordinary local launches retain their existing rendering path.
+export function smokeLaunchOptions(options: ElectronLaunchOptions, mode = process.env.NC_SMOKE_RENDERING): ElectronLaunchOptions {
+  if (!mode || mode === 'native') return options
+  const flags = mode === 'disable-gpu' ? ['--disable-gpu']
+    : mode === 'swiftshader' ? ['--use-gl=angle', '--use-angle=swiftshader']
+      : undefined
+  if (!flags) throw new Error(`Unknown smoke rendering mode: ${mode}`)
+  return { ...options, args: [...flags, ...(options.args ?? [])] }
+}
+
 export interface CleanupIssue {
   kind: CleanupKind
   label: string
@@ -77,7 +87,7 @@ export class SmokeResources {
   }
 
   async launch(options: ElectronLaunchOptions): Promise<ElectronApplication> {
-    const app = await this.ops.launchElectron(options)
+    const app = await this.ops.launchElectron(smokeLaunchOptions(options))
     const child = app.process()
     const pid = registeredPid(child.pid)
     this.processes.push({

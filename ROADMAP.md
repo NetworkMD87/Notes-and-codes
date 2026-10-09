@@ -73,7 +73,8 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 The reliability fixes are released; the remaining delivery sequence follows. The CI experiment is not a release blocker.
 
 - ⬜ **CI renderer smoke support** (**S**, before MSIX; trial) — automatic push/PR CI currently runs build + unit tests, while the hosted Electron smoke job is manual-only because Monaco did not reliably paint on GitHub’s Windows runners.
-  - Retry the manual hosted suite with software rendering (`--use-gl=swiftshader` and/or `--disable-gpu`) supplied through the Electron launch arguments.
+  - **2026-10-09 — Trial prepared locally; hosted evidence pending.** Manual rendering/scope inputs, JSON results and failure traces added. Build/typecheck, focused helper units and 11 local Electron formatting/highlighter checks passed with GPU disabled. No hosted reliability claim or automatic-gate promotion. [Trial plan and evidence](docs/ci-smoke-trial-2026-10-09.md).
+  - Next: approve publishing the trial branch and dispatching focused hosted comparisons, then repeated full runs of the successful candidate.
   - Promote smoke to the automatic push/PR gate only if repeated hosted runs are reliable; otherwise record the new evidence and retain the manual hosted job plus change-specific local checks.
 
 ---

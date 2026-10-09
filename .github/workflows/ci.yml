@@ -8,6 +8,17 @@ on:
     branches: [master]
   pull_request:
   workflow_dispatch:
+    inputs:
+      rendering:
+        description: Electron smoke rendering trial
+        type: choice
+        default: disable-gpu
+        options: [native, disable-gpu, swiftshader]
+      scope:
+        description: Focused rendering checks or full suite
+        type: choice
+        default: focused
+        options: [focused, full]
 
 jobs:
   build-and-test:
@@ -49,12 +60,14 @@ jobs:
   # checked locally; the release checklist selects focused or broader coverage based on risk.
   # The full suite can still be run here on demand.
   #
-  # Worth revisiting with software rendering (--use-gl=swiftshader / --disable-gpu) on the
-  # Electron launch args, which may be what the runner actually needs.
+  # Manual inputs trial native, GPU-disabled, or ANGLE/SwiftShader rendering without
+  # changing the installed app. Compare focused checks first, then repeated full runs.
   smoke:
     name: Smoke tests (Playwright + Electron)
     if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
+    env:
+      NC_SMOKE_RENDERING: ${{ inputs.rendering }}
     steps:
       - uses: actions/checkout@v4
 
@@ -80,12 +93,21 @@ jobs:
       # playwright.config.ts sets NC_HEADLESS before workers spawn, so the app skips global-hotkey
       # registration — a CI job seizing an OS-level hotkey would be both rude and flaky.
       - name: Smoke tests
-        run: npm run test:smoke
+        shell: pwsh
+        run: |
+          Remove-Item env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+          if ('${{ inputs.scope }}' -eq 'focused') {
+            npx playwright test tests/smoke/format-manual.spec.ts tests/smoke/highlighter.spec.ts --reporter=line,json --trace=retain-on-failure
+          } else {
+            npx playwright test --reporter=line,json --trace=retain-on-failure
+          }
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
 
-      - name: Upload failure traces
-        if: failure()
+      - name: Upload smoke results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-results
+          name: playwright-results-${{ inputs.rendering }}-${{ inputs.scope }}
           path: test-results/
           retention-days: 7
