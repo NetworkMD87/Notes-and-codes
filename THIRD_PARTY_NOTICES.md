@@ -6,7 +6,7 @@ licenses.
 
 ## Bundled fonts — SIL Open Font License 1.1
 
-The app embeds these fonts (via the `@fontsource/*` packages) so they render
+The app embeds these fonts (via `@fontsource/*` packages or local font assets) so they render
 without a network fetch. Each is licensed under the SIL Open Font License,
 Version 1.1, reproduced in full at the bottom of this file.
 
@@ -15,6 +15,11 @@ Version 1.1, reproduced in full at the bottom of this file.
 - **Fira Code** — Copyright 2014–2020 The Fira Code Project Authors
   (https://github.com/tonsky/FiraCode)
 - **IBM Plex Mono** — Copyright 2017 IBM Corp. (https://github.com/IBM/plex)
+- **Libron v0.31** — Newsreader Copyright 2020 The Newsreader Project Authors;
+  Readerly and Libron Copyright 2026 Nico Verbruggen, with Reserved Font Name Libron.
+  Unmodified webfonts from https://github.com/nicoverbruggen/libron/releases/tag/v0.31.
+  The upstream copyright notice and full licence are bundled in
+  `out/renderer/licenses/libron/OFL.txt` (source: `src/renderer/public/licenses/libron/OFL.txt`).
 
 ## Runtime dependencies
 

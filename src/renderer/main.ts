@@ -1,5 +1,6 @@
 import './monacoEnv'
 import '@fontsource/jetbrains-mono/400.css'
+import './assets/fonts/libron/libron.css'
 import '@fontsource/jetbrains-mono/700.css'
 import '@fontsource/fira-code/400.css'
 import '@fontsource/ibm-plex-mono/400.css'
@@ -349,6 +350,7 @@ function setTabSizingState(mode: Settings['tabSizing']): void {
 }
 function fontStack(name: string): string { return `'${name}', Consolas, monospace` }
 function applyFont(): void {
+  document.body.style.setProperty('--content-font', fontFamily === 'Libron' ? "'Libron', serif" : "'JetBrains Mono', Consolas, monospace")
   view.paneA.setFontFamily(fontStack(fontFamily)); view.paneB.setFontFamily(fontStack(fontFamily))
   view.paneA.setLigatures(fontLigatures); view.paneB.setLigatures(fontLigatures)
 }
@@ -383,7 +385,10 @@ function setShowMinimapState(on: boolean): void {
 }
 
 let uiFontFamily = 'System'
-function applyUiFont(): void { document.body.style.setProperty('--ui-font', uiFontStack(uiFontFamily)) }
+function applyUiFont(): void {
+  document.body.style.setProperty('--ui-font', uiFontStack(uiFontFamily))
+  document.body.style.setProperty('--hint-font', uiFontFamily === 'Libron' ? "'Libron', serif" : "'JetBrains Mono', Consolas, monospace")
+}
 function persistUiFont(): void { void window.api.updateSettings({ uiFontFamily }) }
 function setUiFontFamilyState(name: string): void { uiFontFamily = name; applyUiFont(); persistUiFont() }
 

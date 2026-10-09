@@ -1,0 +1,24 @@
+@font-face {
+  font-family: 'Libron';
+  font-style: normal;
+  font-weight: 400;
+  src: url('./Libron-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Libron';
+  font-style: italic;
+  font-weight: 400;
+  src: url('./Libron-Italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Libron';
+  font-style: normal;
+  font-weight: 700;
+  src: url('./Libron-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Libron';
+  font-style: italic;
+  font-weight: 700;
+  src: url('./Libron-BoldItalic.woff2') format('woff2');
+}

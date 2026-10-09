@@ -48,6 +48,9 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 
 ### UI / keyboard access
 
+- [x] **Libron font choice — implemented locally, awaiting release (2026-10-09).** Bundled regular, italic, bold and bold italic for offline use in both editor and interface font selectors, including preview/snippet content and interface hints. Existing defaults remain; Windows-controlled menus/dialogs use the system font.
+  - Build/typecheck and focused Electron font-loading, split-pane and restart-persistence check passed (`tests/smoke/libron.spec.ts`). The first sandboxed smoke attempt could not launch Electron; the normal desktop run passed. No release or installed-app replacement performed.
+
 <a id="u1"></a>
 - [x] ✅ **U1 — Keep context menus inside the window — released in v1.21.3.** Shared menus flip/clamp with an 8px edge gap, wrap long labels, scroll focused items and close on resize. Opening animation preserves the bounds. [Source](src/renderer/contextMenu.ts).
   - **2026-10-09:** build/typecheck, focused units, local Electron toolbar/folder/spelling checks and packaged-app menu checks passed. [Implementation evidence](docs/ui-menu-tab-evidence-2026-10-09.md); [release evidence and limits](docs/release-1.21.3-evidence.md).

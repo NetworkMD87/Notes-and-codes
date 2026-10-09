@@ -53,7 +53,7 @@ export interface SettingsDeps {
   focusEditor: () => void
 }
 
-const FONTS = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Lucida Console', 'Courier New']
+const FONTS = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono', 'Libron', 'Cascadia Code', 'Cascadia Mono', 'Consolas', 'Lucida Console', 'Courier New']
 const UI_FONTS = ['System', 'Segoe UI', 'Calibri', 'Tahoma', 'Verdana', 'Arial', 'Georgia', 'system-ui', ...FONTS]
 
 const CATEGORIES: { id: SettingsCategory; label: string }[] = [
