@@ -4,7 +4,9 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
-## [Unreleased]
+## [1.21.3] — 2026-10-09
+
+_Context menus stay within the window, and same-named tabs are easier to identify._
 
 ### Fixed
 - Context menus stay inside the window, wrap long labels and scroll when needed. Keyboard
