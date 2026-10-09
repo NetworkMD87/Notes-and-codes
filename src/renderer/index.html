@@ -34,6 +34,16 @@
       #tabbar[data-tab-sizing=bounded] .tab{flex:0 1 clamp(84px,12.6vw,168px);min-width:84px;max-width:168px}
       .tab-select{flex:1 1 auto;height:100%;min-width:0;overflow:hidden;display:flex;align-items:center;gap:6px;padding:0 0 0 10px;background:none;border:0;color:inherit;cursor:pointer;font:inherit;white-space:nowrap}
       .tab-title{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+      .tab-label{flex:1 1 auto;min-width:0;display:flex;gap:4px;overflow:hidden}
+      .tab-folder{display:flex;flex:none;min-width:0;overflow:hidden;opacity:.7}
+      #tabbar[data-tab-sizing=bounded] .tab-folder{flex:0 0 40%}
+      .tab-folder::before{content:'·';margin-right:1px;flex:none}
+      .tab-folder-text{display:flex;flex:1 1 auto;min-width:0}
+      .tab-folder-prefix{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+      .tab-folder-suffix{display:flex;flex:none;max-width:100%;min-width:0;overflow:hidden}
+      .tab-folder-key{flex:none}
+      .tab-folder-rest{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+      .tab-folder[hidden]{display:none}
       .tab-close{flex:none;align-self:stretch;opacity:.6;background:none;border:0;color:inherit;cursor:pointer;font:inherit;padding:0 10px 0 6px}.tab-close:hover{opacity:1}
       .tab-add{background:none;border:none;color:var(--bartext);font-size:16px;cursor:pointer;padding:0 10px}
       .gutter{background:var(--border);cursor:col-resize}
@@ -81,8 +91,8 @@
       #diff.hidden{display:none}
       .diff-close{position:absolute;top:8px;right:8px;z-index:20;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;border-radius:var(--radius);background:var(--panel-bg);color:var(--panel-text);box-shadow:var(--shadow);font-size:13px;line-height:1;cursor:pointer}
       .diff-close:hover{background:var(--accent);color:var(--accent-text)}
-      #ctx-menu{position:fixed;z-index:100;min-width:150px;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:4px 0;font-size:13px}
-      .ctx-item{display:block;width:100%;padding:6px 14px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;white-space:nowrap}
+      #ctx-menu{box-sizing:border-box;position:fixed;z-index:100;min-width:min(150px,calc(100vw - 16px));max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;background:var(--panel-bg);color:var(--panel-text);border:1px solid var(--accent);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:4px 0;font-size:13px}
+      .ctx-item{display:block;width:100%;padding:6px 14px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;white-space:normal;overflow-wrap:anywhere}
       .ctx-item-radio{display:flex;align-items:center;gap:8px}
       .ctx-check{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1em;height:1em;color:inherit;font-weight:700}
       .ctx-item:hover,.ctx-item:focus-visible{background:var(--accent);color:var(--accent-text);outline:none}
@@ -334,6 +344,8 @@
       .tab,.tb-btn,.tab-add,.tab-close,.palette-row,.qo-row,.sb-row,.ctx-item,.help-row,.about-link,.fh-row button,.fh-close,.help-close,.diff-close,.help-toggle,.swatch,.appearance-theme,.tb-swatch,.ph-picker-head button,.snip-picker-head button,.ph-row,.snip-row,.snip-mgr-head button,.snip-mgr-row button,.personal-dictionary-head button,.personal-word button,.personal-dictionary-open,.accent-default-btn,.settings-cat,.hk-record,.hk-clear,.workspace-excludes-restore{transition:background-color var(--motion-fast) var(--ease),color var(--motion-fast) var(--ease),opacity var(--motion-fast) var(--ease),border-color var(--motion-fast) var(--ease)}
       @keyframes overlayIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
       .palette-box,.qo-box,.settings-box,.help-box,.fh-box,.input-box,.snip-mgr-box,.personal-dictionary-box,.diff-picker-box,#ctx-menu,.ph-list,.snip-list,.toast,.fif-box{animation:overlayIn var(--motion) var(--ease)}
+      @keyframes contextMenuIn{from{opacity:0}to{opacity:1}}
+      #ctx-menu{animation-name:contextMenuIn}
       @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
     </style>
   </head>

@@ -4,6 +4,14 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [Unreleased]
+
+### Fixed
+- Context menus stay inside the window, wrap long labels and scroll when needed. Keyboard
+  navigation keeps the focused action visible, and resizing the window closes the menu.
+- Same-named saved tabs show distinguishing folder labels. Full-path tooltips and accessible
+  labels identify each file and its unsaved changes, including when visible labels are shortened.
+
 ## [1.21.2] — 2026-10-08
 
 _Security updates for Markdown previews, the desktop runtime and Windows packaging tools._

@@ -27,6 +27,24 @@ export function handleContextMenuKey(
 
 const overlay = new OverlayRegistration()
 let closeCurrent: (() => void) | null = null
+const MENU_EDGE_GAP = 8
+
+function placeMenu(menu: HTMLElement, x: number, y: number): void {
+  const bounds = menu.getBoundingClientRect()
+  const style = getComputedStyle(menu)
+  // Layout dimensions are unaffected by opening animations; round outward for fractional pixels.
+  const width = Math.ceil(Number.parseFloat(style.width) || menu.offsetWidth || bounds.width)
+  const height = Math.ceil(Number.parseFloat(style.height) || menu.offsetHeight || bounds.height)
+  const viewportWidth = document.documentElement.clientWidth || window.innerWidth
+  const viewportHeight = document.documentElement.clientHeight || window.innerHeight
+  const maxLeft = Math.max(MENU_EDGE_GAP, viewportWidth - MENU_EDGE_GAP - width)
+  const maxTop = Math.max(MENU_EDGE_GAP, viewportHeight - MENU_EDGE_GAP - height)
+  // Prefer the requested side of the pointer/anchor, then flip if that side has no room.
+  const left = x + width > viewportWidth - MENU_EDGE_GAP ? x - width : x
+  const top = y + height > viewportHeight - MENU_EDGE_GAP ? y - height : y
+  menu.style.left = `${Math.min(Math.max(MENU_EDGE_GAP, left), maxLeft)}px`
+  menu.style.top = `${Math.min(Math.max(MENU_EDGE_GAP, top), maxTop)}px`
+}
 
 export function closeContextMenu(): void { closeCurrent?.() }
 
@@ -42,8 +60,6 @@ export function showContextMenu(
   const menu = document.createElement('div')
   menu.id = 'ctx-menu'
   menu.setAttribute('role', 'menu')
-  menu.style.left = `${x}px`
-  menu.style.top = `${y}px`
   for (const item of items) {
     if ('separator' in item) {
       const sep = document.createElement('div')
@@ -84,6 +100,7 @@ export function showContextMenu(
     menu.removeEventListener('keydown', onMenuKeyDown)
     window.removeEventListener('mousedown', onDown, true)
     window.removeEventListener('keydown', onKeyDown, true)
+    window.removeEventListener('resize', close)
     window.removeEventListener('blur', close)
     if (closeCurrent === close) {
       closeCurrent = null
@@ -108,6 +125,7 @@ export function showContextMenu(
     if (next !== null) {
       for (const [index, row] of rows.entries()) row.tabIndex = index === next ? 0 : -1
       rows[next].focus()
+      rows[next].scrollIntoView?.({ block: 'nearest' })
     }
   }
   function onMenuKeyDown(event: KeyboardEvent): void {
@@ -116,6 +134,7 @@ export function showContextMenu(
     })
   }
   document.body.appendChild(menu)
+  placeMenu(menu, x, y)
   closeCurrent = close
   overlay.open(close)   // Escape closes it via overlayManager
   menu.addEventListener('keydown', onMenuKeyDown)
@@ -123,5 +142,6 @@ export function showContextMenu(
   // defer so the right-click that opened it doesn't immediately close it
   outsideClickTimer = window.setTimeout(() => window.addEventListener('mousedown', onDown, true), 0)
   window.addEventListener('keydown', onKeyDown, true)
+  window.addEventListener('resize', close)
   window.addEventListener('blur', close)
 }
