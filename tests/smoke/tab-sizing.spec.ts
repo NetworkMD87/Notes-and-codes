@@ -33,8 +33,8 @@ test('long filenames are bounded by default and Natural width remains available'
   expect(bounded.badgeShrink).toBe('0')
   await expect(title).toHaveCSS('text-overflow', 'ellipsis')
   expect(await title.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true)
-  await expect(select).toHaveAttribute('title', filename)
-  await expect(select).toHaveAttribute('aria-label', filename)
+  await expect(select).toHaveAttribute('title', filePath)
+  await expect(select).toHaveAttribute('aria-label', `${filename}, ${filePath}`)
 
   await openSettings(win, 'Appearance')
   const sizing = win.getByRole('button', { name: 'Tab sizing' })

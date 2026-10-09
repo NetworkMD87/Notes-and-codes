@@ -1,5 +1,9 @@
 # Notes & Codes — Roadmap
 
+Last updated: 2026-10-09
+
+**🎯 Next up:** [U1](#u1) and [U3](#u3) are implemented and locally verified, awaiting an executable release. [PR #39](https://github.com/NetworkMD87/Notes-and-codes/pull/39) records Git delivery and CI; packaging and release remain a separate decision.
+
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
 Security dependency follow-up added on **2026-10-08** after checking the current source and live npm advisories. Earlier security fixes remain recorded at their original scope; they do not close newer advisories.
@@ -10,7 +14,7 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 | --- | --- |
 | [Security dependencies](#security-dependencies--2026-10-08-follow-up) | S1–S2, S4 and compatible S3 patches released in v1.21.2; S3 retains two dependency chains pending upstream/age eligibility. |
 | [Reliability](#1-reliability--completed) | R1–R4 released in v1.21.1. |
-| [UI and performance](#2-ui-and-performance--planned) | P1 released in v1.21.1; four improvements remain. Agree material UX choices before implementation. |
+| [UI and performance](#2-ui-and-performance--planned) | U1/U3 implemented and locally verified, awaiting release; U2/P2 remain planned. P1 released in v1.21.1. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | CI smoke trial → MSIX → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
@@ -44,9 +48,13 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 
 ### UI / keyboard access
 
-- ⬜ **U1 — Keep context menus inside the window.** Clamp or flip placement at window edges and bound oversized menus with scrolling. Verify editor, spelling, and folder menus near every edge, including keyboard opening. [Source](src/renderer/contextMenu.ts).
+<a id="u1"></a>
+- [ ] 🛠️ **U1 — Keep context menus inside the window — implemented, awaiting release.** Shared menus flip/clamp with an 8px edge gap, wrap long labels, scroll focused items and close on resize. Opening animation preserves the bounds. [Source](src/renderer/contextMenu.ts).
+  - **2026-10-09:** build/typecheck, focused units and local Electron toolbar/folder/spelling checks passed. [Validation and retained failures](docs/ui-menu-tab-evidence-2026-10-09.md); [PR #39 and CI](https://github.com/NetworkMD87/Notes-and-codes/pull/39). Not packaged or released.
 - ⬜ **U2 — Keyboard-accessible folder tree.** Add focusable tree items, arrow navigation, expansion state, and keyboard context-menu access. Verify that browsing and New/Rename/Delete work without a pointer. [Source](src/renderer/sidebar.ts).
-- ⬜ **U3 — Distinguish same-named tabs.** Agree full-path tooltips/accessibility labels and minimal parent-folder disambiguation for duplicate filenames; expose unsaved status to assistive technology. Verify bounded tabs remain readable. [Source](src/renderer/tabBar.ts).
+<a id="u3"></a>
+- [ ] 🛠️ **U3 — Distinguish same-named tabs — implemented, awaiting release.** Saved-file duplicates show minimal folder suffixes with distinguishing characters retained under truncation. Full-path tooltips and accessible labels expose file identity and unsaved status. [Source](src/renderer/tabBar.ts).
+  - **2026-10-09:** focused local checks passed for narrow/wide layouts, natural sizing, themes, open/close/rename/Save As and 100-tab typing stability. [Validation and retained failures](docs/ui-menu-tab-evidence-2026-10-09.md); [PR #39 and CI](https://github.com/NetworkMD87/Notes-and-codes/pull/39). Not packaged or released.
 
 ---
 

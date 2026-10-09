@@ -2,6 +2,7 @@ import type { BufferState, TabSizing } from '../shared/types'
 import { HL_HEX } from '../shared/types'
 import { langBadge } from './fileType'
 import { moveRovingIndex } from './rovingIndex'
+import { tabFolderLabels, tabFolderPrefix } from './tabLabels'
 
 export interface TabHandlers {
   onSelect: (id: string) => void
@@ -12,7 +13,9 @@ export interface TabHandlers {
 
 export class TabBar {
   private draggedId: string | null = null
-  private tabs = new Map<string, { tab: HTMLElement; select: HTMLButtonElement; close: HTMLButtonElement; title: HTMLElement; badge: HTMLElement; language: string }>()
+  private tabs = new Map<string, { tab: HTMLElement; select: HTMLButtonElement; close: HTMLButtonElement; title: HTMLElement; folder: HTMLElement; folderPrefix: HTMLElement; folderKey: HTMLElement; folderRest: HTMLElement; badge: HTMLElement; language: string }>()
+  private folderLabels = new Map<string, string>()
+  private folderPrefixes = new Map<string, string>()
 
   constructor(private container: HTMLElement, private handlers: TabHandlers) {
     this.setSizing('bounded')
@@ -30,6 +33,8 @@ export class TabBar {
   }
 
   render(buffers: BufferState[], activeId: string | null): void {
+    this.folderLabels = tabFolderLabels(buffers)
+    this.folderPrefixes = new Map([...this.folderLabels].map(([id, label]) => [id, tabFolderPrefix(label, this.folderLabels.values())]))
     const ids = [...this.tabs.keys()]
     if (buffers.length > 0 && ids.length === buffers.length && buffers.every((b, i) => b.id === ids[i])) {
       for (const b of buffers) {
@@ -57,30 +62,38 @@ export class TabBar {
       select.setAttribute('role', 'tab')
       select.setAttribute('aria-selected', String(b.id === activeId))
       select.setAttribute('aria-controls', 'panes')
-      select.setAttribute('aria-label', b.title)
-      select.title = b.title
       select.tabIndex = b.id === activeId ? 0 : -1
       const badge = document.createElement('span'); badge.className = 'badge'
       const lb = langBadge(b.language); badge.textContent = lb.label
       if (lb.colour) { const hex = HL_HEX[lb.colour]; badge.style.color = hex; badge.style.background = hex + '22' }
       else badge.style.color = 'var(--muted)'
       const title = document.createElement('span'); title.className = 'tab-title'
-      title.textContent = (b.dirty ? '● ' : '') + b.title
-      select.append(badge, title)
+      const folder = document.createElement('span'); folder.className = 'tab-folder'
+      folder.setAttribute('aria-hidden', 'true')
+      const folderText = document.createElement('span'); folderText.className = 'tab-folder-text'
+      const folderPrefix = document.createElement('span'); folderPrefix.className = 'tab-folder-prefix'
+      const folderSuffix = document.createElement('span'); folderSuffix.className = 'tab-folder-suffix'
+      const folderKey = document.createElement('span'); folderKey.className = 'tab-folder-key'
+      const folderRest = document.createElement('span'); folderRest.className = 'tab-folder-rest'
+      folderSuffix.append(folderKey, folderRest)
+      folderText.append(folderPrefix, folderSuffix); folder.append(folderText)
+      const label = document.createElement('span'); label.className = 'tab-label'
+      label.append(title, folder)
+      select.append(badge, label)
       select.onclick = () => this.handlers.onSelect(b.id)
       select.onkeydown = (event) => this.onTabKeydown(event, select)
       tab.onauxclick = (e) => { if (e.button === 1) this.handlers.onClose(b.id) } // middle-click
 
       const close = document.createElement('button')
       close.type = 'button'; close.textContent = '×'; close.className = 'tab-close'
-      close.setAttribute('aria-label', `Close ${b.title}`)
       close.tabIndex = b.id === activeId ? 0 : -1
       close.onclick = (event) => {
         if (event.detail === 0) void this.closeFromKeyboard(b.id, buffers.findIndex(buffer => buffer.id === b.id))
         else void this.handlers.onClose(b.id)
       }
       tab.append(select, close)
-      this.tabs.set(b.id, { tab, select, close, title, badge, language: b.language })
+      this.tabs.set(b.id, { tab, select, close, title, folder, folderPrefix, folderKey, folderRest, badge, language: b.language })
+      this.updateTab(b)
       this.container.appendChild(tab)
     }
     const add = document.createElement('button')
@@ -95,11 +108,22 @@ export class TabBar {
     if (!entry) return
     const title = (buffer.dirty ? '● ' : '') + buffer.title
     if (entry.title.textContent !== title) entry.title.textContent = title
-    if (entry.select.title !== buffer.title) {
-      entry.select.title = buffer.title
-      entry.select.setAttribute('aria-label', buffer.title)
-      entry.close.setAttribute('aria-label', `Close ${buffer.title}`)
-    }
+    const folder = this.folderLabels.get(buffer.id) ?? ''
+    const prefix = this.folderPrefixes.get(buffer.id) ?? ''
+    const suffix = folder.slice(prefix.length)
+    const key = [...suffix][0] ?? ''
+    const rest = suffix.slice(key.length)
+    if (entry.folderPrefix.textContent !== prefix) entry.folderPrefix.textContent = prefix
+    if (entry.folderKey.textContent !== key) entry.folderKey.textContent = key
+    if (entry.folderRest.textContent !== rest) entry.folderRest.textContent = rest
+    if (entry.folder.hidden !== !folder) entry.folder.hidden = !folder
+    const filePath = typeof buffer.filePath === 'string' && buffer.filePath ? buffer.filePath : null
+    const identity = filePath ? `${buffer.title}, ${filePath}` : buffer.title
+    const tooltip = (filePath ?? buffer.title) + (buffer.dirty ? '\nUnsaved changes' : '')
+    const accessible = identity + (buffer.dirty ? ', Unsaved changes' : '')
+    if (entry.select.title !== tooltip) entry.select.title = tooltip
+    if (entry.select.getAttribute('aria-label') !== accessible) entry.select.setAttribute('aria-label', accessible)
+    if (entry.close.getAttribute('aria-label') !== `Close ${identity}`) entry.close.setAttribute('aria-label', `Close ${identity}`)
     if (entry.language !== buffer.language) {
       entry.language = buffer.language
       const badge = langBadge(buffer.language)
