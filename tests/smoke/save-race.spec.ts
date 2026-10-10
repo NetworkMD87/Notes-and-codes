@@ -37,6 +37,11 @@ test('a queued save writes the latest content and format after an in-flight writ
     env: { ...process.env, NC_HEADLESS: '1', NC_TEST_FILE_WRITE_DELAY_MS: '1000' },
   })
   const win = await app.firstWindow()
+  win.on('console', message => {
+    if (message.type() === 'error' && message.text().startsWith('save failed')) {
+      console.error('[queued-save renderer]', message.text())
+    }
+  })
   await expect(win.locator('body[data-booted="true"]')).toBeVisible()
   await expect(win.locator('#paneA .view-lines')).toContainText('on disk')
 
@@ -69,12 +74,14 @@ test('a queued save writes the latest content and format after an in-flight writ
     dirty: document.body.dataset.saveWriteLastCompletionDirty,
   }))).toEqual({ state: 'active', completions: '1', dirty: 'true' })
 
-  await expect.poll(() => {
-    const bytes = readFileSync(filePath)
-    return { bom: [...bytes.subarray(0, 2)], content: bytes.subarray(2).toString('utf16le') }
-  }).toEqual({ bom: [0xff, 0xfe], content: 'newer\r\nsave' })
+  // Confirm the queued write completed before opening the target on Windows. Reading it
+  // while atomic replacement is in flight adds file access that the scenario does not need.
+  await expect(win.locator('body')).toHaveAttribute('data-save-write-completion-count', '2')
   await expect(win.locator('body')).toHaveAttribute('data-save-write-last-completion-dirty', 'false')
   await expect(win.locator('.sb-state')).toHaveText('● saved')
+  const bytes = readFileSync(filePath)
+  expect({ bom: [...bytes.subarray(0, 2)], content: bytes.subarray(2).toString('utf16le') })
+    .toEqual({ bom: [0xff, 0xfe], content: 'newer\r\nsave' })
 })
 
 test('Save As keeps the originating buffer when an external open rebinds its pane during the dialog', async ({ smoke }) => {
