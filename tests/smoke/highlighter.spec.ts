@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from './smokeTest'
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { waitForBoot } from './appReady'
 
@@ -74,6 +74,15 @@ test('the active highlighter colour persists across a relaunch', async ({ smoke 
       await expect(win1.locator('.tb-btn[title^="Highlighter (blue)"]')).toBeVisible()
       selectedCursor = await win1.locator('body').evaluate((body) =>
         body.style.getPropertyValue('--hl-cursor'))
+      // The toolbar changes immediately; wait for the actual asynchronous disk save.
+      await expect.poll(() => {
+        try {
+          return JSON.parse(readFileSync(join(userDataDir, 'settings.json'), 'utf8')).lastHighlightColour
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+          throw error
+        }
+      }, { message: 'Blue highlighter colour must be saved before closing' }).toBe('blue')
     } finally {
       await app1.close()
     }

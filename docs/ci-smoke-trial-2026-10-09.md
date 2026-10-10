@@ -55,3 +55,32 @@ The owner approved staging, commit and push of the launcher repair, followed onl
 Repair commit `db3e5e0e1142fe0f7fea46a613adc6723167aee5` was pushed to `codex/ci-smoke-rendering-trial`. [Run 38014194401](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/38014194401) passed build/typecheck and all four real Electron startup checks in 6.23s: 0 skipped, 0 failures, 0 flaky results, with retries disabled. GPU-disabled and SwiftShader modes each preserve argv entry position, apply their actual switches, and open the correct blank/requested document. The workflow rendering input is `native` because this spec explicitly tests both software modes itself. The separate broad build/unit job was skipped as intended.
 
 This qualifies the launcher startup repair on the hosted runner; it does not establish full-suite rendering reliability. No further focused or full suite was dispatched. Next proposed step is a bounded hosted focused comparison on the corrected launcher, subject to owner approval.
+
+## Corrected focused comparison — 2026-10-10
+
+The owner approved committing/pushing the startup evidence and dispatching only the 11 focused checks once in each mode. Evidence commit `559dfbf` was pushed; both runs tested that same commit with the corrected launcher.
+
+| Run | Mode | Result |
+| --- | --- | --- |
+| [38014468464](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/38014468464) | Native | 11 first-attempt passes, 0 flaky, 0 failures, 0 skipped; 15.74s. |
+| [38014470496](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/38014470496) | GPU disabled | 10 first-attempt passes, 1 retry-dependent pass, 0 final failures, 0 skipped; 48.60s. |
+
+Both build/typecheck/unit jobs passed. The GPU-disabled retry was `the active highlighter colour persists across a relaunch`: its first attempt could not find the blue Highlighter toolbar button within 30 seconds; the second attempt passed. This is a toolbar/persistence assertion, not evidence that Monaco failed to paint. No causal attribution to GPU disabling is established from one comparison.
+
+Recommendation: retain manual-only smoke and normal rendering as the baseline; this comparison does not demonstrate a software-rendering benefit. Investigate the highlighter retry and identify a representative historical rendered-content failure before proposing broader hosted qualification. No full suites were dispatched. These final result notes are local and uncommitted pending further Git approval.
+
+## Highlighter-colour test synchronization — 2026-10-10
+
+Saved first-attempt evidence from run 38014470496 shows the second launch booted with a yellow highlighter toolbar. The first launch displayed blue and began closing roughly 40ms after the blue UI assertion; it did not check persistence. `setHighlightColour` starts `updateSettings` asynchronously while updating chrome immediately. A save/shutdown race is the likely explanation, but the artifact lacks the settings file and IPC completion evidence, so the exact hosted cause is not proven.
+
+At the owner's request, only `tests/smoke/highlighter.spec.ts` was changed: before closing the first launch, poll the isolated `settings.json` until `lastHighlightColour` equals `blue`. A missing file is retried; unexpected read/parse errors remain failures. Existing second-launch toolbar, mode and cursor checks remain intact. No production code was changed.
+
+- `npm run build`: passed, including typecheck.
+- Single GPU-disabled local test, retries disabled: passed in 4.8s; final restored test passed in 3.9s. No other smoke tests ran.
+- Guard falsification: temporarily replace the isolated settings-update handler with a no-save response. Blue UI still appeared, but the new disk assertion failed (`Expected: blue`, `Received: undefined`). Stub removed before the final passing run.
+- The first overly anchored title filter selected no tests; corrected to the unique title substring before execution.
+- Test processes exited. No full suite, GitHub run, staging, commit or push occurred for this change.
+
+This verifies restore after confirmed save locally, not very-fast user quit or hosted reliability. Proposed next step: approve publication and a single hosted rerun of this test; keep broader suites and automatic-gate promotion out of scope.
+
+The owner subsequently approved staging, commit and push of the synchronized test and evidence, then one hosted GPU-disabled run with retries off. A `highlighter-colour` workflow scope selects only this test and skips the separate broad unit-test job; the smoke job still builds/typechecks before launch. No full suites are authorized.
