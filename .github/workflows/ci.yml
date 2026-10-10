@@ -98,8 +98,6 @@ jobs:
         run: |
           Remove-Item env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
           if ('${{ inputs.scope }}' -eq 'startup') {
-            # This spec applies each rendering mode itself; avoid adding a second set.
-            Remove-Item env:NC_SMOKE_RENDERING -ErrorAction SilentlyContinue
             npx playwright test tests/smoke/rendering-startup.spec.ts --retries=0 --reporter=line,json --trace=retain-on-failure
           } elseif ('${{ inputs.scope }}' -eq 'highlighter-colour') {
             npx playwright test tests/smoke/highlighter.spec.ts -g 'the active highlighter colour persists across a relaunch' --retries=0 --reporter=line,json --trace=retain-on-failure

@@ -1,7 +1,6 @@
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test, expect } from './smokeTest'
-import { smokeLaunchOptions } from './smokeCleanup'
 import { waitForBoot } from './appReady'
 
 for (const mode of ['disable-gpu', 'swiftshader']) {
@@ -12,7 +11,7 @@ for (const mode of ['disable-gpu', 'swiftshader']) {
       if (openFile) writeFileSync(filePath, 'requested startup content')
       const args = ['out/main/index.js', `--user-data-dir=${userDataDir}`]
       if (openFile) args.push(filePath)
-      const app = await smoke.launch(smokeLaunchOptions({ args }, mode))
+      const app = await smoke.launch({ args }, mode)
       const win = await app.firstWindow()
       await waitForBoot(win)
       const runtime = await app.evaluate(({ app }, mode) => ({
@@ -21,9 +20,13 @@ for (const mode of ['disable-gpu', 'swiftshader']) {
           ? app.commandLine.hasSwitch('disable-gpu')
           : app.commandLine.getSwitchValue('use-angle') === 'swiftshader' &&
             app.commandLine.getSwitchValue('use-gl') === 'angle',
+        conflictingSwitchApplied: mode === 'disable-gpu'
+          ? app.commandLine.hasSwitch('use-angle') || app.commandLine.hasSwitch('use-gl')
+          : app.commandLine.hasSwitch('disable-gpu'),
       }), mode)
       expect(runtime.entry.replaceAll('\\', '/')).toMatch(/out\/main\/index\.js$/)
       expect(runtime.switchApplied).toBe(true)
+      expect(runtime.conflictingSwitchApplied).toBe(false)
       await expect(win.locator('.tab')).toHaveCount(1)
       await expect(win.locator('.tab.active')).toContainText(openFile ? 'requested.txt' : 'Untitled-1')
       await expect(win.locator('.tab')).not.toContainText('index.js')

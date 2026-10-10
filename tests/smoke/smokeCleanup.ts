@@ -87,8 +87,9 @@ export class SmokeResources {
     return path
   }
 
-  async launch(options: ElectronLaunchOptions): Promise<ElectronApplication> {
-    const app = await this.ops.launchElectron(smokeLaunchOptions(options))
+  async launch(options: ElectronLaunchOptions, mode?: string): Promise<ElectronApplication> {
+    // An explicit test mode overrides the environment; apply switches only once.
+    const app = await this.ops.launchElectron(smokeLaunchOptions(options, mode))
     const child = app.process()
     const pid = registeredPid(child.pid)
     this.processes.push({

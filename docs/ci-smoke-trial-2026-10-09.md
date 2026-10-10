@@ -2,9 +2,9 @@
 
 ## Scope
 
-Test whether software rendering resolves missing Monaco paints on GitHub-hosted Windows runners. Keep the manual-only smoke job until hosted reliability is established and automatic-gate promotion is approved. Normal app launches and existing test assertions/timeouts/retries remain unchanged.
+Test whether software rendering resolves missing Monaco paints on GitHub-hosted Windows runners. Keep the manual-only smoke job until hosted reliability is established and automatic-gate promotion is approved. Production app launches remain unchanged. Test-only startup guards and a confirmed-save assertion were added; startup and highlighter-colour scopes disable retries, while focused/full scopes retain existing timeouts and retries.
 
-Manual workflow inputs select `native`, `disable-gpu` (default), or `swiftshader`, and `focused` (default) or `full` scope. The corrected shared smoke launcher appends switches after the existing arguments, preserving the entry script position, file arguments, isolated user data and other launch options. SwiftShader uses Chromium's documented ANGLE switches: `--use-gl=angle --use-angle=swiftshader` ([Chromium documentation](https://chromium.googlesource.com/chromium/src/+/main/docs/gpu/swiftshader.md)). No unsafe SwiftShader or sandbox-disable switches are added.
+Manual workflow inputs select `native`, `disable-gpu` (default), or `swiftshader`, and `startup`, `highlighter-colour`, `focused` (default) or `full` scope. The corrected shared smoke launcher appends switches after the existing arguments, preserving the entry script position, file arguments, isolated user data and other launch options. SwiftShader uses Chromium's documented ANGLE switches: `--use-gl=angle --use-angle=swiftshader` ([Chromium documentation](https://chromium.googlesource.com/chromium/src/+/main/docs/gpu/swiftshader.md)). No unsafe SwiftShader or sandbox-disable switches are added.
 
 ## Local evidence
 
@@ -67,7 +67,7 @@ The owner approved committing/pushing the startup evidence and dispatching only 
 
 Both build/typecheck/unit jobs passed. The GPU-disabled retry was `the active highlighter colour persists across a relaunch`: its first attempt could not find the blue Highlighter toolbar button within 30 seconds; the second attempt passed. This is a toolbar/persistence assertion, not evidence that Monaco failed to paint. No causal attribution to GPU disabling is established from one comparison.
 
-Recommendation: retain manual-only smoke and normal rendering as the baseline; this comparison does not demonstrate a software-rendering benefit. Investigate the highlighter retry and identify a representative historical rendered-content failure before proposing broader hosted qualification. No full suites were dispatched. These final result notes are local and uncommitted pending further Git approval.
+Recommendation: retain manual-only smoke and normal rendering as the baseline; this comparison does not demonstrate a software-rendering benefit. Investigate the highlighter retry and identify a representative historical rendered-content failure before proposing broader hosted qualification. No full suites were dispatched. These notes initially awaited Git approval and were subsequently committed and pushed; the hosted highlighter result is recorded below.
 
 ## Highlighter-colour test synchronization — 2026-10-10
 
@@ -90,3 +90,16 @@ The owner subsequently approved staging, commit and push of the synchronized tes
 Commit `a42a996a0470b436f8e3aa1a09b2ff425d7bb9d7` is pushed. [Run 38015857383](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/38015857383) passed build/typecheck and exactly one GPU-disabled highlighter-colour test in 3.63s. Saved JSON confirms retries configured to 0, 1 expected pass, 0 failures, 0 flaky results and 0 skipped. The broad unit-test job was skipped as intended.
 
 The test confirms blue is on disk before closing and is restored after relaunch on this hosted run. One pass does not prove the historical failure's exact cause, long-term stability or rapid user-quit durability. No other tests or full suites were dispatched. Keep smoke manual-only. The owner approved committing and pushing these final result notes; further qualification and merging the trial branch remain separate decisions.
+
+## Rendering-mode isolation repair — 2026-10-10
+
+Read-only branch review found that the startup spec added its explicit rendering switches before calling the shared launcher, which then added `NC_SMOKE_RENDERING` switches again. A full GPU-disabled run could therefore execute a SwiftShader-labelled startup check with both modes selected (and vice versa). The dedicated hosted startup run cleared the environment variable, so its recorded pass remains valid; no full run has qualified the corrected launcher.
+
+At the owner's request, the shared launcher now accepts an explicit mode that overrides the environment, applying switches once. The startup spec passes its mode directly and asserts that the conflicting mode's switches are absent. The workflow's special environment-clearing workaround is removed; ordinary tests still use the selected workflow mode. No production app code changed.
+
+- Regression evidence: new shared-launcher override checks failed against the old implementation under both environment modes, including opposite-mode selections. An initial sandbox attempt failed during Vitest cache rename (`EPERM`), before tests ran; checks then used the normal environment.
+- `npm test -- smokeCleanup`: all 43 helper tests passed. Two parameterized override checks each exercise explicit GPU-disabled, SwiftShader and native modes under GPU-disabled and SwiftShader environments, asserting exact arguments with no conflicting or duplicate flags.
+- `npm run build`: passed, including typecheck. The project TypeScript gate covers `src`; the changed test helpers were exercised by the focused unit/startup runs.
+- With `ELECTRON_RUN_AS_NODE` cleared and `NC_SMOKE_RENDERING=disable-gpu` deliberately retained, `npx playwright test tests/smoke/rendering-startup.spec.ts --retries=0 --reporter=line,json --trace=retain-on-failure` passed all four blank/file GPU-disabled/SwiftShader checks in 6.83s. JSON reported 4 expected passes, 0 failures, 0 flaky results and 0 skipped; the SwiftShader cases rejected inherited GPU-disabled switches.
+
+This fixes the review finding with bounded local evidence. The owner subsequently approved staging, committing and pushing the repair and evidence, with no additional tests or GitHub runs. The reviewed branch is suitable for merging as manual-only trial tooling and test synchronization; merging requires separate approval. Broader hosted reliability and rapid user-quit durability remain unverified; retain manual-only smoke.

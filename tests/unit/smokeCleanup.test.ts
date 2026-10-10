@@ -199,6 +199,26 @@ describe('smoke rendering options', () => {
       vi.unstubAllEnvs()
     }
   })
+  it.each(['disable-gpu', 'swiftshader'])('explicit modes override the %s environment at the shared launcher', async environmentMode => {
+    vi.stubEnv('NC_SMOKE_RENDERING', environmentMode)
+    try {
+      for (const [mode, flags] of [
+        ['disable-gpu', ['--disable-gpu']],
+        ['swiftshader', ['--use-gl=angle', '--use-angle=swiftshader']],
+        ['native', []],
+      ] as const) {
+        const app = new FakeApplication('rendering', 100, [])
+        const launchElectron = vi.fn(async () => app as unknown as Awaited<ReturnType<SmokeResources['launch']>>)
+        const smoke = new SmokeResources({ launchElectron })
+        await smoke.launch(options, mode)
+        expect(launchElectron).toHaveBeenCalledWith({ ...options, args: [...options.args, ...flags] })
+        app.child.exit(0)
+        expect(await smoke.cleanup()).toEqual([])
+      }
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
 })
 
 describe('SmokeResources', () => {
