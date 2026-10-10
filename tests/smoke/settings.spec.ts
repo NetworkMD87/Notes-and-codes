@@ -181,9 +181,11 @@ test('Settings: nav lists categories, detail shows the active one', async ({ smo
 
 test('Settings: Editor groups controls and stacks safely at narrow widths', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-settings-editor-layout-')
-  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  // Keep Follow Windows and its UK label deterministic on any host machine.
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, '--lang=en-GB'] })
   const win = await app.firstWindow()
   await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  expect(await app.evaluate(({ app }) => app.getLocale())).toBe('en-GB')
   await win.setViewportSize({ width: 1100, height: 720 })
   await openSettings(win, 'Editor')
 
@@ -205,6 +207,7 @@ test('Settings: Editor groups controls and stacks safely at narrow widths', asyn
   await expect(markdown).toContainText('Restore Off, Side by side, or Focus when reopening the app.')
   await expect(spelling.getByLabel('Check spelling in plain text and Markdown')).toBeVisible()
   await expect(spelling.getByLabel('Spell check language')).toBeVisible()
+  await expect(spelling.getByLabel('Spell check language')).toHaveValue('system')
   await expect(spelling).toContainText('Works fully offline. Markdown code and technical syntax are ignored.')
   await expect(spelling.locator('.spell-settings-resolved')).toContainText('Currently using English (UK).')
   await expect(spelling.getByRole('button', { name: 'Personal dictionary…' })).toBeVisible()
