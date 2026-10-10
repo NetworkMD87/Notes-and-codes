@@ -553,7 +553,9 @@ interface SaveOpts { snapshot: boolean; recent: boolean; allowDialog: boolean; f
 const MANUAL_SAVE: SaveOpts = { snapshot: true, recent: true, allowDialog: true, format: true, forceDialog: false }
 const exposeSaveWriteState = new URLSearchParams(window.location.search).get('nc-headless') === '1'
 const saveWriteSnapshots: Array<{ content: string; eol: EolMode; encoding: Encoding; revision: number }> = []
+const saveWriteCompletions: Array<{ revision: number; dirty: boolean }> = []
 let saveWriteCompletionCount = 0
+let saveWriteRequestCount = 0
 
 async function writeBufferFile(path: string, content: string, eol: EolMode, encoding: Encoding, savedRevision: number, expectedMtime?: number) {
   if (exposeSaveWriteState) {
@@ -562,6 +564,21 @@ async function writeBufferFile(path: string, content: string, eol: EolMode, enco
     document.body.dataset.saveWriteState = 'active'
   }
   try {
+    // Opt-in headless seam: hold each write until this test releases its exact index.
+    // Register before publishing readiness so release cannot race the listener.
+    if (exposeSaveWriteState && document.body.dataset.saveWriteControlled === 'true') {
+      const index = saveWriteSnapshots.length
+      await new Promise<void>(resolve => {
+        const release = (event: Event) => {
+          if ((event as CustomEvent<number>).detail !== index) return
+          document.removeEventListener('nc-test-release-save-write', release)
+          delete document.body.dataset.saveWriteHeldIndex
+          resolve()
+        }
+        document.addEventListener('nc-test-release-save-write', release)
+        document.body.dataset.saveWriteHeldIndex = String(index)
+      })
+    }
     return await window.api.writeFile(path, content, eol, encoding, expectedMtime)
   } finally {
     if (exposeSaveWriteState) document.body.dataset.saveWriteState = 'settled'
@@ -569,6 +586,7 @@ async function writeBufferFile(path: string, content: string, eol: EolMode, enco
 }
 
 async function saveBuffer(id: string, opts: SaveOpts = MANUAL_SAVE): Promise<boolean> {
+  if (exposeSaveWriteState) document.body.dataset.saveWriteRequestCount = String(++saveWriteRequestCount)
   return saveCoordinator.run(id, () => saveBufferNow(id, opts))
 }
 
@@ -644,6 +662,8 @@ async function saveBufferNow(id: string, opts: SaveOpts): Promise<boolean> {
   manager.markSaved(id, path, r.mtimeMs, savedRevision)
   if (exposeSaveWriteState) {
     saveWriteCompletionCount += 1
+    saveWriteCompletions.push({ revision: savedRevision, dirty: manager.get(id)?.dirty ?? false })
+    document.body.dataset.saveWriteCompletions = JSON.stringify(saveWriteCompletions)
     document.body.dataset.saveWriteCompletionCount = String(saveWriteCompletionCount)
     document.body.dataset.saveWriteLastCompletionDirty = String(manager.get(id)?.dirty ?? false)
   }

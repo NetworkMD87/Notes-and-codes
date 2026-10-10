@@ -21,6 +21,13 @@ async function writeSnapshots(win: Page): Promise<WriteSnapshot[]> {
   return win.evaluate(() => JSON.parse(document.body.dataset.saveWriteSnapshots ?? '[]') as WriteSnapshot[])
 }
 
+async function releaseWrite(win: Page, index: number): Promise<void> {
+  await expect(win.locator('body')).toHaveAttribute('data-save-write-held-index', String(index))
+  await win.evaluate(writeIndex => {
+    document.dispatchEvent(new CustomEvent('nc-test-release-save-write', { detail: writeIndex }))
+  }, index)
+}
+
 async function openExternal(app: ElectronApplication, path: string): Promise<void> {
   await app.evaluate(({ BrowserWindow }, filePath) => {
     BrowserWindow.getAllWindows()[0].webContents.send('open-file', filePath)
@@ -34,7 +41,7 @@ test('a queued save writes the latest content and format after an in-flight writ
   writeFileSync(filePath, 'on disk')
   const app = await smoke.launch({
     args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath],
-    env: { ...process.env, NC_HEADLESS: '1', NC_TEST_FILE_WRITE_DELAY_MS: '1000' },
+    env: { ...process.env, NC_HEADLESS: '1' },
   })
   const win = await app.firstWindow()
   win.on('console', message => {
@@ -44,6 +51,7 @@ test('a queued save writes the latest content and format after an in-flight writ
   })
   await expect(win.locator('body[data-booted="true"]')).toBeVisible()
   await expect(win.locator('#paneA .view-lines')).toContainText('on disk')
+  await win.evaluate(() => { document.body.dataset.saveWriteControlled = 'true' })
 
   const editor = win.locator('#paneA .monaco-editor')
   await editor.click()
@@ -51,6 +59,7 @@ test('a queued save writes the latest content and format after an in-flight writ
   await win.keyboard.type('first save')
   await expect(win.locator('.sb-state')).toHaveText('● unsaved')
   await chooseFileCommand(app, 'Save')
+  await expect(win.locator('body')).toHaveAttribute('data-save-write-held-index', '1')
   await expect(win.locator('body')).toHaveAttribute('data-save-write-state', 'active')
   await expect.poll(() => writeSnapshots(win)).toHaveLength(1)
 
@@ -61,6 +70,13 @@ test('a queued save writes the latest content and format after an in-flight writ
   await win.getByLabel('Line endings').selectOption('CRLF')
   await chooseFileCommand(app, 'Save')
 
+  // Acknowledge the second request while the first is held: it must queue, not write.
+  await expect(win.locator('body')).toHaveAttribute('data-save-write-request-count', '2')
+  expect(await writeSnapshots(win)).toHaveLength(1)
+  await expect(win.locator('body')).not.toHaveAttribute('data-save-write-completion-count')
+  await releaseWrite(win, 1)
+
+  await expect(win.locator('body')).toHaveAttribute('data-save-write-held-index', '2')
   await expect.poll(() => writeSnapshots(win)).toHaveLength(2)
   const writes = await writeSnapshots(win)
   expect(writes.map(({ content, eol, encoding }) => ({ content, eol, encoding }))).toEqual([
@@ -73,11 +89,17 @@ test('a queued save writes the latest content and format after an in-flight writ
     completions: document.body.dataset.saveWriteCompletionCount,
     dirty: document.body.dataset.saveWriteLastCompletionDirty,
   }))).toEqual({ state: 'active', completions: '1', dirty: 'true' })
+  await expect.poll(() => win.evaluate(() => JSON.parse(document.body.dataset.saveWriteCompletions ?? '[]')))
+    .toEqual([{ revision: writes[0].revision, dirty: true }])
+  await releaseWrite(win, 2)
 
   // Confirm the queued write completed before opening the target on Windows. Reading it
   // while atomic replacement is in flight adds file access that the scenario does not need.
   await expect(win.locator('body')).toHaveAttribute('data-save-write-completion-count', '2')
   await expect(win.locator('body')).toHaveAttribute('data-save-write-last-completion-dirty', 'false')
+  await expect(win.locator('body')).toHaveAttribute('data-save-write-state', 'settled')
+  await expect.poll(() => win.evaluate(() => JSON.parse(document.body.dataset.saveWriteCompletions ?? '[]')))
+    .toEqual([{ revision: writes[0].revision, dirty: true }, { revision: writes[1].revision, dirty: false }])
   await expect(win.locator('.sb-state')).toHaveText('● saved')
   const bytes = readFileSync(filePath)
   expect({ bom: [...bytes.subarray(0, 2)], content: bytes.subarray(2).toString('utf16le') })
