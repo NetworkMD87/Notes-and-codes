@@ -16,7 +16,8 @@ export function smokeLaunchOptions(options: ElectronLaunchOptions, mode = proces
     : mode === 'swiftshader' ? ['--use-gl=angle', '--use-angle=swiftshader']
       : undefined
   if (!flags) throw new Error(`Unknown smoke rendering mode: ${mode}`)
-  return { ...options, args: [...flags, ...(options.args ?? [])] }
+  // Keep the entry script at argv[1]: unpackaged file routing skips that position.
+  return { ...options, args: [...(options.args ?? []), ...flags] }
 }
 
 export interface CleanupIssue {

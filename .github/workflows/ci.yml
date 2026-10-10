@@ -15,14 +15,15 @@ on:
         default: disable-gpu
         options: [native, disable-gpu, swiftshader]
       scope:
-        description: Focused rendering checks or full suite
+        description: Startup qualification, focused rendering checks or full suite
         type: choice
         default: focused
-        options: [focused, full]
+        options: [startup, focused, full]
 
 jobs:
   build-and-test:
     name: Build & unit tests
+    if: github.event_name != 'workflow_dispatch' || inputs.scope != 'startup'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -96,7 +97,11 @@ jobs:
         shell: pwsh
         run: |
           Remove-Item env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
-          if ('${{ inputs.scope }}' -eq 'focused') {
+          if ('${{ inputs.scope }}' -eq 'startup') {
+            # This spec applies each rendering mode itself; avoid adding a second set.
+            Remove-Item env:NC_SMOKE_RENDERING -ErrorAction SilentlyContinue
+            npx playwright test tests/smoke/rendering-startup.spec.ts --retries=0 --reporter=line,json --trace=retain-on-failure
+          } elseif ('${{ inputs.scope }}' -eq 'focused') {
             npx playwright test tests/smoke/format-manual.spec.ts tests/smoke/highlighter.spec.ts --reporter=line,json --trace=retain-on-failure
           } else {
             npx playwright test --reporter=line,json --trace=retain-on-failure

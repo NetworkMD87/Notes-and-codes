@@ -1,6 +1,6 @@
 # Notes & Codes — Roadmap
 
-Last updated: 2026-10-09
+Last updated: 2026-10-10
 
 **🎯 Next up:** [U1](#u1) and [U3](#u3) are released in **v1.21.3**. The existing delivery sequence continues with the [CI renderer smoke trial](#3-delivery-and-existing-features); U2/P2 remain planned.
 
@@ -73,8 +73,9 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 The reliability fixes are released; the remaining delivery sequence follows. The CI experiment is not a release blocker.
 
 - ⬜ **CI renderer smoke support** (**S**, before MSIX; trial) — automatic push/PR CI currently runs build + unit tests, while the hosted Electron smoke job is manual-only because Monaco did not reliably paint on GitHub’s Windows runners.
-  - **2026-10-09 — Trial prepared locally; hosted evidence pending.** Manual rendering/scope inputs, JSON results and failure traces added. Build/typecheck, focused helper units and 11 local Electron formatting/highlighter checks passed with GPU disabled. No hosted reliability claim or automatic-gate promotion. [Trial plan and evidence](docs/ci-smoke-trial-2026-10-09.md).
-  - Next: approve publishing the trial branch and dispatching focused hosted comparisons, then repeated full runs of the successful candidate.
+  - **2026-10-10 — Trial failed: test-launcher defect.** Both focused modes passed 11 tests without retries. All three full runs failed (100–102 failures, 0–2 flaky passes) after about 3h 40–43m; rendering flags before the entry script cause `index.js` to open as a document, invalidating the comparison. All build/unit jobs passed; the quiet follow-up is stopped. [Final trial evidence and defect](docs/ci-smoke-trial-2026-10-09.md).
+  - **Local repair verified (2026-10-10):** switches now follow the existing arguments. The new startup guard failed with the old ordering, then all four real Electron blank/file startup checks passed for GPU-disabled and SwiftShader modes, without retries; 41 helper units passed. Repair remains local and unpublished.
+  - Next approved action: publish the corrected launcher and run only the four hosted startup checks, without retries. Retain manual-only smoke; further focused/full trials require approval and hosted rendering reliability remains unverified.
   - Promote smoke to the automatic push/PR gate only if repeated hosted runs are reliable; otherwise record the new evidence and retain the manual hosted job plus change-specific local checks.
 
 ---

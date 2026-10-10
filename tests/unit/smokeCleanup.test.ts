@@ -178,8 +178,8 @@ describe('smoke rendering options', () => {
   it.each([
     ['disable-gpu', ['--disable-gpu']],
     ['swiftshader', ['--use-gl=angle', '--use-angle=swiftshader']],
-  ])('prepends %s switches without losing launch options', (mode, flags) => {
-    expect(smokeLaunchOptions(options, mode as string)).toEqual({ ...options, args: [...flags, ...options.args] })
+  ])('appends %s switches without shifting the entry script', (mode, flags) => {
+    expect(smokeLaunchOptions(options, mode as string)).toEqual({ ...options, args: [...options.args, ...flags] })
     expect(options.args[0]).toBe('out/main/index.js')
   })
   it('rejects unknown modes rather than silently running a different experiment', () => {
@@ -192,7 +192,7 @@ describe('smoke rendering options', () => {
       const launchElectron = vi.fn(async () => app as unknown as Awaited<ReturnType<SmokeResources['launch']>>)
       const smoke = new SmokeResources({ launchElectron })
       await smoke.launch(options)
-      expect(launchElectron).toHaveBeenCalledWith({ ...options, args: ['--disable-gpu', ...options.args] })
+      expect(launchElectron).toHaveBeenCalledWith({ ...options, args: [...options.args, '--disable-gpu'] })
       app.child.exit(0)
       expect(await smoke.cleanup()).toEqual([])
     } finally {
