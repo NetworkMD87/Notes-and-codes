@@ -15,15 +15,15 @@ on:
         default: disable-gpu
         options: [native, disable-gpu, swiftshader]
       scope:
-        description: Startup, highlighter-colour, pen-cursor, settings-layout, save-format, queued-save, overwrite-warning, shared-model, focused, full or bounded full suite
+        description: Startup, highlighter-colour, pen-cursor, settings-layout, save-format, queued-save, overwrite-warning, shared-model, shared-patterns, focused, full or bounded full suite
         type: choice
         default: focused
-        options: [startup, highlighter-colour, pen-cursor, settings-layout, save-format, queued-save, overwrite-warning, shared-model, focused, full, full-bounded]
+        options: [startup, highlighter-colour, pen-cursor, settings-layout, save-format, queued-save, overwrite-warning, shared-model, shared-patterns, focused, full, full-bounded]
 
 jobs:
   build-and-test:
     name: Build & unit tests
-    if: github.event_name != 'workflow_dispatch' || (inputs.scope != 'startup' && inputs.scope != 'highlighter-colour' && inputs.scope != 'pen-cursor' && inputs.scope != 'settings-layout' && inputs.scope != 'save-format' && inputs.scope != 'queued-save' && inputs.scope != 'overwrite-warning' && inputs.scope != 'shared-model')
+    if: github.event_name != 'workflow_dispatch' || (inputs.scope != 'startup' && inputs.scope != 'highlighter-colour' && inputs.scope != 'pen-cursor' && inputs.scope != 'settings-layout' && inputs.scope != 'save-format' && inputs.scope != 'queued-save' && inputs.scope != 'overwrite-warning' && inputs.scope != 'shared-model' && inputs.scope != 'shared-patterns')
     runs-on: windows-latest
     timeout-minutes: ${{ inputs.scope == 'full-bounded' && 30 || 360 }}
     steps:
@@ -68,7 +68,7 @@ jobs:
     name: Smoke tests (Playwright + Electron)
     if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
-    timeout-minutes: ${{ (inputs.scope == 'full-bounded' || inputs.scope == 'pen-cursor' || inputs.scope == 'settings-layout' || inputs.scope == 'save-format' || inputs.scope == 'queued-save' || inputs.scope == 'overwrite-warning' || inputs.scope == 'shared-model') && 30 || 360 }}
+    timeout-minutes: ${{ (inputs.scope == 'full-bounded' || inputs.scope == 'pen-cursor' || inputs.scope == 'settings-layout' || inputs.scope == 'save-format' || inputs.scope == 'queued-save' || inputs.scope == 'overwrite-warning' || inputs.scope == 'shared-model' || inputs.scope == 'shared-patterns') && 30 || 360 }}
     env:
       NC_SMOKE_RENDERING: ${{ inputs.rendering }}
     steps:
@@ -115,6 +115,11 @@ jobs:
             npx playwright test tests/smoke/overwrite-warning.spec.ts -g 'saving a file that changed on disk while the app was closed warns first' --retries=0 --workers=1 --max-failures=1 --reporter=line,json --trace=retain-on-failure
           } elseif ('${{ inputs.scope }}' -eq 'shared-model') {
             npx playwright test tests/smoke/shared-model-integration.spec.ts --retries=0 --workers=1 --max-failures=1 --reporter=line,json --trace=retain-on-failure
+          } elseif ('${{ inputs.scope }}' -eq 'shared-patterns') {
+            $selection = Get-Content tests/smoke/shared-patterns.json -Raw | ConvertFrom-Json
+            $files = @($selection.files)
+            $pattern = ($selection.titles | ForEach-Object { [regex]::Escape($_) }) -join '|'
+            npx playwright test @files --grep $pattern --retries=0 --workers=1 --max-failures=1 --global-timeout=900000 --reporter=line,json --trace=on
           } elseif ('${{ inputs.scope }}' -eq 'focused') {
             npx playwright test tests/smoke/format-manual.spec.ts tests/smoke/highlighter.spec.ts --reporter=line,json --trace=retain-on-failure
           } elseif ('${{ inputs.scope }}' -eq 'full-bounded') {

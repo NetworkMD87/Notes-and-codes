@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
 import { waitForBoot } from './appReady'
+import { quitViaMenu, runPaletteCommand } from './appActions'
 
 test('launches, creates tabs, splits, toggles theme', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
@@ -477,50 +478,55 @@ test('drag reorders tabs and the new order persists across relaunch', async ({ s
   const titlesOf = (w: Page) =>
     w.locator('.tab .tab-title').evaluateAll(els => els.map(e => (e.textContent ?? '').replace('×', '').trim()))
 
-  const app1 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
-    const win = await app1.firstWindow()
-    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
+  const app1 = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+    env: { ...process.env, NC_TEST_SESSION_SAVE_DELAY_MS: '1000' },
+  })
+  const win = await app1.firstWindow()
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
-    // Start with the one auto tab; add two more → Untitled-1, Untitled-2, Untitled-3.
-    const newTab = async () => {
-      await win.keyboard.press('Control+Shift+P')
-      await win.locator('#palette input').fill('New Tab')
-      await win.keyboard.press('Enter')
+  // Start with the one auto tab; add two more → Untitled-1, Untitled-2, Untitled-3.
+  const newTab = () => runPaletteCommand(win, 'New Tab')
+  await newTab(); await newTab()
+  await expect(win.locator('.tab')).toHaveCount(3)
+  expect(await titlesOf(win)).toEqual(['Untitled-1', 'Untitled-2', 'Untitled-3'])
+
+  // Drag the first tab onto the right edge of the last → it lands at the end.
+  await win.evaluate(() => {
+    const tabs = Array.from(document.querySelectorAll<HTMLElement>('#tabbar .tab'))
+    const src = tabs[0], last = tabs[tabs.length - 1]
+    const dt = new DataTransfer()
+    src.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }))
+    const r = last.getBoundingClientRect()
+    const opts: DragEventInit = { bubbles: true, dataTransfer: dt, clientX: r.right - 2, clientY: r.top + 5 }
+    last.dispatchEvent(new DragEvent('dragover', opts))
+    last.dispatchEvent(new DragEvent('drop', opts))
+    src.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }))
+  })
+
+  await expect.poll(() => titlesOf(win)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
+  await expect.poll(() => {
+    try {
+      const session = JSON.parse(readFileSync(join(userDataDir, 'session', 'session.json'), 'utf8'))
+      return session.buffers.map((buffer: { title: string }) => buffer.title)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+      throw error
     }
-    await newTab(); await newTab()
-    await expect(win.locator('.tab')).toHaveCount(3)
-    expect(await titlesOf(win)).toEqual(['Untitled-1', 'Untitled-2', 'Untitled-3'])
-
-    // Drag the first tab onto the right edge of the last → it lands at the end.
-    await win.evaluate(() => {
-      const tabs = Array.from(document.querySelectorAll<HTMLElement>('#tabbar .tab'))
-      const src = tabs[0], last = tabs[tabs.length - 1]
-      const dt = new DataTransfer()
-      src.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }))
-      const r = last.getBoundingClientRect()
-      const opts: DragEventInit = { bubbles: true, dataTransfer: dt, clientX: r.right - 2, clientY: r.top + 5 }
-      last.dispatchEvent(new DragEvent('dragover', opts))
-      last.dispatchEvent(new DragEvent('drop', opts))
-      src.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }))
-    })
-
-    await expect.poll(() => titlesOf(win)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
-    await win.waitForTimeout(800) // let the debounced session save flush
-  } finally {
-    await app1.close()
-  }
+  }, { message: 'Reordered tabs must reach the session file before restart' })
+    .toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
+  await quitViaMenu(app1)
 
   const app2 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-    const win2 = await app2.firstWindow()
-    await expect(win2.locator('body[data-booted="true"]')).toBeVisible()
-    await expect.poll(() => titlesOf(win2)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
+  const win2 = await app2.firstWindow()
+  await expect(win2.locator('body[data-booted="true"]')).toBeVisible()
+  await expect.poll(() => titlesOf(win2)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
 
-    // Regression: the tabBar rewrite must keep close-× and the + add button working.
-    await win2.locator('.tab').last().locator('.tab-close').click()
-    await expect(win2.locator('.tab')).toHaveCount(2)
-    await win2.locator('.tab-add').click()
-    await expect(win2.locator('.tab')).toHaveCount(3)
+  // Regression: the tabBar rewrite must keep close-× and the + add button working.
+  await win2.locator('.tab').last().locator('.tab-close').click()
+  await expect(win2.locator('.tab')).toHaveCount(2)
+  await win2.locator('.tab-add').click()
+  await expect(win2.locator('.tab')).toHaveCount(3)
 })
 
 test('command palette is one stacked box and still runs commands', async ({ smoke }) => {

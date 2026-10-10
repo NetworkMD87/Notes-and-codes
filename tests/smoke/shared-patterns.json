@@ -1,0 +1,40 @@
+{
+  "files": [
+    "tests/smoke/app.spec.ts",
+    "tests/smoke/close-safety.spec.ts",
+    "tests/smoke/electron-runtime.spec.ts",
+    "tests/smoke/format-manual.spec.ts",
+    "tests/smoke/help.spec.ts",
+    "tests/smoke/highlighter.spec.ts",
+    "tests/smoke/markdown-preview-layout.spec.ts",
+    "tests/smoke/overlay-dismiss.spec.ts",
+    "tests/smoke/settings.spec.ts"
+  ],
+  "titles": [
+    "highlighter paints a decoration and Clear removes it",
+    "highlights persist across a relaunch",
+    "the active highlighter colour persists across a relaunch",
+    "highlight colour popup shows 18 swatches (3x6)",
+    "highlight mode uses the pen cursor and updates with the colour",
+    "the pen cursor image is not blocked by the CSP",
+    "Help: Keyboard Shortcuts overlay renders, filters, and closes on Esc",
+    "Help: About shows the live version and link buttons",
+    "closing a dirty untitled tab via the × warns before discarding",
+    "command-palette Close Tab warns before discarding a dirty tab",
+    "palette command that opens a text prompt does not auto-submit it",
+    "command-palette Close Tab on the last tab hides to tray",
+    "Format Selection formats a non-empty selection",
+    "Format Document no-ops on an unsupported language (plaintext) with a toast",
+    "Format Document leaves the buffer untouched on a syntax error, with a toast",
+    "a re-entrant overlay open leaves no ghost entry to swallow later Escapes",
+    "re-opening Quick Open and Help leaves one effective Escape close",
+    "Settings: spell controls show offline defaults and persist enablement and language",
+    "Settings: clicking a theme commits it and it survives relaunch",
+    "Settings: launch-on-login toggle persists across relaunch",
+    "Settings: recording a hotkey updates the chips and persists",
+    "Settings: Clear removes the hotkey entirely and it stays cleared",
+    "Open, Save As and folder dialogs remember independent directories after restart",
+    "drag reorders tabs and the new order persists across relaunch",
+    "Markdown preview controls, commands, and unavailable toggle keep one saved preference"
+  ]
+}
