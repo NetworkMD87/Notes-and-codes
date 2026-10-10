@@ -49,3 +49,9 @@ Rendering switches now follow the existing launch arguments, retaining the entry
 - `npm run build`: passed, including TypeScript checking. Test Electron processes exited. No new hosted run, staging, commit or push performed for this repair. Hosted reliability remains unverified; failed runs above remain invalid rendering comparisons.
 
 The owner approved staging, commit and push of the launcher repair, followed only by hosted startup qualification. A `startup` workflow scope runs the four startup checks with retries disabled, covering both rendering modes explicitly, and skips the separate broad unit-test job. The smoke job still builds/typechecks the app before launching it. Further focused/full dispatch remains unapproved. Keep smoke manual-only.
+
+## Hosted startup qualification — passed
+
+Repair commit `db3e5e0e1142fe0f7fea46a613adc6723167aee5` was pushed to `codex/ci-smoke-rendering-trial`. [Run 38014194401](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/38014194401) passed build/typecheck and all four real Electron startup checks in 6.23s: 0 skipped, 0 failures, 0 flaky results, with retries disabled. GPU-disabled and SwiftShader modes each preserve argv entry position, apply their actual switches, and open the correct blank/requested document. The workflow rendering input is `native` because this spec explicitly tests both software modes itself. The separate broad build/unit job was skipped as intended.
+
+This qualifies the launcher startup repair on the hosted runner; it does not establish full-suite rendering reliability. No further focused or full suite was dispatched. Next proposed step is a bounded hosted focused comparison on the corrected launcher, subject to owner approval.
