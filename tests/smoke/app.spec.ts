@@ -581,6 +581,8 @@ test('file format selectors update status and rewrite bytes on save', async ({ s
   writeFileSync(filePath, 'a\nb')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
   const win = await app.firstWindow()
+  await waitForBoot(win)
+  await expect(win.getByRole('tab', { selected: true })).toContainText('format.txt')
 
   const encoding = win.getByLabel('File encoding')
   const eol = win.getByLabel('Line endings')
@@ -602,12 +604,21 @@ test('file format selectors update status and rewrite bytes on save', async ({ s
   await expect(win.getByLabel('File encoding')).toHaveAttribute('aria-describedby', 'status-format-note')
   await expect(win.locator('#status-format-note')).toContainText('next save')
 
-  // Playwright cannot trigger Electron's native-menu Ctrl+S accelerator; run the same Save command via the palette.
+  // Playwright cannot trigger Electron's native-menu Ctrl+S accelerator.
+  // Verify the palette selection and target Enter at its input before awaiting the write.
   await win.keyboard.press('Control+Shift+P')
-  await win.locator('#palette input').fill('Save')
-  await win.keyboard.press('Enter')
-  await expect.poll(() => [...readFileSync(filePath).subarray(0, 2)], { timeout: 5000 }).toEqual([0xff, 0xfe])
-  expect(readFileSync(filePath).subarray(2).toString('utf16le')).toBe('a\r\nb')
+  const palette = win.getByRole('dialog', { name: 'Command Palette' })
+  const command = palette.getByRole('combobox', { name: 'Command Palette' })
+  await command.fill('Save')
+  await expect(command).toHaveAttribute('aria-activedescendant', 'palette-option-save')
+  await expect(palette.locator('#palette-option-save')).toHaveAttribute('aria-selected', 'true')
+  await command.press('Enter')
+  await expect(palette).toBeHidden()
+  await expect(win.locator('body')).toHaveAttribute('data-save-write-completion-count', '1')
+  const bytes = readFileSync(filePath)
+  expect([...bytes.subarray(0, 2)]).toEqual([0xff, 0xfe])
+  expect(bytes.subarray(2).toString('utf16le')).toBe('a\r\nb')
+  await expect(win.locator('#statusbar .sb-state')).toHaveText('● saved')
   await expect(win.getByLabel('File encoding')).toHaveValue('utf16le')
   await expect(win.getByLabel('Line endings')).toHaveValue('CRLF')
   await expect(win.locator('#toast-host')).toContainText('Encoding: UTF-16 LE')
