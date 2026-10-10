@@ -84,3 +84,9 @@ At the owner's request, only `tests/smoke/highlighter.spec.ts` was changed: befo
 This verifies restore after confirmed save locally, not very-fast user quit or hosted reliability. Proposed next step: approve publication and a single hosted rerun of this test; keep broader suites and automatic-gate promotion out of scope.
 
 The owner subsequently approved staging, commit and push of the synchronized test and evidence, then one hosted GPU-disabled run with retries off. A `highlighter-colour` workflow scope selects only this test and skips the separate broad unit-test job; the smoke job still builds/typechecks before launch. No full suites are authorized.
+
+## Synchronized highlighter test — hosted pass
+
+Commit `a42a996a0470b436f8e3aa1a09b2ff425d7bb9d7` is pushed. [Run 38015857383](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/38015857383) passed build/typecheck and exactly one GPU-disabled highlighter-colour test in 3.63s. Saved JSON confirms retries configured to 0, 1 expected pass, 0 failures, 0 flaky results and 0 skipped. The broad unit-test job was skipped as intended.
+
+The test confirms blue is on disk before closing and is restored after relaunch on this hosted run. One pass does not prove the historical failure's exact cause, long-term stability or rapid user-quit durability. No other tests or full suites were dispatched. Keep smoke manual-only. The owner approved committing and pushing these final result notes; further qualification and merging the trial branch remain separate decisions.
