@@ -15,15 +15,15 @@ on:
         default: disable-gpu
         options: [native, disable-gpu, swiftshader]
       scope:
-        description: Startup, highlighter-colour, settings-layout, save-format, queued-save, overwrite-warning, shared-model, focused, full or bounded full suite
+        description: Startup, highlighter-colour, pen-cursor, settings-layout, save-format, queued-save, overwrite-warning, shared-model, focused, full or bounded full suite
         type: choice
         default: focused
-        options: [startup, highlighter-colour, settings-layout, save-format, queued-save, overwrite-warning, shared-model, focused, full, full-bounded]
+        options: [startup, highlighter-colour, pen-cursor, settings-layout, save-format, queued-save, overwrite-warning, shared-model, focused, full, full-bounded]
 
 jobs:
   build-and-test:
     name: Build & unit tests
-    if: github.event_name != 'workflow_dispatch' || (inputs.scope != 'startup' && inputs.scope != 'highlighter-colour' && inputs.scope != 'settings-layout' && inputs.scope != 'save-format' && inputs.scope != 'queued-save' && inputs.scope != 'overwrite-warning' && inputs.scope != 'shared-model')
+    if: github.event_name != 'workflow_dispatch' || (inputs.scope != 'startup' && inputs.scope != 'highlighter-colour' && inputs.scope != 'pen-cursor' && inputs.scope != 'settings-layout' && inputs.scope != 'save-format' && inputs.scope != 'queued-save' && inputs.scope != 'overwrite-warning' && inputs.scope != 'shared-model')
     runs-on: windows-latest
     timeout-minutes: ${{ inputs.scope == 'full-bounded' && 30 || 360 }}
     steps:
@@ -68,7 +68,7 @@ jobs:
     name: Smoke tests (Playwright + Electron)
     if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
-    timeout-minutes: ${{ (inputs.scope == 'full-bounded' || inputs.scope == 'settings-layout' || inputs.scope == 'save-format' || inputs.scope == 'queued-save' || inputs.scope == 'overwrite-warning' || inputs.scope == 'shared-model') && 30 || 360 }}
+    timeout-minutes: ${{ (inputs.scope == 'full-bounded' || inputs.scope == 'pen-cursor' || inputs.scope == 'settings-layout' || inputs.scope == 'save-format' || inputs.scope == 'queued-save' || inputs.scope == 'overwrite-warning' || inputs.scope == 'shared-model') && 30 || 360 }}
     env:
       NC_SMOKE_RENDERING: ${{ inputs.rendering }}
     steps:
@@ -103,6 +103,8 @@ jobs:
             npx playwright test tests/smoke/rendering-startup.spec.ts --retries=0 --reporter=line,json --trace=retain-on-failure
           } elseif ('${{ inputs.scope }}' -eq 'highlighter-colour') {
             npx playwright test tests/smoke/highlighter.spec.ts -g 'the active highlighter colour persists across a relaunch' --retries=0 --reporter=line,json --trace=retain-on-failure
+          } elseif ('${{ inputs.scope }}' -eq 'pen-cursor') {
+            npx playwright test tests/smoke/highlighter.spec.ts -g 'the pen cursor image is not blocked by the CSP' --retries=0 --workers=1 --max-failures=1 --reporter=line,json --trace=retain-on-failure
           } elseif ('${{ inputs.scope }}' -eq 'settings-layout') {
             npx playwright test tests/smoke/settings.spec.ts -g 'Settings: Editor groups controls and stacks safely at narrow widths' --retries=0 --workers=1 --reporter=line,json --trace=retain-on-failure
           } elseif ('${{ inputs.scope }}' -eq 'save-format') {

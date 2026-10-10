@@ -133,12 +133,40 @@ test('the pen cursor image is not blocked by the CSP', async ({ smoke }) => {
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, TEXT)
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
-    const win = await app.firstWindow()
-    const violations: string[] = []
-    win.on('console', (m) => { if (/Content.Security.Policy/i.test(m.text())) violations.push(m.text()) })
-    await expect(win.locator('#paneA .view-lines')).toContainText('hello')
-    await runCmd(win, 'Toggle Highlighter')
-    await dragPaint(win)
-    await expect(win.locator('#paneA .hl-yellow').first()).toBeVisible()
-    expect(violations).toEqual([])
+  const win = await app.firstWindow()
+  const violations: string[] = []
+  win.on('console', (m) => { if (/Content.Security.Policy/i.test(m.text())) violations.push(m.text()) })
+  await waitForBoot(win)
+  await expect(win.getByRole('tab', { name: `note.txt, ${filePath}`, exact: true })).toBeVisible()
+  const line = win.locator('#paneA .view-line').filter({ hasText: TEXT })
+  await expect(line).toHaveText(TEXT)
+
+  await win.keyboard.press('Control+Shift+P')
+  const palette = win.getByRole('dialog', { name: 'Command Palette' })
+  const command = palette.getByRole('combobox', { name: 'Command Palette' })
+  await command.fill('Toggle Highlighter')
+  await expect(palette.getByRole('option', { name: 'Toggle Highlighter', exact: true }))
+    .toHaveAttribute('aria-selected', 'true')
+  await command.press('Enter')
+  await expect(palette).toBeHidden()
+  await expect(win.locator('#paneA')).toHaveClass(/\bhl-mode\b/)
+  await expect.poll(() => line.evaluate(el => getComputedStyle(el).cursor))
+    .toContain('data:image/svg+xml')
+
+  // Measure the rendered text itself: the viewport's top edge can be padding, not a glyph.
+  const box = await line.evaluate(el => {
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    const rect = range.getBoundingClientRect()
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+  })
+  expect(box.width).toBeGreaterThan(0)
+  expect(box.height).toBeGreaterThan(0)
+  const y = box.y + box.height / 2
+  await win.mouse.move(box.x + 1, y)
+  await win.mouse.down()
+  await win.mouse.move(box.x + box.width / 2, y, { steps: 8 })
+  await win.mouse.up()
+  await expect(win.locator('#paneA .hl-yellow').first()).toBeVisible()
+  expect(violations).toEqual([])
 })
