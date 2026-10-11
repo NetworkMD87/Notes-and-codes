@@ -175,6 +175,15 @@ describe('smoke rendering options', () => {
   it('preserves ordinary launches', () => {
     expect(smokeLaunchOptions(options, 'native')).toBe(options)
   })
+  it('preserves absent options for native launches', () => {
+    expect(smokeLaunchOptions(undefined, 'native')).toBeUndefined()
+  })
+  it.each([
+    ['disable-gpu', ['--disable-gpu']],
+    ['swiftshader', ['--use-gl=angle', '--use-angle=swiftshader']],
+  ])('creates %s switches from absent launch options', (mode, flags) => {
+    expect(smokeLaunchOptions(undefined, mode as string)).toEqual({ args: flags })
+  })
   it.each([
     ['disable-gpu', ['--disable-gpu']],
     ['swiftshader', ['--use-gl=angle', '--use-angle=swiftshader']],

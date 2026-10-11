@@ -17,7 +17,7 @@ export function smokeLaunchOptions(options: ElectronLaunchOptions, mode = proces
       : undefined
   if (!flags) throw new Error(`Unknown smoke rendering mode: ${mode}`)
   // Keep the entry script at argv[1]: unpackaged file routing skips that position.
-  return { ...options, args: [...(options.args ?? []), ...flags] }
+  return { ...options, args: [...(options?.args ?? []), ...flags] }
 }
 
 export interface CleanupIssue {
