@@ -1,6 +1,8 @@
 import { test, expect } from './smokeTest'
 import type { Page } from '@playwright/test'
 import type { SmokeResources } from './smokeCleanup'
+import { runPaletteCommand } from './appActions'
+import { waitForBoot } from './appReady'
 
 // Audit Phase 1 — H2 (palette "Close Tab" bypasses closeTab safeguards) and
 // M1 (closing a dirty *untitled* tab discards content with no warning).
@@ -8,10 +10,12 @@ import type { SmokeResources } from './smokeCleanup'
 async function launch(smoke: SmokeResources) {
   const userDataDir = smoke.tempDir('notes-close-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  await waitForBoot(await app.firstWindow())
   return { app }
 }
 
 async function dirtyTheActiveTab(win: Page) {
+  await waitForBoot(win)
   await win.locator('#paneA .monaco-editor').click()
   await win.keyboard.type('unsaved scratch notes')
 }
@@ -45,9 +49,7 @@ test('command-palette Close Tab warns before discarding a dirty tab', async ({ s
     await expect(win.locator('#tabbar')).toBeVisible()
 
     await dirtyTheActiveTab(win)
-    await win.keyboard.press('Control+Shift+P')
-    await win.locator('#palette input').fill('Close Tab')
-    await win.keyboard.press('Enter')
+    await runPaletteCommand(win, 'Close Tab')
 
     await expect(win.locator('.input-overlay')).toBeVisible()
     await expect(win.locator('.input-overlay button', { hasText: 'Discard' })).toBeVisible()
@@ -66,9 +68,7 @@ test('palette command that opens a text prompt does not auto-submit it', async (
     await win.keyboard.type('reusable snippet body')
     await win.keyboard.press('Control+A')
 
-    await win.keyboard.press('Control+Shift+P')
-    await win.locator('#palette input').fill('Save Selection as Snippet')
-    await win.keyboard.press('Enter')
+    await runPaletteCommand(win, 'Save Selection as Snippet')
 
     // The name prompt (an .input-overlay with a text field) must stay open.
     await expect(win.locator('.input-overlay input')).toBeVisible()
@@ -82,9 +82,7 @@ test('command-palette Close Tab on the last tab hides to tray', async ({ smoke }
     await expect(win.locator('#tabbar')).toBeVisible()
     await expect(win.locator('.tab')).toHaveCount(1)
 
-    await win.keyboard.press('Control+Shift+P')
-    await win.locator('#palette input').fill('Close Tab')
-    await win.keyboard.press('Enter')
+    await runPaletteCommand(win, 'Close Tab')
 
     await expect.poll(
       () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isVisible()),

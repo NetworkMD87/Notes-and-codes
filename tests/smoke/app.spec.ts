@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
 import { waitForBoot } from './appReady'
+import { quitViaMenu, runPaletteCommand } from './appActions'
 
 test('launches, creates tabs, splits, toggles theme', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-smoke-')
@@ -477,50 +478,55 @@ test('drag reorders tabs and the new order persists across relaunch', async ({ s
   const titlesOf = (w: Page) =>
     w.locator('.tab .tab-title').evaluateAll(els => els.map(e => (e.textContent ?? '').replace('×', '').trim()))
 
-  const app1 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-  try {
-    const win = await app1.firstWindow()
-    await expect(win.locator('body[data-booted="true"]')).toBeVisible()
+  const app1 = await smoke.launch({
+    args: ['out/main/index.js', `--user-data-dir=${userDataDir}`],
+    env: { ...process.env, NC_TEST_SESSION_SAVE_DELAY_MS: '1000' },
+  })
+  const win = await app1.firstWindow()
+  await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
-    // Start with the one auto tab; add two more → Untitled-1, Untitled-2, Untitled-3.
-    const newTab = async () => {
-      await win.keyboard.press('Control+Shift+P')
-      await win.locator('#palette input').fill('New Tab')
-      await win.keyboard.press('Enter')
+  // Start with the one auto tab; add two more → Untitled-1, Untitled-2, Untitled-3.
+  const newTab = () => runPaletteCommand(win, 'New Tab')
+  await newTab(); await newTab()
+  await expect(win.locator('.tab')).toHaveCount(3)
+  expect(await titlesOf(win)).toEqual(['Untitled-1', 'Untitled-2', 'Untitled-3'])
+
+  // Drag the first tab onto the right edge of the last → it lands at the end.
+  await win.evaluate(() => {
+    const tabs = Array.from(document.querySelectorAll<HTMLElement>('#tabbar .tab'))
+    const src = tabs[0], last = tabs[tabs.length - 1]
+    const dt = new DataTransfer()
+    src.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }))
+    const r = last.getBoundingClientRect()
+    const opts: DragEventInit = { bubbles: true, dataTransfer: dt, clientX: r.right - 2, clientY: r.top + 5 }
+    last.dispatchEvent(new DragEvent('dragover', opts))
+    last.dispatchEvent(new DragEvent('drop', opts))
+    src.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }))
+  })
+
+  await expect.poll(() => titlesOf(win)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
+  await expect.poll(() => {
+    try {
+      const session = JSON.parse(readFileSync(join(userDataDir, 'session', 'session.json'), 'utf8'))
+      return session.buffers.map((buffer: { title: string }) => buffer.title)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+      throw error
     }
-    await newTab(); await newTab()
-    await expect(win.locator('.tab')).toHaveCount(3)
-    expect(await titlesOf(win)).toEqual(['Untitled-1', 'Untitled-2', 'Untitled-3'])
-
-    // Drag the first tab onto the right edge of the last → it lands at the end.
-    await win.evaluate(() => {
-      const tabs = Array.from(document.querySelectorAll<HTMLElement>('#tabbar .tab'))
-      const src = tabs[0], last = tabs[tabs.length - 1]
-      const dt = new DataTransfer()
-      src.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }))
-      const r = last.getBoundingClientRect()
-      const opts: DragEventInit = { bubbles: true, dataTransfer: dt, clientX: r.right - 2, clientY: r.top + 5 }
-      last.dispatchEvent(new DragEvent('dragover', opts))
-      last.dispatchEvent(new DragEvent('drop', opts))
-      src.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }))
-    })
-
-    await expect.poll(() => titlesOf(win)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
-    await win.waitForTimeout(800) // let the debounced session save flush
-  } finally {
-    await app1.close()
-  }
+  }, { message: 'Reordered tabs must reach the session file before restart' })
+    .toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
+  await quitViaMenu(app1)
 
   const app2 = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
-    const win2 = await app2.firstWindow()
-    await expect(win2.locator('body[data-booted="true"]')).toBeVisible()
-    await expect.poll(() => titlesOf(win2)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
+  const win2 = await app2.firstWindow()
+  await expect(win2.locator('body[data-booted="true"]')).toBeVisible()
+  await expect.poll(() => titlesOf(win2)).toEqual(['Untitled-2', 'Untitled-3', 'Untitled-1'])
 
-    // Regression: the tabBar rewrite must keep close-× and the + add button working.
-    await win2.locator('.tab').last().locator('.tab-close').click()
-    await expect(win2.locator('.tab')).toHaveCount(2)
-    await win2.locator('.tab-add').click()
-    await expect(win2.locator('.tab')).toHaveCount(3)
+  // Regression: the tabBar rewrite must keep close-× and the + add button working.
+  await win2.locator('.tab').last().locator('.tab-close').click()
+  await expect(win2.locator('.tab')).toHaveCount(2)
+  await win2.locator('.tab-add').click()
+  await expect(win2.locator('.tab')).toHaveCount(3)
 })
 
 test('command palette is one stacked box and still runs commands', async ({ smoke }) => {
@@ -581,6 +587,8 @@ test('file format selectors update status and rewrite bytes on save', async ({ s
   writeFileSync(filePath, 'a\nb')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
   const win = await app.firstWindow()
+  await waitForBoot(win)
+  await expect(win.getByRole('tab', { selected: true })).toContainText('format.txt')
 
   const encoding = win.getByLabel('File encoding')
   const eol = win.getByLabel('Line endings')
@@ -602,12 +610,21 @@ test('file format selectors update status and rewrite bytes on save', async ({ s
   await expect(win.getByLabel('File encoding')).toHaveAttribute('aria-describedby', 'status-format-note')
   await expect(win.locator('#status-format-note')).toContainText('next save')
 
-  // Playwright cannot trigger Electron's native-menu Ctrl+S accelerator; run the same Save command via the palette.
+  // Playwright cannot trigger Electron's native-menu Ctrl+S accelerator.
+  // Verify the palette selection and target Enter at its input before awaiting the write.
   await win.keyboard.press('Control+Shift+P')
-  await win.locator('#palette input').fill('Save')
-  await win.keyboard.press('Enter')
-  await expect.poll(() => [...readFileSync(filePath).subarray(0, 2)], { timeout: 5000 }).toEqual([0xff, 0xfe])
-  expect(readFileSync(filePath).subarray(2).toString('utf16le')).toBe('a\r\nb')
+  const palette = win.getByRole('dialog', { name: 'Command Palette' })
+  const command = palette.getByRole('combobox', { name: 'Command Palette' })
+  await command.fill('Save')
+  await expect(command).toHaveAttribute('aria-activedescendant', 'palette-option-save')
+  await expect(palette.locator('#palette-option-save')).toHaveAttribute('aria-selected', 'true')
+  await command.press('Enter')
+  await expect(palette).toBeHidden()
+  await expect(win.locator('body')).toHaveAttribute('data-save-write-completion-count', '1')
+  const bytes = readFileSync(filePath)
+  expect([...bytes.subarray(0, 2)]).toEqual([0xff, 0xfe])
+  expect(bytes.subarray(2).toString('utf16le')).toBe('a\r\nb')
+  await expect(win.locator('#statusbar .sb-state')).toHaveText('● saved')
   await expect(win.getByLabel('File encoding')).toHaveValue('utf16le')
   await expect(win.getByLabel('Line endings')).toHaveValue('CRLF')
   await expect(win.locator('#toast-host')).toContainText('Encoding: UTF-16 LE')

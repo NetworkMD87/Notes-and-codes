@@ -1,15 +1,9 @@
 import { test, expect } from './smokeTest'
-import type { Page } from '@playwright/test'
+import { runPaletteCommand } from './appActions'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const UGLY_JS = 'const   x=1\nfunction  f( ){return   x}'
-
-async function runCmd(win: Page, label: string) {
-  await win.keyboard.press('Control+Shift+P')
-  await win.locator('#palette input').fill(label)
-  await win.keyboard.press('Enter')
-}
 
 test('Format Selection formats a non-empty selection', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-fmtsel-')
@@ -20,7 +14,7 @@ test('Format Selection formats a non-empty selection', async ({ smoke }) => {
     await expect(win.locator('#paneA .view-lines')).toContainText('const')
     await win.locator('#paneA .monaco-editor').click()
     await win.keyboard.press('Control+A')   // non-empty selection → exercises the range-format branch
-    await runCmd(win, 'Format Selection')
+    await runPaletteCommand(win, 'Format Selection')
     await expect(win.locator('#paneA .view-lines')).toContainText('const x = 1;')
 })
 
@@ -31,7 +25,7 @@ test('Format Document no-ops on an unsupported language (plaintext) with a toast
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#paneA .view-lines')).toContainText('const')
-    await runCmd(win, 'Format Document')
+    await runPaletteCommand(win, 'Format Document')
     await expect(win.locator('#toast-host .toast')).toContainText("isn't supported")
     // No reformat happened: the prettier-canonical form never appears.
     await expect(win.locator('#paneA .view-lines')).not.toContainText('const x = 1;')
@@ -44,7 +38,7 @@ test('Format Document leaves the buffer untouched on a syntax error, with a toas
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, filePath] })
     const win = await app.firstWindow()
     await expect(win.locator('#paneA .view-lines')).toContainText('const x = (')
-    await runCmd(win, 'Format Document')
+    await runPaletteCommand(win, 'Format Document')
     await expect(win.locator('#toast-host .toast')).toContainText('Format failed')
     await expect(win.locator('#paneA .view-lines')).toContainText('const x = (')
 })

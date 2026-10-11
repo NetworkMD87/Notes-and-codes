@@ -1,6 +1,6 @@
 import type { ElectronApplication, Page } from '@playwright/test'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { test, expect } from './smokeTest'
 
 async function fileCommand(app: ElectronApplication, label: string): Promise<void> {
@@ -10,10 +10,10 @@ async function fileCommand(app: ElectronApplication, label: string): Promise<voi
   }, label)
 }
 
-async function share(win: Page): Promise<void> {
+async function share(win: Page, filePath: string): Promise<void> {
   await win.locator('.tb-btn[title="Toggle split pane"]').click()
   await win.locator('#paneB .monaco-editor').click()
-  await win.getByRole('tab', { name: 'shared.txt', exact: true }).click()
+  await win.getByRole('tab', { name: `${basename(filePath)}, ${filePath}`, exact: true }).click()
   await expect(win.locator('#paneB .view-lines')).toContainText('current note')
 }
 
@@ -32,7 +32,7 @@ test('history restore replaces both shared views and preserves highlights throug
     BrowserWindow.getAllWindows()[0].webContents.send('open-file', path)
   }, filePath)
   await expect(win.locator('#paneA .hl-yellow')).toHaveText('current')
-  await share(win)
+  await share(win, filePath)
   await expect(win.locator('#paneB .hl-yellow')).toHaveText('current')
 
   await win.locator('.tb-btn[title="File History"]').click()
@@ -65,12 +65,12 @@ test('Save As changes a shared model language without losing its edits or undo h
   })
   const win = await app.firstWindow()
   await expect(win.locator('body[data-booted="true"]')).toBeVisible()
-  await share(win)
+  await share(win, filePath)
   await win.locator('#paneB .monaco-editor').click()
   await win.keyboard.press('Control+A')
   await win.keyboard.insertText('latestNote')
   await fileCommand(app, 'Save As…')
-  await expect(win.getByRole('tab', { name: 'shared.md', exact: true })).toBeVisible()
+  await expect(win.getByRole('tab', { name: `${basename(targetPath)}, ${targetPath}`, exact: true })).toBeVisible()
   expect(readFileSync(targetPath, 'utf8')).toBe('latestNote')
   await expect(win.locator('.sb-state')).toHaveText('● saved')
   await win.locator('#paneA .monaco-editor').click()

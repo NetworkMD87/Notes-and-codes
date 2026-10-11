@@ -2,6 +2,8 @@ import { test, expect } from './smokeTest'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { openSettings } from './settingsHelper'
+import { waitForBoot } from './appReady'
+import { expectPersistedSettings, quitViaMenu } from './appActions'
 
 const spellToggle = (win: import('@playwright/test').Page) => win.locator(
   '.appearance-row', { hasText: 'Check spelling in plain text and Markdown' },
@@ -181,9 +183,11 @@ test('Settings: nav lists categories, detail shows the active one', async ({ smo
 
 test('Settings: Editor groups controls and stacks safely at narrow widths', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-settings-editor-layout-')
-  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  // Keep Follow Windows and its UK label deterministic on any host machine.
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`, '--lang=en-GB'] })
   const win = await app.firstWindow()
   await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+  expect(await app.evaluate(({ app }) => app.getLocale())).toBe('en-GB')
   await win.setViewportSize({ width: 1100, height: 720 })
   await openSettings(win, 'Editor')
 
@@ -205,6 +209,7 @@ test('Settings: Editor groups controls and stacks safely at narrow widths', asyn
   await expect(markdown).toContainText('Restore Off, Side by side, or Focus when reopening the app.')
   await expect(spelling.getByLabel('Check spelling in plain text and Markdown')).toBeVisible()
   await expect(spelling.getByLabel('Spell check language')).toBeVisible()
+  await expect(spelling.getByLabel('Spell check language')).toHaveValue('system')
   await expect(spelling).toContainText('Works fully offline. Markdown code and technical syntax are ignored.')
   await expect(spelling.locator('.spell-settings-resolved')).toContainText('Currently using English (UK).')
   await expect(spelling.getByRole('button', { name: 'Personal dictionary…' })).toBeVisible()
@@ -270,7 +275,7 @@ test('Settings: spell controls show offline defaults and persist enablement and 
   const userDataDir = smoke.tempDir('notes-settings-spell-')
   let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     let win = await app.firstWindow()
-    await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+    await waitForBoot(win)
     await openSettings(win, 'Editor')
 
     await expect(spellToggle(win)).toBeChecked()
@@ -284,11 +289,12 @@ test('Settings: spell controls show offline defaults and persist enablement and 
     await expect(spellLanguage(win)).toBeDisabled()
     await expect(win.locator('.personal-dictionary-open')).toBeDisabled()
     await win.keyboard.press('Escape')
-    await app.close()
+    await expectPersistedSettings(userDataDir, { spellCheckEnabled: false })
+    await quitViaMenu(app)
 
     app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
-    await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+    await waitForBoot(win)
     await openSettings(win, 'Editor')
     await expect(spellToggle(win)).not.toBeChecked()
 
@@ -297,11 +303,12 @@ test('Settings: spell controls show offline defaults and persist enablement and 
     await spellLanguage(win).selectOption('en-US')
     await expect(spellLanguage(win)).toHaveValue('en-US')
     await win.keyboard.press('Escape')
-    await app.close()
+    await expectPersistedSettings(userDataDir, { spellCheckEnabled: true, spellCheckLanguage: 'en-US' })
+    await quitViaMenu(app)
 
     app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
-    await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
+    await waitForBoot(win)
     await openSettings(win, 'Editor')
     await expect(spellToggle(win)).toBeChecked()
     await expect(spellLanguage(win)).toHaveValue('en-US')
@@ -370,10 +377,11 @@ test('Settings: hovering a theme row does not change the theme', async ({ smoke 
   const userDataDir = smoke.tempDir('notes-appear-hover-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    // Static chrome can appear before startup applies the saved/default theme.
+    await waitForBoot(win)
     await openSettings(win, 'Appearance')
     const committed = await win.evaluate(() => document.body.dataset.theme)
-    expect(committed).not.toBe('monokai') // else the assertions below prove nothing
+    expect(committed).toBe('dark') // fresh profile: require a real, non-hover-target baseline
 
     await win.locator('.appearance-theme', { hasText: 'Monokai' }).hover()
     await win.waitForTimeout(600)
@@ -394,16 +402,17 @@ test('Settings: clicking a theme commits it and it survives relaunch', async ({ 
   const userDataDir = smoke.tempDir('notes-appear-commit-')
   let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     let win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await waitForBoot(win)
     await openSettings(win, 'Appearance')
     await win.locator('.appearance-theme', { hasText: 'Nord' }).click()
     await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 3000 }).toBe('nord')
     await win.keyboard.press('Escape')
-    await app.close()
+    await expectPersistedSettings(userDataDir, { themeId: 'nord' })
+    await quitViaMenu(app)
 
     app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await waitForBoot(win)
     await expect.poll(() => win.evaluate(() => document.body.dataset.theme), { timeout: 5000 }).toBe('nord')
 })
 
@@ -560,7 +569,7 @@ test('Settings: launch-on-login toggle persists across relaunch', async ({ smoke
   const userDataDir = smoke.tempDir('notes-settings-login-')
   let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     let win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await waitForBoot(win)
     await openSettings(win, 'Startup')
 
     const cb = win.locator('.appearance-row', { hasText: 'Launch when Windows starts' }).locator('input[type=checkbox]')
@@ -571,11 +580,12 @@ test('Settings: launch-on-login toggle persists across relaunch', async ({ smoke
     await expect(cb).toBeChecked()
 
     await win.keyboard.press('Escape')
-    await app.close()
+    await expectPersistedSettings(userDataDir, { openAtLogin: true })
+    await quitViaMenu(app)
 
     app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await waitForBoot(win)
     await openSettings(win, 'Startup')
     await expect(win.locator('.appearance-row', { hasText: 'Launch when Windows starts' })
       .locator('input[type=checkbox]')).toBeChecked()
@@ -585,7 +595,7 @@ test('Settings: recording a hotkey updates the chips and persists', async ({ smo
   const userDataDir = smoke.tempDir('notes-settings-hotkey-')
   let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     let win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await waitForBoot(win)
     await openSettings(win, 'Startup')
 
     const hotkeyGroup = win.getByRole('group', { name: 'Summon hotkey' })
@@ -600,11 +610,12 @@ test('Settings: recording a hotkey updates the chips and persists', async ({ smo
     await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Alt', 'J'])
 
     await win.keyboard.press('Escape')     // closes the panel (not recording any more)
-    await app.close()
+    await expectPersistedSettings(userDataDir, { globalHotkey: 'CommandOrControl+Alt+J' })
+    await quitViaMenu(app)
 
     app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await waitForBoot(win)
     await openSettings(win, 'Startup')
     await expect(win.locator('.hk-chip')).toHaveText(['Ctrl', 'Alt', 'J'])
 })
@@ -730,7 +741,7 @@ test('Settings: Clear removes the hotkey entirely and it stays cleared', async (
   const userDataDir = smoke.tempDir('notes-settings-hkclear-')
   let app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     let win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await waitForBoot(win)
     await openSettings(win, 'Startup')
 
     await win.locator('.hk-clear').click()
@@ -738,12 +749,13 @@ test('Settings: Clear removes the hotkey entirely and it stays cleared', async (
     await expect(win.locator('.hk-none')).toBeVisible()
 
     await win.keyboard.press('Escape')
-    await app.close()
+    await expectPersistedSettings(userDataDir, { globalHotkey: '' })
+    await quitViaMenu(app)
 
     // Guards the `??` fix from Task 10: a `||` fallback would silently re-bind the default.
     app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    await waitForBoot(win)
     await openSettings(win, 'Startup')
     await expect(win.locator('.hk-chip')).toHaveCount(0)
 })

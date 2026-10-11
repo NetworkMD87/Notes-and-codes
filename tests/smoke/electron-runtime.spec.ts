@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test, expect } from './smokeTest'
 import { waitForBoot } from './appReady'
+import { expectPersistedSettings, quitViaMenu } from './appActions'
 
 // Optional isolated QA executable; every launch still owns a fresh temporary profile.
 const executablePath = process.env.NC_RUNTIME_EXECUTABLE
@@ -55,7 +56,12 @@ test('Open, Save As and folder dialogs remember independent directories after re
   expect(await win.evaluate(() => window.api.openDialog())).toBe(openPath)
   expect(await win.evaluate(() => window.api.saveAsDialog())).toBe(savePath)
   expect(await win.evaluate(() => window.api.openFolderDialog())).toBe(folderDir)
-  await app.close()
+  await expectPersistedSettings(userDataDir, {
+    lastOpenDirectory: openDir,
+    lastSaveDirectory: saveDir,
+    lastFolderDirectory: folderDir,
+  })
+  await quitViaMenu(app)
 
   const reopened = await smoke.launch({ executablePath, args: [...entryArgs, `--user-data-dir=${userDataDir}`] })
   const restored = await reopened.firstWindow()

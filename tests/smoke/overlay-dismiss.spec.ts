@@ -1,6 +1,6 @@
 import { test, expect } from './smokeTest'
-import type { Page } from '@playwright/test'
 import type { SmokeResources } from './smokeCleanup'
+import { runPaletteCommand } from './appActions'
 import { openSettings } from './settingsHelper'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -9,14 +9,6 @@ async function launch(smoke: SmokeResources) {
   const userDataDir = smoke.tempDir('notes-esc-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
   return { app }
-}
-
-type Win = Page
-
-async function runCmd(win: Win, label: string) {
-  await win.keyboard.press('Control+Shift+P')
-  await win.locator('#palette input').fill(label)
-  await win.keyboard.press('Enter')
 }
 
 test('Escape closes overlays that previously had no Esc handler', async ({ smoke }) => {
@@ -69,9 +61,9 @@ test('a re-entrant overlay open leaves no ghost entry to swallow later Escapes',
 
     // Run the same overlay command twice: the second lands while the overlay is already open
     // (what a user does with Ctrl+P twice, or by re-running a palette command).
-    await runCmd(win, 'Help: Shortcuts & Commands')
+    await runPaletteCommand(win, 'Help: Shortcuts & Commands')
     await expect(win.locator('.help-overlay')).toBeVisible()
-    await runCmd(win, 'Help: Shortcuts & Commands')
+    await runPaletteCommand(win, 'Help: Shortcuts & Commands')
     await expect(win.locator('.help-overlay')).toBeVisible()
 
     await win.keyboard.press('Escape')
@@ -100,8 +92,8 @@ test('re-opening Quick Open and Help leaves one effective Escape close', async (
   await win.keyboard.press('Escape')
   await expect(win.locator('#quick-open')).toBeHidden()
 
-  await runCmd(win, 'Help: Shortcuts & Commands')
-  await runCmd(win, 'Help: Shortcuts & Commands')
+  await runPaletteCommand(win, 'Help: Shortcuts & Commands')
+  await runPaletteCommand(win, 'Help: Shortcuts & Commands')
   await expect(win.locator('.help-overlay')).toBeVisible()
   await win.keyboard.press('Escape')
   await expect(win.locator('.help-overlay')).toBeHidden()

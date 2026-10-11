@@ -8,6 +8,7 @@ import {
   execFileWithTimeout,
   formatCleanupIssues,
   SmokeResources,
+  smokeLaunchOptions,
   type CleanupIssue,
   type ElectronLaunchOptions,
 } from '../smoke/smokeCleanup'
@@ -168,6 +169,66 @@ async function flush(): Promise<void> {
 function issue(kind: CleanupIssue['kind'], label: string): CleanupIssue {
   return { kind, label, error: new Error(`Could not clean ${label}`) }
 }
+
+describe('smoke rendering options', () => {
+  const options = { args: ['out/main/index.js', '--user-data-dir=isolated', 'note.md'], timeout: 1234 }
+  it('preserves ordinary launches', () => {
+    expect(smokeLaunchOptions(options, 'native')).toBe(options)
+  })
+  it('preserves absent options for native launches', () => {
+    expect(smokeLaunchOptions(undefined, 'native')).toBeUndefined()
+  })
+  it.each([
+    ['disable-gpu', ['--disable-gpu']],
+    ['swiftshader', ['--use-gl=angle', '--use-angle=swiftshader']],
+  ])('creates %s switches from absent launch options', (mode, flags) => {
+    expect(smokeLaunchOptions(undefined, mode as string)).toEqual({ args: flags })
+  })
+  it.each([
+    ['disable-gpu', ['--disable-gpu']],
+    ['swiftshader', ['--use-gl=angle', '--use-angle=swiftshader']],
+  ])('appends %s switches without shifting the entry script', (mode, flags) => {
+    expect(smokeLaunchOptions(options, mode as string)).toEqual({ ...options, args: [...options.args, ...flags] })
+    expect(options.args[0]).toBe('out/main/index.js')
+  })
+  it('rejects unknown modes rather than silently running a different experiment', () => {
+    expect(() => smokeLaunchOptions(options, 'typo')).toThrow('Unknown smoke rendering mode')
+  })
+  it('applies the environment mode at the shared Electron launcher', async () => {
+    vi.stubEnv('NC_SMOKE_RENDERING', 'disable-gpu')
+    try {
+      const app = new FakeApplication('rendering', 100, [])
+      const launchElectron = vi.fn(async () => app as unknown as Awaited<ReturnType<SmokeResources['launch']>>)
+      const smoke = new SmokeResources({ launchElectron })
+      await smoke.launch(options)
+      expect(launchElectron).toHaveBeenCalledWith({ ...options, args: [...options.args, '--disable-gpu'] })
+      app.child.exit(0)
+      expect(await smoke.cleanup()).toEqual([])
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+  it.each(['disable-gpu', 'swiftshader'])('explicit modes override the %s environment at the shared launcher', async environmentMode => {
+    vi.stubEnv('NC_SMOKE_RENDERING', environmentMode)
+    try {
+      for (const [mode, flags] of [
+        ['disable-gpu', ['--disable-gpu']],
+        ['swiftshader', ['--use-gl=angle', '--use-angle=swiftshader']],
+        ['native', []],
+      ] as const) {
+        const app = new FakeApplication('rendering', 100, [])
+        const launchElectron = vi.fn(async () => app as unknown as Awaited<ReturnType<SmokeResources['launch']>>)
+        const smoke = new SmokeResources({ launchElectron })
+        await smoke.launch(options, mode)
+        expect(launchElectron).toHaveBeenCalledWith({ ...options, args: [...options.args, ...flags] })
+        app.child.exit(0)
+        expect(await smoke.cleanup()).toEqual([])
+      }
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+})
 
 describe('SmokeResources', () => {
   it('kills and rejects a helper subprocess that exceeds the exec bound', async () => {

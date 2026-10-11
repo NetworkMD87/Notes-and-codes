@@ -1,11 +1,5 @@
 import { test, expect } from './smokeTest'
-import type { Page } from '@playwright/test'
-
-async function runCmd(win: Page, label: string) {
-  await win.keyboard.press('Control+Shift+P')
-  await win.locator('#palette input').fill(label)
-  await win.keyboard.press('Enter')
-}
+import { runPaletteCommand } from './appActions'
 
 test('Help: Keyboard Shortcuts overlay renders, filters, and closes on Esc', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-help-')
@@ -13,7 +7,7 @@ test('Help: Keyboard Shortcuts overlay renders, filters, and closes on Esc', asy
     const win = await app.firstWindow()
     await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
-    await runCmd(win, 'Help: Shortcuts & Commands')
+    await runPaletteCommand(win, 'Help: Shortcuts & Commands')
     await expect(win.locator('.help-overlay')).toBeVisible()
     // six categories render
     await expect(win.locator('.help-cat')).toHaveCount(6)
@@ -45,7 +39,7 @@ test('Help: About shows the live version and link buttons', async ({ smoke }) =>
     const win = await app.firstWindow()
     await expect(win.locator('body[data-booted="true"]')).toBeVisible()
 
-    await runCmd(win, 'Help: About Notes & Codes')
+    await runPaletteCommand(win, 'Help: About Notes & Codes')
     await expect(win.locator('.help-overlay')).toBeVisible()
     // wordmark logo renders (replaces the old text name)
     await expect(win.locator('.about-logo svg')).toBeVisible()

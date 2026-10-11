@@ -2,14 +2,9 @@ import type { Page } from '@playwright/test'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test, expect } from './smokeTest'
+import { runPaletteCommand } from './appActions'
 import { openSettings } from './settingsHelper'
 import { waitForBoot } from './appReady'
-
-async function runCommand(win: Page, label: string): Promise<void> {
-  await win.keyboard.press('Control+Shift+P')
-  await win.locator('#palette input').fill(label)
-  await win.keyboard.press('Enter')
-}
 
 async function chooseToolbarMode(win: Page, label: 'Side by side' | 'Focus' | 'Off'): Promise<void> {
   await win.getByRole('button', { name: 'Choose Markdown preview mode' }).click()
@@ -403,13 +398,13 @@ test('Markdown preview controls, commands, and unavailable toggle keep one saved
   await toggle.click()
   await expectMode(win, 'focus')
 
-  await runCommand(win, 'Markdown Preview: Off')
+  await runPaletteCommand(win, 'Markdown Preview: Off')
   await expectMode(win, 'off')
-  await runCommand(win, 'Markdown Preview: Side by side')
+  await runPaletteCommand(win, 'Markdown Preview: Side by side')
   await expectMode(win, 'side-by-side')
-  await runCommand(win, 'Markdown Preview: Focus')
+  await runPaletteCommand(win, 'Markdown Preview: Focus')
   await expectMode(win, 'focus')
-  await runCommand(win, 'Markdown Preview: Side by side')
+  await runPaletteCommand(win, 'Markdown Preview: Side by side')
   await expectMode(win, 'side-by-side')
   await expect.poll(() => settings(userDataDir).markdownPreviewMode).toBe('side-by-side')
 
@@ -423,14 +418,14 @@ test('Markdown preview controls, commands, and unavailable toggle keep one saved
   await expect(toggle).toHaveAttribute('aria-label', unavailable)
   await expect(chooser).toHaveAttribute('title', unavailable)
   await expect(chooser).toHaveAttribute('aria-label', unavailable)
-  await runCommand(win, 'Markdown Preview: Focus')
+  await runPaletteCommand(win, 'Markdown Preview: Focus')
   const toasts = win.locator('#toast-host .toast')
   await expect(toasts).toHaveCount(1)
   await expect(toasts.first()).toContainText('Markdown Preview is available for Markdown files.')
   await expectMode(win, 'off')
   await expect(toasts).toHaveCount(0)
 
-  await runCommand(win, 'Toggle Markdown Preview')
+  await runPaletteCommand(win, 'Toggle Markdown Preview')
   await expect(toasts).toHaveCount(1)
   await expect(toasts.first()).toContainText('Markdown Preview is available for Markdown files.')
   await expectMode(win, 'off')
