@@ -4,6 +4,13 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [Unreleased]
+
+_More dependable automated Windows desktop checks._
+
+### Changed
+- Improved automated checks for saving, queued saves, restart recovery, Settings and editor interactions. Added a bounded manual full smoke mode with zero retries and a stop at the first failure.
+
 ## [1.21.3] — 2026-10-09
 
 _Context menus stay within the window, and same-named tabs are easier to identify._
