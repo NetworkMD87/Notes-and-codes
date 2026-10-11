@@ -377,10 +377,11 @@ test('Settings: hovering a theme row does not change the theme', async ({ smoke 
   const userDataDir = smoke.tempDir('notes-appear-hover-')
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
-    await expect(win.locator('#tabbar')).toBeVisible()
+    // Static chrome can appear before startup applies the saved/default theme.
+    await waitForBoot(win)
     await openSettings(win, 'Appearance')
     const committed = await win.evaluate(() => document.body.dataset.theme)
-    expect(committed).not.toBe('monokai') // else the assertions below prove nothing
+    expect(committed).toBe('dark') // fresh profile: require a real, non-hover-target baseline
 
     await win.locator('.appearance-theme', { hasText: 'Monokai' }).hover()
     await win.waitForTimeout(600)
