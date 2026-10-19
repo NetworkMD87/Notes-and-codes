@@ -83,7 +83,7 @@ describe('searchFiles', () => {
       return decode(...args)
     }) as Buffer['toString']
     const originalExec = RegExp.prototype.exec
-    const exec = vi.spyOn(RegExp.prototype, 'exec').mockImplementation(function (value: string) {
+    const exec = vi.spyOn(RegExp.prototype, 'exec').mockImplementation(function (this: RegExp, value: string) {
       if (this.source === 'needle') matchCalls++
       return originalExec.call(this, value)
     })
@@ -104,7 +104,7 @@ describe('searchFiles', () => {
     writeFileSync(join(dir, 'a.txt'), 'needle')
     let cancelled = false
     const originalExec = RegExp.prototype.exec
-    const exec = vi.spyOn(RegExp.prototype, 'exec').mockImplementation(function (value: string) {
+    const exec = vi.spyOn(RegExp.prototype, 'exec').mockImplementation(function (this: RegExp, value: string) {
       const result = originalExec.call(this, value)
       if (this.source === 'needle') cancelled = true
       return result

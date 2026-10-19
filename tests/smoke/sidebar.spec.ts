@@ -3,7 +3,6 @@ import type { ElectronApplication } from '@playwright/test'
 import type { SmokeResources } from './smokeCleanup'
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, basename } from 'node:path'
-import { openSettings } from './settingsHelper'
 
 function seededFolder(smoke: SmokeResources) {
   const userDataDir = smoke.tempDir('notes-smoke-')
@@ -96,7 +95,7 @@ test('the keyboard-owned folder switcher menu navigates and restores focus', asy
 })
 
 test('nested sidebar rows carry a --depth for indent guides', async ({ smoke }) => {
-  const { userDataDir, projectDir } = seededFolder(smoke)
+  const { userDataDir } = seededFolder(smoke)
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#sidebar')).toBeVisible()
@@ -109,7 +108,7 @@ test('nested sidebar rows carry a --depth for indent guides', async ({ smoke }) 
 })
 
 test('sidebar file rows show a tinted extension badge; dirs show a folder glyph', async ({ smoke }) => {
-  const { userDataDir, projectDir } = seededFolder(smoke)
+  const { userDataDir } = seededFolder(smoke)
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#sidebar')).toBeVisible()
@@ -121,7 +120,7 @@ test('sidebar file rows show a tinted extension badge; dirs show a folder glyph'
 })
 
 test('the edge tab toggles the sidebar and flips its chevron', async ({ smoke }) => {
-  const { userDataDir, projectDir } = seededFolder(smoke)
+  const { userDataDir } = seededFolder(smoke)
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     const tab = win.locator('.sb-toggle')
@@ -240,7 +239,7 @@ test('opening a folder records it in the recent list', async ({ smoke }) => {
 })
 
 test('opening a file highlights (marks active) its row in the sidebar', async ({ smoke }) => {
-  const { userDataDir, projectDir } = seededFolder(smoke)
+  const { userDataDir } = seededFolder(smoke)
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#sidebar')).toBeVisible()

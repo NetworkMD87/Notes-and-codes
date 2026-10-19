@@ -173,6 +173,7 @@ Requires Node.js 22.12 or newer and npm 11 or newer.
 npm ci
 npm run dev          # Electron development mode with HMR
 npm run build        # Type-check, then compile
+npm run typecheck:tests # Type-check unit, smoke and benchmark tests; no app launch
 npm test             # Vitest unit tests
 npm run test:smoke   # Playwright Electron tests; build first
 npm run screenshots  # Regenerate README screenshots

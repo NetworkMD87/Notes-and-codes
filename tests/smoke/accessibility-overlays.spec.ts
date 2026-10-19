@@ -3,7 +3,7 @@ import type { Locator, Page } from '@playwright/test'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-async function expectDialog(win: Page, name: string, initial: Locator, last: Locator) {
+async function expectDialog(win: Page, name: string | RegExp, initial: Locator, last: Locator) {
   const dialog = win.getByRole('dialog', { name })
   await expect(dialog).toBeVisible(); await expect(initial).toBeFocused()
   await last.focus(); await win.keyboard.press('Tab'); await expect(initial).toBeFocused()

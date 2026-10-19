@@ -130,7 +130,8 @@ describe('MarkdownPreview', () => {
       render,
       setTimer: (callback) => {
         callbacks.push(callback)
-        return callbacks.length as ReturnType<typeof setTimeout>
+        // This fixture models browser-style numeric timer IDs; the production timer type is Node's opaque Timeout.
+        return callbacks.length as unknown as ReturnType<typeof setTimeout>
       },
       // Model a callback that has already entered the host queue and cannot be retracted.
       clearTimer: vi.fn(),
@@ -154,7 +155,8 @@ describe('MarkdownPreview', () => {
       render,
       setTimer: (callback) => {
         callbacks.push(callback)
-        return callbacks.length as ReturnType<typeof setTimeout>
+        // This fixture models browser-style numeric timer IDs; the production timer type is Node's opaque Timeout.
+        return callbacks.length as unknown as ReturnType<typeof setTimeout>
       },
       // Model callbacks already queued by the host, which clearTimeout cannot retract.
       clearTimer: vi.fn(),
@@ -177,7 +179,8 @@ describe('MarkdownPreview', () => {
       render: markdown => markdown,
       setTimer: (callback) => {
         callbacks.push(callback)
-        return callbacks.length as ReturnType<typeof setTimeout>
+        // This fixture models browser-style numeric timer IDs; the production timer type is Node's opaque Timeout.
+        return callbacks.length as unknown as ReturnType<typeof setTimeout>
       },
       clearTimer,
     })
@@ -200,7 +203,8 @@ describe('MarkdownPreview', () => {
       render,
       setTimer: (callback) => {
         callbacks.push(callback)
-        return callbacks.length as ReturnType<typeof setTimeout>
+        // This fixture models browser-style numeric timer IDs; the production timer type is Node's opaque Timeout.
+        return callbacks.length as unknown as ReturnType<typeof setTimeout>
       },
       clearTimer,
     })

@@ -91,7 +91,7 @@ describe('SpellWorkerClient', () => {
   it('does not expose the smoke-only test hook without the headless navigation flag', () => {
     const { createWorker } = factory()
     const client = new SpellWorkerClient({ createWorker })
-    const target: { __ncSpellTest?: unknown } = {}
+    const target: Parameters<typeof exposeSpellTestHooks>[2] = {}
 
     exposeSpellTestHooks(new URLSearchParams(), client, target)
 

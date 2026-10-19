@@ -39,8 +39,9 @@ describe('buildEditorContextEntries', () => {
       palette,
     )
     const rows = entries.filter(entry => !('separator' in entry))
-    rows.find(row => row.label === 'Copy')!.run()
-    rows.find(row => row.label === 'Command Palette')!.run()
+    const actionRows = rows.filter((entry): entry is Extract<typeof entry, { label: string; run: () => void }> => 'label' in entry && 'run' in entry)
+    actionRows.find(row => row.label === 'Copy')!.run()
+    actionRows.find(row => row.label === 'Command Palette')!.run()
     await Promise.resolve()
     expect(copy).toHaveBeenCalledOnce()
     expect(palette).toHaveBeenCalledOnce()

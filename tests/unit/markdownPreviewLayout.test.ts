@@ -12,12 +12,13 @@ function harness() {
   Object.defineProperty(root, 'clientWidth', { configurable: true, value: 1000 })
   let sizes = [50, 50]
   let options!: Split.Options
-  const instance: Split.Instance = {
-    setSizes: vi.fn(next => { sizes = [...next] }),
+  const setSizes = vi.fn((next: number[]) => { sizes = [...next] })
+  const instance = {
+    setSizes,
     getSizes: vi.fn(() => [...sizes]),
     collapse: vi.fn(),
     destroy: vi.fn(),
-  }
+  } satisfies Split.Instance
   const createSplit = vi.fn((elements: Array<string | HTMLElement>, next?: Split.Options) => {
     options = next!
     return instance
@@ -186,7 +187,7 @@ describe('MarkdownPreviewLayout', () => {
       markdownPreviewMode: 'side-by-side',
       markdownPreviewWidthPercent: 80,
     }, true)
-    const gutter = h.options().gutter!('horizontal', 6)
+    const gutter = h.options().gutter!(0, 'horizontal')
 
     expect(h.createResizeObserver).toHaveBeenCalledOnce()
     expect(h.resizeObserver.observe).toHaveBeenCalledWith(h.root)
@@ -230,7 +231,7 @@ describe('MarkdownPreviewLayout', () => {
     const h = harness()
     h.layout.restore(DEFAULT_SETTINGS, true)
     h.layout.selectMode('side-by-side')
-    const gutter = h.options().gutter!('horizontal', 6)
+    const gutter = h.options().gutter!(0, 'horizontal')
     gutter.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))
     expect(h.instance.setSizes).toHaveBeenLastCalledWith([45, 55])
     gutter.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
@@ -293,7 +294,7 @@ describe('MarkdownPreviewLayout', () => {
     const h = harness()
     h.layout.restore(DEFAULT_SETTINGS, true)
     h.layout.selectMode('side-by-side')
-    const gutter = h.options().gutter!('horizontal', 6)
+    const gutter = h.options().gutter!(0, 'horizontal')
     h.editor.style.flexBasis = '50%'
     h.preview.style.flexBasis = '50%'
     h.layout.dispose()

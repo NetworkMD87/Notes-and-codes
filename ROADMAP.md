@@ -104,6 +104,13 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 
 ---
 
+### Local test type checking
+
+- [x] **Test-maintenance batch — locally verified, uncommitted (2026-10-19).** Added `npm run typecheck:tests` and repaired test fixtures/helper types while preserving assertions and application behavior. Build, strict test typecheck, 207 focused unit tests and three targeted Electron checks passed; deliberate type errors failed in all three test directories. [Scope, review and evidence](docs/test-type-maintenance-2026-10-19.md).
+  - The command is local only; build and CI policies are unchanged. No release or installed-app validation is implied.
+
+---
+
 ### Microsoft Store and feature delivery
 
 <a id="msix"></a>

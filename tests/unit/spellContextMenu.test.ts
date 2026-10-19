@@ -131,7 +131,7 @@ describe('SpellContextMenuCoordinator', () => {
     h.coordinator.tryOpen(target())
     h.pending.resolve(['spelling'])
     await flush()
-    const rows = h.shown[0].entries.filter(entry => !('separator' in entry))
+    const rows = h.shown[0].entries.filter((entry): entry is Extract<typeof entry, { label: string; run: () => void }> => 'label' in entry && 'run' in entry)
     rows.find(row => row.label === 'spelling')!.run()
     rows.find(row => row.label === 'Ignore for this session')!.run()
     rows.find(row => row.label === 'Add to personal dictionary')!.run()

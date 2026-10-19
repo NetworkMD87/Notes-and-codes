@@ -186,7 +186,7 @@ describe('@electron/get proxy compatibility with its app-builder-lib dependency'
   }, 15_000)
 
   it('uses HTTPS CONNECT, verifies a local CA, and sends matching localhost SNI', async () => {
-    let observedSni: string | false | undefined
+    let observedSni: string | false | null | undefined
     const target = trackServer(createHttpsServer({ key: testPrivateKey, cert: testCertificate }, (_request, response) => {
       response.end('https through connect')
     }))

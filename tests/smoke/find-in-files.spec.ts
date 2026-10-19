@@ -37,7 +37,7 @@ function seededFolder(smoke: import('./smokeCleanup').SmokeResources) {
 }
 
 test('Ctrl+Shift+F finds a match in the folder and jumps to it', async ({ smoke }) => {
-  const { userDataDir, projectDir } = seededFolder(smoke)
+  const { userDataDir } = seededFolder(smoke)
   const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
     const win = await app.firstWindow()
     await expect(win.locator('#sidebar')).toBeVisible()   // the folder was restored

@@ -42,7 +42,7 @@ describe('shipped dependency security floors', () => {
 
 describe('development dependency security floors', () => {
   // Check every nested resolution: builder's archive/glob helpers use multiple majors.
-  it.each([
+  const dependencies: Array<{ packageName: string; floors: Record<number, string> }> = [
     { packageName: 'brace-expansion', floors: { 1: '1.1.21', 2: '2.1.7', 5: '5.0.12' } },
     { packageName: 'js-yaml', floors: { 4: '4.3.2' } },
     { packageName: '@xmldom/xmldom', floors: { 0: '0.8.15' } },
@@ -56,7 +56,8 @@ describe('development dependency security floors', () => {
     { packageName: 'source-map-js', floors: { 1: '1.2.2' } },
     { packageName: 'browserslist', floors: { 4: '4.28.7' } },
     { packageName: 'baseline-browser-mapping', floors: { 2: '2.11.0' } },
-  ])('$packageName has no vulnerable nested resolution', ({ packageName, floors }) => {
+  ]
+  it.each(dependencies)('$packageName has no vulnerable nested resolution', ({ packageName, floors }) => {
     const entries = Object.entries(lock.packages).filter(([path]) =>
       path.endsWith(`node_modules/${packageName}`),
     )
@@ -65,8 +66,9 @@ describe('development dependency security floors', () => {
       expect(entry.version, path).toBeTypeOf('string')
       const version = entry.version as string
       const major = numericVersion(version)[0]
-      const floor = (floors as Record<number, string>)[major]
+      const floor = floors[major]
       expect(floor, `${path}@${version}: review security floor for new major`).toBeTypeOf('string')
+      if (typeof floor !== 'string') throw new Error(`Missing security floor for ${path}@${version}`)
       expect(compareVersions(version, floor), `${path}@${version} is below ${floor}`).toBeGreaterThanOrEqual(0)
     }
   })

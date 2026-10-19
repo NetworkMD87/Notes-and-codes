@@ -130,7 +130,6 @@ describe('workspace filtering', () => {
     const fileEntry = (name: string): Dirent => ({
       name,
       parentPath: dir,
-      path: dir,
       isFile: () => true,
       isDirectory: () => false,
       isBlockDevice: () => false,
@@ -139,9 +138,14 @@ describe('workspace filtering', () => {
       isFIFO: () => false,
       isSocket: () => false,
     })
-    const readdir = vi.spyOn(fs, 'readdir')
-      .mockResolvedValueOnce(names.map(fileEntry))
-      .mockResolvedValueOnce([...names].reverse().map(fileEntry))
+    const entries = [names.map(fileEntry), [...names].reverse().map(fileEntry)]
+    let readIndex = 0
+    // The fixture specifically models the withFileTypes overload; readdir's other overloads
+    // return strings or buffers, so the implementation crosses its overloaded function type.
+    const readDirectoryEntries = async (): Promise<Dirent[]> => entries[readIndex++]
+    const readdir = vi.spyOn(fs, 'readdir').mockImplementation(
+      readDirectoryEntries as unknown as typeof fs.readdir,
+    )
 
     try {
       const forward = await walkFiles(dir, DEFAULT_FILTER)

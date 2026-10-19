@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Api, DirEntry, SearchResponse, WalkResult, WorkspaceFilter } from '../../src/shared/types'
+import type { Api, DirEntry, SearchRequest, SearchResponse, WalkResult, WorkspaceFilter } from '../../src/shared/types'
 import { DEFAULT_SETTINGS } from '../../src/shared/types'
 
 vi.mock('split.js', () => ({
@@ -181,7 +181,7 @@ describe('FolderMode refresh integration', () => {
     const bSettings = deferred<typeof DEFAULT_SETTINGS>()
     const oldA = deferred<SearchResponse>()
     const cancelSearch = vi.fn()
-    const searchFiles = vi.fn((req: { root: string; searchId: number }) =>
+    const searchFiles = vi.fn((req: SearchRequest) =>
       req.root === 'C:\\A'
         ? oldA.promise
         : Promise.resolve(response(req.searchId, 'C:\\B\\fresh.txt', 'fresh B result')))

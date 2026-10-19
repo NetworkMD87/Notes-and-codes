@@ -23,10 +23,10 @@ function setup() {
   const diff = vi.fn()
   const restore = vi.fn()
   const getHistory = vi.fn()
-  window.api = {
+  Object.defineProperty(window, 'api', { configurable: true, value: {
     listHistory: vi.fn(async () => [{ ts: version.ts }]),
     getHistory,
-  } as Api
+  } satisfies Pick<Api, 'listHistory' | 'getHistory'> })
   const panel = new FileHistoryPanel(document.body, {
     current: () => current(),
     openDiff: diff,

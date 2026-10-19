@@ -235,7 +235,7 @@ async function defaultForceTerminate(child: ChildProcess, pid: number): Promise<
 }
 
 function isValidPid(pid: number | undefined): pid is number {
-  return Number.isSafeInteger(pid) && pid > 0
+  return typeof pid === 'number' && Number.isSafeInteger(pid) && pid > 0
 }
 
 function registeredPid(pid: number | undefined): number | undefined {

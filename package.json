@@ -21,6 +21,7 @@
     "dev": "electron-vite dev",
     "build": "tsc --noEmit && electron-vite build",
     "typecheck": "tsc --noEmit",
+    "typecheck:tests": "tsc -p tsconfig.tests.json",
     "preview": "electron-vite preview",
     "screenshots": "node scripts/screenshots.mjs",
     "test": "vitest run",

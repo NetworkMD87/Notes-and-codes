@@ -15,7 +15,10 @@ test('the running Electron matches the lockfile and keeps the renderer sandboxed
   await waitForBoot(win)
   const expected = JSON.parse(readFileSync('package-lock.json', 'utf8')).packages['node_modules/electron'].version
   const runtime = await app.evaluate(({ BrowserWindow, app }) => {
-    const preferences = BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences()
+    const webContents = BrowserWindow.getAllWindows()[0].webContents as Electron.WebContents & {
+      getLastWebPreferences(): Pick<Electron.WebPreferences, 'sandbox' | 'contextIsolation' | 'nodeIntegration'>
+    }
+    const preferences = webContents.getLastWebPreferences()
     return {
       version: process.versions.electron,
       packaged: app.isPackaged,

@@ -156,8 +156,8 @@ describe('BufferManager', () => {
   })
 
   it('open activates an existing buffer with the same path instead of duplicating', () => {
-    const first = m.open({ filePath: 'C:/a.ts', content: 'a', eol: 'LF' })
-    const again = m.open({ filePath: 'C:/a.ts', content: 'a', eol: 'LF' })
+    const first = m.open({ filePath: 'C:/a.ts', content: 'a', eol: 'LF', encoding: 'utf8' })
+    const again = m.open({ filePath: 'C:/a.ts', content: 'a', eol: 'LF', encoding: 'utf8' })
     expect(m.list()).toHaveLength(1)
     expect(again.id).toBe(first.id)
   })
@@ -273,7 +273,7 @@ describe('BufferManager', () => {
   })
 
   it('move does not change the active buffer', () => {
-    const a = m.create(); const b = m.create(); const c = m.create()
+    const a = m.create(); const b = m.create(); m.create()
     m.setActive(b.id)
     m.move(a.id, 2)
     expect(m.activeId).toBe(b.id)

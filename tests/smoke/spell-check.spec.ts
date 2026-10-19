@@ -175,7 +175,7 @@ async function useReplacement(win: Page, replacement: string, pane = '#paneA'): 
 
 test('a non-responsive spell worker does not block app boot', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-spell-hung-')
-  const { app, win } = await launchWithHungSpellWorker(smoke, userDataDir)
+  const { win } = await launchWithHungSpellWorker(smoke, userDataDir)
     expect(new URL(win.url()).searchParams.get('nc-spell-worker')).toBe('hang')
     await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
     await replaceEditorText(win, 'speling remains editable')
@@ -188,7 +188,7 @@ test('a spell worker constructor failure cannot become a session restore failure
   const userDataDir = smoke.tempDir('notes-spell-constructor-')
   const filePath = join(userDataDir, 'constructor.txt')
   writeFileSync(filePath, 'ordinary text')
-  const { app, win } = await launchWithFailedSpellWorkerConstruction(smoke, userDataDir, filePath)
+  const { win } = await launchWithFailedSpellWorkerConstruction(smoke, userDataDir, filePath)
     await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')
     await expect(win.locator('.toast--warning')).toHaveCount(1)
     await expect(win.locator('.toast--warning')).not.toContainText('ordinary text')
@@ -204,7 +204,7 @@ test('a first worker crash warns once, recovers, and never blocks editing or sav
   const userDataDir = smoke.tempDir('notes-spell-recover-')
   const filePath = join(userDataDir, 'recover.txt')
   writeFileSync(filePath, 'ordinary text')
-  const { app, win } = await launchHeadless(smoke, userDataDir, filePath)
+  const { win } = await launchHeadless(smoke, userDataDir, filePath)
     expect(new URL(win.url()).searchParams.get('nc-headless')).toBe('1')
     await win.waitForTimeout(700)
     await win.evaluate(() => window.__ncSpellTest!.failNextWorkerRequest())
@@ -235,7 +235,7 @@ test('a held stale response from model A cannot decorate replacement model B', a
     ],
     activeId: 'first',
   }))
-  const { app, win } = await launchHeadless(smoke, userDataDir)
+  const { win } = await launchHeadless(smoke, userDataDir)
     await win.waitForTimeout(700)
     await win.evaluate(() => window.__ncSpellTest!.delayNextChecks(2))
     await replaceEditorText(win, 'speling in model A')
@@ -305,7 +305,7 @@ test('correct text and keyboard context-menu invocations remain Monaco-owned', a
   const userDataDir = smoke.tempDir('notes-spell-correct-menu-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'ordinary speling')
-  const { app, win } = await launch(smoke, userDataDir, filePath)
+  const { win } = await launch(smoke, userDataDir, filePath)
     await expect(win.locator('#paneA .view-lines')).toContainText('ordinary speling')
     await expect(
       spellErrors(win),
@@ -338,7 +338,7 @@ test('does not decorate the identical word in a TypeScript buffer', async ({ smo
     ],
     activeId: 'control',
   }))
-  const { app, win } = await launch(smoke, userDataDir)
+  const { win } = await launch(smoke, userDataDir)
     await win.locator('.tb-btn[title="Toggle split pane"]').click()
     await expect(win.locator('#paneB')).toBeVisible()
     await win.locator('#paneB .monaco-editor').click()
@@ -363,7 +363,7 @@ test('checks Markdown prose but excludes inline and fenced code', async ({ smoke
   const userDataDir = smoke.tempDir('notes-spell-md-')
   const filePath = join(userDataDir, 'note.md')
   writeFileSync(filePath, 'speling prose\n\n`speling`\n\n```ts\nspeling\n```')
-  const { app, win } = await launch(smoke, userDataDir, filePath)
+  const { win } = await launch(smoke, userDataDir, filePath)
     await expect(win.locator('#paneA .view-lines')).toContainText('speling')
 
     await expect(
@@ -550,7 +550,7 @@ test('disabling clears spell decorations immediately and enabling restores them'
   const userDataDir = smoke.tempDir('notes-spell-toggle-')
   const filePath = join(userDataDir, 'note.txt')
   writeFileSync(filePath, 'speling')
-  const { app, win } = await launch(smoke, userDataDir, filePath)
+  const { win } = await launch(smoke, userDataDir, filePath)
     await expect(spellErrors(win)).toHaveCount(1)
     await openSettings(win, 'Editor')
     const toggle = win.locator('.appearance-row', {
@@ -629,7 +629,7 @@ test('switching UK and US rechecks both visible split panes', async ({ smoke }) 
     ],
     activeId: 'british',
   }))
-  const { app, win } = await launch(smoke, userDataDir)
+  const { win } = await launch(smoke, userDataDir)
     await win.locator('.tb-btn[title="Toggle split pane"]').click()
     await win.locator('#paneB .monaco-editor').click()
     await win.locator('.tab', { hasText: 'american.txt' }).click()

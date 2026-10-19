@@ -46,7 +46,7 @@ test('Settings: dialog semantics, vertical tabs, focus trap, labels, and focus r
   for (const panelId of tabControls) await expect(dialog.locator(`[id="${panelId}"]`)).toHaveCount(1)
   const panels = dialog.locator('[role="tabpanel"]')
   await expect(panels).toHaveCount(tabControls.length)
-  expect(await panels.evaluateAll(items => items.filter(item => !item.hidden).length)).toBe(1)
+  expect(await panels.evaluateAll(items => items.filter(item => !(item as HTMLElement).hidden).length)).toBe(1)
   await expect(dialog.getByRole('button', { name: /accent/i }).first()).toHaveAttribute('aria-pressed', /true|false/)
   const close = dialog.getByRole('button', { name: 'Close Settings' })
   await close.focus(); await win.keyboard.press('Tab')
