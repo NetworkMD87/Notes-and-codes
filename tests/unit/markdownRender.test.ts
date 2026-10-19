@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest'
-import { renderMarkdown } from '../../src/renderer/markdownRender'
+import { describe, it, expect, vi } from 'vitest'
+import MarkdownIt from 'markdown-it'
+import { renderMarkdown, renderMarkdownFragment } from '../../src/renderer/markdownRender'
 
 describe('renderMarkdown', () => {
   it('renders basic markdown to html', () => {
@@ -51,5 +52,43 @@ describe('renderMarkdown', () => {
     expect(items[0].classList.contains('task-list-item')).toBe(false)
     expect(items[1].classList.contains('task-list-item')).toBe(true)
     expect(items[1].querySelector('input[type="checkbox"]')?.hasAttribute('disabled')).toBe(true)
+  })
+})
+
+describe('renderMarkdownFragment', () => {
+  it.each([
+    '',
+    '# Heading\n\nParagraph with **bold**, *emphasis*, `code`, café and 😀.\nNext line',
+    '- [ ]\n- [x] Done\n  - [ ] Child\n- ordinary',
+    '- \n  - [ ] Child\n\n1. first\n2. second',
+    '| A | B |\n| --- | --- |\n| one | two |\n\n> Quote\n\n```html\n<script>literal</script>\n```',
+    'a@b.co\nhttps://example.com\na://a://\n[unsafe](javascript:alert(1))',
+    '<input onclick="alert(1)">\n<script>alert(1)</script>',
+  ])('matches the existing sanitized export output for %j', source => {
+    const panel = document.createElement('div')
+    const fragment = renderMarkdownFragment(source)
+    expect(fragment).toBeInstanceOf(DocumentFragment)
+    panel.replaceChildren(fragment)
+    expect(panel.innerHTML).toBe(renderMarkdown(source))
+  })
+
+  it('sanitizes parser output before returning live nodes', () => {
+    // Exercise the sanitizer independently of markdown-it rejecting raw source HTML.
+    const parser = vi.spyOn(MarkdownIt.prototype, 'render').mockReturnValue(
+      '<script>alert(1)</script><img src="x" onerror="alert(1)">'
+      + '<a href="javascript:alert(1)" onclick="alert(1)">unsafe</a>'
+      + '<a href="https://example.com">safe</a><input type="checkbox" disabled checked>',
+    )
+    try {
+      const fragment = renderMarkdownFragment('parser fixture')
+      expect(fragment.querySelector('script, [onerror], [onclick]')).toBeNull()
+      expect(fragment.querySelector('a')?.hasAttribute('href')).toBe(false)
+      expect(fragment.querySelector('a[href]')?.getAttribute('rel')).toBe('noopener noreferrer')
+      const checkbox = fragment.querySelector('input')!
+      expect(checkbox.disabled).toBe(true)
+      expect(checkbox.checked).toBe(true)
+    } finally {
+      parser.mockRestore()
+    }
   })
 })

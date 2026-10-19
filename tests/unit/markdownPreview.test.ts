@@ -8,6 +8,61 @@ describe('MarkdownPreview', () => {
     document.body.replaceChildren()
   })
 
+  it('inserts sanitized nodes directly and replaces them on the next edit', async () => {
+    vi.useFakeTimers()
+    const panel = document.createElement('div')
+    // A reparse via innerHTML would throw: the default preview must insert sanitized nodes.
+    Object.defineProperty(panel, 'innerHTML', { set: () => { throw new Error('Unexpected HTML reparse') } })
+    const preview = new MarkdownPreview(panel, {})
+    preview.setActive(true, 'a', '# First\n\n- [x] done\n\nhttps://example.com')
+    expect(panel.querySelector('h1')?.textContent).toBe('First')
+    expect(panel.querySelector('input')?.disabled).toBe(true)
+    expect(panel.querySelector('input')?.checked).toBe(true)
+    expect(panel.querySelector('a')?.getAttribute('rel')).toBe('noopener noreferrer')
+    preview.update('a', '# Second')
+    await vi.advanceTimersByTimeAsync(150)
+    expect(panel.querySelector('h1')?.textContent).toBe('Second')
+    expect(panel.querySelector('input, a')).toBeNull()
+    preview.dispose()
+  })
+
+  it('moves a rendered fragment into the panel without cloning its nodes', () => {
+    const panel = document.createElement('div')
+    const fragment = document.createDocumentFragment()
+    const heading = document.createElement('h1')
+    heading.textContent = 'Retained node'
+    fragment.append(heading)
+    const preview = new MarkdownPreview(panel, { render: () => fragment })
+    preview.setActive(true, 'a', 'source')
+    expect(panel.firstElementChild).toBe(heading)
+    expect(fragment.childNodes).toHaveLength(0)
+    preview.dispose()
+  })
+
+  it('clears old nodes for empty content and recovers after a renderer failure', async () => {
+    vi.useFakeTimers()
+    const panel = document.createElement('div')
+    const preview = new MarkdownPreview(panel, {
+      render: markdown => {
+        if (markdown === 'fail') throw new Error('Renderer failed')
+        const fragment = document.createDocumentFragment()
+        if (markdown) fragment.append(document.createTextNode(markdown))
+        return fragment
+      },
+    })
+    preview.setActive(true, 'a', 'initial')
+    preview.update('a', '')
+    await vi.advanceTimersByTimeAsync(150)
+    expect(panel.childNodes).toHaveLength(0)
+    preview.update('a', 'fail')
+    await vi.advanceTimersByTimeAsync(150)
+    expect(panel.textContent).toBe('Preview failed to render.')
+    preview.update('a', 'recovered')
+    await vi.advanceTimersByTimeAsync(150)
+    expect(panel.textContent).toBe('recovered')
+    preview.dispose()
+  })
+
   it('renders immediately when shown and debounces edits to the newest content', async () => {
     vi.useFakeTimers()
     const panel = document.createElement('div')

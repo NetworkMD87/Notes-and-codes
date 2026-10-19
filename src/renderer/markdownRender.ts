@@ -33,3 +33,9 @@ md.core.ruler.after('inline', 'task-list-checkboxes', (state) => {
 export function renderMarkdown(src: string): string {
   return DOMPurify.sanitize(md.render(src))
 }
+
+/** Insert sanitized preview nodes directly, avoiding serialization and a second HTML parse.
+ *  Keep the string renderer for self-contained HTML/PDF exports. */
+export function renderMarkdownFragment(src: string): DocumentFragment {
+  return DOMPurify.sanitize(md.render(src), { RETURN_DOM_FRAGMENT: true })
+}

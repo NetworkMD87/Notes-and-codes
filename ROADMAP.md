@@ -1,8 +1,8 @@
 # Notes & Codes — Roadmap
 
-Last updated: 2026-10-11
+Last updated: 2026-10-19
 
-**🎯 Next up:** [Microsoft Store release via MSIX](#msix) — owner decision on starting the planned design-and-trial pass; implementation and Store submission are not yet approved. [CI renderer smoke qualification](#ci-smoke) is complete and merged through [PR #42](https://github.com/NetworkMD87/Notes-and-codes/pull/42) on 2026-10-11. Master build/typecheck and all 1,101 units passed; the two consecutive 192-test full passes remain the bounded smoke evidence. No further full smoke run is indicated and smoke stays manual-only. U2/P2 remain planned; the existing delivery order is unchanged.
+**🎯 Next up:** [Microsoft Store release via MSIX](#msix) — owner decision on starting the planned design-and-trial pass; implementation and Store submission are not yet approved. The authorised [S3 dependency follow-up](#security-dependencies--2026-10-08-follow-up) is investigated but blocked on upstream fixes: eligible HTTP-cache 4.3.0 failed security qualification on 2026-10-13, so dependencies were retained. [CI renderer smoke qualification](#ci-smoke) is complete and merged through [PR #42](https://github.com/NetworkMD87/Notes-and-codes/pull/42) on 2026-10-11. Master build/typecheck and all 1,101 units passed at that merge; the two consecutive 192-test full passes remain the bounded smoke evidence. No further full smoke run is indicated and smoke stays manual-only. U2 remains planned; the approved [P2 performance batch](#p2-bound-large-markdown-preview-work) has a locally verified partial optimization, uncommitted. Broader large-document behavior remains open; the existing delivery order is unchanged.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -12,9 +12,9 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 
 | At a glance | Status / order |
 | --- | --- |
-| [Security dependencies](#security-dependencies--2026-10-08-follow-up) | S1–S2, S4 and compatible S3 patches released in v1.21.2; S3 retains two dependency chains pending upstream/age eligibility. |
+| [Security dependencies](#security-dependencies--2026-10-08-follow-up) | S1–S2, S4 and compatible S3 patches released in v1.21.2; S3 retains two chains pending verified upstream fixes. Eligible HTTP-cache 4.3.0 failed qualification. |
 | [Reliability](#1-reliability--completed) | R1–R4 released in v1.21.1. |
-| [UI and performance](#2-ui-and-performance--planned) | U1/U3 released in v1.21.3; U2/P2 remain planned. P1 released in v1.21.1. |
+| [UI and performance](#2-ui-and-performance--planned) | U1/U3 released in v1.21.3; U2 planned; P2 partially improved and locally verified, uncommitted. P1 released in v1.21.1. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | Bounded full CI qualification merged → MSIX design/trial awaits approval → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
@@ -30,11 +30,12 @@ Security dependency follow-up added on **2026-10-08** after checking the current
   - **Next runtime upgrade:** move to a supported major before [Electron 43 support ends on 2027-01-05](https://releases.electronjs.org/schedule); account for Electron 44's clipboard API migration.
 
 - [ ] **S3 — Compatible patches released in v1.21.2; upstream follow-ups remain.** Updated all affected `brace-expansion` copies, `js-yaml`, `@xmldom/xmldom`, `fast-uri` and `undici` within existing compatible ranges. Retained builder 26.15.3, tar 7.5.22 and builder-util-runtime 9.7.0.
-  - **Recorded outstanding work (2026-10-08):** `sprintf-js` had no published patch; HTTP-cache fix 4.3.0 becomes eligible under the seven-day npm release-age safeguard on **2026-10-11 at 03:56 BST**. Recheck upstream availability and eligibility before the next dependency change. The global-agent 4.1.3 candidate failed a trusted-certificate proxy test; owner retained 3.0.0. Inspected build paths did not expose the advisory preconditions (attacker-controlled log formats or a shared HTTP cache). [Applicability, validation and remaining work](docs/packaging-dependency-evidence-2026-10-08.md).
+  - **Blocked on verified upstream fixes (2026-10-13):** `http-cache-semantics` 4.3.0 passed the seven-day release-age threshold on **2026-10-11 at 03:56 BST**, but the published artifact still reproduces the `max-stale` flaw; the earlier “published fix” description is corrected. Retained 4.2.0; `sprintf-js` remains unpatched at 1.1.3 and the rejected global-agent 4.1.3 override stays excluded. Inspected build paths do not enable a shared HTTP cache; package-level reproduction is not an app exploit. Next action: qualify an upstream fix before updating. [Artifact, behaviour and independent review evidence](docs/packaging-dependency-follow-up-2026-10-13.md).
+  - **Current validation:** 25 focused dependency/proxy tests and build/typecheck passed; full audit retains 9 affected entries (1 high, 8 moderate), production audit zero warnings. No dependency, release or Git mutation; S3 remains open. [Original compatibility decisions](docs/packaging-dependency-evidence-2026-10-08.md).
 
 - ✅ **S4 — Compatible dependency fixes released in v1.21.2.** Updated DOMPurify 3.4.16, Vitest/mocker 4.1.11, sharp 0.35.5, source-map-js 1.2.2, browserslist 4.29.3 and baseline-browser-mapping 2.11.26. The 2026-10-08 production dependency audit reported zero warnings; S3's recorded HTTP-cache and proxy-logging follow-ups remain open. [Validation and rejected proxy candidate](docs/packaging-dependency-evidence-2026-10-08.md#s4-and-proxy-replacement-qualification).
 
-**Evidence boundary — 2026-10-08 audit snapshot:** the pre-fix `npm audit --json --ignore-scripts` reported 23 affected dependency entries (10 high, 12 moderate, 1 low), including indirect warnings. After S1/S2 there were 21, then 16 after S3; after S4, **9 remained (1 high, 8 moderate, 0 low)**, tracked above; Electron and Markdown were no longer flagged. No fresh dependency audit was run during this roadmap update. These are dependency warnings, not independently demonstrated app exploits. The screenshot supplied titles without advisory IDs, so the exact historical alert records were not closed. The esbuild cross-origin read, remote renderer override, and document-driven PDF resource-fetch findings remain patched in the inspected source.
+**Evidence boundary:** the 2026-10-08 pre-fix audit reported 23 affected dependency entries (10 high, 12 moderate, 1 low), including indirect warnings. After S1/S2 there were 21, then 16 after S3; after S4, **9 remained (1 high, 8 moderate, 0 low)**. The fresh 2026-10-13 full audit reports the same counts and the production audit zero warnings; Electron and Markdown are not flagged. These are dependency warnings, not independently demonstrated app exploits. The screenshot supplied titles without advisory IDs, so the exact historical alert records were not closed. The esbuild cross-origin read, remote renderer override, and document-driven PDF resource-fetch findings remain patched at their recorded scope. [Current dependency evidence](docs/packaging-dependency-follow-up-2026-10-13.md).
 
 ---
 
@@ -63,8 +64,11 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 
 ### Performance
 
-- ⬜ **P2 — Bound large Markdown preview work.** Profile parsing, sanitization, and full DOM replacement in Electron before choosing an optimization. Consider a size-based preview policy only after UX approval; preserve sanitization, task rendering, focus, and scroll behavior. [Source](src/renderer/markdownPreview.ts).
-  - **Evidence limit:** a synthetic 500 KiB document took about 2.4 seconds through rendering and DOM replacement in Node/jsdom. This is not an Electron responsiveness measurement. The existing debounce is already shipped; this item addresses work remaining after it fires. Broader large-file mode remains a separate someday idea.
+### P2: Bound large Markdown preview work
+
+- [ ] **Partial — local optimization verified, uncommitted (2026-10-19).** Electron profiling led to direct sanitized-node insertion, removing repeated HTML parsing. Large-fixture insertion fell from 92–130 ms to 29–76 ms; total time including layout remains variable. [Source](src/renderer/markdownPreview.ts).
+  - **Validation:** build/typecheck, 54 focused units and passing results for all 11 affected Electron smoke tests; sanitizer bypass made its guard fail, then exact restoration passed. Export strings, sanitization, task rendering, focus and scroll are preserved. [Measurements, retained failures and review](docs/markdown-preview-performance-2026-10-19.md).
+  - **Remaining:** sanitization/layout still block large previews after the existing debounce fires. No consistent overall latency gain or complete P2 solution is claimed. A size-based preview policy requires owner UX approval; broader large-file mode remains a separate someday idea.
 
 ---
 

@@ -58,6 +58,11 @@ patch is available.
 
 ### HTTP-cache patch deferred by release-age safeguard
 
+**2026-10-13 correction:** 4.3.0 is now age-eligible, but direct artifact inspection
+and behavioural qualification show it still reproduces the recorded flaw. The
+historical “published fix” claim below is superseded; 4.2.0 remains installed and
+the issue remains open. [Current verification evidence](packaging-dependency-follow-up-2026-10-13.md).
+
 `http-cache-semantics` remains 4.2.0, flagged by
 [GHSA-ch52-4w7c-c8xp](https://github.com/advisories/GHSA-ch52-4w7c-c8xp).
 The published fix is 4.3.0, released 2026-10-04 at 02:56 UTC; npm's configured

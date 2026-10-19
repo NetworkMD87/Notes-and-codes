@@ -1,7 +1,7 @@
-import { renderMarkdown } from './markdownRender'
+import { renderMarkdownFragment } from './markdownRender'
 
 export interface MarkdownPreviewDeps {
-  render?: (markdown: string) => string
+  render?: (markdown: string) => string | DocumentFragment
   setTimer?: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
   clearTimer?: (timer: ReturnType<typeof setTimeout>) => void
 }
@@ -14,7 +14,7 @@ export class MarkdownPreview {
   private generation = 0
   private revision = 0
   private disposed = false
-  private readonly render: (markdown: string) => string
+  private readonly render: (markdown: string) => string | DocumentFragment
   private readonly setTimer: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
   private readonly clearTimer: (timer: ReturnType<typeof setTimeout>) => void
   private readonly handlePanelClick = (event: MouseEvent): void => {
@@ -23,7 +23,7 @@ export class MarkdownPreview {
   }
 
   constructor(private panel: HTMLElement, deps: MarkdownPreviewDeps) {
-    this.render = deps.render ?? renderMarkdown
+    this.render = deps.render ?? renderMarkdownFragment
     this.setTimer = deps.setTimer ?? ((callback, delay) => setTimeout(callback, delay))
     this.clearTimer = deps.clearTimer ?? (timer => clearTimeout(timer))
     this.panel.addEventListener('click', this.handlePanelClick)
@@ -80,7 +80,11 @@ export class MarkdownPreview {
   }
 
   private renderNow(markdown: string): void {
-    try { this.panel.innerHTML = this.render(markdown) }
+    try {
+      const rendered = this.render(markdown)
+      if (typeof rendered === 'string') this.panel.innerHTML = rendered
+      else this.panel.replaceChildren(rendered)
+    }
     catch { this.panel.textContent = 'Preview failed to render.' }
   }
 
