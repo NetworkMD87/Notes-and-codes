@@ -4,7 +4,7 @@ Last updated: 2026-11-05
 
 ## 🎯 Next up
 
-[Release v1.22.0](#v1220-release-and-installed-acceptance) — finish the authorised installer/portable release; then await installed-app acceptance. [MSIX design and trial](#microsoft-store-release-via-msix) still needs an owner decision before Safe Replace and snippet placeholders. [P2](#p2-bound-large-markdown-preview-work) and [dependency follow-ups](#security-dependencies--2026-10-08-follow-up) remain open.
+[Install and check v1.22.0](#v1220-release-and-installed-acceptance) — the installer and portable release are published; await owner-installed acceptance. [MSIX design and trial](#microsoft-store-release-via-msix) still needs an owner decision before Safe Replace and snippet placeholders. [P2](#p2-bound-large-markdown-preview-work) and [dependency follow-ups](#security-dependencies--2026-10-08-follow-up) remain open.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -14,13 +14,13 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 
 | At a glance | Status / order |
 | --- | --- |
-| [Security dependencies](#november-security-patch-handoff) | November compatible patches locally verified; conditional minimatch packaging advisory remains. Earlier S3 cache/proxy qualification decisions are preserved. |
+| [Security dependencies](#november-security-patch-handoff) | November patches released in v1.22.0; GitHub confirms 27 imported alerts fixed and one minimatch alert open. Earlier S3 qualification decisions are preserved. |
 | [Reliability](#1-reliability--completed) | R1–R4 released in v1.21.1. |
-| [UI and performance](#2-ui-and-performance--planned) | U1/U3 released in v1.21.3; U2 planned; P2 partially improved and verified; broader work remains open. P1 released in v1.21.1. |
+| [UI and performance](#2-ui-and-performance--planned) | Libron and the partial P2 optimization released in v1.22.0; U2 and broader P2 work remain open. U1/U3 and P1 retain their earlier release status. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | Bounded full CI qualification merged → MSIX design/trial awaits approval → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
-| Latest release | [v1.21.3](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.3): context menus within the window and distinguishing folder labels for same-named tabs. |
+| Latest release | [v1.22.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.0): security updates, offline Libron fonts and partial Markdown preview optimization. |
 
 ---
 
@@ -28,15 +28,16 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 
 ### v1.22.0 release and installed acceptance
 
-- [ ] **Release v1.22.0 — In progress.** Prepare and publish the authorised release containing the unreleased Libron feature and security patches. Latest released remains v1.21.3 until publication succeeds.
+- [x] **Release v1.22.0 — Published 2026-11-05.** Installer and portable assets were built from tag `v1.22.0` at `ea787a1`; Windows CI and four packaged runtime/font checks passed.
+  Defender scans, uploaded hashes/sizes and independent public-download checks passed. [Release](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.0); [evidence and limits](docs/release-1.22.0-evidence.md).
 - [ ] **Installed-app acceptance — Awaiting your testing.** Install v1.22.0, confirm existing notes/settings remain available, and check normal open/save and Markdown preview/export. Automated packaged checks do not establish installed acceptance; other manual limits remain in the [release evidence](docs/release-1.22.0-evidence.md).
 
 ### November security patch handoff
 
-- [x] **NC-01/02 — Parser and shipped-runtime patches locally verified (2026-11-05).** Markdown-it **14.3.3**, DOMPurify **3.4.17** and Electron **43.8.4**; release-age safeguard retained.
+- [x] **NC-01/02 — Parser and shipped-runtime patches released in v1.22.0 (2026-11-05).** Markdown-it **14.3.3**, DOMPurify **3.4.17** and Electron **43.8.4**; release-age safeguard retained.
   Malformed-reference guards failed before repair and passed after; build, unit, type and focused Electron checks passed. [Results and limits](docs/release-1.22.0-evidence.md).
 - [x] **NC-03 — Conditional findings assessed (2026-11-05).** Conservative parser/sanitizer options remain; the imported #1/#5 explanation swap is corrected in the [release evidence](docs/release-1.22.0-evidence.md). Both render outputs retain sanitization and ordinary reference links.
-- [x] **NC-04 — Compatible tooling patches locally verified (2026-11-05).** Vite **7.3.7**, Vitest/mocker **4.1.12**, Undici **6.29.1 / 7.30.1**, fast-uri **3.1.9**; matching Vitest siblings updated together.
+- [x] **NC-04 — Compatible tooling patches delivered with v1.22.0 (2026-11-05).** Vite **7.3.7**, Vitest/mocker **4.1.12**, Undici **6.29.1 / 7.30.1**, fast-uri **3.1.9**; matching Vitest siblings updated together.
   Full audit: six moderate entries in one minimatch chain; production audit: zero. Prior HTTP-cache and sprintf qualifications were not repeated. [Release evidence](docs/release-1.22.0-evidence.md).
 - [ ] **NC-04 residual — Blocked upstream.** Await a compatible minimatch parent fix; even app-builder-lib **26.18.1** still requests minimatch **^10.2.5**. The flaw requires optimization level **2+**, while inspected callers use **1**. No forced major override or suppression. [Advisory and qualification](docs/release-1.22.0-evidence.md#remaining-advisories-and-acceptance-limits).
 
@@ -61,8 +62,8 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 
 ### UI / keyboard access
 
-- [x] 🛠️ **Libron font choice — implementation merged to `master`, awaiting release (2026-10-09).** Bundled regular, italic, bold and bold italic for offline use in editor/interface selectors and associated content. Defaults remain; Windows-controlled menus/dialogs use the system font.
-  Commit `5ecb902` is included in v1.22.0 preparation. [Font-loading/restart checks](tests/smoke/libron.spec.ts) and [release evidence](docs/release-1.22.0-evidence.md) distinguish packaged validation from installed acceptance.
+- [x] ✅ **Libron font choice — released in v1.22.0 (2026-11-05).** Bundled regular, italic, bold and bold italic for offline editor/interface use. Defaults remain; Windows menus/dialogs use the system font.
+  Packaged [font-loading/restart checks](tests/smoke/libron.spec.ts) passed; installed acceptance remains separate. [Release evidence](docs/release-1.22.0-evidence.md).
 
 ### U1: Keep context menus inside the window
 
@@ -81,7 +82,7 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 
 ### P2: Bound large Markdown preview work
 
-- [ ] **Partial — optimization locally verified (2026-10-19), later committed as `825c28f`.** Electron profiling led to direct sanitized-node insertion, removing repeated HTML parsing. Large-fixture insertion fell from 92–130 ms to 29–76 ms; total time including layout remains variable. [Source](src/renderer/markdownPreview.ts).
+- [ ] **Partial — direct-node insertion released in v1.22.0 (2026-11-05).** The 2026-10-19 optimization (`825c28f`) removes repeated HTML parsing. Large-fixture insertion fell from 92–130 ms to 29–76 ms; total time including layout remains variable. [Source](src/renderer/markdownPreview.ts).
   - **Validation:** build/typecheck, 54 focused units and passing results for all 11 affected Electron smoke tests; sanitizer bypass made its guard fail, then exact restoration passed. Export strings, sanitization, task rendering, focus and scroll are preserved. [Measurements, retained failures and review](docs/markdown-preview-performance-2026-10-19.md).
   - **Remaining:** sanitization/layout still block large previews after the existing debounce fires. No consistent overall latency gain or complete P2 solution is claimed. A size-based preview policy requires owner UX approval; broader large-file mode remains a separate someday idea.
 
@@ -186,6 +187,7 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 
 | Release | Outcome |
 | --- | --- |
+| **v1.22.0** · 2026-11-05 | Markdown/runtime security patches, offline Libron fonts, partial preview optimization and stronger test tooling. [Release evidence](docs/release-1.22.0-evidence.md). Installed acceptance remains open. |
 | **v1.21.3** · 2026-10-09 | Context menus stay within the window; same-named tabs show distinguishing folder labels and accessible file identities. [Release evidence](docs/release-1.21.3-evidence.md). |
 | **v1.21.2** · 2026-10-08 | Electron and Markdown security updates, compatible packaging/tooling dependency fixes, and remembered dialog folders. [Release evidence](docs/release-1.21.2-evidence.md). |
 | **v1.21.1** · 2026-10-02 | Reliable split-pane and overlapping saves; rename/save-path and stale-history fixes; in-place tab updates while typing. |

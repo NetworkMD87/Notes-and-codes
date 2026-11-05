@@ -2,16 +2,19 @@
 
 ## Source and release status
 
-Release preparation is authorised and in progress. Version 1.22.0 includes the
+The [v1.22.0 release](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.0)
+was published as latest stable on **2026-11-05 at 19:44:10 UTC**. It includes the
 already-merged Libron font option (`5ecb902`), direct sanitized preview insertion
 (`825c28f`), Windows smoke qualification and local strict test typing (`14b14b2`),
 plus the November security dependency patches. No new product settings or defaults
 were introduced in the security batch.
 
-The version is bumped before packaging. The release tag must be created after
-validation, and the installer/portable artifacts built once from that tag.
-Publication, hashes and final packaged checks will be recorded here after they
-are observed. Installed-app replacement remains for the owner to perform.
+The version was bumped and source committed/pushed as
+`ea787a1b6ed79dd6e08a07a8eba4f76b37f31b5b` before the annotated `v1.22.0` tag was
+created and pushed. The installer and portable files were built once from that
+clean tagged checkout, with automatic publishing disabled. The later documentation
+closeout does not change the tag or packaged source. Installed-app replacement
+remains for the owner to perform.
 
 ## Security dependency qualification
 
@@ -86,9 +89,9 @@ requests minimatch ^10.2.5 and universal 2.0.3. No forced major override, builde
 downgrade, warning suppression or dismissal was used. Revisit on a compatible
 upstream fix or changed input/configuration.
 
-The imported 28-alert ledger is a historical snapshot. Local patched package
-versions address 27 records; remote alert closure is not implied before source
-delivery is observed. Earlier HTTP-cache/proxy qualification decisions remain
+All **28 imported alert IDs** were freshly checked after the source push:
+GitHub reports **27 fixed / one open** (#32, minimatch), with none dismissed by
+this work. Earlier HTTP-cache/proxy qualification decisions remain
 separate and unchanged, even though the current npm feed omits those old matches.
 
 Executables retain the existing unsigned distribution status. Native installer
@@ -111,5 +114,40 @@ taskbar identity issue remains open. No owner acceptance is inferred from tests.
   [the roadmap archive](roadmap-archive.md). Previously committed preview/type
   work is no longer described as uncommitted. Open gates and prior failures remain.
 - Earlier successful build and focused app checks are reused where source is
-  unchanged; packaging will rebuild from the new version's tag. No full desktop
+  unchanged; packaging rebuilt from the new version's tag. No full desktop
   suite rerun is implied.
+
+## Tagged artifacts and final checks
+
+- [Release commit CI](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/42095795693)
+  passed its Windows build/typecheck and unit job; manual-only smoke correctly
+  skipped. Hosted unit logs show 102 passing files (20.71 seconds).
+- `npm run package -- --publish never` completed from clean `ea787a1` / `v1.22.0`.
+  Both files identify product version **1.22.0**; ASAR metadata is **1.22.0** with
+  **3,095 entries**. Main/preload JavaScript and renderer HTML match the tagged
+  build outputs byte for byte, using native archive entry separators.
+- Four checks against `dist/win-unpacked/Notes & Codes.exe` passed without retries
+  in **9.9 seconds**: runtime/sandbox/clipboard/HTTPS dispatch, remembered dialogs
+  across restart, actual HTML/PDF exports, and all Libron font faces in both panes
+  and interface with restart persistence. Each launch used isolated profiles;
+  shell integration and owner data were not changed.
+- Defender custom scans completed on the exact two release files, with zero
+  matching threat detections; signature version **1.463.140.0**. Both executables
+  remain **NotSigned**, consistent with the existing distribution channel.
+- Uploaded asset sizes and GitHub SHA-256 digests matched local files before the
+  draft was published. The draft by-tag endpoint initially returned 404; listing
+  releases and checking exact release ID **435649178** resolved the lookup. No
+  duplicate release or tag replacement occurred. Public release/latest endpoints
+  confirm v1.22.0 is non-draft and non-prerelease.
+- Both public asset URLs were downloaded without GitHub credentials after
+  publication. Downloaded sizes and SHA-256 hashes independently matched the
+  tagged artifacts below; the two temporary verification copies were removed.
+- All build, test, scan and upload sessions completed. A final process identity
+  check found zero executables running from the project; no pre-existing or
+  owner-installed process was stopped. Local installer/portable files and ignored
+  build receipts remain available; the checkout closeout changes only documentation.
+
+| Public asset | Bytes | SHA-256 |
+| --- | --- | --- |
+| `Notes.Codes.Setup.1.22.0.exe` | 128,041,947 | `0935ee5ac681001c05283eb1d651a6e2322865fe99d81835d79949c7b8671bbf` |
+| `Notes.Codes.1.22.0.exe` | 127,815,759 | `02ed0d2da95387a68324a11817aa0fbfefca1306c7e556d80410d2febe19dfa2` |
