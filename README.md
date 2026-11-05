@@ -47,6 +47,8 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.22.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.0):** updates Markdown parsing and the Electron runtime for security fixes,
+  adds the offline Libron editor/interface font option, and reduces repeated HTML parsing in Markdown previews.
 - **[v1.21.3](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.3):** keeps context menus inside the window
   and distinguishes same-named saved tabs with folder labels, full-path tooltips and accessible file identities.
 - **[v1.21.2](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.2):** updates Electron and Markdown security dependencies,

@@ -4,6 +4,40 @@ import { test, expect } from './smokeTest'
 import { waitForBoot } from './appReady'
 import { quitViaMenu } from './appActions'
 
+test('pasting Markdown preserves preview safety and saves the original source', async ({ smoke }) => {
+  const userData = smoke.tempDir('notes-markdown-paste-')
+  const path = join(userData, 'pasted.md')
+  writeFileSync(path, '')
+  const source = '# Pasted Markdown\n\n- [x] complete\n\n[normal][reference]\n\n'
+    + '[reference]: https://example.com\n\n<script>alert(1)</script>'
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userData}`, path] })
+  const win = await app.firstWindow()
+  await waitForBoot(win)
+  await win.getByRole('button', { name: 'Choose Markdown preview mode' }).click()
+  await win.getByRole('menuitemradio', { name: 'Side by side', exact: true }).click()
+  await win.locator('#paneA .monaco-editor').click()
+  // Supply a renderer clipboard event, exercising Monaco's real paste handler
+  // without reading or changing the owner's Windows clipboard.
+  await win.evaluate(source => {
+    const target = document.activeElement
+    if (!(target instanceof HTMLTextAreaElement)) throw new Error('Expected the focused Monaco textarea')
+    const clipboardData = new DataTransfer()
+    clipboardData.setData('text/plain', source)
+    target.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData }))
+  }, source)
+  const preview = win.locator('#mdpreview')
+  await expect(preview.locator('h1')).toHaveText('Pasted Markdown')
+  await expect(preview.locator('input')).toBeChecked()
+  await expect(preview.locator('input')).toBeDisabled()
+  await expect(preview.locator('a')).toHaveAttribute('href', 'https://example.com')
+  await expect(preview.locator('a')).toHaveAttribute('rel', 'noopener noreferrer')
+  await expect(preview.locator('script')).toHaveCount(0)
+  await expect(preview).toContainText('<script>alert(1)</script>')
+  await win.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect.poll(() => readFileSync(path, 'utf8')).toBe(source)
+  await quitViaMenu(app)
+})
+
 test('Markdown preview inserts sanitized nodes and preserves editing, scroll and links', async ({ smoke }) => {
   const userData = smoke.tempDir('notes-markdown-render-')
   const path = join(userData, 'render.md')

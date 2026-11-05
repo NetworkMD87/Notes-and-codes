@@ -4,12 +4,21 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
-## [Unreleased]
+## [1.22.0] — 2026-11-05
 
-_More dependable automated Windows desktop checks._
+_Safer Markdown previews and exports, an updated desktop runtime, and the new Libron font option._
+
+### Added
+- Libron is available offline for both the editor and interface, with regular, italic, bold and bold italic styles. Existing font defaults stay the same.
+
+### Fixed
+- Updated Markdown parsing to prevent the reported excessive-processing issue caused by crafted multiline link references in previews and exports.
+- Updated Electron to 43.8.4 and refreshed compatible sanitization, build and test dependencies for the reported security fixes. The remaining conditional packaging-tool warning is tracked in the roadmap.
 
 ### Changed
+- Markdown previews insert sanitized nodes directly, reducing repeated HTML parsing. This is a partial improvement; very large previews can still take time to sanitize and lay out.
 - Improved automated checks for saving, queued saves, restart recovery, Settings and editor interactions. Added a bounded manual full smoke mode with zero retries and a stop at the first failure.
+- Added a local strict test type-check command and regression coverage for malformed Markdown, paste/save, sanitized outputs and external-link dispatch.
 
 ## [1.21.3] — 2026-10-09
 

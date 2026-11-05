@@ -5,7 +5,11 @@ import { openSettings } from './settingsHelper'
 
 test('Libron is bundled for editor and interface fonts and survives restart', async ({ smoke }) => {
   const userDataDir = smoke.tempDir('notes-libron-')
-  const launch = () => smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const executablePath = process.env.NC_RUNTIME_EXECUTABLE
+  const launch = () => smoke.launch({
+    executablePath,
+    args: [...(executablePath ? [] : ['out/main/index.js']), `--user-data-dir=${userDataDir}`],
+  })
   const app = await launch()
   const win = await app.firstWindow()
   await expect(win.locator('body')).toHaveAttribute('data-booted', 'true')

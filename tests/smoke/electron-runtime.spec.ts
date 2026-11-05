@@ -32,6 +32,17 @@ test('the running Electron matches the lockfile and keeps the renderer sandboxed
   // Exercise the clipboard IPC without reading or changing the user's actual clipboard.
   await app.evaluate(({ clipboard }) => { clipboard.readText = () => 'runtime clipboard fixture' })
   expect(await win.evaluate(() => window.api.clipboardRead())).toBe('runtime clipboard fixture')
+  // Verify the external-link IPC without opening a browser or making a request.
+  await app.evaluate(({ shell }) => {
+    const opened: string[] = []
+    ;(globalThis as unknown as { openedExternalUrls: string[] }).openedExternalUrls = opened
+    shell.openExternal = async url => { opened.push(url) }
+  })
+  for (const url of ['https://example.com/fixture', 'http://example.com', 'file:///C:/fixture', 'javascript:alert(1)']) {
+    await win.evaluate(url => window.api.openExternal(url), url)
+  }
+  expect(await app.evaluate(() => (globalThis as unknown as { openedExternalUrls: string[] }).openedExternalUrls))
+    .toEqual(['https://example.com/fixture'])
 })
 
 test('Open, Save As and folder dialogs remember independent directories after restart', async ({ smoke }) => {

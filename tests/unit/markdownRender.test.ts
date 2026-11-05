@@ -72,7 +72,21 @@ describe('renderMarkdownFragment', () => {
     expect(panel.innerHTML).toBe(renderMarkdown(source))
   })
 
-  it('sanitizes parser output before returning live nodes', () => {
+  it.each(['string', 'fragment'])('retains multiline references and conservative parser options in %s output', mode => {
+    const source = '[normal][reference]\n\n<em>raw</em>\n\n"quoted"\n\n'
+      + '[reference]:\n  https://example.com\n  "Multiline title"\n'
+    const panel = document.createElement('div')
+    if (mode === 'string') panel.innerHTML = renderMarkdown(source)
+    else panel.replaceChildren(renderMarkdownFragment(source))
+    expect(panel.querySelector('a')?.getAttribute('href')).toBe('https://example.com')
+    expect(panel.querySelector('a')?.getAttribute('title')).toBe('Multiline title')
+    expect(panel.querySelector('a')?.textContent).toBe('normal')
+    expect(panel.querySelector('em')).toBeNull()
+    expect(panel.textContent).toContain('<em>raw</em>')
+    expect(panel.textContent).toContain('"quoted"')
+  })
+
+  it.each(['string', 'fragment'])('sanitizes parser output before returning %s output', mode => {
     // Exercise the sanitizer independently of markdown-it rejecting raw source HTML.
     const parser = vi.spyOn(MarkdownIt.prototype, 'render').mockReturnValue(
       '<script>alert(1)</script><img src="x" onerror="alert(1)">'
@@ -80,7 +94,9 @@ describe('renderMarkdownFragment', () => {
       + '<a href="https://example.com">safe</a><input type="checkbox" disabled checked>',
     )
     try {
-      const fragment = renderMarkdownFragment('parser fixture')
+      const fragment = document.createElement('div')
+      if (mode === 'string') fragment.innerHTML = renderMarkdown('parser fixture')
+      else fragment.replaceChildren(renderMarkdownFragment('parser fixture'))
       expect(fragment.querySelector('script, [onerror], [onclick]')).toBeNull()
       expect(fragment.querySelector('a')?.hasAttribute('href')).toBe(false)
       expect(fragment.querySelector('a[href]')?.getAttribute('rel')).toBe('noopener noreferrer')

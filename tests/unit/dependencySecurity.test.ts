@@ -24,12 +24,12 @@ function compareVersions(leftVersion: string, rightVersion: string): number {
 
 describe('shipped dependency security floors', () => {
   it.each([
-    { packageName: 'dompurify', patchedMinimum: '3.4.16' },
+    { packageName: 'dompurify', patchedMinimum: '3.4.17' },
     { packageName: 'linkify-it', patchedMinimum: '5.0.2' },
-    // GHSA-253c-mchw-3w2r: markdown-it itself also has quadratic linkification paths.
-    { packageName: 'markdown-it', patchedMinimum: '14.3.1' },
+    // GHSA-gfr2-rv44-r23c: default multiline reference parsing blocks the renderer.
+    { packageName: 'markdown-it', patchedMinimum: '14.3.3' },
     // Electron is a devDependency but its runtime ships in the packaged app.
-    { packageName: 'electron', patchedMinimum: '43.7.7' },
+    { packageName: 'electron', patchedMinimum: '43.8.1' },
   ])('$packageName resolves at or above $patchedMinimum', ({ packageName, patchedMinimum }) => {
     const version = lock.packages[`node_modules/${packageName}`]?.version
     expect(version, `${packageName} must be present in package-lock.json`).toBeTypeOf('string')
@@ -46,12 +46,13 @@ describe('development dependency security floors', () => {
     { packageName: 'brace-expansion', floors: { 1: '1.1.21', 2: '2.1.7', 5: '5.0.12' } },
     { packageName: 'js-yaml', floors: { 4: '4.3.2' } },
     { packageName: '@xmldom/xmldom', floors: { 0: '0.8.15' } },
-    { packageName: 'fast-uri', floors: { 3: '3.1.8' } },
-    { packageName: 'undici', floors: { 6: '6.28.1', 7: '7.29.1' } },
+    { packageName: 'fast-uri', floors: { 3: '3.1.9' } },
+    { packageName: 'undici', floors: { 6: '6.29.1', 7: '7.30.1' } },
     { packageName: 'tar', floors: { 7: '7.5.22' } },
     { packageName: 'builder-util-runtime', floors: { 9: '9.7.0' } },
-    { packageName: 'vitest', floors: { 4: '4.1.11' } },
-    { packageName: '@vitest/mocker', floors: { 4: '4.1.11' } },
+    { packageName: 'vite', floors: { 7: '7.3.7' } },
+    { packageName: 'vitest', floors: { 4: '4.1.12' } },
+    { packageName: '@vitest/mocker', floors: { 4: '4.1.12' } },
     { packageName: 'sharp', floors: { 0: '0.35.5' } },
     { packageName: 'source-map-js', floors: { 1: '1.2.2' } },
     { packageName: 'browserslist', floors: { 4: '4.28.7' } },
