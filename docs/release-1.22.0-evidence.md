@@ -13,8 +13,8 @@ The version was bumped and source committed/pushed as
 `ea787a1b6ed79dd6e08a07a8eba4f76b37f31b5b` before the annotated `v1.22.0` tag was
 created and pushed. The installer and portable files were built once from that
 clean tagged checkout, with automatic publishing disabled. The later documentation
-closeout does not change the tag or packaged source. Installed-app replacement
-remains for the owner to perform.
+closeout does not change the tag or packaged source. Installed replacement and
+general operation are now owner-confirmed below.
 
 ## Security dependency qualification
 
@@ -94,11 +94,21 @@ GitHub reports **27 fixed / one open** (#32, minimatch), with none dismissed by
 this work. Earlier HTTP-cache/proxy qualification decisions remain
 separate and unchanged, even though the current npm feed omits those old matches.
 
-Executables retain the existing unsigned distribution status. Native installer
-interaction, owner-installed replacement, real Windows clipboard/pickers,
+Executables retain the existing unsigned distribution status. Owner-installed
+replacement is confirmed below. Detailed native installer interaction, real Windows clipboard/pickers,
 tray/hotkey behavior and intercepted-TLS exploitation were not manually exercised.
 Large-preview sanitization/layout remains partial P2 work; the parked installed
 taskbar identity issue remains open. No owner acceptance is inferred from tests.
+
+## Owner-installed acceptance
+
+On **2026-11-05**, the owner reported: “Installed and working fine, notes and
+settings are all there.” This confirms installation, general operation and
+preservation of existing notes/settings through the update. It is owner-reported
+evidence, not an independently observed installation or a feature-by-feature test.
+Specific clipboard/picker, tray/hotkey, font, export, accessibility and security
+scenario checks were not separately reported. Existing P2, minimatch and parked
+taskbar-identity work remain open.
 
 ## Release-candidate checks
 

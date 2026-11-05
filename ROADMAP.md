@@ -4,7 +4,7 @@ Last updated: 2026-11-05
 
 ## 🎯 Next up
 
-[Install and check v1.22.0](#v1220-release-and-installed-acceptance) — the installer and portable release are published; await owner-installed acceptance. [MSIX design and trial](#microsoft-store-release-via-msix) still needs an owner decision before Safe Replace and snippet placeholders. [P2](#p2-bound-large-markdown-preview-work) and [dependency follow-ups](#security-dependencies--2026-10-08-follow-up) remain open.
+[MSIX design and trial](#microsoft-store-release-via-msix) — owner decision on starting the planned pass, before Safe Replace and snippet placeholders. v1.22.0 installation is owner-confirmed working with notes/settings preserved. [P2](#p2-bound-large-markdown-preview-work) and [dependency follow-ups](#security-dependencies--2026-10-08-follow-up) remain open.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -30,7 +30,7 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 
 - [x] **Release v1.22.0 — Published 2026-11-05.** Installer and portable assets were built from tag `v1.22.0` at `ea787a1`; Windows CI and four packaged runtime/font checks passed.
   Defender scans, uploaded hashes/sizes and independent public-download checks passed. [Release](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.0); [evidence and limits](docs/release-1.22.0-evidence.md).
-- [ ] **Installed-app acceptance — Awaiting your testing.** Install v1.22.0, confirm existing notes/settings remain available, and check normal open/save and Markdown preview/export. Automated packaged checks do not establish installed acceptance; other manual limits remain in the [release evidence](docs/release-1.22.0-evidence.md).
+- [x] **Installed-app acceptance — Owner-confirmed 2026-11-05.** The owner reports v1.22.0 installed and working fine, with existing notes and settings present. This is general installed acceptance, not separate verification of every feature or manual test. [Evidence and remaining limits](docs/release-1.22.0-evidence.md#owner-installed-acceptance).
 
 ### November security patch handoff
 
@@ -63,7 +63,7 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 ### UI / keyboard access
 
 - [x] ✅ **Libron font choice — released in v1.22.0 (2026-11-05).** Bundled regular, italic, bold and bold italic for offline editor/interface use. Defaults remain; Windows menus/dialogs use the system font.
-  Packaged [font-loading/restart checks](tests/smoke/libron.spec.ts) passed; installed acceptance remains separate. [Release evidence](docs/release-1.22.0-evidence.md).
+  Packaged [font-loading/restart checks](tests/smoke/libron.spec.ts) passed; general installed acceptance is owner-confirmed, without a separate font-specific owner test. [Release evidence](docs/release-1.22.0-evidence.md).
 
 ### U1: Keep context menus inside the window
 
@@ -187,7 +187,7 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 
 | Release | Outcome |
 | --- | --- |
-| **v1.22.0** · 2026-11-05 | Markdown/runtime security patches, offline Libron fonts, partial preview optimization and stronger test tooling. [Release evidence](docs/release-1.22.0-evidence.md). Installed acceptance remains open. |
+| **v1.22.0** · 2026-11-05 | Markdown/runtime security patches, offline Libron fonts, partial preview optimization and stronger test tooling. Owner confirms installation works and notes/settings are preserved. [Release evidence](docs/release-1.22.0-evidence.md). |
 | **v1.21.3** · 2026-10-09 | Context menus stay within the window; same-named tabs show distinguishing folder labels and accessible file identities. [Release evidence](docs/release-1.21.3-evidence.md). |
 | **v1.21.2** · 2026-10-08 | Electron and Markdown security updates, compatible packaging/tooling dependency fixes, and remembered dialog folders. [Release evidence](docs/release-1.21.2-evidence.md). |
 | **v1.21.1** · 2026-10-02 | Reliable split-pane and overlapping saves; rename/save-path and stale-history fixes; in-place tab updates while typing. |
