@@ -4,7 +4,7 @@ Last updated: 2026-11-18
 
 ## 🎯 Next up
 
-**Next task decision pending.** [U4 — Keep tabs usable in narrow windows](#u4-keep-tabs-usable-in-narrow-windows) and [U5 — Explain files skipped by Find in Files](#u5-explain-files-skipped-by-find-in-files) are locally verified and awaiting release. The [MSIX design and trial](#microsoft-store-release-via-msix) remains deferred.
+Package and publish **v1.22.1** with [U4 — Keep tabs usable in narrow windows](#u4-keep-tabs-usable-in-narrow-windows) and [U5 — Explain files skipped by Find in Files](#u5-explain-files-skipped-by-find-in-files). Both fixes passed Windows PR CI and merged in [PR #43](https://github.com/NetworkMD87/Notes-and-codes/pull/43). The [MSIX design and trial](#microsoft-store-release-via-msix) remains deferred.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -83,12 +83,12 @@ The 2026-11-18 audit used the local v1.22.0 Electron build with disposable profi
 
 ### U4: Keep tabs usable in narrow windows
 
-- [x] **U4 — Implemented and locally verified 2026-11-18, awaiting release.** The active tab, New Tab and Settings stay visible at narrow widths. More actions keeps secondary toolbar controls within reach.
+- [x] **U4 — Merged 2026-11-18 for v1.22.1.** The active tab, New Tab and Settings stay visible at narrow widths. More actions keeps secondary toolbar controls within reach.
   Electron checks covered 480 px and 620 px with the sidebar open and closed, a widened sidebar, keyboard navigation, and long filenames. [Window and keyboard checks](tests/smoke/tabs.spec.ts) · [Tab sizing checks](tests/smoke/tab-sizing.spec.ts).
 
 ### U5: Explain files skipped by Find in Files
 
-- [x] **U5 — Implemented and locally verified 2026-11-18, awaiting release.** Find in Files reports how many unopened files over 1 MiB it skipped, with or without matches, and explains how to include a file.
+- [x] **U5 — Merged 2026-11-18 for v1.22.1.** Find in Files reports how many unopened files over 1 MiB it skipped, with or without matches, and explains how to include a file.
   Unit coverage checks the size boundary and search scope. The Electron smoke test verifies the notice and finds a match after opening the file. [Unit check](tests/unit/searchService.test.ts) · [Electron check](tests/smoke/find-in-files.spec.ts).
 
 ### U6: Make Quick Open results accessible

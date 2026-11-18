@@ -4,6 +4,14 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [1.22.1] — 2026-11-18
+
+_Keep tabs usable in narrow windows and see when Find in Files skips large files._
+
+### Fixed
+- The active tab, New Tab and Settings stay visible in narrow windows, even with the sidebar open. Other toolbar controls are available in the keyboard-accessible More actions menu when space is tight.
+- Find in Files reports how many unopened files over 1 MiB it skipped, even on the no-results screen. Open a file to include it in the search.
+
 ## [1.22.0] — 2026-11-05
 
 _Safer Markdown previews and exports, an updated desktop runtime, and the new Libron font option._
