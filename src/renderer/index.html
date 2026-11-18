@@ -11,9 +11,9 @@
       button,select,input,textarea{font-family:inherit}
       input[type=checkbox]{accent-color:var(--accent)}
       #app{display:flex;flex-direction:row}
-      #main{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;position:relative}
-      #header{height:34px;display:flex;align-items:center;background:var(--bar);border-bottom:1px solid var(--border)}
-      #tabbar{flex:1;min-width:0;height:100%;display:flex;align-items:center;overflow-x:auto;overflow-y:hidden}
+      #main{flex:1;min-width:min(180px,100%);height:100%;display:flex;flex-direction:column;position:relative}
+      #header{height:34px;display:flex;align-items:center;background:var(--bar);border-bottom:1px solid var(--border);container:header / inline-size}
+      #tabbar{flex:0 1 auto;min-width:0;height:100%;display:flex;align-items:center;overflow-x:auto;overflow-y:hidden}
       #panes{flex:1;display:flex;min-width:0;min-height:0}
       #editor-group{flex:1;display:flex;min-width:0;min-height:0}
       #editor-group.hidden{display:none}
@@ -25,17 +25,17 @@
       .sb-select{box-sizing:border-box;min-height:20px;max-width:112px;padding:0 2px;border:1px solid transparent;border-radius:2px;background:transparent;color:inherit;font:inherit}
       .sb-select:focus-visible{outline:1px solid var(--accent);outline-offset:1px}
       .spell-error{text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:var(--danger);text-decoration-thickness:1px;text-underline-offset:2px}
-      .tab{box-sizing:border-box;display:flex;align-items:center;height:100%;color:var(--tab-inactive-text);border-right:1px solid var(--border);border-top:2px solid transparent;cursor:pointer;white-space:nowrap;border-top-left-radius:6px;border-top-right-radius:6px}
+      .tab{box-sizing:border-box;display:flex;align-items:center;height:100%;max-width:100%;color:var(--tab-inactive-text);border-right:1px solid var(--border);border-top:2px solid transparent;cursor:pointer;white-space:nowrap;border-top-left-radius:6px;border-top-right-radius:6px}
       .tab:hover{background:var(--bar-hover)}
       .tab.active{background:var(--tab-active-bg);color:var(--bartext);border-top:2px solid var(--accent)}
       .tab.dragging{opacity:.5}
       .tab.drop-before{box-shadow:inset 2px 0 0 var(--accent)}
       .tab.drop-after{box-shadow:inset -2px 0 0 var(--accent)}
-      #tabbar[data-tab-sizing=bounded] .tab{flex:0 1 clamp(84px,12.6vw,168px);min-width:84px;max-width:168px}
+      #tabbar[data-tab-sizing=bounded] .tab{flex:0 1 clamp(84px,12.6vw,168px);min-width:min(84px,100%);max-width:min(168px,100%)}
       .tab-select{flex:1 1 auto;height:100%;min-width:0;overflow:hidden;display:flex;align-items:center;gap:6px;padding:0 0 0 10px;background:none;border:0;color:inherit;cursor:pointer;font:inherit;white-space:nowrap}
       .tab-title{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
       .tab-label{flex:1 1 auto;min-width:0;display:flex;gap:4px;overflow:hidden}
-      .tab-folder{display:flex;flex:none;min-width:0;overflow:hidden;opacity:.7}
+      .tab-folder{display:flex;flex:0 1 auto;min-width:0;overflow:hidden;opacity:.7}
       #tabbar[data-tab-sizing=bounded] .tab-folder{flex:0 0 40%}
       .tab-folder::before{content:'·';margin-right:1px;flex:none}
       .tab-folder-text{display:flex;flex:1 1 auto;min-width:0}
@@ -45,10 +45,17 @@
       .tab-folder-rest{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
       .tab-folder[hidden]{display:none}
       .tab-close{flex:none;align-self:stretch;opacity:.6;background:none;border:0;color:inherit;cursor:pointer;font:inherit;padding:0 10px 0 6px}.tab-close:hover{opacity:1}
-      .tab-add{background:none;border:none;color:var(--bartext);font-size:16px;cursor:pointer;padding:0 10px}
+      .tab-add{flex:none;background:none;border:none;color:var(--bartext);font-size:16px;cursor:pointer;padding:0 10px}
       .gutter{background:var(--border);cursor:col-resize}
       .gutter.gutter-horizontal{width:6px}
-      #toolbar{margin-left:auto;display:flex;align-items:center;gap:1px;padding:0 2px}
+      #toolbar{flex:none;margin-left:auto;display:flex;align-items:center;gap:1px;padding:0 2px}
+      #toolbar .tb-more{display:none;width:28px;justify-content:center;font-size:16px;line-height:16px}
+      /* Leave room for the selected tab after the toolbar and New Tab button. */
+      @container header (width <= 500px){
+        #toolbar > :not(.tb-more,.tb-settings){display:none}
+        #toolbar .tb-more{display:flex}
+        .tab-folder{max-width:40%}
+      }
       .tb-btn{background:none;border:none;color:var(--bartext);cursor:pointer;padding:4px 6px;display:flex;align-items:center;border-radius:var(--radius);line-height:0}
       .tb-btn[hidden]{display:none}
       .tb-btn:hover{background:var(--bar-hover)}

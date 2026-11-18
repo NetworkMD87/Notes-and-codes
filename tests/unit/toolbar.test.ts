@@ -102,4 +102,41 @@ describe('Toolbar Markdown preview split control', () => {
     document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')[1].click()
     expect(handlers.applyMarkdown).toHaveBeenCalledWith('bold')
   })
+
+  it('provides the Markdown and highlighter choices through More actions', () => {
+    const handlers = createHandlers()
+    const toolbar = new Toolbar(document.body, handlers)
+    const more = document.querySelector<HTMLButtonElement>('[aria-label="More actions"]')!
+    const choose = (label: string): void => {
+      const rows = [...document.querySelectorAll<HTMLButtonElement>('#ctx-menu button')]
+      rows.find(row => row.textContent?.trim() === label)!.click()
+    }
+
+    toolbar.syncPreview({ available: false, mode: 'off', lastVisibleMode: 'side-by-side' })
+    toolbar.syncMarkdownTools(false)
+    more.click()
+    expect(document.querySelector('#ctx-menu')?.textContent).not.toContain('Markdown')
+    closeContextMenu()
+
+    toolbar.syncPreview({ available: true, mode: 'off', lastVisibleMode: 'side-by-side' })
+    toolbar.syncMarkdownTools(true)
+    more.click()
+    choose('Choose Markdown preview mode')
+    choose('Focus')
+    expect(handlers.setPreviewMode).toHaveBeenCalledWith('focus')
+    more.click()
+    choose('Markdown tools')
+    choose('Bold')
+    expect(handlers.applyMarkdown).toHaveBeenCalledWith('bold')
+    toolbar.syncHighlighter(true, 'blue')
+    more.click()
+    choose('Highlight colour')
+    expect(document.querySelector('[role="menuitemradio"][aria-checked="true"]')?.textContent).toContain('Blue')
+    choose('Red')
+    expect(handlers.pickHighlightColour).toHaveBeenCalledWith('red')
+    more.click()
+    choose('Clear highlights')
+    expect(handlers.clearHighlights).toHaveBeenCalledOnce()
+    expect(document.activeElement).toBe(more)
+  })
 })

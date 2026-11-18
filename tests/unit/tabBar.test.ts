@@ -23,9 +23,14 @@ describe('TabBar', () => {
   })
   it('keeps the new-tab control when rendering an empty list', () => {
     const host = document.createElement('div'); const onNew = vi.fn()
+    document.body.append(host)
     const bar = new TabBar(host, { onSelect: vi.fn(), onClose: vi.fn(), onNew, onReorder: vi.fn() })
+    const add = host.nextElementSibling as HTMLButtonElement
+    bar.render([buffer('a')], 'a')
     bar.render([], null)
-    host.querySelector<HTMLButtonElement>('.tab-add')!.click()
+    expect(host.nextElementSibling).toBe(add)
+    expect(add.getAttribute('aria-label')).toBe('New Tab')
+    add.click()
     expect(onNew).toHaveBeenCalledOnce()
   })
 

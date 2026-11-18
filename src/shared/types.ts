@@ -46,6 +46,7 @@ export interface SearchRequest {
 export interface SearchResponse {
   files: SearchFileResult[]
   totalMatches: number
+  skippedLargeFiles: number
   truncated: boolean     // total cap hit, or the file index itself was truncated
   searchId: number
 }

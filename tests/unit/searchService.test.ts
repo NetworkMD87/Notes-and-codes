@@ -49,7 +49,7 @@ describe('searchFiles', () => {
     }
     const result = await searchFiles(req(), () => cancelled, io)
     expect(reads).toBe(0)
-    expect(result).toEqual({ files: [], totalMatches: 0, truncated: false, searchId: 1 })
+    expect(result).toEqual({ files: [], totalMatches: 0, skippedLargeFiles: 0, truncated: false, searchId: 1 })
   })
 
   it('does not decode or match after cancellation becomes true during read', async () => {
@@ -111,7 +111,7 @@ describe('searchFiles', () => {
     })
     try {
       const result = await searchFiles(req(), () => cancelled)
-      expect(result).toEqual({ files: [], totalMatches: 0, truncated: false, searchId: 1 })
+      expect(result).toEqual({ files: [], totalMatches: 0, skippedLargeFiles: 0, truncated: false, searchId: 1 })
     } finally {
       exec.mockRestore()
     }
@@ -140,7 +140,7 @@ describe('searchFiles', () => {
         },
       }
       const result = await searchFiles(req(), () => cancelled, io)
-      expect(result).toEqual({ files: [], totalMatches: 0, truncated: false, searchId: 1 })
+      expect(result).toEqual({ files: [], totalMatches: 0, skippedLargeFiles: 0, truncated: false, searchId: 1 })
     },
   )
 
@@ -247,9 +247,24 @@ describe('searchFiles', () => {
     expect(r.files.length).toBeLessThan(60)
   })
 
-  it('skips files over 1MB', async () => {
-    writeFileSync(join(dir, 'big.txt'), 'needle' + 'x'.repeat(1024 * 1024))
-    expect((await searchFiles(req())).totalMatches).toBe(0)
+  it('counts only in-scope unopened files above the size limit', async () => {
+    const limit = 1024 * 1024
+    const opened = join(dir, 'open.txt')
+    const atLimit = join(dir, 'at-limit.txt')
+    const largeText = 'needle' + 'x'.repeat(limit)
+    writeFileSync(join(dir, 'big.txt'), largeText)
+    writeFileSync(join(dir, 'another-big.txt'), largeText)
+    writeFileSync(opened, largeText)
+    writeFileSync(join(dir, 'excluded.txt'), largeText)
+    writeFileSync(atLimit, 'needle' + 'x'.repeat(limit - 'needle'.length))
+
+    const result = await searchFiles(req({
+      skipPaths: [opened],
+      scope: { includePatterns: [], excludePatterns: ['excluded.txt'] },
+    }))
+
+    expect(result.files.map(file => file.path)).toEqual([atLimit])
+    expect(result.skippedLargeFiles).toBe(2)
   })
 
   it('skips binary files', async () => {

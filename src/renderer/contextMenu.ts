@@ -7,6 +7,7 @@ export type ContextMenuEntry = ContextMenuItem | { separator: true }
 export interface ContextMenuOptions {
   opener?: HTMLElement | null
   focusFirst?: boolean
+  fallbackFocus?: HTMLElement
 }
 
 type MenuKeyEvent = Pick<KeyboardEvent, 'key' | 'preventDefault' | 'stopPropagation'>
@@ -57,6 +58,7 @@ export function showContextMenu(
   options: ContextMenuOptions = {},
 ): void {
   closeContextMenu()
+  const menuButton = options.opener?.hasAttribute('aria-expanded') ? options.opener : null
   const menu = document.createElement('div')
   menu.id = 'ctx-menu'
   menu.setAttribute('role', 'menu')
@@ -107,12 +109,18 @@ export function showContextMenu(
       overlay.release()
     }
     menu.remove()
-    if (options.focusFirst && options.opener?.isConnected &&
-      !options.opener.matches(':disabled') && options.opener.getAttribute('aria-disabled') !== 'true') {
-      options.opener.focus()
+    menuButton?.setAttribute('aria-expanded', 'false')
+    const opener = options.opener
+    if (options.focusFirst && opener?.isConnected &&
+      !opener.matches(':disabled') && opener.getAttribute('aria-disabled') !== 'true') {
+      const target = options.fallbackFocus && getComputedStyle(opener).display === 'none' ? options.fallbackFocus : opener
+      target.focus()
     }
   }
-  function onDown(e: MouseEvent): void { if (!menu.contains(e.target as Node)) close() }
+  function onDown(e: MouseEvent): void {
+    const target = e.target as Node
+    if (!menu.contains(target) && !menuButton?.contains(target)) close()
+  }
   function onKeyDown(e: KeyboardEvent): void {
     if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) close()
   }
@@ -129,6 +137,10 @@ export function showContextMenu(
     }
   }
   function onMenuKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Tab' && menuButton) {
+      close()
+      return
+    }
     handleContextMenuKey(event, move, () => {
       if (document.activeElement instanceof HTMLButtonElement) document.activeElement.click()
     })
@@ -137,6 +149,7 @@ export function showContextMenu(
   placeMenu(menu, x, y)
   closeCurrent = close
   overlay.open(close)   // Escape closes it via overlayManager
+  menuButton?.setAttribute('aria-expanded', 'true')
   menu.addEventListener('keydown', onMenuKeyDown)
   if (options.focusFirst) move('Home')
   // defer so the right-click that opened it doesn't immediately close it

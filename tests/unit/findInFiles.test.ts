@@ -14,6 +14,7 @@ function response(searchId: number, path: string, preview: string): SearchRespon
   return {
     searchId,
     totalMatches: 1,
+    skippedLargeFiles: 0,
     truncated: false,
     files: [{ path, matches: [{ line: 1, column: 1, length: 3, preview }], truncated: false }],
   }

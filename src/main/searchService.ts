@@ -3,11 +3,11 @@ import { relative } from 'node:path'
 import { walkFiles, type WalkFilesOptions } from './fsService'
 import { detectEncoding, decode } from './encoding'
 import { compileSearchScope } from '../shared/searchScope'
-import { searchText, MIN_QUERY_LENGTH, MAX_MATCHES_PER_FILE, pathKey } from '../shared/searchText'
+import { searchText, MIN_QUERY_LENGTH, MAX_SEARCH_FILE_MIB, MAX_MATCHES_PER_FILE, pathKey } from '../shared/searchText'
 import type { SearchFileResult, SearchRequest, SearchResponse } from '../shared/types'
 
 const MAX_MATCHES_TOTAL = 1000
-const MAX_FILE_BYTES = 1024 * 1024
+const MAX_FILE_BYTES = MAX_SEARCH_FILE_MIB * 1024 * 1024
 const BINARY_SNIFF_BYTES = 8192
 
 export interface SearchIo {
@@ -51,7 +51,7 @@ export async function searchFiles(
   io: SearchIo = DEFAULT_IO,
   walkOptions: Pick<WalkFilesOptions, 'afterDirectoryRead'> = {},
 ): Promise<SearchResponse> {
-  const empty: SearchResponse = { files: [], totalMatches: 0, truncated: false, searchId: req.searchId }
+  const empty: SearchResponse = { files: [], totalMatches: 0, skippedLargeFiles: 0, truncated: false, searchId: req.searchId }
   if (!req.root || req.query.length < MIN_QUERY_LENGTH || shouldCancel()) return empty
 
   const scope = compileSearchScope(req.scope, req.filter.excludePatterns, req.filter.showAll)
@@ -64,6 +64,7 @@ export async function searchFiles(
   const skip = new Set(req.skipPaths.map(pathKey))
   const files: SearchFileResult[] = []
   let total = 0
+  let skippedLargeFiles = 0
   let truncated = walk.truncated
 
   for (const path of walk.files) {
@@ -77,7 +78,11 @@ export async function searchFiles(
     try {
       const st = await io.stat(path)
       if (shouldCancel()) return empty
-      if (!st.isFile() || st.size > MAX_FILE_BYTES) continue
+      if (!st.isFile()) continue
+      if (st.size > MAX_FILE_BYTES) {
+        skippedLargeFiles++
+        continue
+      }
       buf = await io.readFile(path)
       if (shouldCancel()) return empty
     } catch {
@@ -103,5 +108,5 @@ export async function searchFiles(
     total += matches.length
   }
 
-  return { files, totalMatches: total, truncated, searchId: req.searchId }
+  return { files, totalMatches: total, skippedLargeFiles, truncated, searchId: req.searchId }
 }

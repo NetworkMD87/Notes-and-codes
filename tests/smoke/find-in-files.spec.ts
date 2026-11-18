@@ -57,6 +57,33 @@ test('Ctrl+Shift+F finds a match in the folder and jumps to it', async ({ smoke 
     await expect(win.locator('.find-widget.visible')).toBeVisible()
 })
 
+test('reports large files skipped by search until they are opened', async ({ smoke }) => {
+  const { userDataDir, projectDir } = seededFolder(smoke)
+  writeFileSync(join(projectDir, 'large.txt'), 'zorkmid and oversized marker\n' + 'x'.repeat(1024 * 1024))
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await expect(win.locator('.sb-row', { hasText: 'large.txt' })).toBeVisible()
+  await win.keyboard.press('Control+Shift+F')
+
+  const query = win.getByRole('searchbox', { name: 'Find in Files' })
+  const footer = win.locator('.fif-note')
+  const notice = '1 file over 1 MiB was skipped. Open a file to include it in search.'
+  await query.fill('zorkmid')
+  await expect(footer).toContainText('1 match in 1 file')
+  await expect(footer).toContainText(notice)
+
+  await query.fill('oversized marker')
+  await expect(win.locator('.fif-empty')).toHaveText('No matches for “oversized marker”')
+  await expect(footer).toHaveText(notice)
+
+  await win.keyboard.press('Escape')
+  await win.locator('.sb-row', { hasText: 'large.txt' }).click()
+  await expect(win.locator('.tab', { hasText: 'large.txt' })).toBeVisible()
+  await win.keyboard.press('Control+Shift+F')
+  await expect(footer).toHaveText('1 match in 1 file')
+  await expect(win.locator('.fif-file')).toContainText('large.txt')
+})
+
 // This variant opens NO folder (the file arrives as a bare argv file arg), so runSearch() takes
 // the early `!root` return and never reaches the skipPaths-guarded disk search at all — see the
 // next test for that. What this one DOES prove is real: that a dirty buffer is searched from its

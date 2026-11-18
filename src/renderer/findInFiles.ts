@@ -1,7 +1,7 @@
 import { DialogController } from './dialogController'
 import { emptyState, EMPTY_ICONS } from './emptyState'
 import { searchBuffers, mergeResults, type SearchableBuffer } from './findInFilesModel'
-import { MIN_QUERY_LENGTH } from '../shared/searchText'
+import { MAX_SEARCH_FILE_MIB, MIN_QUERY_LENGTH } from '../shared/searchText'
 import { describeSearchScope, parseScopeField } from '../shared/searchScope'
 import { fileType } from './fileType'
 import { HL_HEX, type SearchFileResult, type SearchOptions, type SearchScope, type WorkspaceFilter } from '../shared/types'
@@ -126,6 +126,7 @@ export class FindInFiles {
 
     this.listEl = document.createElement('div'); this.listEl.className = 'fif-list'
     this.footEl = document.createElement('div'); this.footEl.className = 'fif-note'
+    this.footEl.setAttribute('role', 'status')
     box.append(title, head, scopeToggle, scopeEl, this.scopeSummaryEl, this.listEl, this.footEl)
     this.host.replaceChildren(box)
     this.host.classList.remove('hidden')
@@ -272,10 +273,10 @@ export class FindInFiles {
     this.results = mergeResults(bufferResults, res.files)
     this.truncated = res.truncated
     this.searching = false
-    this.render()
+    this.render(res.skippedLargeFiles)
   }
 
-  private render(): void {
+  private render(skippedLargeFiles = 0): void {
     this.listEl.replaceChildren()
     this.rows = []
     if (this.query.length < MIN_QUERY_LENGTH) {
@@ -287,9 +288,12 @@ export class FindInFiles {
       this.footEl.textContent = 'Searching…'
       return
     }
+    const sizeNotice = skippedLargeFiles === 0 ? '' :
+      `${skippedLargeFiles} ${skippedLargeFiles === 1 ? 'file' : 'files'} over ${MAX_SEARCH_FILE_MIB} MiB ` +
+      `${skippedLargeFiles === 1 ? 'was' : 'were'} skipped. Open a file to include it in search.`
     if (!this.results.length) {
       this.listEl.appendChild(emptyState('fif-empty', EMPTY_ICONS.search, `No matches for “${this.query}”`))
-      this.footEl.textContent = ''
+      this.footEl.textContent = sizeNotice
       return
     }
     let total = 0
@@ -313,7 +317,8 @@ export class FindInFiles {
     const files = this.results.length
     this.footEl.textContent =
       `${total} match${total === 1 ? '' : 'es'} in ${files} file${files === 1 ? '' : 's'}` +
-      (this.truncated ? ' — results truncated; narrow your search.' : '')
+      (this.truncated ? ' — results truncated; narrow your search.' : '') +
+      (sizeNotice ? ` · ${sizeNotice}` : '')
   }
 
   private fileRow(file: SearchFileResult): HTMLElement {
