@@ -16,11 +16,23 @@ export class TabBar {
   private tabs = new Map<string, { tab: HTMLElement; select: HTMLButtonElement; close: HTMLButtonElement; title: HTMLElement; folder: HTMLElement; folderPrefix: HTMLElement; folderKey: HTMLElement; folderRest: HTMLElement; badge: HTMLElement; language: string }>()
   private folderLabels = new Map<string, string>()
   private folderPrefixes = new Map<string, string>()
+  private activeId: string | null = null
 
   constructor(private container: HTMLElement, private handlers: TabHandlers) {
     this.setSizing('bounded')
     this.container.setAttribute('role', 'tablist')
     this.container.setAttribute('aria-label', 'Open files')
+    const add = document.createElement('button')
+    add.type = 'button'
+    add.className = 'tab-add'
+    add.textContent = '+'
+    add.title = 'New Tab'
+    add.setAttribute('aria-label', 'New Tab')
+    add.onclick = () => this.handlers.onNew()
+    this.container.after(add)
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => this.revealActive()).observe(this.container)
+    }
     // Delegated on the container so the listeners survive render()'s replaceChildren().
     this.container.addEventListener('dragstart', (e) => this.onDragStart(e as DragEvent))
     this.container.addEventListener('dragover', (e) => this.onDragOver(e as DragEvent))
@@ -30,9 +42,12 @@ export class TabBar {
 
   setSizing(mode: TabSizing): void {
     this.container.dataset.tabSizing = mode
+    this.revealActive()
   }
 
   render(buffers: BufferState[], activeId: string | null): void {
+    const activeChanged = this.activeId !== activeId
+    this.activeId = activeId
     this.folderLabels = tabFolderLabels(buffers)
     this.folderPrefixes = new Map([...this.folderLabels].map(([id, label]) => [id, tabFolderPrefix(label, this.folderLabels.values())]))
     const ids = [...this.tabs.keys()]
@@ -45,6 +60,7 @@ export class TabBar {
         select.setAttribute('aria-selected', String(active))
         select.tabIndex = close.tabIndex = active ? 0 : -1
       }
+      if (activeChanged) this.revealActive()
       return
     }
     this.tabs.clear()
@@ -96,10 +112,16 @@ export class TabBar {
       this.updateTab(b)
       this.container.appendChild(tab)
     }
-    const add = document.createElement('button')
-    add.textContent = '+'; add.className = 'tab-add'
-    add.onclick = () => this.handlers.onNew()
-    this.container.appendChild(add)
+    this.revealActive()
+  }
+
+  private revealActive(): void {
+    const tab = this.activeId === null ? undefined : this.tabs.get(this.activeId)?.tab
+    if (!tab) return
+    const strip = this.container.getBoundingClientRect()
+    const selected = tab.getBoundingClientRect()
+    if (selected.left < strip.left) this.container.scrollLeft += selected.left - strip.left
+    else if (selected.right > strip.right) this.container.scrollLeft += selected.right - strip.right
   }
 
   /** Content edits touch only their tab; repeated edits of a dirty tab do no DOM work. */

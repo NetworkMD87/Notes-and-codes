@@ -48,8 +48,12 @@ test('toolbar menus flip, scroll focused items into view, and close on resize', 
   await win.locator('#toolbar').evaluate(toolbar => {
     Object.assign((toolbar as HTMLElement).style, { position: 'fixed', right: '0', bottom: '0' })
   })
-  const opener = win.locator('[data-toolbar="markdown-tools"]')
-  await opener.click()
+  const opener = win.getByRole('button', { name: 'More actions' })
+  const openMarkdownTools = async (): Promise<void> => {
+    await opener.click()
+    await win.getByRole('menuitem', { name: 'Markdown tools', exact: true }).click()
+  }
+  await openMarkdownTools()
   const menu = win.locator('#ctx-menu')
   await expect(menu).toBeVisible()
   await expectMenuInsideViewport(win)
@@ -68,7 +72,7 @@ test('toolbar menus flip, scroll focused items into view, and close on resize', 
   await expect(menu).toHaveCount(0)
   await expect(opener).toBeFocused()
 
-  await opener.click()
+  await openMarkdownTools()
   await expect(menu).toBeVisible()
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(340, 260))
   await expect(menu).toHaveCount(0)

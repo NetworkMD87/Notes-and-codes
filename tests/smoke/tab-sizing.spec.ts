@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test, expect } from './smokeTest'
 import { waitForBoot } from './appReady'
@@ -76,4 +76,46 @@ test('long filenames are bounded by default and Natural width remains available'
   await expect.poll(
     () => JSON.parse(readFileSync(join(userDataDir, 'settings.json'), 'utf8')).tabSizing,
   ).toBe('natural')
+  await win.keyboard.press('Escape')
+  await win.setViewportSize({ width: 480, height: 600 })
+  await expect(win.getByRole('button', { name: 'More actions' })).toBeVisible()
+  const fitsTabStrip = await tab.evaluate(element => {
+    const tab = element.getBoundingClientRect()
+    const strip = element.parentElement!.getBoundingClientRect()
+    return tab.width > 168 && tab.left >= strip.left - 1 && tab.right <= strip.right + 1
+  })
+  expect(fitsTabStrip).toBe(true)
+  await expect(select).toHaveAttribute('aria-label', `${filename}, ${filePath}`)
+})
+
+test('compact Natural width keeps the filename visible beside a long duplicate folder name', async ({ smoke }) => {
+  const userDataDir = smoke.tempDir('notes-tab-natural-duplicate-')
+  const folder = smoke.tempDir('notes-tab-natural-folder-')
+  const buffers = ['a', 'b'].map(id => {
+    const directory = join(folder, `${id}-${'long-folder-'.repeat(10)}`)
+    mkdirSync(directory)
+    const filePath = join(directory, 'note.txt')
+    writeFileSync(filePath, id)
+    return {
+      id, title: 'note.txt', filePath, content: id, language: 'plaintext',
+      eol: 'LF', encoding: 'utf8', dirty: false,
+    }
+  })
+  mkdirSync(join(userDataDir, 'session'))
+  writeFileSync(join(userDataDir, 'settings.json'), JSON.stringify({ tabSizing: 'natural' }))
+  writeFileSync(join(userDataDir, 'session', 'session.json'), JSON.stringify({ buffers, activeId: 'b' }))
+  const app = await smoke.launch({ args: ['out/main/index.js', `--user-data-dir=${userDataDir}`] })
+  const win = await app.firstWindow()
+  await waitForBoot(win)
+  await win.setViewportSize({ width: 480, height: 600 })
+  const active = win.locator('.tab.active')
+  await expect(active.locator('.tab-folder')).toBeVisible()
+  const widths = await active.evaluate(tab => ({
+    title: tab.querySelector('.tab-title')!.getBoundingClientRect().width,
+    folder: tab.querySelector('.tab-folder')!.getBoundingClientRect().width,
+    label: tab.querySelector('.tab-label')!.getBoundingClientRect().width,
+  }))
+  expect(widths.title).toBeGreaterThan(20)
+  expect(widths.folder).toBeLessThanOrEqual(widths.label * 0.4 + 1)
+  await expect(active.getByRole('tab')).toHaveAttribute('aria-label', `note.txt, ${buffers[1].filePath}`)
 })

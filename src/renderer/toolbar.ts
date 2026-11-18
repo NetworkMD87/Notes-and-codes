@@ -1,5 +1,5 @@
 import { HIGHLIGHT_COLOURS, HL_HEX, type HighlightColour, type MarkdownPreviewMode, type MarkdownPreviewVisibleMode } from '../shared/types'
-import { showContextMenu } from './contextMenu'
+import { closeContextMenu, showContextMenu, type ContextMenuEntry } from './contextMenu'
 import type { MarkdownAction } from './markdownEditing'
 
 export interface ToolbarHandlers {
@@ -44,16 +44,18 @@ export class Toolbar {
   private markdownTools: HTMLButtonElement
   private pinBtn: HTMLButtonElement
   private hlBtn!: HTMLButtonElement
+  private highlightColour: HighlightColour = 'yellow'
 
   constructor(host: HTMLElement, h: ToolbarHandlers) {
     this.el = document.createElement('div')
     this.el.id = 'toolbar'
 
-    const mk = (title: string, svg: string, onClick: () => void): HTMLButtonElement => {
+    const mk = (title: string, icon: string, onClick: () => void): HTMLButtonElement => {
       const b = document.createElement('button')
+      b.type = 'button'
       b.className = 'tb-btn'
       b.title = title
-      b.innerHTML = svg
+      b.innerHTML = icon
       b.onclick = onClick
       return b
     }
@@ -61,6 +63,10 @@ export class Toolbar {
       const s = document.createElement('span')
       s.className = 'tb-sep'
       return s
+    }
+    const openMenu = (opener: HTMLButtonElement, entries: ContextMenuEntry[]): void => {
+      const rect = opener.getBoundingClientRect()
+      showContextMenu(rect.left, rect.bottom, entries, { opener, focusFirst: true, fallbackFocus: settings })
     }
 
     this.splitBtn = mk('Toggle split pane', ICONS.split, h.toggleSplit)
@@ -77,14 +83,12 @@ export class Toolbar {
     this.previewCaret.textContent = '▾'
     this.previewCaret.setAttribute('aria-label', 'Choose Markdown preview mode')
     this.previewCaret.setAttribute('aria-haspopup', 'menu')
-    this.previewCaret.onclick = () => {
-      const rect = this.previewCaret.getBoundingClientRect()
-      showContextMenu(rect.left, rect.bottom, [
-        { label: 'Side by side', checked: this.previewMode === 'side-by-side', run: () => h.setPreviewMode('side-by-side') },
-        { label: 'Focus', checked: this.previewMode === 'focus', run: () => h.setPreviewMode('focus') },
-        { label: 'Off', checked: this.previewMode === 'off', run: () => h.setPreviewMode('off') },
-      ], { opener: this.previewCaret, focusFirst: true })
-    }
+    const openPreviewModes = (opener: HTMLButtonElement): void => openMenu(opener, [
+      { label: 'Side by side', checked: this.previewMode === 'side-by-side', run: () => h.setPreviewMode('side-by-side') },
+      { label: 'Focus', checked: this.previewMode === 'focus', run: () => h.setPreviewMode('focus') },
+      { label: 'Off', checked: this.previewMode === 'off', run: () => h.setPreviewMode('off') },
+    ])
+    this.previewCaret.onclick = () => openPreviewModes(this.previewCaret)
     previewWrap.append(this.previewBtn, this.previewCaret)
     this.markdownTools = document.createElement('button')
     this.markdownTools.className = 'tb-btn'
@@ -93,18 +97,15 @@ export class Toolbar {
     this.markdownTools.textContent = 'MD ▾'
     this.markdownTools.setAttribute('aria-label', 'Markdown tools')
     this.markdownTools.setAttribute('aria-haspopup', 'menu')
-    this.markdownTools.onclick = () => {
-      const rect = this.markdownTools.getBoundingClientRect()
+    const openMarkdownTools = (opener: HTMLButtonElement): void => {
       const actions: Array<[string, MarkdownAction]> = [
         ['Heading', 'heading'], ['Bold', 'bold'], ['Italic', 'italic'], ['Link', 'link'],
         ['Inline code', 'inline-code'], ['Code block', 'code-block'], ['Quote', 'quote'],
         ['Bulleted list', 'bulleted-list'], ['Numbered list', 'numbered-list'], ['Task list', 'task-list'],
       ]
-      showContextMenu(rect.left, rect.bottom, actions.map(([label, action]) => ({ label, run: () => h.applyMarkdown(action) })), {
-        opener: this.markdownTools,
-        focusFirst: true,
-      })
+      openMenu(opener, actions.map(([label, action]) => ({ label, run: () => h.applyMarkdown(action) })))
     }
+    this.markdownTools.onclick = () => openMarkdownTools(this.markdownTools)
     this.pinBtn = mk('Toggle always on top', ICONS.pin, h.togglePin)
     this.hlBtn = mk('Highlighter — drag to paint, re-stroke same colour to erase', ICONS.highlighter, h.toggleHighlighter)
     const hlWrap = document.createElement('div')
@@ -125,11 +126,51 @@ export class Toolbar {
     caret.onclick = (e) => { e.stopPropagation(); pop.classList.toggle('hidden') }
     document.addEventListener('click', () => pop.classList.add('hidden'))
     hlWrap.append(this.hlBtn, caret, pop)
-    this.syncHighlighter(false, 'yellow') // initial colour indicator (manager defaults to yellow)
+    this.syncHighlighter(false, this.highlightColour)
+
+    const open = mk('Open file', ICONS.open, h.open)
+    const save = mk('Save', ICONS.save, h.save)
+    const history = mk('File History', ICONS.history, h.openHistory)
+    const diff = mk('Start diff', ICONS.diff, h.startDiff)
+    const paste = mk('Paste from history', ICONS.paste, h.pasteFromHistory)
+    const settings = mk('Settings', ICONS.gear, h.openSettings)
+    settings.classList.add('tb-settings')
+    const action = (button: HTMLButtonElement, label = button.title): ContextMenuEntry => ({
+      label, disabled: button.disabled, run: () => button.click(),
+    })
+    const more = mk('More actions', '<span aria-hidden="true">…</span>', () => {
+      if (more.getAttribute('aria-expanded') === 'true') {
+        closeContextMenu()
+        return
+      }
+      const entries: ContextMenuEntry[] = [
+        action(open), action(save), action(history), { separator: true }, action(this.splitBtn),
+      ]
+      if (!this.previewBtn.disabled) {
+        entries.push(action(this.previewBtn), { label: this.previewCaret.title, run: () => openPreviewModes(more) })
+      }
+      if (!this.markdownTools.hidden) {
+        entries.push({ label: this.markdownTools.title, run: () => openMarkdownTools(more) })
+      }
+      entries.push(action(this.pinBtn), { separator: true }, action(this.hlBtn, 'Toggle highlighter'), {
+        label: caret.title,
+        run: () => openMenu(more, HIGHLIGHT_COLOURS.map(colour => ({
+          label: colour[0].toUpperCase() + colour.slice(1),
+          checked: colour === this.highlightColour,
+          run: () => h.pickHighlightColour(colour),
+        }))),
+      }, action(clearBtn, 'Clear highlights'), action(diff), action(paste))
+      openMenu(more, entries)
+    })
+    more.classList.add('tb-more')
+    more.setAttribute('aria-label', more.title)
+    more.setAttribute('aria-haspopup', 'menu')
+    more.setAttribute('aria-expanded', 'false')
+
     this.el.append(
-      mk('Open file', ICONS.open, h.open),
-      mk('Save', ICONS.save, h.save),
-      mk('File History', ICONS.history, h.openHistory),
+      open,
+      save,
+      history,
       sep(),
       this.splitBtn,
       previewWrap,
@@ -137,12 +178,20 @@ export class Toolbar {
       this.pinBtn,
       sep(),
       hlWrap,
-      mk('Start diff', ICONS.diff, h.startDiff),
-      mk('Paste from history', ICONS.paste, h.pasteFromHistory),
+      diff,
+      paste,
       sep(),
-      mk('Settings', ICONS.gear, h.openSettings)
+      more,
+      settings,
     )
     host.appendChild(this.el)
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => {
+        if (more.getAttribute('aria-expanded') === 'true' && !more.getClientRects().length) {
+          closeContextMenu()
+        }
+      }).observe(host)
+    }
   }
 
   syncToggles(state: { split: boolean; pin: boolean }): void {
@@ -181,6 +230,7 @@ export class Toolbar {
   }
 
   syncHighlighter(on: boolean, colour: HighlightColour): void {
+    this.highlightColour = colour
     this.hlBtn.classList.toggle('tb-active', on)
     this.hlBtn.style.boxShadow = `inset 0 -3px 0 ${HL_HEX[colour]}` // underline shows the active colour
     this.hlBtn.title = `Highlighter (${colour}) — drag to paint, re-stroke same colour to erase`

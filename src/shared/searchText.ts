@@ -4,6 +4,7 @@
 import type { SearchMatch, SearchOptions } from './types'
 
 export const MIN_QUERY_LENGTH = 2
+export const MAX_SEARCH_FILE_MIB = 1
 // Cross-process invariant: main (searchService.ts) and the renderer (findInFilesModel.ts) must
 // cap at the same number or their results silently disagree — the exact class of bug the shared
 // matcher exists to prevent. One declaration, imported by both.

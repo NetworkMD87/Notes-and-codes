@@ -4,7 +4,7 @@ Last updated: 2026-11-18
 
 ## 🎯 Next up
 
-[MSIX design and trial](#microsoft-store-release-via-msix) — owner decision on starting the planned pass, before Safe Replace and snippet placeholders. v1.22.0 installation is owner-confirmed working with notes/settings preserved. [P2](#p2-bound-large-markdown-preview-work) and [dependency follow-ups](#security-dependencies--2026-10-08-follow-up) remain open.
+**Next task decision pending.** [U4 — Keep tabs usable in narrow windows](#u4-keep-tabs-usable-in-narrow-windows) and [U5 — Explain files skipped by Find in Files](#u5-explain-files-skipped-by-find-in-files) are locally verified and awaiting release. The [MSIX design and trial](#microsoft-store-release-via-msix) remains deferred.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -16,8 +16,8 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 | --- | --- |
 | [Security dependencies](#november-security-patch-handoff) | November patches released in v1.22.0; GitHub confirms 27 imported alerts fixed and one minimatch alert open. Earlier S3 qualification decisions are preserved. |
 | [Reliability](#1-reliability--completed) | R1–R4 released in v1.21.1. |
-| [UI and performance](#2-ui-and-performance--planned) | Libron and part of P2 shipped in v1.22.0. U2 and P2 remain open. The November audit adds proposed fixes for narrow windows, search, Quick Open, and large-folder rendering. |
-| [Delivery and existing features](#3-delivery-and-existing-features) | Bounded full CI qualification merged → MSIX design/trial awaits approval → Safe Replace → snippet placeholders. |
+| [UI and performance](#2-ui-and-performance--planned) | Libron and part of P2 shipped in v1.22.0. U4 and U5 are locally verified. Open work includes folder-tree access and performance, Quick Open, search speed, and large Markdown previews. |
+| [Delivery and existing features](#3-delivery-and-existing-features) | Bounded full CI qualification merged. Safe Replace follows the deferred MSIX trial, then snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
 | Latest release | [v1.22.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.0): security updates, offline Libron fonts and partial Markdown preview optimization. |
@@ -83,11 +83,13 @@ The 2026-11-18 audit used the local v1.22.0 Electron build with disposable profi
 
 ### U4: Keep tabs usable in narrow windows
 
-- [ ] **Proposed — Keep the active tab and New Tab button visible.** With the sidebar open, a 620 px window left about 72 px for tabs. At 480 px, tabs disappeared and Settings was clipped. Review a **More actions** menu for secondary toolbar controls. Verify at both widths with the sidebar open and closed, including keyboard access to all actions. [Layout source](src/renderer/index.html).
+- [x] **U4 — Implemented and locally verified 2026-11-18, awaiting release.** The active tab, New Tab and Settings stay visible at narrow widths. More actions keeps secondary toolbar controls within reach.
+  Electron checks covered 480 px and 620 px with the sidebar open and closed, a widened sidebar, keyboard navigation, and long filenames. [Window and keyboard checks](tests/smoke/tabs.spec.ts) · [Tab sizing checks](tests/smoke/tab-sizing.spec.ts).
 
 ### U5: Explain files skipped by Find in Files
 
-- [ ] **Proposed — Indicate when the search skipped large closed files.** A match in a file just over 1 MiB appeared only after the file was opened. Keep the size limit for the first fix and show the skipped-file notice with both results and empty results. [Search service](src/main/searchService.ts) · [Results panel](src/renderer/findInFiles.ts).
+- [x] **U5 — Implemented and locally verified 2026-11-18, awaiting release.** Find in Files reports how many unopened files over 1 MiB it skipped, with or without matches, and explains how to include a file.
+  Unit coverage checks the size boundary and search scope. The Electron smoke test verifies the notice and finds a match after opening the file. [Unit check](tests/unit/searchService.test.ts) · [Electron check](tests/smoke/find-in-files.spec.ts).
 
 ### U6: Make Quick Open results accessible
 
@@ -130,12 +132,7 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 
 ---
 
-### Microsoft Store release via MSIX
-
-- [ ] **Microsoft Store release via MSIX** (**M**, after the reliability work and CI trial) — a design-and-trial pass, not a repackage-and-submit exercise.
-  - MSIX virtualises registry writes. Explorer context-menu registration and launch-on-login must therefore use Store manifest declarations or be hidden in Store builds; a packaged-only gate would silently no-op.
-  - Use `process.windowsStore` as the Store-specific branch. Decide the Explorer integration and startup-task behaviour, then configure the `appx` target, account/identity, IARC rating, privacy-policy URL, Store listing/screenshots, and certification submission.
-  - The Store channel is Microsoft-signed; direct downloads remain a separate signing decision.
+### Safe Replace and snippet placeholders
 
 - [ ] **Safe Replace in Files** (**L**, after MSIX) — preview the change set; let users opt files in/out; snapshot history before writes; use atomic writes and stale-mtime conflict checks; make destructive scope unmistakable. Keep it separate from Find in Files.
 
@@ -157,6 +154,13 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 ---
 
 ## 5. Parked and deferred
+
+### Microsoft Store release via MSIX
+
+- [ ] **Microsoft Store release via MSIX** (**M**) — deferred by the owner on 2026-11-18. When resumed, start with a design and packaging trial.
+  - MSIX virtualises registry writes. Explorer context-menu registration and launch-on-login must therefore use Store manifest declarations or be hidden in Store builds; a packaged-only gate would silently no-op.
+  - Use `process.windowsStore` as the Store-specific branch. Decide the Explorer integration and startup-task behaviour, then configure the `appx` target, account/identity, IARC rating, privacy-policy URL, Store listing/screenshots, and certification submission.
+  - The Store channel is Microsoft-signed; direct downloads remain a separate signing decision.
 
 ### Platform and design
 
