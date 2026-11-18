@@ -47,6 +47,7 @@ No workspace setup, account, or cloud connection required.
 
 ## What's new
 
+- **[v1.22.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.1)** keeps the active tab, New Tab and Settings visible in narrow windows and reports when Find in Files skips large unopened files.
 - **[v1.22.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.0):** updates Markdown parsing and the Electron runtime for security fixes,
   adds the offline Libron editor/interface font option, and reduces repeated HTML parsing in Markdown previews.
 - **[v1.21.3](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.21.3):** keeps context menus inside the window

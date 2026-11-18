@@ -4,7 +4,7 @@ Last updated: 2026-11-18
 
 ## 🎯 Next up
 
-Package and publish **v1.22.1** with [U4 — Keep tabs usable in narrow windows](#u4-keep-tabs-usable-in-narrow-windows) and [U5 — Explain files skipped by Find in Files](#u5-explain-files-skipped-by-find-in-files). Both fixes passed Windows PR CI and merged in [PR #43](https://github.com/NetworkMD87/Notes-and-codes/pull/43). The [MSIX design and trial](#microsoft-store-release-via-msix) remains deferred.
+**Next task decision pending.** [v1.22.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.1) shipped the narrow-window tab and skipped-file search fixes. The [MSIX design and trial](#microsoft-store-release-via-msix) remains deferred.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -16,11 +16,11 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 | --- | --- |
 | [Security dependencies](#november-security-patch-handoff) | November patches released in v1.22.0; GitHub confirms 27 imported alerts fixed and one minimatch alert open. Earlier S3 qualification decisions are preserved. |
 | [Reliability](#1-reliability--completed) | R1–R4 released in v1.21.1. |
-| [UI and performance](#2-ui-and-performance--planned) | Libron and part of P2 shipped in v1.22.0. U4 and U5 are locally verified. Open work includes folder-tree access and performance, Quick Open, search speed, and large Markdown previews. |
+| [UI and performance](#2-ui-and-performance--planned) | Libron and part of P2 shipped in v1.22.0. U4 and U5 shipped in v1.22.1. Open work includes folder-tree access and performance, Quick Open, search speed, and large Markdown previews. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | Bounded full CI qualification merged. Safe Replace follows the deferred MSIX trial, then snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
-| Latest release | [v1.22.0](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.0): security updates, offline Libron fonts and partial Markdown preview optimization. |
+| Latest release | [v1.22.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.1) keeps tabs usable in narrow windows and reports large files skipped during search. |
 
 ---
 
@@ -83,12 +83,12 @@ The 2026-11-18 audit used the local v1.22.0 Electron build with disposable profi
 
 ### U4: Keep tabs usable in narrow windows
 
-- [x] **U4 — Merged 2026-11-18 for v1.22.1.** The active tab, New Tab and Settings stay visible at narrow widths. More actions keeps secondary toolbar controls within reach.
+- [x] **U4 — Released in v1.22.1 (2026-11-18).** The active tab, New Tab and Settings stay visible at narrow widths. More actions keeps secondary toolbar controls within reach.
   Electron checks covered 480 px and 620 px with the sidebar open and closed, a widened sidebar, keyboard navigation, and long filenames. [Window and keyboard checks](tests/smoke/tabs.spec.ts) · [Tab sizing checks](tests/smoke/tab-sizing.spec.ts).
 
 ### U5: Explain files skipped by Find in Files
 
-- [x] **U5 — Merged 2026-11-18 for v1.22.1.** Find in Files reports how many unopened files over 1 MiB it skipped, with or without matches, and explains how to include a file.
+- [x] **U5 — Released in v1.22.1 (2026-11-18).** Find in Files reports how many unopened files over 1 MiB it skipped, with or without matches, and explains how to include a file.
   Unit coverage checks the size boundary and search scope. The Electron smoke test verifies the notice and finds a match after opening the file. [Unit check](tests/unit/searchService.test.ts) · [Electron check](tests/smoke/find-in-files.spec.ts).
 
 ### U6: Make Quick Open results accessible
@@ -216,6 +216,7 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 
 | Release | Outcome |
 | --- | --- |
+| **v1.22.1** · 2026-11-18 | Narrow-window tabs and skipped-file search notices. Windows CI and four unpacked-app smoke tests passed. Installer and portable sizes and SHA-256 hashes match the tagged build. [PR #43](https://github.com/NetworkMD87/Notes-and-codes/pull/43) · [Release CI](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/44330264878) · [Release](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.1) |
 | **v1.22.0** · 2026-11-05 | Markdown/runtime security patches, offline Libron fonts, partial preview optimization and stronger test tooling. Owner confirms installation works and notes/settings are preserved. [Release evidence](docs/release-1.22.0-evidence.md). |
 | **v1.21.3** · 2026-10-09 | Context menus stay within the window; same-named tabs show distinguishing folder labels and accessible file identities. [Release evidence](docs/release-1.21.3-evidence.md). |
 | **v1.21.2** · 2026-10-08 | Electron and Markdown security updates, compatible packaging/tooling dependency fixes, and remembered dialog folders. [Release evidence](docs/release-1.21.2-evidence.md). |
