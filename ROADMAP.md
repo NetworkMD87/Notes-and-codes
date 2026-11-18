@@ -1,6 +1,6 @@
 # Notes & Codes — Roadmap
 
-Last updated: 2026-11-05
+Last updated: 2026-11-18
 
 ## 🎯 Next up
 
@@ -16,7 +16,7 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 | --- | --- |
 | [Security dependencies](#november-security-patch-handoff) | November patches released in v1.22.0; GitHub confirms 27 imported alerts fixed and one minimatch alert open. Earlier S3 qualification decisions are preserved. |
 | [Reliability](#1-reliability--completed) | R1–R4 released in v1.21.1. |
-| [UI and performance](#2-ui-and-performance--planned) | Libron and the partial P2 optimization released in v1.22.0; U2 and broader P2 work remain open. U1/U3 and P1 retain their earlier release status. |
+| [UI and performance](#2-ui-and-performance--planned) | Libron and part of P2 shipped in v1.22.0. U2 and P2 remain open. The November audit adds proposed fixes for narrow windows, search, Quick Open, and large-folder rendering. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | Bounded full CI qualification merged → MSIX design/trial awaits approval → Safe Replace → snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
@@ -60,6 +60,8 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 
 ## 2. UI and performance — planned
 
+The 2026-11-18 audit used the local v1.22.0 Electron build with disposable profiles and synthetic files. Installed-app and Narrator checks remain outstanding for these findings. The new proposals await scope approval and scheduling.
+
 ### UI / keyboard access
 
 - [x] ✅ **Libron font choice — released in v1.22.0 (2026-11-05).** Bundled regular, italic, bold and bold italic for offline editor/interface use. Defaults remain; Windows menus/dialogs use the system font.
@@ -72,11 +74,24 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 
 ### U2: Keyboard-accessible folder tree
 
-- [ ] **U2 — Keyboard-accessible folder tree.** Add focusable tree items, arrow navigation, expansion state, and keyboard context-menu access. Verify that browsing and New/Rename/Delete work without a pointer. [Source](src/renderer/sidebar.ts).
+- [ ] **U2 — Keyboard-accessible folder tree.** Audit reproduced rows outside the tab order. Add focusable tree items, arrow navigation, announced expansion state, and keyboard context-menu access. Verify browsing and New/Rename/Delete with keyboard and Narrator, including focus after a refresh. Coordinate with [P3](#p3-reduce-large-folder-rendering-work). [Source](src/renderer/sidebar.ts).
+
 ### U3: Distinguish same-named tabs
 
 - [x] ✅ **U3 — Distinguish same-named tabs — released in v1.21.3.** Saved-file duplicates show minimal folder suffixes with distinguishing characters retained under truncation. Full-path tooltips and accessible labels expose file identity and unsaved status. [Source](src/renderer/tabBar.ts).
   **2026-10-09:** focused layout, file-action, typing and packaged identity checks passed. [Implementation evidence](docs/ui-menu-tab-evidence-2026-10-09.md); [release limits](docs/release-1.21.3-evidence.md).
+
+### U4: Keep tabs usable in narrow windows
+
+- [ ] **Proposed — Keep the active tab and New Tab button visible.** With the sidebar open, a 620 px window left about 72 px for tabs. At 480 px, tabs disappeared and Settings was clipped. Review a **More actions** menu for secondary toolbar controls. Verify at both widths with the sidebar open and closed, including keyboard access to all actions. [Layout source](src/renderer/index.html).
+
+### U5: Explain files skipped by Find in Files
+
+- [ ] **Proposed — Indicate when the search skipped large closed files.** A match in a file just over 1 MiB appeared only after the file was opened. Keep the size limit for the first fix and show the skipped-file notice with both results and empty results. [Search service](src/main/searchService.ts) · [Results panel](src/renderer/findInFiles.ts).
+
+### U6: Make Quick Open results accessible
+
+- [ ] **Proposed — Expose the selected result and show an empty state.** Quick Open visually highlights results without exposing a selectable option or active result to assistive technology. A query with no matches leaves a blank list. Verify that Narrator announces the result as arrow keys move, Enter opens the highlighted file, and an unmatched query shows **No matching files**. [Source](src/renderer/quickOpen.ts).
 
 ---
 
@@ -85,6 +100,15 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 - [ ] **Partial — direct-node insertion released in v1.22.0 (2026-11-05).** The 2026-10-19 optimization (`825c28f`) removes repeated HTML parsing. Large-fixture insertion fell from 92–130 ms to 29–76 ms; total time including layout remains variable. [Source](src/renderer/markdownPreview.ts).
   - **Validation:** build/typecheck, 54 focused units and passing results for all 11 affected Electron smoke tests; sanitizer bypass made its guard fail, then exact restoration passed. Export strings, sanitization, task rendering, focus and scroll are preserved. [Measurements, retained failures and review](docs/markdown-preview-performance-2026-10-19.md).
   - **Remaining:** sanitization/layout still block large previews after the existing debounce fires. No consistent overall latency gain or complete P2 solution is claimed. A size-based preview policy requires owner UX approval; broader large-file mode remains a separate someday idea.
+  - **2026-11-18 local profile:** three activations per fixture took 128–202 ms at 50 KiB and 1.44–2.35 seconds at 500 KiB, including layout. Proposed follow-up: measure typing responsiveness, then review a threshold above which the preview stays visible and refreshes on demand. [Benchmark](tests/benchmark/markdownPreview.spec.ts).
+
+### P3: Reduce large-folder rendering work
+
+- [ ] **Proposed — Update the changed branch while preserving focus and scroll.** Expanding a synthetic 4,000-file folder took 351–474 ms to the second animation frame and replaced unrelated sidebar rows. Recheck that fixture after incremental updates. Coordinate with [U2](#u2-keyboard-accessible-folder-tree). [Source](src/renderer/sidebar.ts).
+
+### P4: Reduce Find in Files wait time
+
+- [ ] **Proposed — Benchmark bounded parallel reads against the current sequential scan.** Two queries in the synthetic workspace took 4.6 and 12.8 seconds to finish. If waits remain high, review showing matches as they arrive. Verify cancellation and that unsaved editor text still takes precedence over the disk copy. [Source](src/main/searchService.ts) · [Workspace benchmark](tests/benchmark/workspaceResponsiveness.test.ts).
 
 ---
 
@@ -158,7 +182,7 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 - [ ] **Folder mode:** drag-to-move; cut/copy/paste; multi-root; `.gitignore` awareness.
 - [ ] **Text highlighter:** re-anchor after external edits; highlights panel; export highlights to HTML/PDF; custom colour picker; Edit-menu command; keyboard-only painting.
 - [ ] **Tab animation:** live-shift / FLIP animation for neighbouring tabs while reordering.
-- [ ] **Find in Files:** regex search only after its safety/performance model is designed; streaming results if measurements still justify it.
+- [ ] **Find in Files regex search:** revisit after its safety and performance model is designed.
 - [ ] **In-app Help:** dedicated hotkey (without conflicting with Monaco); clickable commands; generated content; shared shortcut constants.
 
 ---
@@ -175,6 +199,7 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 
 ### Small maintenance follow-up
 
+- [ ] **Proposed — Update status bar values in place.** One cursor move rebuilt the encoding and line-ending controls in Electron. Reuse the controls and verify they retain focus and respond to changes. Overall speed impact is unmeasured. [Source](src/renderer/statusBar.ts).
 - [ ] **Unused full-settings-save IPC:** consider removing `saveSettings` from the renderer API, preload, and handler; renderer callers already use `updateSettings`. Preserve the store's internal save behavior and tests. This is cleanup, not an open settings-write defect.
 
 **Audit-record reconciliation (2026-09-08):** the historical checklist has no unchecked findings. The valid deferred items above were checked against current source; stale orphan-pruning work was removed. Rejected `fsync` and speculative Windows rename retries are not queued. See [the audit review note](AUDIT-CHECKLIST.md#2026-09-08-backlog-review) for scope and evidence.
