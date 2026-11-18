@@ -4,7 +4,7 @@ Last updated: 2026-11-18
 
 ## 🎯 Next up
 
-**Next task decision pending.** [v1.22.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.1) shipped the narrow-window tab and skipped-file search fixes. The [MSIX design and trial](#microsoft-store-release-via-msix) remains deferred.
+The **recommended next task** is [U6 — Make Quick Open results accessible](#u6-make-quick-open-results-accessible). Agree what Narrator should announce when the selection moves and what Quick Open should show when no files match.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -20,7 +20,7 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 | [Delivery and existing features](#3-delivery-and-existing-features) | Bounded full CI qualification merged. Safe Replace follows the deferred MSIX trial, then snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
-| Latest release | [v1.22.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.1) keeps tabs usable in narrow windows and reports large files skipped during search. |
+| Latest release | [v1.22.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.1) keeps tabs usable in narrow windows and reports large files skipped during search. [Windows upgrade accepted](#v1221-installed-acceptance). |
 
 ---
 
@@ -60,7 +60,7 @@ R1–R4 shipped in v1.21.1: shared split-pane models, ordered saves that preserv
 
 ## 2. UI and performance — planned
 
-The 2026-11-18 audit used the local v1.22.0 Electron build with disposable profiles and synthetic files. Installed-app and Narrator checks remain outstanding for these findings. The new proposals await scope approval and scheduling.
+The 2026-11-18 audit used the local v1.22.0 Electron build with disposable profiles and synthetic files. Feature-specific checks in the installed app and with Narrator remain outstanding. Open proposals await scope approval and scheduling.
 
 ### UI / keyboard access
 
@@ -213,6 +213,13 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 ## 6. Shipped and settled
 
 [Detailed historical evidence and CI chronology](docs/roadmap-archive.md).
+
+### v1.22.1 installed acceptance
+
+- [x] **Windows upgrade — Owner accepted 2026-11-18.** The in-place upgrade from v1.22.0 preserved the existing settings and saved session files byte for byte.
+  The installed v1.22.1 window opened and responded, and the owner said it looked good. [Release](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.1)
+
+### Release history
 
 | Release | Outcome |
 | --- | --- |
