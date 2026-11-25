@@ -4,7 +4,7 @@ Last updated: 2026-11-25
 
 ## 🎯 Next up
 
-[Quick Open accessibility](#u6-make-quick-open-results-accessible) and [Electron 45.5.0](#electron-runtime-upgrade) are verified in the main checkout. Package and publish v1.22.2, then verify the in-place Windows upgrade.
+[v1.22.2 is published and the in-place Windows upgrade is verified](#v1222-installed-verification). The [next feature](#4-feature-ideas--decision-required) is open for an owner decision.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -16,11 +16,11 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 | --- | --- |
 | [Security dependencies](#november-security-patch-handoff) | November patches released in v1.22.0; GitHub confirms 27 imported alerts fixed and one minimatch alert open. Earlier S3 qualification decisions are preserved. |
 | [Reliability](#1-reliability--completed) | R1–R4 released in v1.21.1. |
-| [UI and performance](#2-ui-and-performance--planned) | Libron and part of P2 shipped in v1.22.0. U4 and U5 shipped in v1.22.1. Open work includes folder-tree access and performance, Quick Open, search speed, and large Markdown previews. |
+| [UI and performance](#2-ui-and-performance--planned) | Libron and part of P2 shipped in v1.22.0. U4 and U5 shipped in v1.22.1. Quick Open accessibility shipped in v1.22.2. Open work includes folder-tree access and performance, search speed, and large Markdown previews. |
 | [Delivery and existing features](#3-delivery-and-existing-features) | Bounded full CI qualification merged. Safe Replace follows the deferred MSIX trial, then snippet placeholders. |
 | [Feature decisions](#4-feature-ideas--decision-required) | Four suggestions; **none approved or scheduled**. |
 | [Parked work](#5-parked-and-deferred) | Retained for later; no implied commitment. |
-| Latest release | [v1.22.1](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.1) keeps tabs usable in narrow windows and reports large files skipped during search. [Windows upgrade accepted](#v1221-installed-acceptance). |
+| Latest release | [v1.22.2](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.2) makes Quick Open accessible to Narrator and updates Electron to 45.5.0. [Windows upgrade verified](#v1222-installed-verification). |
 
 ---
 
@@ -53,7 +53,7 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 - [x] **Initial Electron 45 compatibility verified 2026-11-25.** The isolated **45.3.4** candidate passed build and test typing, 32 focused units, 11 development smoke checks, 3 unpacked Windows runtime checks, and 4 tests using the real Windows clipboard. The existing guarded clipboard bridge handled the [asynchronous clipboard API](https://www.electronjs.org/blog/electron-44-0) without a production code change.
 - [x] **Electron 45.5.0 candidate verified 2026-11-25.** An owner-approved one-time exception admitted only [Electron 45.5.0](https://releases.electronjs.org/release/v45.5.0). Build, test typing, 32 focused units, 11 development smoke checks, three unpacked Windows runtime checks and four real clipboard tests passed.
 - [x] **Applied to the main checkout 2026-11-25.** The verified Electron binary and dependency pin match the candidate. Build, test typing and four Windows smoke tests passed in the main checkout. The seven-day rule remains active for future updates.
-  Prepared for v1.22.2. Published v1.22.1 uses Electron 43, which is scheduled to [reach end of support on 2027-01-05](https://releases.electronjs.org/schedule).
+  Released in [v1.22.2](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.2). Electron 43, used by v1.22.1, is scheduled to [reach end of support on 2027-01-05](https://releases.electronjs.org/schedule).
 
 ---
 
@@ -98,7 +98,7 @@ The 2026-11-18 audit used the local v1.22.0 Electron build with disposable profi
 
 ### U6: Make Quick Open results accessible
 
-- [x] **Implemented and verified locally 2026-11-25.** Quick Open exposes the highlighted file as the active option and shows **No matching files** when the list is empty. Windows Narrator Speech Recap recorded both sample filenames with their selected positions and announced the empty state. Enter opened the highlighted file with Narrator active. [Source](src/renderer/quickOpen.ts) · [Smoke test](tests/smoke/accessibility-overlays.spec.ts).
+- [x] **Released in v1.22.2 (2026-11-25).** Quick Open exposes the highlighted file as the active option and shows **No matching files** when the list is empty. In the local Windows check, Narrator Speech Recap recorded both sample filenames with their selected positions and announced the empty state. Enter opened the highlighted file with Narrator active. [Source](src/renderer/quickOpen.ts) · [Smoke test](tests/smoke/accessibility-overlays.spec.ts).
 
 ---
 
@@ -219,6 +219,10 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 
 [Detailed historical evidence and CI chronology](docs/roadmap-archive.md).
 
+### v1.22.2 installed verification
+
+- [x] **In-place Windows upgrade verified 2026-11-25.** The v1.22.2 installer replaced v1.22.1 in the existing per-user path. The installed executable matched the tagged package, the settings and saved session matched their pre-install copies byte for byte, and the app restarted in the tray. [Release](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.2)
+
 ### v1.22.1 installed acceptance
 
 - [x] **Windows upgrade — Owner accepted 2026-11-18.** The in-place upgrade from v1.22.0 preserved the existing settings and saved session files byte for byte.
@@ -228,6 +232,7 @@ The reliability fixes are released; the remaining delivery sequence follows. The
 
 | Release | Outcome |
 | --- | --- |
+| **v1.22.2** · 2026-11-25 | Narrator support and an empty state for Quick Open, plus Electron 45.5.0. After correcting the truncation assertion from [the initial CI run](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/45723721070), [tagged Windows CI](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/45724270701) and three unpacked-app checks passed. GitHub installer and portable SHA-256 digests match the local packages. [Release](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.2) |
 | **v1.22.1** · 2026-11-18 | Narrow-window tabs and skipped-file search notices. Windows CI and four unpacked-app smoke tests passed. Installer and portable sizes and SHA-256 hashes match the tagged build. [PR #43](https://github.com/NetworkMD87/Notes-and-codes/pull/43) · [Release CI](https://github.com/NetworkMD87/Notes-and-codes/actions/runs/44330264878) · [Release](https://github.com/NetworkMD87/Notes-and-codes/releases/tag/v1.22.1) |
 | **v1.22.0** · 2026-11-05 | Markdown/runtime security patches, offline Libron fonts, partial preview optimization and stronger test tooling. Owner confirms installation works and notes/settings are preserved. [Release evidence](docs/release-1.22.0-evidence.md). |
 | **v1.21.3** · 2026-10-09 | Context menus stay within the window; same-named tabs show distinguishing folder labels and accessible file identities. [Release evidence](docs/release-1.21.3-evidence.md). |
