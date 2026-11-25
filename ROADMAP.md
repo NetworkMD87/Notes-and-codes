@@ -1,10 +1,10 @@
 # Notes & Codes — Roadmap
 
-Last updated: 2026-11-18
+Last updated: 2026-11-25
 
 ## 🎯 Next up
 
-The **recommended next task** is [U6 — Make Quick Open results accessible](#u6-make-quick-open-results-accessible). Agree what Narrator should announce when the selection moves and what Quick Open should show when no files match.
+[Quick Open accessibility](#u6-make-quick-open-results-accessible) and [Electron 45.5.0](#electron-runtime-upgrade) are verified in the main checkout. Package and publish v1.22.2, then verify the in-place Windows upgrade.
 
 Open work first; shipped history and settled decisions last. Based on the **2026-09-08 audit of v1.21.0**; reliability fixes and P1 released in **v1.21.1** on **2026-10-02**.
 
@@ -48,7 +48,12 @@ Security dependency follow-up added on **2026-10-08** after checking the current
 - [ ] **S3 — Upstream dependency follow-ups.** HTTP-cache 4.3.0 failed qualification; retain 4.2.0 and sprintf-js 1.1.3 until fixes are qualified. The rejected global-agent override stays excluded. [Evidence and prior audit](docs/packaging-dependency-follow-up-2026-10-13.md); [historical detail](docs/roadmap-archive.md#earlier-security-dependency-history).
 - [x] **S4 — Compatible dependency fixes** — released in v1.21.2. The 2026-10-08 production audit had zero warnings; S3 remains open. [Evidence](docs/packaging-dependency-evidence-2026-10-08.md#s4-and-proxy-replacement-qualification).
 
-Next runtime upgrade: move to a supported major before [Electron 43 support ends on 2027-01-05](https://releases.electronjs.org/schedule), accounting for Electron 44's clipboard migration.
+### Electron runtime upgrade
+
+- [x] **Initial Electron 45 compatibility verified 2026-11-25.** The isolated **45.3.4** candidate passed build and test typing, 32 focused units, 11 development smoke checks, 3 unpacked Windows runtime checks, and 4 tests using the real Windows clipboard. The existing guarded clipboard bridge handled the [asynchronous clipboard API](https://www.electronjs.org/blog/electron-44-0) without a production code change.
+- [x] **Electron 45.5.0 candidate verified 2026-11-25.** An owner-approved one-time exception admitted only [Electron 45.5.0](https://releases.electronjs.org/release/v45.5.0). Build, test typing, 32 focused units, 11 development smoke checks, three unpacked Windows runtime checks and four real clipboard tests passed.
+- [x] **Applied to the main checkout 2026-11-25.** The verified Electron binary and dependency pin match the candidate. Build, test typing and four Windows smoke tests passed in the main checkout. The seven-day rule remains active for future updates.
+  Prepared for v1.22.2. Published v1.22.1 uses Electron 43, which is scheduled to [reach end of support on 2027-01-05](https://releases.electronjs.org/schedule).
 
 ---
 
@@ -93,7 +98,7 @@ The 2026-11-18 audit used the local v1.22.0 Electron build with disposable profi
 
 ### U6: Make Quick Open results accessible
 
-- [ ] **Proposed — Expose the selected result and show an empty state.** Quick Open visually highlights results without exposing a selectable option or active result to assistive technology. A query with no matches leaves a blank list. Verify that Narrator announces the result as arrow keys move, Enter opens the highlighted file, and an unmatched query shows **No matching files**. [Source](src/renderer/quickOpen.ts).
+- [x] **Implemented and verified locally 2026-11-25.** Quick Open exposes the highlighted file as the active option and shows **No matching files** when the list is empty. Windows Narrator Speech Recap recorded both sample filenames with their selected positions and announced the empty state. Enter opened the highlighted file with Narrator active. [Source](src/renderer/quickOpen.ts) · [Smoke test](tests/smoke/accessibility-overlays.spec.ts).
 
 ---
 

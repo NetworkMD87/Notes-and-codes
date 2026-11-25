@@ -4,6 +4,17 @@ All notable changes to **Notes & Codes** are documented here. This project adher
 [Semantic Versioning](https://semver.org/). Releases before v1.12.1 are recorded in the
 [GitHub Releases](https://github.com/) history and git tags.
 
+## [1.22.2] — 2026-11-25
+
+*Quick Open is easier to use with Windows Narrator, and the desktop runtime is up to date.*
+
+### Fixed
+- Windows Narrator announces the highlighted file as you move through Quick Open results with the arrow keys.
+- Quick Open shows **No matching files** when your search has no results.
+
+### Changed
+- Updated the desktop runtime to Electron 45.5.0.
+
 ## [1.22.1] — 2026-11-18
 
 _Keep tabs usable in narrow windows and see when Find in Files skips large files._

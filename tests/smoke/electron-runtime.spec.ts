@@ -30,7 +30,7 @@ test('the running Electron matches the lockfile and keeps the renderer sandboxed
   expect(runtime).toEqual({ version: expected, packaged: !!executablePath, sandbox: true, contextIsolation: true, nodeIntegration: false })
   expect(await win.evaluate(() => typeof (globalThis as unknown as { require?: unknown }).require)).toBe('undefined')
   // Exercise the clipboard IPC without reading or changing the user's actual clipboard.
-  await app.evaluate(({ clipboard }) => { clipboard.readText = () => 'runtime clipboard fixture' })
+  await app.evaluate(({ clipboard }) => { clipboard.readText = async () => 'runtime clipboard fixture' })
   expect(await win.evaluate(() => window.api.clipboardRead())).toBe('runtime clipboard fixture')
   // Verify the external-link IPC without opening a browser or making a request.
   await app.evaluate(({ shell }) => {
