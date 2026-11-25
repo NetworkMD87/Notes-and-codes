@@ -285,15 +285,17 @@ describe('FolderMode refresh integration', () => {
 
     const openingB = mode.openFolder('C:\\B')
     mode.openQuickOpen()
-    const input = document.querySelector<HTMLInputElement>('#quick-open input')!
+    const quickOpen = document.querySelector('#quick-open')!
+    const input = quickOpen.querySelector<HTMLInputElement>('input')!
     expect(document.body.textContent).not.toContain('seeded-a.ts')
-    expect(document.querySelector('.qo-note')).toBeNull()
+    expect(quickOpen.textContent).not.toContain('Index truncated')
+    expect(quickOpen.querySelector('[role="status"]')?.textContent).toBe('No matching files')
 
     staleAWalk.resolve({ files: ['C:\\A\\late-a.ts'], truncated: true })
     await staleRefresh
     input.dispatchEvent(new Event('input'))
     expect(document.body.textContent).not.toContain('late-a.ts')
-    expect(document.querySelector('.qo-note')).toBeNull()
+    expect(quickOpen.textContent).not.toContain('Index truncated')
 
     bSettings.resolve({ ...DEFAULT_SETTINGS })
     await vi.waitFor(() => expect(watchDir).toHaveBeenCalledWith('C:\\B'))
